@@ -1,0 +1,158 @@
+{% extends "components/base.html" %}
+{% block title %}History - Udemy Enroller{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold text-white mb-6">
+        <i class="fas fa-history mr-2 text-blue-400"></i>Enrollment History
+    </h1>
+
+    <div id="history-list" class="space-y-4">
+        <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+            <p>Loading history...</p>
+        </div>
+    </div>
+
+    <!-- Run Detail Modal -->
+    <div id="run-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 max-w-4xl w-full max-h-screen overflow-y-auto p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-white">Run Details</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    loadHistory();
+});
+
+async function checkAuth() {
+    try {
+        const resp = await fetch('/api/auth/status');
+        const data = await resp.json();
+        if (!data.authenticated) { window.location.href = '/login'; return; }
+        document.getElementById('user-info').textContent = data.display_name;
+        document.getElementById('logout-btn').classList.remove('hidden');
+    } catch(e) { window.location.href = '/login'; }
+}
+
+async function loadHistory() {
+    try {
+        const resp = await fetch('/api/enrollment/history?limit=50');
+        const runs = await resp.json();
+        const container = document.getElementById('history-list');
+
+        if (runs.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">No enrollment runs found.</p>';
+            return;
+        }
+
+        container.innerHTML = runs.map(run => `
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 cursor-pointer hover:border-blue-500 transition-colors"
+                 onclick="showRunDetails(${run.run_id})">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium
+                            ${run.status === 'completed' ? 'bg-green-900 text-green-300' :
+                              run.status === 'failed' ? 'bg-red-900 text-red-300' :
+                              'bg-yellow-900 text-yellow-300'}">
+                            ${run.status}
+                        </span>
+                        <span class="text-sm text-gray-400">${new Date(run.started_at).toLocaleString()}</span>
+                        ${run.completed_at ? `<span class="text-xs text-gray-500">Duration: ${getDuration(run.started_at, run.completed_at)}</span>` : ''}
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
+                    <div><p class="text-xs text-gray-500">Found</p><p class="text-lg font-bold text-white">${run.total_courses_found}</p></div>
+                    <div><p class="text-xs text-gray-500">Enrolled</p><p class="text-lg font-bold text-green-400">${run.successfully_enrolled}</p></div>
+                    <div><p class="text-xs text-gray-500">Already</p><p class="text-lg font-bold text-cyan-400">${run.already_enrolled}</p></div>
+                    <div><p class="text-xs text-gray-500">Expired</p><p class="text-lg font-bold text-red-400">${run.expired}</p></div>
+                    <div><p class="text-xs text-gray-500">Excluded</p><p class="text-lg font-bold text-yellow-400">${run.excluded}</p></div>
+                    <div><p class="text-xs text-gray-500">Saved</p><p class="text-lg font-bold text-emerald-400">${run.amount_saved.toFixed(2)} ${run.currency.toUpperCase()}</p></div>
+                </div>
+                ${run.error_message ? `<p class="text-red-400 text-sm mt-2"><i class="fas fa-exclamation-triangle mr-1"></i>${run.error_message}</p>` : ''}
+            </div>
+        `).join('');
+    } catch(e) {
+        console.error('Failed to load history:', e);
+        document.getElementById('history-list').innerHTML = '<p class="text-center text-red-400 py-8">Failed to load history.</p>';
+    }
+}
+
+async function showRunDetails(runId) {
+    document.getElementById('run-modal').classList.remove('hidden');
+    document.getElementById('modal-content').innerHTML = '<p class="text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i>Loading...</p>';
+
+    try {
+        const resp = await fetch(`/api/enrollment/run/${runId}`);
+        const data = await resp.json();
+        const courses = data.courses || [];
+
+        const enrolled = courses.filter(c => c.status === 'enrolled');
+        const other = courses.filter(c => c.status !== 'enrolled');
+
+        document.getElementById('modal-content').innerHTML = `
+            <div class="mb-4">
+                <h3 class="text-green-400 font-semibold mb-2">Enrolled Courses (${enrolled.length})</h3>
+                ${enrolled.length > 0 ? `
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        ${enrolled.map(c => `
+                            <div class="bg-gray-700 rounded-lg p-3">
+                                <a href="${c.url}" target="_blank" class="text-blue-400 hover:underline text-sm">${c.title}</a>
+                                <div class="flex items-center space-x-3 text-xs text-gray-400 mt-1">
+                                    ${c.category ? `<span>${c.category}</span>` : ''}
+                                    ${c.language ? `<span>${c.language}</span>` : ''}
+                                    ${c.price ? `<span class="text-emerald-400">$${c.price}</span>` : ''}
+                                    ${c.site_source ? `<span>via ${c.site_source}</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p class="text-gray-500 text-sm">None</p>'}
+            </div>
+            <div>
+                <h3 class="text-gray-400 font-semibold mb-2">Other Courses (${other.length})</h3>
+                ${other.length > 0 ? `
+                    <div class="space-y-1 max-h-48 overflow-y-auto">
+                        ${other.map(c => `
+                            <div class="flex items-center justify-between text-sm py-1">
+                                <span class="text-gray-300 truncate mr-2">${c.title}</span>
+                                <span class="text-xs px-2 py-0.5 rounded
+                                    ${c.status === 'expired' ? 'bg-red-900 text-red-300' :
+                                      c.status === 'excluded' ? 'bg-yellow-900 text-yellow-300' :
+                                      c.status === 'already_enrolled' ? 'bg-cyan-900 text-cyan-300' :
+                                      'bg-gray-600 text-gray-300'}">${c.status}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p class="text-gray-500 text-sm">None</p>'}
+            </div>
+        `;
+    } catch(e) {
+        document.getElementById('modal-content').innerHTML = '<p class="text-red-400">Failed to load details</p>';
+    }
+}
+
+function closeModal() {
+    document.getElementById('run-modal').classList.add('hidden');
+}
+
+function getDuration(start, end) {
+    const ms = new Date(end) - new Date(start);
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+</script>
+{% endblock %}

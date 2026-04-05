@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.env
+*.md
+.vscode
+.idea
+*.egg-info
+dist
+build
+venv
+.venv
+logs/*.log
+Courses/*.txt
+udemy_enroller.db

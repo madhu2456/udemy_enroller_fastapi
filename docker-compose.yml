@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    container_name: udemy-enroller
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=Udemy Course Enroller
+      - DEBUG=false
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DATABASE_URL=sqlite:///./udemy_enroller.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - app-data:/app/data
+      - app-logs:/app/logs
+      - app-courses:/app/Courses
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  app-data:
+  app-logs:
+  app-courses:

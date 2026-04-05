@@ -1,0 +1,306 @@
+{% extends "components/base.html" %}
+{% block title %}Dashboard - Udemy Enroller{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-400">Successfully Enrolled</p>
+                <p class="text-3xl font-bold text-green-400 mt-1" id="stat-enrolled">0</p>
+            </div>
+            <div class="bg-green-900 bg-opacity-50 rounded-lg p-3">
+                <i class="fas fa-check-circle text-green-400 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-400">Amount Saved</p>
+                <p class="text-3xl font-bold text-emerald-400 mt-1" id="stat-saved">$0</p>
+            </div>
+            <div class="bg-emerald-900 bg-opacity-50 rounded-lg p-3">
+                <i class="fas fa-dollar-sign text-emerald-400 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-400">Already Enrolled</p>
+                <p class="text-3xl font-bold text-cyan-400 mt-1" id="stat-already">0</p>
+            </div>
+            <div class="bg-cyan-900 bg-opacity-50 rounded-lg p-3">
+                <i class="fas fa-user-check text-cyan-400 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-400">Total Runs</p>
+                <p class="text-3xl font-bold text-blue-400 mt-1" id="stat-runs">0</p>
+            </div>
+            <div class="bg-blue-900 bg-opacity-50 rounded-lg p-3">
+                <i class="fas fa-play-circle text-blue-400 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Section -->
+<div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-white">
+            <i class="fas fa-rocket mr-2 text-blue-400"></i>Enrollment Control
+        </h2>
+        <button id="start-btn" onclick="startEnrollment()"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition-colors">
+            <i class="fas fa-play mr-2"></i>Start Enrollment
+        </button>
+    </div>
+
+    <!-- Progress Panel (hidden by default) -->
+    <div id="progress-panel" class="hidden">
+        <div class="border-t border-gray-700 pt-4 mt-4">
+            <!-- Status Badge -->
+            <div class="flex items-center justify-between mb-4">
+                <span id="run-status" class="px-3 py-1 rounded-full text-sm font-medium bg-yellow-900 text-yellow-300">
+                    <i class="fas fa-spinner fa-spin mr-1"></i>Scraping...
+                </span>
+                <span id="run-progress-text" class="text-sm text-gray-400">0 / 0 courses</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-700 rounded-full h-3 mb-4">
+                <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <!-- Scraping Sites Progress -->
+            <div id="scraping-sites" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"></div>
+
+            <!-- Current Course -->
+            <div id="current-course" class="bg-gray-700 rounded-lg p-4 hidden">
+                <p class="text-sm text-gray-400 mb-1">Currently Processing</p>
+                <p id="current-title" class="text-white font-medium truncate"></p>
+                <a id="current-url" href="#" target="_blank" class="text-blue-400 text-sm hover:underline truncate block"></a>
+            </div>
+
+            <!-- Live Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                <div class="text-center">
+                    <p class="text-green-400 text-2xl font-bold" id="live-enrolled">0</p>
+                    <p class="text-xs text-gray-400">Enrolled</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-cyan-400 text-2xl font-bold" id="live-already">0</p>
+                    <p class="text-xs text-gray-400">Already</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-red-400 text-2xl font-bold" id="live-expired">0</p>
+                    <p class="text-xs text-gray-400">Expired</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-yellow-400 text-2xl font-bold" id="live-excluded">0</p>
+                    <p class="text-xs text-gray-400">Excluded</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-emerald-400 text-2xl font-bold" id="live-saved">$0</p>
+                    <p class="text-xs text-gray-400">Saved</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Runs -->
+<div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+    <h2 class="text-xl font-bold text-white mb-4">
+        <i class="fas fa-history mr-2 text-blue-400"></i>Recent Runs
+    </h2>
+    <div id="recent-runs" class="space-y-3">
+        <p class="text-gray-500 text-center py-4">No enrollment runs yet. Click "Start Enrollment" to begin!</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let progressInterval = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    loadDashboardStats();
+    loadRecentRuns();
+    checkActiveRun();
+});
+
+async function checkAuth() {
+    try {
+        const resp = await fetch('/api/auth/status');
+        const data = await resp.json();
+        if (!data.authenticated) {
+            window.location.href = '/login';
+            return;
+        }
+        document.getElementById('user-info').textContent = data.display_name;
+        document.getElementById('logout-btn').classList.remove('hidden');
+    } catch (e) {
+        window.location.href = '/login';
+    }
+}
+
+async function loadDashboardStats() {
+    try {
+        const resp = await fetch('/api/dashboard/stats');
+        const data = await resp.json();
+        document.getElementById('stat-enrolled').textContent = data.total_enrolled;
+        document.getElementById('stat-saved').textContent = `${data.total_amount_saved.toFixed(2)} ${data.currency.toUpperCase()}`;
+        document.getElementById('stat-already').textContent = data.total_already_enrolled;
+        document.getElementById('stat-runs').textContent = data.total_runs;
+    } catch (e) { console.error('Failed to load stats:', e); }
+}
+
+async function loadRecentRuns() {
+    try {
+        const resp = await fetch('/api/enrollment/history?limit=5');
+        const runs = await resp.json();
+        const container = document.getElementById('recent-runs');
+        if (runs.length === 0) return;
+
+        container.innerHTML = runs.map(run => `
+            <a href="/history" class="block bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-sm font-medium ${run.status === 'completed' ? 'text-green-400' : run.status === 'failed' ? 'text-red-400' : 'text-yellow-400'}">
+                            <i class="fas ${run.status === 'completed' ? 'fa-check-circle' : run.status === 'failed' ? 'fa-times-circle' : 'fa-spinner fa-spin'} mr-1"></i>
+                            ${run.status.charAt(0).toUpperCase() + run.status.slice(1)}
+                        </span>
+                        <span class="text-gray-400 text-sm ml-3">${new Date(run.started_at).toLocaleString()}</span>
+                    </div>
+                    <div class="flex space-x-4 text-sm">
+                        <span class="text-green-400">${run.successfully_enrolled} enrolled</span>
+                        <span class="text-emerald-400">${run.amount_saved.toFixed(2)} ${run.currency.toUpperCase()}</span>
+                        <span class="text-gray-400">${run.total_courses_found} found</span>
+                    </div>
+                </div>
+            </a>
+        `).join('');
+    } catch (e) { console.error('Failed to load runs:', e); }
+}
+
+async function startEnrollment() {
+    const btn = document.getElementById('start-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Starting...';
+
+    try {
+        const resp = await fetch('/api/enrollment/start', { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            showProgressPanel();
+            startProgressPolling();
+        } else {
+            alert(data.detail || data.message || 'Failed to start enrollment');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play mr-2"></i>Start Enrollment';
+        }
+    } catch (e) {
+        alert('Error starting enrollment');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play mr-2"></i>Start Enrollment';
+    }
+}
+
+function showProgressPanel() {
+    document.getElementById('progress-panel').classList.remove('hidden');
+    document.getElementById('start-btn').classList.add('hidden');
+}
+
+async function checkActiveRun() {
+    try {
+        const resp = await fetch('/api/enrollment/progress');
+        const data = await resp.json();
+        if (data.active) {
+            showProgressPanel();
+            updateProgress(data);
+            startProgressPolling();
+        }
+    } catch (e) {}
+}
+
+function startProgressPolling() {
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(async () => {
+        try {
+            const resp = await fetch('/api/enrollment/progress');
+            const data = await resp.json();
+            if (!data.active) {
+                clearInterval(progressInterval);
+                document.getElementById('run-status').innerHTML = '<i class="fas fa-check-circle mr-1"></i>Completed';
+                document.getElementById('run-status').className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-900 text-green-300';
+                document.getElementById('start-btn').classList.remove('hidden');
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('start-btn').innerHTML = '<i class="fas fa-play mr-2"></i>Start Enrollment';
+                loadDashboardStats();
+                loadRecentRuns();
+                return;
+            }
+            updateProgress(data);
+        } catch (e) {}
+    }, 1500);
+}
+
+function updateProgress(data) {
+    // Status
+    const statusEl = document.getElementById('run-status');
+    if (data.status === 'scraping') {
+        statusEl.innerHTML = '<i class="fas fa-search mr-1"></i>Scraping courses...';
+        statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-900 text-yellow-300';
+    } else if (data.status === 'enrolling') {
+        statusEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Enrolling...';
+        statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-blue-900 text-blue-300';
+    }
+
+    // Progress bar
+    const pct = data.total_courses > 0 ? (data.processed / data.total_courses * 100) : 0;
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('run-progress-text').textContent = `${data.processed} / ${data.total_courses} courses`;
+
+    // Live stats
+    document.getElementById('live-enrolled').textContent = data.successfully_enrolled;
+    document.getElementById('live-already').textContent = data.already_enrolled;
+    document.getElementById('live-expired').textContent = data.expired;
+    document.getElementById('live-excluded').textContent = data.excluded;
+    document.getElementById('live-saved').textContent = `$${data.amount_saved.toFixed(2)}`;
+
+    // Current course
+    if (data.current_course_title) {
+        document.getElementById('current-course').classList.remove('hidden');
+        document.getElementById('current-title').textContent = data.current_course_title;
+        document.getElementById('current-url').textContent = data.current_course_url;
+        document.getElementById('current-url').href = data.current_course_url;
+    }
+
+    // Scraping sites
+    if (data.scraping_progress && data.scraping_progress.length > 0) {
+        const container = document.getElementById('scraping-sites');
+        container.innerHTML = data.scraping_progress.map(s => `
+            <div class="bg-gray-700 rounded-lg p-3">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs text-gray-300 truncate">${s.site}</span>
+                    ${s.done ? '<i class="fas fa-check text-green-400 text-xs"></i>' :
+                      s.error ? '<i class="fas fa-times text-red-400 text-xs"></i>' :
+                      '<i class="fas fa-spinner fa-spin text-blue-400 text-xs"></i>'}
+                </div>
+                <div class="w-full bg-gray-600 rounded-full h-1.5">
+                    <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${s.total > 0 ? (s.progress / s.total * 100) : 0}%"></div>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+</script>
+{% endblock %}

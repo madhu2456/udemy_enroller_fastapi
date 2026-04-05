@@ -1,0 +1,198 @@
+{% extends "components/base.html" %}
+{% block title %}Settings - Udemy Enroller{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-white">
+            <i class="fas fa-cog mr-2 text-blue-400"></i>Enrollment Settings
+        </h1>
+        <div class="flex space-x-3">
+            <button onclick="resetSettings()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                <i class="fas fa-undo mr-1"></i>Reset
+            </button>
+            <button onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-save mr-1"></i>Save Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- Sites -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+        <h2 class="text-lg font-semibold text-white mb-4">
+            <i class="fas fa-globe mr-2 text-cyan-400"></i>Coupon Websites
+        </h2>
+        <div id="sites-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+    </div>
+
+    <!-- Languages -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+        <h2 class="text-lg font-semibold text-white mb-4">
+            <i class="fas fa-language mr-2 text-cyan-400"></i>Languages
+        </h2>
+        <div id="languages-grid" class="grid grid-cols-3 md:grid-cols-7 gap-3"></div>
+    </div>
+
+    <!-- Categories -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+        <h2 class="text-lg font-semibold text-white mb-4">
+            <i class="fas fa-tags mr-2 text-cyan-400"></i>Categories
+        </h2>
+        <div id="categories-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+    </div>
+
+    <!-- Advanced Settings -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+        <h2 class="text-lg font-semibold text-white mb-4">
+            <i class="fas fa-sliders-h mr-2 text-cyan-400"></i>Advanced Filters
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Min Rating -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Minimum Rating</label>
+                <input type="number" id="min-rating" min="0" max="5" step="0.5" value="0"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
+                <p class="text-xs text-gray-500 mt-1">0.0 to 5.0</p>
+            </div>
+
+            <!-- Course Update Threshold -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Course Updated Within (months)</label>
+                <input type="number" id="update-threshold" min="1" max="48" value="24"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
+                <p class="text-xs text-gray-500 mt-1">Exclude courses not updated within this period</p>
+            </div>
+
+            <!-- Instructor Exclude -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Exclude Instructors</label>
+                <textarea id="instructor-exclude" rows="4"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    placeholder="One username per line"></textarea>
+            </div>
+
+            <!-- Title Exclude -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Exclude Title Keywords</label>
+                <textarea id="title-exclude" rows="4"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    placeholder="One keyword per line (not case sensitive)"></textarea>
+            </div>
+        </div>
+
+        <!-- Checkboxes -->
+        <div class="flex flex-wrap gap-6 mt-6">
+            <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="save-txt" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                <span class="text-sm text-gray-300">Save enrolled courses to text file</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="discounted-only" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                <span class="text-sm text-gray-300">Discounted courses only (skip free)</span>
+            </label>
+        </div>
+    </div>
+
+    <div id="settings-message" class="text-center text-sm hidden mb-4"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSettings = {};
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    loadSettings();
+});
+
+async function checkAuth() {
+    try {
+        const resp = await fetch('/api/auth/status');
+        const data = await resp.json();
+        if (!data.authenticated) { window.location.href = '/login'; return; }
+        document.getElementById('user-info').textContent = data.display_name;
+        document.getElementById('logout-btn').classList.remove('hidden');
+    } catch(e) { window.location.href = '/login'; }
+}
+
+async function loadSettings() {
+    try {
+        const resp = await fetch('/api/settings/');
+        currentSettings = await resp.json();
+        renderCheckboxGrid('sites-grid', currentSettings.sites);
+        renderCheckboxGrid('languages-grid', currentSettings.languages);
+        renderCheckboxGrid('categories-grid', currentSettings.categories);
+        document.getElementById('min-rating').value = currentSettings.min_rating;
+        document.getElementById('update-threshold').value = currentSettings.course_update_threshold_months;
+        document.getElementById('instructor-exclude').value = (currentSettings.instructor_exclude || []).join('\n');
+        document.getElementById('title-exclude').value = (currentSettings.title_exclude || []).join('\n');
+        document.getElementById('save-txt').checked = currentSettings.save_txt;
+        document.getElementById('discounted-only').checked = currentSettings.discounted_only;
+    } catch(e) { console.error('Failed to load settings:', e); }
+}
+
+function renderCheckboxGrid(containerId, items) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = Object.entries(items).map(([key, val]) => `
+        <label class="flex items-center space-x-2 bg-gray-700 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-600 transition-colors">
+            <input type="checkbox" data-group="${containerId}" data-key="${key}" ${val ? 'checked' : ''}
+                class="rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500">
+            <span class="text-sm text-gray-300 truncate">${key}</span>
+        </label>
+    `).join('');
+}
+
+function gatherSettings() {
+    const gather = (groupId) => {
+        const result = {};
+        document.querySelectorAll(`[data-group="${groupId}"]`).forEach(cb => {
+            result[cb.dataset.key] = cb.checked;
+        });
+        return result;
+    };
+    return {
+        sites: gather('sites-grid'),
+        languages: gather('languages-grid'),
+        categories: gather('categories-grid'),
+        min_rating: parseFloat(document.getElementById('min-rating').value) || 0,
+        course_update_threshold_months: parseInt(document.getElementById('update-threshold').value) || 24,
+        instructor_exclude: document.getElementById('instructor-exclude').value.split('\n').filter(x => x.trim()),
+        title_exclude: document.getElementById('title-exclude').value.split('\n').filter(x => x.trim()),
+        save_txt: document.getElementById('save-txt').checked,
+        discounted_only: document.getElementById('discounted-only').checked,
+    };
+}
+
+async function saveSettings() {
+    const settings = gatherSettings();
+    try {
+        const resp = await fetch('/api/settings/', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(settings)
+        });
+        const data = await resp.json();
+        showMsg(data.success ? 'Settings saved!' : 'Failed to save', data.success ? 'green' : 'red');
+    } catch(e) { showMsg('Error saving settings', 'red'); }
+}
+
+async function resetSettings() {
+    if (!confirm('Reset all settings to defaults?')) return;
+    try {
+        await fetch('/api/settings/reset', { method: 'POST' });
+        loadSettings();
+        showMsg('Settings reset to defaults', 'blue');
+    } catch(e) { showMsg('Error resetting', 'red'); }
+}
+
+function showMsg(msg, color) {
+    const el = document.getElementById('settings-message');
+    el.className = `text-center text-sm text-${color}-400`;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 3000);
+}
+</script>
+{% endblock %}

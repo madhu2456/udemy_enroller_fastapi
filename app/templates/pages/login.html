@@ -1,0 +1,157 @@
+{% extends "components/base.html" %}
+{% block title %}Login - Udemy Enroller{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-16">
+    <div class="bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700">
+        <div class="text-center mb-8">
+            <i class="fas fa-graduation-cap text-5xl text-blue-400 mb-4"></i>
+            <h1 class="text-2xl font-bold text-white">Udemy Course Enroller</h1>
+            <p class="text-gray-400 mt-2">Login to start enrolling in free courses</p>
+        </div>
+
+        <!-- Tab buttons -->
+        <div class="flex rounded-lg bg-gray-700 p-1 mb-6">
+            <button id="tab-email" onclick="switchTab('email')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white">
+                <i class="fas fa-envelope mr-1"></i>Email
+            </button>
+            <button id="tab-cookies" onclick="switchTab('cookies')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white">
+                <i class="fas fa-cookie mr-1"></i>Cookies
+            </button>
+        </div>
+
+        <!-- Email Login Form -->
+        <form id="email-form" onsubmit="loginWithEmail(event)">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <input type="email" id="email" required
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="your@email.com">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                <input type="password" id="password" required
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="Your Udemy password">
+            </div>
+            <button type="submit" id="login-btn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors">
+                <i class="fas fa-sign-in-alt mr-2"></i>Login
+            </button>
+        </form>
+
+        <!-- Cookie Login Form -->
+        <form id="cookies-form" class="hidden" onsubmit="loginWithCookies(event)">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Access Token</label>
+                <input type="text" id="access_token" required
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    placeholder="From browser cookies">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Client ID</label>
+                <input type="text" id="client_id" required
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    placeholder="From browser cookies">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">CSRF Token</label>
+                <input type="text" id="csrf_token" required
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    placeholder="From browser cookies">
+            </div>
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors">
+                <i class="fas fa-cookie mr-2"></i>Login with Cookies
+            </button>
+        </form>
+
+        <!-- Status Message -->
+        <div id="login-message" class="mt-4 text-center text-sm hidden"></div>
+
+        <div class="mt-6 text-center text-xs text-gray-500">
+            <p>Your credentials are sent directly to Udemy's servers.</p>
+            <p class="mt-1">They are not stored permanently on this server.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tab) {
+    const emailForm = document.getElementById('email-form');
+    const cookiesForm = document.getElementById('cookies-form');
+    const tabEmail = document.getElementById('tab-email');
+    const tabCookies = document.getElementById('tab-cookies');
+
+    if (tab === 'email') {
+        emailForm.classList.remove('hidden');
+        cookiesForm.classList.add('hidden');
+        tabEmail.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white';
+        tabCookies.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white';
+    } else {
+        emailForm.classList.add('hidden');
+        cookiesForm.classList.remove('hidden');
+        tabCookies.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white';
+        tabEmail.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white';
+    }
+}
+
+async function loginWithEmail(e) {
+    e.preventDefault();
+    showMessage('Logging in...', 'blue');
+    try {
+        const resp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showMessage(`Welcome, ${data.display_name}! Redirecting...`, 'green');
+            setTimeout(() => window.location.href = '/', 1000);
+        } else {
+            showMessage(data.message, 'red');
+        }
+    } catch (err) {
+        showMessage('Connection error. Please try again.', 'red');
+    }
+}
+
+async function loginWithCookies(e) {
+    e.preventDefault();
+    showMessage('Logging in...', 'blue');
+    try {
+        const resp = await fetch('/api/auth/login/cookies', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                access_token: document.getElementById('access_token').value,
+                client_id: document.getElementById('client_id').value,
+                csrf_token: document.getElementById('csrf_token').value
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showMessage(`Welcome, ${data.display_name}! Redirecting...`, 'green');
+            setTimeout(() => window.location.href = '/', 1000);
+        } else {
+            showMessage(data.message, 'red');
+        }
+    } catch (err) {
+        showMessage('Connection error. Please try again.', 'red');
+    }
+}
+
+function showMessage(msg, color) {
+    const el = document.getElementById('login-message');
+    el.className = `mt-4 text-center text-sm text-${color}-400`;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+</script>
+{% endblock %}

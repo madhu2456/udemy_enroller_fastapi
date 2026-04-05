@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Udemy Course Enroller{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-xl font-bold text-blue-400 hover:text-blue-300">
+                    <i class="fas fa-graduation-cap mr-2"></i>Udemy Enroller
+                </a>
+                <div class="hidden md:flex space-x-1" id="nav-links">
+                    <a href="/" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                        <i class="fas fa-chart-bar mr-1"></i>Dashboard
+                    </a>
+                    <a href="/settings" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                        <i class="fas fa-cog mr-1"></i>Settings
+                    </a>
+                    <a href="/history" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                        <i class="fas fa-history mr-1"></i>History
+                    </a>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="user-info" class="text-sm text-gray-400"></span>
+                <button id="logout-btn" class="hidden text-sm text-red-400 hover:text-red-300" onclick="logout()">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 border-t border-gray-700 px-6 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto text-center text-sm text-gray-500">
+            Udemy Course Enroller &mdash; Built with FastAPI
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
