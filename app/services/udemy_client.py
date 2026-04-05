@@ -316,6 +316,7 @@ class UdemyClient:
                 months_diff = (current_date.year - last_update_date.year) * 12 + (current_date.month - last_update_date.month)
                 if months_diff >= threshold:
                     course.is_excluded = True
+                    course.error = f"Not updated in {months_diff} months (last: {course.last_update}, threshold: {threshold})"
                     return
             except ValueError:
                 pass
@@ -324,6 +325,7 @@ class UdemyClient:
         for instructor in course.instructors:
             if instructor in instructor_exclude:
                 course.is_excluded = True
+                course.error = f"Instructor excluded: {instructor}"
                 return
 
         # Check title keywords
@@ -331,21 +333,25 @@ class UdemyClient:
         for word in title_words:
             if word.casefold() in [t.casefold() for t in title_exclude]:
                 course.is_excluded = True
+                course.error = f"Title keyword excluded: {word}"
                 return
 
         # Check category
         if course.category and course.category not in categories:
             course.is_excluded = True
+            course.error = f"Category not enabled: {course.category}"
             return
 
         # Check language
         if course.language and course.language not in languages:
             course.is_excluded = True
+            course.error = f"Language not enabled: {course.language}"
             return
 
         # Check rating
         if course.rating is not None and course.rating < min_rating:
             course.is_excluded = True
+            course.error = f"Rating too low: {course.rating} (min: {min_rating})"
 
     # ── Enrollment ────────────────────────────────────
 

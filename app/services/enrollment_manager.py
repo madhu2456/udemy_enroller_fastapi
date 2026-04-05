@@ -109,11 +109,7 @@ class EnrollmentManager:
                         self.udemy.already_enrolled_c += 1
                         self._save_enrolled_course(course, "already_enrolled")
                     else:
-                        self.udemy.is_course_excluded(course, self.settings)
-                        if course.is_excluded:
-                            self.udemy.excluded_c += 1
-                            self._save_enrolled_course(course, "excluded")
-                        elif course.is_free:
+                        if course.is_free:
                             if self.settings.get("discounted_only", False):
                                 self.udemy.excluded_c += 1
                                 self._save_enrolled_course(course, "excluded", "Free course (discounted only)")

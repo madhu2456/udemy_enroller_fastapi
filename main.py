@@ -2,6 +2,7 @@
 
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,13 +13,20 @@ from config.settings import get_settings
 from app.models.database import create_tables
 from app.routers import auth, settings, enrollment, dashboard
 
+# Ensure the Windows console can handle non-ASCII characters (e.g. Vietnamese,
+# Arabic, Chinese course titles) without crashing the logging thread.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("logs/app.log", mode="a"),
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("logs/app.log", mode="a", encoding="utf-8"),
     ],
 )
 logger = logging.getLogger(__name__)
