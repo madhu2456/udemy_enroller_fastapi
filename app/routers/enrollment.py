@@ -7,64 +7,28 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.models.database import get_db, User, UserSettings, EnrollmentRun, EnrolledCourse
+from app.models.database import get_db, UserSettings, EnrollmentRun, EnrolledCourse
+from app.deps import get_current_user_id, get_udemy_client
 from app.schemas.schemas import EnrollmentStatus, CourseInfo
 from app.services.enrollment_manager import EnrollmentManager
-from app.services.udemy_client import UdemyClient
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/enrollment", tags=["Enrollment"])
 
 
-def get_user_id(request: Request, db: Session = Depends(get_db)) -> int:
-    # Primary: in-memory state (set at login, present while server is running)
-    user_id = getattr(request.app.state, "udemy_clients", {}).get("default_user_id")
-    if user_id:
-        return user_id
-
-    # Fallback: persistent cookie set at login time (survives server restarts)
-    cookie_user_id = request.cookies.get("user_id")
-    if cookie_user_id:
-        try:
-            uid = int(cookie_user_id)
-            user = db.query(User).filter(User.id == uid).first()
-            if user:
-                # Restore in-memory state so subsequent calls skip the DB lookup
-                if not hasattr(request.app.state, "udemy_clients"):
-                    request.app.state.udemy_clients = {}
-                request.app.state.udemy_clients["default_user_id"] = uid
-                return uid
-        except (ValueError, Exception):
-            pass
-
-    raise HTTPException(status_code=401, detail="Not authenticated")
-
-
-def get_udemy_client(request: Request) -> UdemyClient:
-    session_id = request.cookies.get("session_id", "default")
-    clients = getattr(request.app.state, "udemy_clients", {})
-    client = clients.get(session_id)
-    if not client or not client.is_authenticated:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return client
-
-
 @router.post("/start")
 async def start_enrollment(
     request: Request,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    client=Depends(get_udemy_client),
 ):
     """Start a new enrollment run."""
-    user_id = get_user_id(request)
-    client = get_udemy_client(request)
-
-    # Check for active run
     active = EnrollmentManager.get_active_run(user_id)
     if active:
         raise HTTPException(status_code=409, detail="An enrollment run is already active")
 
-    # Load settings
     user_settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     if not user_settings:
         raise HTTPException(status_code=404, detail="Settings not found. Configure settings first.")
@@ -81,7 +45,6 @@ async def start_enrollment(
         "discounted_only": user_settings.discounted_only or False,
     }
 
-    # Validate settings
     enabled_sites = [k for k, v in settings_dict["sites"].items() if v]
     enabled_langs = [k for k, v in settings_dict["languages"].items() if v]
     enabled_cats = [k for k, v in settings_dict["categories"].items() if v]
@@ -98,9 +61,8 @@ async def start_enrollment(
 
 
 @router.get("/progress")
-async def get_progress(request: Request):
+async def get_progress(user_id: int = Depends(get_current_user_id)):
     """Get live progress of the active enrollment run."""
-    user_id = get_user_id(request)
     active = EnrollmentManager.get_active_run(user_id)
     if not active:
         return {"active": False, "message": "No active enrollment run"}
@@ -108,10 +70,8 @@ async def get_progress(request: Request):
 
 
 @router.get("/progress/stream")
-async def stream_progress(request: Request):
+async def stream_progress(user_id: int = Depends(get_current_user_id)):
     """Server-Sent Events stream for real-time progress updates."""
-    user_id = get_user_id(request)
-
     async def event_generator():
         import asyncio
         while True:
@@ -128,12 +88,11 @@ async def stream_progress(request: Request):
 
 @router.get("/history", response_model=list[EnrollmentStatus])
 async def get_enrollment_history(
-    request: Request,
     limit: int = 20,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
-    """Get enrollment run history."""
-    user_id = get_user_id(request)
+    """Get enrollment run history for the current user only."""
     runs = (
         db.query(EnrollmentRun)
         .filter(EnrollmentRun.user_id == user_id)
@@ -164,11 +123,10 @@ async def get_enrollment_history(
 @router.get("/run/{run_id}")
 async def get_run_details(
     run_id: int,
-    request: Request,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
-    """Get details for a specific enrollment run."""
-    user_id = get_user_id(request)
+    """Get details for a specific enrollment run (only if it belongs to the current user)."""
     run = db.query(EnrollmentRun).filter(
         EnrollmentRun.id == run_id,
         EnrollmentRun.user_id == user_id,

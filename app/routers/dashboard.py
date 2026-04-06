@@ -7,7 +7,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.models.database import get_db, EnrollmentRun, EnrolledCourse
+from app.models.database import get_db, User, EnrollmentRun, EnrolledCourse
+from app.deps import get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -41,44 +42,31 @@ async def history_page(request: Request):
 
 @router.get("/api/dashboard/stats")
 async def dashboard_stats(
-    request: Request,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
-    """Get aggregated dashboard statistics."""
-    user_id = getattr(request.app.state, "udemy_clients", {}).get("default_user_id")
-    if not user_id:
-        return {
-            "total_runs": 0,
-            "total_enrolled": 0,
-            "total_amount_saved": 0.0,
-            "currency": "usd",
-            "total_already_enrolled": 0,
-            "total_expired": 0,
-            "total_excluded": 0,
-        }
+    """Get dashboard statistics for the current user.
 
-    stats = db.query(
-        func.count(EnrollmentRun.id).label("total_runs"),
-        func.coalesce(func.sum(EnrollmentRun.successfully_enrolled), 0).label("total_enrolled"),
-        func.coalesce(func.sum(EnrollmentRun.amount_saved), 0.0).label("total_amount_saved"),
-        func.coalesce(func.sum(EnrollmentRun.already_enrolled), 0).label("total_already_enrolled"),
-        func.coalesce(func.sum(EnrollmentRun.expired), 0).label("total_expired"),
-        func.coalesce(func.sum(EnrollmentRun.excluded), 0).label("total_excluded"),
-    ).filter(EnrollmentRun.user_id == user_id).first()
+    Lifetime totals come from the user row (incremented atomically after every
+    course, so they survive disconnects and incomplete runs).
+    Total run count still comes from enrollment_runs.
+    """
+    user = db.get(User, user_id)
+    if not user:
+        return {"total_runs": 0, "total_enrolled": 0, "total_amount_saved": 0.0,
+                "currency": "usd", "total_already_enrolled": 0,
+                "total_expired": 0, "total_excluded": 0}
 
-    latest_run = (
-        db.query(EnrollmentRun)
-        .filter(EnrollmentRun.user_id == user_id)
-        .order_by(EnrollmentRun.started_at.desc())
-        .first()
-    )
+    total_runs = db.query(func.count(EnrollmentRun.id)).filter(
+        EnrollmentRun.user_id == user_id
+    ).scalar() or 0
 
     return {
-        "total_runs": stats.total_runs or 0,
-        "total_enrolled": stats.total_enrolled or 0,
-        "total_amount_saved": float(stats.total_amount_saved or 0),
-        "currency": latest_run.currency if latest_run else "usd",
-        "total_already_enrolled": stats.total_already_enrolled or 0,
-        "total_expired": stats.total_expired or 0,
-        "total_excluded": stats.total_excluded or 0,
+        "total_runs": total_runs,
+        "total_enrolled": user.total_enrolled or 0,
+        "total_amount_saved": float(user.total_amount_saved or 0),
+        "currency": user.currency or "usd",
+        "total_already_enrolled": user.total_already_enrolled or 0,
+        "total_expired": user.total_expired or 0,
+        "total_excluded": user.total_excluded or 0,
     }

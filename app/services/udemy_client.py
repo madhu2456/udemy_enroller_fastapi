@@ -63,10 +63,20 @@ class UdemyClient:
         """Login using email and password."""
         logger.info("Attempting manual login")
         s = requests.session()
-        r = s.get(
-            "https://www.udemy.com/join/signup-popup/?locale=en_US&response_type=html&next=https%3A%2F%2Fwww.udemy.com%2Flogout%2F",
-            headers={"User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)"},
-        )
+        try:
+            r = s.get(
+                "https://www.udemy.com/join/signup-popup/?locale=en_US&response_type=html&next=https%3A%2F%2Fwww.udemy.com%2Flogout%2F",
+                headers={"User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)"},
+                timeout=30,
+            )
+        except requests.exceptions.ConnectionError as e:
+            raise LoginException(
+                "Could not connect to Udemy — check your internet connection and try again."
+            ) from e
+        except requests.exceptions.Timeout:
+            raise LoginException(
+                "Connection to Udemy timed out — check your internet connection and try again."
+            )
         try:
             csrf_token = r.cookies["csrftoken"]
         except KeyError:
@@ -135,12 +145,21 @@ class UdemyClient:
         }
 
         # ── Step 1: verify login ───────────────────────
-        ctx_resp = s.get(
-            "https://www.udemy.com/api-2.0/contexts/me/?header=True",
-            cookies=self.cookie_dict,
-            headers=headers,
-            timeout=30,
-        )
+        try:
+            ctx_resp = s.get(
+                "https://www.udemy.com/api-2.0/contexts/me/?header=True",
+                cookies=self.cookie_dict,
+                headers=headers,
+                timeout=30,
+            )
+        except requests.exceptions.ConnectionError as e:
+            raise LoginException(
+                "Could not connect to Udemy — check your internet connection and try again."
+            ) from e
+        except requests.exceptions.Timeout:
+            raise LoginException(
+                "Connection to Udemy timed out — check your internet connection and try again."
+            )
         if not ctx_resp.text or not ctx_resp.text.strip():
             raise LoginException("Udemy returned an empty response during login verification")
         try:
@@ -384,6 +403,17 @@ class UdemyClient:
             return 0.0
         return len(ta & tb) / len(ta | tb)
 
+    @staticmethod
+    def _throttle_wait(result: dict) -> int:
+        """Return the number of seconds to wait if Udemy is throttling, else 0."""
+        detail = result.get("detail", "")
+        if "throttled" in str(detail).lower():
+            match = re.search(r"(\d+)\s+second", str(detail), re.IGNORECASE)
+            wait = int(match.group(1)) if match else 60
+            logger.warning(f"Udemy rate-limit hit — waiting {wait}s before retrying")
+            return wait
+        return 0
+
     def _checkout_one(self, course: Course, headers: dict) -> bool:
         """Enroll in a single course with a coupon. Returns True on success."""
         payload = {
@@ -425,11 +455,33 @@ class UdemyClient:
                 self.already_enrolled_c += 1
                 return True  # treat as success so the caller marks it enrolled
 
+            # Handle rate-throttling: wait the requested time then retry
+            wait = self._throttle_wait(result)
+            if wait:
+                time.sleep(wait)
+                continue  # don't count this as a failed attempt
+
             logger.error(f"Single checkout attempt {attempt+1} failed for '{course.title}': {result}")
             self.client.get("https://www.udemy.com/payment/checkout/", headers=headers)
             time.sleep(5)
 
         return False
+
+    def checkout_single(self, course: Course) -> bool:
+        """Public single-course checkout. Builds headers and delegates to _checkout_one."""
+        headers = {
+            "User-Agent": "okhttp/4.10.0 UdemyAndroid 9.7.0(515) (phone)",
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": "https://www.udemy.com",
+            "Referer": "https://www.udemy.com/payment/checkout/",
+            "X-CSRF-Token": self.client.cookies.get("csrftoken", domain="www.udemy.com"),
+        }
+        result = self._checkout_one(course, headers)
+        # Reset the checkout page between courses
+        self.client.get("https://www.udemy.com/payment/checkout/", headers=headers)
+        return result
 
     def bulk_checkout(self, valid_courses: list[Course]):
         """Bulk enroll in courses with valid coupons."""
@@ -528,6 +580,13 @@ class UdemyClient:
                     self.client.get("https://www.udemy.com/payment/checkout/", headers=headers)
                     time.sleep(1)
                 return True  # individual results already tracked inside _checkout_one
+
+            # Handle rate-throttling: wait the requested time and retry without
+            # burning one of the limited attempts
+            wait = self._throttle_wait(result)
+            if wait:
+                time.sleep(wait)
+                continue  # retry immediately after the wait; don't count as failure
 
             logger.error(f"Bulk checkout attempt {attempt + 1} failed: {result}")
             self.client.get("https://www.udemy.com/payment/checkout/", headers=headers)

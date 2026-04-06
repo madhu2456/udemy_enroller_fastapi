@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db, UserSettings
+from app.deps import get_current_user_id
 from app.schemas.schemas import SettingsUpdate, SettingsResponse
 
 logger = logging.getLogger(__name__)
@@ -12,21 +13,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/settings", tags=["Settings"])
 
 
-def get_user_id(request: Request) -> int:
-    """Get current user ID from app state."""
-    user_id = getattr(request.app.state, "udemy_clients", {}).get("default_user_id")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return user_id
-
-
 @router.get("/", response_model=SettingsResponse)
 async def get_settings(
-    request: Request,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
     """Get current user settings."""
-    user_id = get_user_id(request)
     settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
@@ -47,11 +39,10 @@ async def get_settings(
 @router.put("/")
 async def update_settings(
     settings_update: SettingsUpdate,
-    request: Request,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
     """Update user settings."""
-    user_id = get_user_id(request)
     settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
@@ -67,11 +58,10 @@ async def update_settings(
 
 @router.post("/reset")
 async def reset_settings(
-    request: Request,
     db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
     """Reset settings to defaults."""
-    user_id = get_user_id(request)
     settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")

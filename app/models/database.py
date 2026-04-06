@@ -40,9 +40,30 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Lifetime aggregate stats — incremented after every course regardless of whether
+    # a run completes, so metrics are always accurate even after disconnects.
+    total_enrolled = Column(Integer, default=0, nullable=False)
+    total_already_enrolled = Column(Integer, default=0, nullable=False)
+    total_expired = Column(Integer, default=0, nullable=False)
+    total_excluded = Column(Integer, default=0, nullable=False)
+    total_amount_saved = Column(Float, default=0.0, nullable=False)
+
     # Relationships
     settings = relationship("UserSettings", back_populates="user", uselist=False)
     enrollment_runs = relationship("EnrollmentRun", back_populates="user")
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserSession(Base):
+    """Persistent session — maps a secure token (stored in browser cookie) to a user."""
+    __tablename__ = "user_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(64), unique=True, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="sessions")
 
 
 class UserSettings(Base):
