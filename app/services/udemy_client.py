@@ -80,7 +80,16 @@ class UdemyClient:
         try:
             csrf_token = r.cookies["csrftoken"]
         except KeyError:
-            raise LoginException("Could not retrieve CSRF token from Udemy")
+            logger.error(
+                f"CSRF token missing — HTTP {r.status_code}, "
+                f"cookies={list(r.cookies.keys())}, "
+                f"body_preview={r.text[:300]!r}"
+            )
+            raise LoginException(
+                "Email/password login is blocked by Udemy's security on this server. "
+                "Please use Cookie Login instead: open udemy.com in your browser, "
+                "press F12 → Application → Cookies, and copy access_token, client_id, and csrftoken."
+            )
 
         data = {
             "csrfmiddlewaretoken": csrf_token,

@@ -12,16 +12,21 @@
 
         <!-- Tab buttons -->
         <div class="flex rounded-lg bg-gray-700 p-1 mb-6">
-            <button id="tab-email" onclick="switchTab('email')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white">
+            <button id="tab-email" onclick="switchTab('email')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white">
                 <i class="fas fa-envelope mr-1"></i>Email
             </button>
-            <button id="tab-cookies" onclick="switchTab('cookies')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white">
+            <button id="tab-cookies" onclick="switchTab('cookies')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white">
                 <i class="fas fa-cookie mr-1"></i>Cookies
             </button>
         </div>
 
         <!-- Email Login Form -->
-        <form id="email-form" onsubmit="loginWithEmail(event)">
+        <form id="email-form" class="hidden" onsubmit="loginWithEmail(event)">
+            <div class="mb-4 p-3 bg-yellow-900/40 border border-yellow-600/50 rounded-lg text-yellow-300 text-xs">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Email/password login may be blocked by Udemy's security when running on a server.
+                If you see a CSRF error, switch to <strong>Cookie Login</strong> below.
+            </div>
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-300 mb-2">Email</label>
                 <input type="email" id="email" required
@@ -41,7 +46,15 @@
         </form>
 
         <!-- Cookie Login Form -->
-        <form id="cookies-form" class="hidden" onsubmit="loginWithCookies(event)">
+        <form id="cookies-form" onsubmit="loginWithCookies(event)">
+            <div class="mb-4 p-3 bg-blue-900/40 border border-blue-600/50 rounded-lg text-blue-300 text-xs">
+                <p class="font-semibold mb-1"><i class="fas fa-info-circle mr-1"></i>How to get your cookies:</p>
+                <ol class="list-decimal list-inside space-y-0.5 text-blue-200">
+                    <li>Open <a href="https://www.udemy.com" target="_blank" class="underline">udemy.com</a> and log in</li>
+                    <li>Press <strong>F12</strong> → <strong>Application</strong> tab → <strong>Cookies</strong> → <strong>https://www.udemy.com</strong></li>
+                    <li>Copy the values for <strong>access_token</strong>, <strong>client_id</strong>, and <strong>csrftoken</strong></li>
+                </ol>
+            </div>
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-300 mb-2">Access Token</label>
                 <input type="text" id="access_token" required
@@ -97,6 +110,9 @@ function switchTab(tab) {
         tabEmail.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white';
     }
 }
+
+// Start on Cookies tab (email login is blocked by Cloudflare on hosted servers)
+window.addEventListener('DOMContentLoaded', () => switchTab('cookies'));
 
 async function loginWithEmail(e) {
     e.preventDefault();
