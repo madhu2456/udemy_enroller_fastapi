@@ -12,6 +12,12 @@ A production-ready backend system built with FastAPI to discover, aggregate, and
 
 ---
 
+## 🌐 My Portfolio
+
+- 🔗 https://www.madhudadi.in
+
+---
+
 ## 🧠 Problem Statement
 
 While spending significant time on online learning platforms, I realized that many publicly available course opportunities (like discounts and offers) often go unnoticed due to timing and discoverability.
