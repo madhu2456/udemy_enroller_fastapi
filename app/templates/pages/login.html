@@ -114,6 +114,10 @@ function switchTab(tab) {
 // Start on Cookies tab (email login is blocked by Cloudflare on hosted servers)
 window.addEventListener('DOMContentLoaded', () => switchTab('cookies'));
 
+function isLoginSuccess(data) {
+    return !!data && (data.success === true || data.status === 'success');
+}
+
 async function loginWithEmail(e) {
     e.preventDefault();
     showMessage('Logging in...', 'blue');
@@ -127,7 +131,7 @@ async function loginWithEmail(e) {
             })
         });
         const data = await resp.json();
-        if (data.success) {
+        if (isLoginSuccess(data)) {
             showMessage(`Welcome, ${data.display_name}! Redirecting...`, 'green');
             setTimeout(() => window.location.href = '/', 1000);
         } else {
@@ -152,7 +156,7 @@ async function loginWithCookies(e) {
             })
         });
         const data = await resp.json();
-        if (data.success) {
+        if (isLoginSuccess(data)) {
             showMessage(`Welcome, ${data.display_name}! Redirecting...`, 'green');
             setTimeout(() => window.location.href = '/', 1000);
         } else {

@@ -2,13 +2,32 @@
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 # ── Auth ──────────────────────────────────────────────
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        """Validate email is non-empty and has a basic email shape."""
+        value = v.strip() if isinstance(v, str) else ""
+        if not value:
+            raise ValueError("Email cannot be empty")
+        if "@" not in value or "." not in value.rsplit("@", 1)[-1]:
+            raise ValueError("Invalid email format")
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """Validate password meets minimum security requirements."""
+        if not v or len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        return v
 
 
 class CookieLoginRequest(BaseModel):
@@ -18,7 +37,8 @@ class CookieLoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    success: bool
+    success: bool = False
+    status: str  # "success" | "error"
     message: str
     display_name: Optional[str] = None
     currency: Optional[str] = None
@@ -46,6 +66,44 @@ class SettingsUpdate(BaseModel):
     course_update_threshold_months: Optional[int] = None
     save_txt: Optional[bool] = None
     discounted_only: Optional[bool] = None
+    proxy_url: Optional[str] = None
+    enable_headless: Optional[bool] = None
+    schedule_interval: Optional[int] = None
+
+    @field_validator("proxy_url")
+    @classmethod
+    def validate_proxy_url(cls, v: Optional[str]) -> Optional[str]:
+        """Validate proxy URL format if provided."""
+        if not v:
+            return v
+        from app.security import validate_proxy_url
+        if not validate_proxy_url(v):
+            raise ValueError("Invalid proxy URL format")
+        return v
+
+    @field_validator("min_rating")
+    @classmethod
+    def validate_min_rating(cls, v: Optional[float]) -> Optional[float]:
+        """Validate min_rating is between 0 and 5."""
+        if v is not None and not (0.0 <= v <= 5.0):
+            raise ValueError("min_rating must be between 0 and 5")
+        return v
+
+    @field_validator("course_update_threshold_months")
+    @classmethod
+    def validate_threshold(cls, v: Optional[int]) -> Optional[int]:
+        """Validate threshold is positive."""
+        if v is not None and v < 0:
+            raise ValueError("course_update_threshold_months must be non-negative")
+        return v
+
+    @field_validator("schedule_interval")
+    @classmethod
+    def validate_schedule(cls, v: Optional[int]) -> Optional[int]:
+        """Validate schedule_interval is non-negative."""
+        if v is not None and v < 0:
+            raise ValueError("schedule_interval must be non-negative")
+        return v
 
 
 class SettingsResponse(BaseModel):
@@ -58,9 +116,11 @@ class SettingsResponse(BaseModel):
     course_update_threshold_months: int
     save_txt: bool
     discounted_only: bool
+    proxy_url: Optional[str]
+    enable_headless: bool
+    schedule_interval: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Enrollment ────────────────────────────────────────
@@ -84,8 +144,7 @@ class EnrollmentStatus(BaseModel):
     completed_at: Optional[datetime] = None
     error_message: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CourseInfo(BaseModel):
@@ -103,8 +162,7 @@ class CourseInfo(BaseModel):
     error_message: Optional[str] = None
     enrolled_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Dashboard ─────────────────────────────────────────

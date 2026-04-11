@@ -1,12 +1,11 @@
 """SQLAlchemy database setup and models."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text, JSON,
     create_engine, ForeignKey
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from config.settings import get_settings
 
 settings = get_settings()
@@ -18,6 +17,11 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+
+def _utcnow_naive() -> datetime:
+    """Return current UTC timestamp without tzinfo for DB compatibility."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def get_db():
@@ -34,11 +38,13 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=True)  # Bcrypt hashed password
     udemy_display_name = Column(String(255), nullable=True)
+    udemy_cookies = Column(JSON, nullable=True)
     currency = Column(String(10), default="usd")
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow_naive)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
 
     # Lifetime aggregate stats — incremented after every course regardless of whether
     # a run completes, so metrics are always accurate even after disconnects.
@@ -61,7 +67,7 @@ class UserSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String(64), unique=True, index=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow_naive)
 
     user = relationship("User", back_populates="sessions")
 
@@ -112,8 +118,13 @@ class UserSettings(Base):
     save_txt = Column(Boolean, default=False)
     discounted_only = Column(Boolean, default=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Advanced Features
+    proxy_url = Column(String(500), nullable=True)
+    enable_headless = Column(Boolean, default=False)
+    schedule_interval = Column(Integer, default=0)  # 0 = disabled, else hours
+
+    created_at = Column(DateTime, default=_utcnow_naive)
+    updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
 
     # Relationships
     user = relationship("User", back_populates="settings")
@@ -136,7 +147,7 @@ class EnrollmentRun(Base):
     currency = Column(String(10), default="usd")
 
     error_message = Column(Text, nullable=True)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=_utcnow_naive)
     completed_at = Column(DateTime, nullable=True)
 
     # Relationships
@@ -162,7 +173,7 @@ class EnrolledCourse(Base):
     site_source = Column(String(100), nullable=True)
     status = Column(String(50), default="enrolled")  # enrolled, failed, excluded, expired
     error_message = Column(Text, nullable=True)
-    enrolled_at = Column(DateTime, default=datetime.utcnow)
+    enrolled_at = Column(DateTime, default=_utcnow_naive)
 
     # Relationships
     enrollment_run = relationship("EnrollmentRun", back_populates="courses")

@@ -27,7 +27,7 @@ def get_current_user_id(request: Request, db: Session = Depends(get_db)) -> int:
     return session.user_id
 
 
-def get_udemy_client(request: Request) -> UdemyClient:
+async def get_udemy_client(request: Request, db: Session = Depends(get_db)) -> UdemyClient:
     """Return the authenticated UdemyClient for this session.
 
     The client is stored in app.state keyed by the session token so each
@@ -37,9 +37,36 @@ def get_udemy_client(request: Request) -> UdemyClient:
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    session = db.query(UserSession).filter(UserSession.token == token).first()
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
     clients = getattr(request.app.state, "udemy_clients", {})
     client = clients.get(token)
-    if not client or not client.is_authenticated:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    if client and client.is_authenticated:
+        return client
 
-    return client
+    user = session.user
+    cookies = user.udemy_cookies if user else None
+    if not user or not isinstance(cookies, dict):
+        raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
+
+    access_token = cookies.get("access_token")
+    client_id = cookies.get("client_id")
+    csrf_token = cookies.get("csrf_token") or cookies.get("csrftoken") or ""
+    if not access_token or not client_id:
+        raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
+
+    restored_client = UdemyClient(proxy=user.settings.proxy_url if user.settings else None)
+    restored_client.cookie_login(access_token, client_id, csrf_token)
+    try:
+        await restored_client.get_session_info()
+    except Exception as exc:
+        logger.warning("Failed to restore Udemy session for user %s: %s", session.user_id, exc)
+        raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
+
+    if not hasattr(request.app.state, "udemy_clients"):
+        request.app.state.udemy_clients = {}
+    request.app.state.udemy_clients[token] = restored_client
+
+    return restored_client
