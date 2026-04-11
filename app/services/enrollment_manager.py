@@ -72,12 +72,19 @@ class EnrollmentManager:
         if active:
             raise RuntimeError("An enrollment run is already active for this user")
 
+        enabled_sites = [k for k, v in self.settings.get("sites", {}).items() if v]
+        initial_scraping_progress = [
+            {"site": site, "progress": 0, "total": 0, "done": False, "error": None}
+            for site in enabled_sites
+        ]
+
         run = EnrollmentRun(
             user_id=self.user_id,
             status="pending",
             currency=self.udemy.currency,
             progress_data={
-                "settings": self.settings
+                "settings": self.settings,
+                "scraping_progress": initial_scraping_progress
             }
         )
         self._request_db.add(run)
@@ -105,7 +112,17 @@ class EnrollmentManager:
                 proxy=self.settings.get("proxy_url"),
                 enable_headless=self.settings.get("enable_headless", False)
             )
-            raw_scraped_courses = await self.scraper.scrape_all()
+
+            async def _update_scraping_progress():
+                while self.status == "scraping":
+                    await self._update_run_stats(db, run)
+                    await asyncio.sleep(1)
+
+            progress_task = asyncio.create_task(_update_scraping_progress())
+            try:
+                raw_scraped_courses = await self.scraper.scrape_all()
+            finally:
+                progress_task.cancel()
 
             # Pre-filter to ignore previously processed courses for this user
             previous_courses = db.query(EnrolledCourse.url, EnrolledCourse.slug, EnrolledCourse.status)\

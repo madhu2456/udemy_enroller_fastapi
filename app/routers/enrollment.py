@@ -110,6 +110,7 @@ async def get_enrollment_history(
     runs = (
         db.query(EnrollmentRun)
         .filter(EnrollmentRun.user_id == user_id)
+        .filter(EnrollmentRun.status != "deleted")
         .order_by(EnrollmentRun.started_at.desc())
         .limit(limit)
         .all()
@@ -144,6 +145,7 @@ async def get_run_details(
     run = db.query(EnrollmentRun).filter(
         EnrollmentRun.id == run_id,
         EnrollmentRun.user_id == user_id,
+        EnrollmentRun.status != "deleted"
     ).first()
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -156,6 +158,31 @@ async def get_run_details(
         "run": run,
         "courses": courses,
     }
+
+
+@router.delete("/run/{run_id}")
+async def delete_run(
+    run_id: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """Soft delete a specific enrollment run while keeping its course records for the cache."""
+    run = db.query(EnrollmentRun).filter(
+        EnrollmentRun.id == run_id,
+        EnrollmentRun.user_id == user_id,
+    ).first()
+    
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+        
+    if run.status in ["pending", "scraping", "enrolling"]:
+        raise HTTPException(status_code=400, detail="Cannot delete an active run")
+
+    run.status = "deleted"
+    run.progress_data = {}  # Clear large JSON data to save space
+    db.commit()
+
+    return {"success": True, "message": "Run deleted successfully"}
 
 
 @router.get("/run/{run_id}/export")

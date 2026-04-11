@@ -95,6 +95,7 @@ def upgrade() -> None:
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("started_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("completed_at", sa.DateTime(), nullable=True),
+        sa.Column("progress_data", sa.JSON(), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
     )

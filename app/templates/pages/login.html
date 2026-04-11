@@ -112,7 +112,20 @@ function switchTab(tab) {
 }
 
 // Start on Cookies tab (email login is blocked by Cloudflare on hosted servers)
-window.addEventListener('DOMContentLoaded', () => switchTab('cookies'));
+window.addEventListener('DOMContentLoaded', () => {
+    switchTab('cookies');
+    checkIfAlreadyLoggedIn();
+});
+
+async function checkIfAlreadyLoggedIn() {
+    try {
+        const resp = await fetch('/api/auth/status');
+        const data = await resp.json();
+        if (data.authenticated) {
+            window.location.href = '/';
+        }
+    } catch (err) {}
+}
 
 function isLoginSuccess(data) {
     return !!data && (data.success === true || data.status === 'success');

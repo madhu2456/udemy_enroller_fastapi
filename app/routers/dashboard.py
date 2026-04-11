@@ -60,7 +60,8 @@ async def dashboard_stats(
                 "total_expired": 0, "total_excluded": 0}
 
     total_runs = db.query(func.count(EnrollmentRun.id)).filter(
-        EnrollmentRun.user_id == user_id
+        EnrollmentRun.user_id == user_id,
+        EnrollmentRun.status != "deleted"
     ).scalar() or 0
 
     return {

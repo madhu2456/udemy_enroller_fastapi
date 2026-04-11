@@ -58,7 +58,7 @@ async function loadHistory() {
         }
 
         container.innerHTML = runs.map(run => `
-            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 cursor-pointer hover:border-blue-500 transition-colors"
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 cursor-pointer hover:border-blue-500 transition-colors relative"
                  onclick="showRunDetails(${run.run_id})">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
@@ -71,7 +71,12 @@ async function loadHistory() {
                         <span class="text-sm text-gray-400">${new Date(run.started_at).toLocaleString()}</span>
                         ${run.completed_at ? `<span class="text-xs text-gray-500">Duration: ${getDuration(run.started_at, run.completed_at)}</span>` : ''}
                     </div>
-                    <i class="fas fa-chevron-right text-gray-500"></i>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="event.stopPropagation(); deleteRun(${run.run_id})" class="text-red-400 hover:text-red-300 transition-colors" title="Delete Run" ${['pending', 'scraping', 'enrolling'].includes(run.status) ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <i class="fas fa-chevron-right text-gray-500"></i>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
                     <div><p class="text-xs text-gray-500">Found</p><p class="text-lg font-bold text-white">${run.total_courses_found}</p></div>
@@ -87,6 +92,27 @@ async function loadHistory() {
     } catch(e) {
         console.error('Failed to load history:', e);
         document.getElementById('history-list').innerHTML = '<p class="text-center text-red-400 py-8">Failed to load history.</p>';
+    }
+}
+
+async function deleteRun(runId) {
+    if (!confirm('Are you sure you want to delete this run? Your lifetime metrics will be kept, but the specific course records for this run will be permanently deleted.')) {
+        return;
+    }
+    
+    try {
+        const resp = await fetch(`/api/enrollment/run/${runId}`, { method: 'DELETE' });
+        const data = await resp.json();
+        
+        if (resp.ok && data.success) {
+            showToast('Run deleted successfully', 'success');
+            loadHistory();
+        } else {
+            showToast(data.detail || data.message || 'Failed to delete run', 'error');
+        }
+    } catch (e) {
+        console.error('Error deleting run:', e);
+        showToast('Error communicating with the server', 'error');
     }
 }
 
