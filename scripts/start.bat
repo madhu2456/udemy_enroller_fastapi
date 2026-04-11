@@ -64,7 +64,7 @@ if not exist ".env" (
 REM Start the application
 echo.
 echo ========================================
-echo  Server starting at http://localhost:8000
+echo  Server starting at http://localhost:8001
 echo  Press Ctrl+C to stop
 echo ========================================
 echo.

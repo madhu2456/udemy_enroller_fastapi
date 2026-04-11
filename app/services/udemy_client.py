@@ -152,8 +152,8 @@ class UdemyClient:
             logger.exception("Failed to get session info")
             raise LoginException(f"Session verification failed: {str(e)}")
 
-    async def get_enrolled_courses(self):
-        """Fetch all enrolled courses asynchronously."""
+    async def get_enrolled_courses(self, known_slugs: set = None):
+        """Fetch all enrolled courses asynchronously. Stops early if known courses are found."""
         logger.info("Fetching enrolled courses")
         next_page = (
             "https://www.udemy.com/api-2.0/users/me/subscribed-courses/"
@@ -161,26 +161,39 @@ class UdemyClient:
         )
         courses = {}
         page_num = 0
+        known_slugs = known_slugs or set()
+        stop_fetching = False
 
-        while next_page and page_num < 50:
+        while next_page and page_num < 50 and not stop_fetching:
             page_num += 1
             resp = await self.http.get(next_page, cookies=self.cookie_dict)
             data = await self.http.safe_json(resp, f"enrolled courses page {page_num}")
             if not data:
                 break
 
-            for course in data.get("results", []):
+            results = data.get("results", [])
+            if not results:
+                break
+
+            for course in results:
                 try:
                     parts = course["url"].split("/")
                     slug = parts[3] if len(parts) > 3 and parts[2] == "draft" else parts[2]
                     courses[slug] = course.get("enrollment_time", "")
+                    if slug in known_slugs:
+                        # Reached courses we already know about. Stop fetching.
+                        stop_fetching = True
                 except (IndexError, KeyError):
                     continue
 
             next_page = data.get("next")
 
         self.enrolled_courses = courses
-        logger.info(f"Found {len(courses)} enrolled courses.")
+        # Merge with known_slugs so is_already_enrolled works for older courses
+        for slug in known_slugs:
+            if slug not in self.enrolled_courses:
+                self.enrolled_courses[slug] = ""
+        logger.info(f"Fetched {page_num} page(s) of enrolled courses.")
 
     async def get_course_id(self, course: Course):
         """Fetch course ID and metadata asynchronously."""
