@@ -67,17 +67,38 @@
             <!-- Instructor Exclude -->
             <div>
                 <label class="block text-sm font-medium text-gray-300 mb-2">Exclude Instructors</label>
-                <textarea id="instructor-exclude" rows="4"
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                    placeholder="One username per line"></textarea>
+                <div id="instructor-tags" class="flex flex-wrap gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg min-h-[100px]">
+                    <input type="text" id="instructor-input" placeholder="Type and press Enter..."
+                        class="bg-transparent border-none focus:ring-0 text-white text-sm flex-grow min-w-[120px]">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Press Enter to add instructor username</p>
             </div>
 
             <!-- Title Exclude -->
             <div>
                 <label class="block text-sm font-medium text-gray-300 mb-2">Exclude Title Keywords</label>
-                <textarea id="title-exclude" rows="4"
+                <div id="title-tags" class="flex flex-wrap gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg min-h-[100px]">
+                    <input type="text" id="title-input" placeholder="Type and press Enter..."
+                        class="bg-transparent border-none focus:ring-0 text-white text-sm flex-grow min-w-[120px]">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Press Enter to add keyword</p>
+            </div>
+
+            <!-- Proxy URL -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Proxy URL</label>
+                <input type="text" id="proxy-url" 
                     class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                    placeholder="One keyword per line (not case sensitive)"></textarea>
+                    placeholder="http://user:pass@host:port">
+                <p class="text-xs text-gray-500 mt-1">Leave blank for direct connection</p>
+            </div>
+
+            <!-- Schedule Interval -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Auto-Run Every (hours)</label>
+                <input type="number" id="schedule-interval" min="0" max="168" value="0"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
+                <p class="text-xs text-gray-500 mt-1">Set to 0 to disable automated background runs</p>
             </div>
         </div>
 
@@ -90,6 +111,10 @@
             <label class="flex items-center space-x-2 cursor-pointer">
                 <input type="checkbox" id="discounted-only" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
                 <span class="text-sm text-gray-300">Discounted courses only (skip free)</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="enable-headless" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                <span class="text-sm text-gray-300">Enable Headless Browser (Slower but more robust)</span>
             </label>
         </div>
     </div>
@@ -105,6 +130,8 @@ let currentSettings = {};
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     loadSettings();
+    setupTagInput('instructor-input', 'instructor-tags');
+    setupTagInput('title-input', 'title-tags');
 });
 
 async function checkAuth() {
@@ -117,6 +144,37 @@ async function checkAuth() {
     } catch(e) { window.location.href = '/login'; }
 }
 
+function setupTagInput(inputId, containerId) {
+    const input = document.getElementById(inputId);
+    const container = document.getElementById(containerId);
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = input.value.trim();
+            if (val) {
+                addTag(container, val);
+                input.value = '';
+            }
+        }
+    });
+}
+
+function addTag(container, text) {
+    const existing = Array.from(container.querySelectorAll('.tag-text')).map(t => t.textContent);
+    if (existing.includes(text)) return;
+
+    const tag = document.createElement('div');
+    tag.className = 'flex items-center bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs group';
+    tag.innerHTML = `
+        <span class="tag-text">${text}</span>
+        <button type="button" onclick="this.parentElement.remove()" class="ml-2 text-blue-400 hover:text-white">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    container.insertBefore(tag, container.querySelector('input'));
+}
+
 async function loadSettings() {
     try {
         const resp = await fetch('/api/settings/');
@@ -126,10 +184,21 @@ async function loadSettings() {
         renderCheckboxGrid('categories-grid', currentSettings.categories);
         document.getElementById('min-rating').value = currentSettings.min_rating;
         document.getElementById('update-threshold').value = currentSettings.course_update_threshold_months;
-        document.getElementById('instructor-exclude').value = (currentSettings.instructor_exclude || []).join('\n');
-        document.getElementById('title-exclude').value = (currentSettings.title_exclude || []).join('\n');
+        
+        // Clear and Render Tags
+        const instContainer = document.getElementById('instructor-tags');
+        instContainer.querySelectorAll('.flex').forEach(t => t.remove());
+        (currentSettings.instructor_exclude || []).forEach(t => addTag(instContainer, t));
+
+        const titleContainer = document.getElementById('title-tags');
+        titleContainer.querySelectorAll('.flex').forEach(t => t.remove());
+        (currentSettings.title_exclude || []).forEach(t => addTag(titleContainer, t));
+
         document.getElementById('save-txt').checked = currentSettings.save_txt;
         document.getElementById('discounted-only').checked = currentSettings.discounted_only;
+        document.getElementById('proxy-url').value = currentSettings.proxy_url || '';
+        document.getElementById('schedule-interval').value = currentSettings.schedule_interval || 0;
+        document.getElementById('enable-headless').checked = currentSettings.enable_headless || false;
     } catch(e) { console.error('Failed to load settings:', e); }
 }
 
@@ -152,16 +221,24 @@ function gatherSettings() {
         });
         return result;
     };
+    
+    const getTags = (containerId) => {
+        return Array.from(document.getElementById(containerId).querySelectorAll('.tag-text')).map(t => t.textContent);
+    };
+
     return {
         sites: gather('sites-grid'),
         languages: gather('languages-grid'),
         categories: gather('categories-grid'),
         min_rating: parseFloat(document.getElementById('min-rating').value) || 0,
         course_update_threshold_months: parseInt(document.getElementById('update-threshold').value) || 24,
-        instructor_exclude: document.getElementById('instructor-exclude').value.split('\n').filter(x => x.trim()),
-        title_exclude: document.getElementById('title-exclude').value.split('\n').filter(x => x.trim()),
+        instructor_exclude: getTags('instructor-tags'),
+        title_exclude: getTags('title-tags'),
         save_txt: document.getElementById('save-txt').checked,
         discounted_only: document.getElementById('discounted-only').checked,
+        proxy_url: document.getElementById('proxy-url').value.trim() || null,
+        schedule_interval: parseInt(document.getElementById('schedule-interval').value) || 0,
+        enable_headless: document.getElementById('enable-headless').checked,
     };
 }
 

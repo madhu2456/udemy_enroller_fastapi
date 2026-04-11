@@ -115,6 +115,32 @@
     </div>
 </div>
 
+<!-- Charts & Logs -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Savings Chart -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-xl font-bold text-white mb-4">
+            <i class="fas fa-chart-line mr-2 text-emerald-400"></i>Savings History
+        </h2>
+        <div class="h-64">
+            <canvas id="savings-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Live Logs -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-white">
+                <i class="fas fa-terminal mr-2 text-blue-400"></i>Live System Logs
+            </h2>
+            <button onclick="clearLogs()" class="text-xs text-gray-500 hover:text-gray-300">Clear</button>
+        </div>
+        <div id="log-window" class="h-64 bg-black rounded-lg p-3 font-mono text-xs overflow-y-auto text-green-500 border border-gray-700">
+            <div class="text-gray-600">Waiting for logs...</div>
+        </div>
+    </div>
+</div>
+
 <!-- Recent Runs -->
 <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
     <h2 class="text-xl font-bold text-white mb-4">
@@ -129,12 +155,15 @@
 {% block scripts %}
 <script>
 let progressInterval = null;
+let savingsChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     loadDashboardStats();
     loadRecentRuns();
     checkActiveRun();
+    initAnalytics();
+    initLogStream();
 });
 
 async function checkAuth() {
@@ -171,22 +200,26 @@ async function loadRecentRuns() {
         if (runs.length === 0) return;
 
         container.innerHTML = runs.map(run => `
-            <a href="/history" class="block bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors">
+            <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors group">
                 <div class="flex items-center justify-between">
-                    <div>
+                    <div class="cursor-pointer" onclick="window.location.href='/history'">
                         <span class="text-sm font-medium ${run.status === 'completed' ? 'text-green-400' : run.status === 'failed' ? 'text-red-400' : 'text-yellow-400'}">
                             <i class="fas ${run.status === 'completed' ? 'fa-check-circle' : run.status === 'failed' ? 'fa-times-circle' : 'fa-spinner fa-spin'} mr-1"></i>
                             ${run.status.charAt(0).toUpperCase() + run.status.slice(1)}
                         </span>
                         <span class="text-gray-400 text-sm ml-3">${new Date(run.started_at).toLocaleString()}</span>
                     </div>
-                    <div class="flex space-x-4 text-sm">
-                        <span class="text-green-400">${run.successfully_enrolled} enrolled</span>
-                        <span class="text-emerald-400">${run.amount_saved.toFixed(2)} ${run.currency.toUpperCase()}</span>
-                        <span class="text-gray-400">${run.total_courses_found} found</span>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex space-x-4 text-sm mr-4">
+                            <span class="text-green-400">${run.successfully_enrolled} enrolled</span>
+                            <span class="text-emerald-400">${run.amount_saved.toFixed(2)} ${run.currency.toUpperCase()}</span>
+                        </div>
+                        <a href="/api/enrollment/run/${run.run_id}/export" class="text-gray-400 hover:text-white transition-colors" title="Export CSV">
+                            <i class="fas fa-file-export"></i>
+                        </a>
                     </div>
                 </div>
-            </a>
+            </div>
         `).join('');
     } catch (e) { console.error('Failed to load runs:', e); }
 }
@@ -246,6 +279,7 @@ function startProgressPolling() {
                 document.getElementById('start-btn').innerHTML = '<i class="fas fa-play mr-2"></i>Start Enrollment';
                 loadDashboardStats();
                 loadRecentRuns();
+                updateAnalytics();
                 return;
             }
             updateProgress(data);
@@ -301,6 +335,74 @@ function updateProgress(data) {
             </div>
         `).join('');
     }
+}
+
+async function initAnalytics() {
+    const ctx = document.getElementById('savings-chart').getContext('2d');
+    savingsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Savings',
+                data: [],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+            }
+        }
+    });
+    updateAnalytics();
+}
+
+async function updateAnalytics() {
+    try {
+        const resp = await fetch('/api/dashboard/analytics');
+        const data = await resp.json();
+        savingsChart.data.labels = data.map(d => d.date);
+        savingsChart.data.datasets[0].data = data.map(d => d.savings);
+        savingsChart.update();
+    } catch (e) { console.error('Failed to update analytics:', e); }
+}
+
+function initLogStream() {
+    const logWindow = document.getElementById('log-window');
+    const eventSource = new EventSource('/api/dashboard/logs/stream');
+    
+    eventSource.onmessage = (event) => {
+        const div = document.createElement('div');
+        div.className = 'mb-1';
+        div.textContent = event.data;
+        logWindow.appendChild(div);
+        logWindow.scrollTop = logWindow.scrollHeight;
+        
+        // Remove "Waiting for logs..." if present
+        if (logWindow.firstChild && logWindow.firstChild.textContent === 'Waiting for logs...') {
+            logWindow.removeChild(logWindow.firstChild);
+        }
+    };
+
+    eventSource.onerror = () => {
+        const div = document.createElement('div');
+        div.className = 'text-red-500';
+        div.textContent = 'Disconnected from log stream. Retrying...';
+        logWindow.appendChild(div);
+    };
+}
+
+function clearLogs() {
+    document.getElementById('log-window').innerHTML = '';
 }
 </script>
 {% endblock %}
