@@ -3,10 +3,11 @@
 import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from sqlalchemy import update
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from loguru import logger
 
 from app.models.database import SessionLocal, EnrollmentRun, EnrolledCourse, User
@@ -17,9 +18,6 @@ from app.services.udemy_client import UdemyClient
 
 class EnrollmentManager:
     """Manages the full enrollment pipeline asynchronously: scrape -> validate -> enroll."""
-
-    # Active runs tracked by user_id
-    _active_runs: Dict[int, "EnrollmentManager"] = {}
 
     @staticmethod
     def _utcnow_naive() -> datetime:
@@ -44,29 +42,48 @@ class EnrollmentManager:
         self._task: Optional[asyncio.Task] = None
 
     @classmethod
-    def get_active_run(cls, user_id: int) -> Optional["EnrollmentManager"]:
-        return cls._active_runs.get(user_id)
+    def get_active_run(cls, db: Session, user_id: int) -> Optional[EnrollmentRun]:
+        return db.query(EnrollmentRun).filter(
+            EnrollmentRun.user_id == user_id,
+            EnrollmentRun.status.in_(["pending", "scraping", "enrolling"])
+        ).first()
+
+    @classmethod
+    def get_progress_from_run(cls, run: EnrollmentRun) -> dict:
+        pd = run.progress_data or {}
+        return {
+            "run_id": run.id,
+            "status": run.status,
+            "total_courses": run.total_courses_found,
+            "processed": run.total_processed,
+            "successfully_enrolled": run.successfully_enrolled,
+            "already_enrolled": run.already_enrolled,
+            "expired": run.expired,
+            "excluded": run.excluded,
+            "amount_saved": float(run.amount_saved),
+            "current_course_title": pd.get("current_course_title", ""),
+            "current_course_url": pd.get("current_course_url", ""),
+            "scraping_progress": pd.get("scraping_progress", []),
+        }
 
     async def start(self) -> int:
-        """Create the run record then start the async background task."""
-        if self.user_id in self._active_runs:
+        """Create the run record then return the run_id. Let the scheduler pick it up."""
+        active = self.get_active_run(self._request_db, self.user_id)
+        if active:
             raise RuntimeError("An enrollment run is already active for this user")
 
         run = EnrollmentRun(
             user_id=self.user_id,
-            status="scraping",
+            status="pending",
             currency=self.udemy.currency,
+            progress_data={
+                "settings": self.settings
+            }
         )
         self._request_db.add(run)
         self._request_db.commit()
         self._request_db.refresh(run)
         self.run_id = run.id
-
-        self._active_runs[self.user_id] = self
-        self.status = "scraping"
-
-        # Start the background task
-        self._task = asyncio.create_task(self._run_pipeline())
 
         return self.run_id
 
@@ -88,7 +105,31 @@ class EnrollmentManager:
                 proxy=self.settings.get("proxy_url"),
                 enable_headless=self.settings.get("enable_headless", False)
             )
-            scraped_courses = await self.scraper.scrape_all()
+            raw_scraped_courses = await self.scraper.scrape_all()
+
+            # Pre-filter to ignore previously processed courses for this user
+            previous_courses = db.query(EnrolledCourse.url, EnrolledCourse.slug, EnrolledCourse.status)\
+                .join(EnrollmentRun).filter(EnrollmentRun.user_id == self.user_id).all()
+            
+            processed_urls = {c.url for c in previous_courses if c.url and c.status in ("enrolled", "already_enrolled", "expired", "invalid")}
+            enrolled_slugs = {c.slug for c in previous_courses if c.slug and c.status in ("enrolled", "already_enrolled")}
+
+            scraped_courses = []
+            import re
+            for course in raw_scraped_courses:
+                if course.url in processed_urls:
+                    continue
+                
+                if not course.slug and course.url:
+                    match = re.search(r"udemy\.com/course/([^/?#]+)", course.url)
+                    if match:
+                        course.slug = match.group(1)
+                
+                if course.slug and course.slug in enrolled_slugs:
+                    continue
+                    
+                scraped_courses.append(course)
+
             self.total_courses = len(scraped_courses)
 
             run.total_courses_found = self.total_courses
@@ -97,6 +138,15 @@ class EnrollmentManager:
             self.status = "enrolling"
 
             # Phase 2: Process and enroll
+            batch: List[Course] = []
+
+            async def process_batch():
+                if not batch: return
+                outcomes = await self.udemy.bulk_checkout(batch)
+                for c, status in outcomes.items():
+                    await self._save_course(db, run, c, status)
+                batch.clear()
+
             for index, course in enumerate(scraped_courses):
                 self.processed = index + 1
                 self.current_course_title = course.title
@@ -145,15 +195,17 @@ class EnrollmentManager:
                                 self.udemy.expired_c += 1
                                 await self._save_course(db, run, course, "expired")
                             else:
-                                success = await self.udemy.checkout_single(course)
-                                if success:
-                                    await self._save_course(db, run, course, "enrolled")
-                                else:
-                                    await self._save_course(db, run, course, "failed")
+                                batch.append(course)
+                                if len(batch) >= 10:
+                                    await process_batch()
 
                 await self._update_run_stats(db, run)
                 # Small sleep to prevent tight loop blocking and respect rate limits
                 await asyncio.sleep(1.5)
+
+            # Process remaining batch
+            await process_batch()
+            await self._update_run_stats(db, run)
 
             # Mark complete
             run.status = "completed"
@@ -178,7 +230,6 @@ class EnrollmentManager:
             db.close()
             if self.close_client:
                 await self.udemy.close()
-            self._active_runs.pop(self.user_id, None)
 
     async def _update_run_stats(self, db: Session, run: EnrollmentRun):
         """Flush in-memory counters to the run record."""
@@ -189,6 +240,16 @@ class EnrollmentManager:
             run.expired = self.udemy.expired_c
             run.excluded = self.udemy.excluded_c
             run.amount_saved = float(self.udemy.amount_saved_c)
+            
+            pd = run.progress_data or {}
+            pd["current_course_title"] = self.current_course_title
+            pd["current_course_url"] = self.current_course_url
+            if self.scraper:
+                pd["scraping_progress"] = self.scraper.get_progress()
+            
+            run.progress_data = pd
+            flag_modified(run, "progress_data")
+            
             db.commit()
         except Exception:
             db.rollback()
@@ -240,20 +301,3 @@ class EnrollmentManager:
         run.completed_at = self._utcnow_naive()
         db.commit()
         self.status = "failed"
-
-    def get_progress(self) -> dict:
-        """Return live progress for the SSE/polling endpoint."""
-        return {
-            "run_id": self.run_id,
-            "status": self.status,
-            "total_courses": self.total_courses,
-            "processed": self.processed,
-            "successfully_enrolled": self.udemy.successfully_enrolled_c,
-            "already_enrolled": self.udemy.already_enrolled_c,
-            "expired": self.udemy.expired_c,
-            "excluded": self.udemy.excluded_c,
-            "amount_saved": float(self.udemy.amount_saved_c),
-            "current_course_title": self.current_course_title,
-            "current_course_url": self.current_course_url,
-            "scraping_progress": self.scraper.get_progress() if self.scraper else [],
-        }

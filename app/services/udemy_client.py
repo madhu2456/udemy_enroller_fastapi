@@ -363,9 +363,10 @@ class UdemyClient:
             break
         return False
 
-    async def bulk_checkout(self, courses: List[Course]) -> bool:
+    async def bulk_checkout(self, courses: List[Course]) -> Dict[Course, str]:
         """Asynchronously enroll in a batch of courses."""
-        if not courses: return True
+        outcomes: Dict[Course, str] = {c: "failed" for c in courses}
+        if not courses: return outcomes
         
         headers = {
             "Content-Type": "application/json",
@@ -376,7 +377,7 @@ class UdemyClient:
         
         remaining = list(courses)
         for attempt in range(len(courses) + 2):
-            if not remaining: return True
+            if not remaining: break
             
             items = [{
                 "buyable": {"id": str(c.course_id), "type": "course"},
@@ -400,7 +401,8 @@ class UdemyClient:
                     self.successfully_enrolled_c += 1
                     if self.enrolled_courses is not None:
                         self.enrolled_courses[c.slug] = datetime.now(UTC).isoformat()
-                return True
+                    outcomes[c] = "enrolled"
+                break
             
             # Handle "already enrolled" by finding the offender
             msg = result.get("message", "") if result else ""
@@ -420,15 +422,18 @@ class UdemyClient:
                 if offender:
                     remaining.remove(offender)
                     self.already_enrolled_c += 1
+                    outcomes[offender] = "already_enrolled"
                     continue
                 
                 # If we can't find it, fall back to single
-                for c in remaining: await self.checkout_single(c)
-                return True
+                for c in remaining:
+                    success = await self.checkout_single(c)
+                    outcomes[c] = "enrolled" if success else "failed"
+                break
 
             wait = self._throttle_wait(result or {})
             if wait:
                 await asyncio.sleep(wait)
                 continue
             break
-        return False
+        return outcomes

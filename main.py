@@ -49,6 +49,21 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("AUTO_CREATE_TABLES is disabled; expecting Alembic-managed schema.")
 
+    # Clean up stale runs
+    from app.models.database import SessionLocal, EnrollmentRun
+    from sqlalchemy import update
+    try:
+        with SessionLocal() as db:
+            db.execute(
+                update(EnrollmentRun)
+                .where(EnrollmentRun.status.in_(["scraping", "enrolling"]))
+                .values(status="failed", error_message="Server restarted")
+            )
+            db.commit()
+            logger.info("Cleaned up stale enrollment runs.")
+    except Exception as e:
+        logger.error(f"Failed to clean up stale runs: {e}")
+
     # Initialize app state
     app.state.udemy_clients = {}
 

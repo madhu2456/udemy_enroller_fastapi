@@ -149,6 +149,7 @@ class EnrollmentRun(Base):
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime, default=_utcnow_naive)
     completed_at = Column(DateTime, nullable=True)
+    progress_data = Column(JSON, default=dict)
 
     # Relationships
     user = relationship("User", back_populates="enrollment_runs")

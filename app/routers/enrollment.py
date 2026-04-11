@@ -31,7 +31,7 @@ async def start_enrollment(
     client=Depends(get_udemy_client),
 ):
     """Start a new enrollment run."""
-    active = EnrollmentManager.get_active_run(user_id)
+    active = EnrollmentManager.get_active_run(db, user_id)
     if active:
         raise HTTPException(status_code=409, detail="An enrollment run is already active")
 
@@ -72,26 +72,29 @@ async def start_enrollment(
 
 
 @router.get("/progress")
-async def get_progress(user_id: int = Depends(get_current_user_id)):
+async def get_progress(db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
     """Get live progress of the active enrollment run."""
-    active = EnrollmentManager.get_active_run(user_id)
+    active = EnrollmentManager.get_active_run(db, user_id)
     if not active:
         return {"active": False, "message": "No active enrollment run"}
-    return {"active": True, **active.get_progress()}
+    return {"active": True, **EnrollmentManager.get_progress_from_run(active)}
 
 
 @router.get("/progress/stream")
-async def stream_progress(user_id: int = Depends(get_current_user_id)):
+async def stream_progress(db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
     """Server-Sent Events stream for real-time progress updates."""
     async def event_generator():
         import asyncio
         while True:
-            active = EnrollmentManager.get_active_run(user_id)
-            if not active:
-                yield f"data: {json.dumps({'active': False, 'status': 'completed'})}\n\n"
-                break
-            progress = active.get_progress()
-            yield f"data: {json.dumps({'active': True, **progress})}\n\n"
+            # Need to get a fresh session per loop since this is async streaming
+            from app.models.database import SessionLocal
+            with SessionLocal() as stream_db:
+                active = EnrollmentManager.get_active_run(stream_db, user_id)
+                if not active:
+                    yield f"data: {json.dumps({'active': False, 'status': 'completed'})}\n\n"
+                    break
+                progress = EnrollmentManager.get_progress_from_run(active)
+                yield f"data: {json.dumps({'active': True, **progress})}\n\n"
             await asyncio.sleep(1)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
