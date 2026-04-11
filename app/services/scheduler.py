@@ -6,9 +6,10 @@ from typing import Dict
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 from loguru import logger
 
-from app.models.database import SessionLocal, User, UserSettings
+from app.models.database import SessionLocal, User, UserSettings, EnrollmentRun
 from app.services.udemy_client import UdemyClient
 from app.services.enrollment_manager import EnrollmentManager
 
@@ -29,6 +30,8 @@ class EnrollmentScheduler:
             self.scheduler.start()
             # Check for scheduled runs every 30 minutes
             self.scheduler.add_job(self.check_and_trigger_runs, "interval", minutes=30)
+            # Poll for pending runs every 10 seconds
+            self.scheduler.add_job(self.poll_pending_runs, "interval", seconds=10)
             logger.info("Enrollment Scheduler started")
 
     def stop(self):
@@ -48,11 +51,10 @@ class EnrollmentScheduler:
 
             for user in eligible_users:
                 # Check if already running
-                if EnrollmentManager.get_active_run(user.id):
+                if EnrollmentManager.get_active_run(db, user.id):
                     continue
 
                 # Check last run time
-                from app.models.database import EnrollmentRun
                 last_run = db.query(EnrollmentRun).filter(
                     EnrollmentRun.user_id == user.id
                 ).order_by(EnrollmentRun.started_at.desc()).first()
@@ -67,27 +69,19 @@ class EnrollmentScheduler:
 
                 if should_run:
                     logger.info(f"Triggering scheduled run for user {user.email}")
-                    asyncio.create_task(self.run_for_user(user.id))
+                    asyncio.create_task(self.create_pending_run_for_user(user.id))
 
         except Exception as e:
             logger.exception("Error in check_and_trigger_runs")
         finally:
             db.close()
 
-    async def run_for_user(self, user_id: int):
-        """Restore session and start enrollment run for a specific user."""
+    async def create_pending_run_for_user(self, user_id: int):
+        """Create a pending run for a specific user to be picked up by the poller."""
         db: Session = SessionLocal()
         try:
             user = db.get(User, user_id)
             if not user or not user.udemy_cookies:
-                return
-
-            client = UdemyClient(proxy=user.settings.proxy_url)
-            client.cookie_dict = user.udemy_cookies
-            try:
-                await client.get_session_info()
-            except Exception as e:
-                logger.error(f"Failed to restore session for scheduled run (user {user_id}): {e}")
                 return
 
             settings_dict = {
@@ -103,13 +97,76 @@ class EnrollmentScheduler:
                 "enable_headless": user.settings.enable_headless or False,
             }
 
+            run = EnrollmentRun(
+                user_id=user.id,
+                status="pending",
+                currency=user.currency or "usd",
+                progress_data={
+                    "settings": settings_dict
+                }
+            )
+            db.add(run)
+            db.commit()
+        except Exception as e:
+            logger.exception(f"Failed to create pending run for user {user_id}")
+        finally:
+            db.close()
+
+    async def poll_pending_runs(self):
+        """Poll database for pending runs and execute them."""
+        db: Session = SessionLocal()
+        try:
+            pending_runs = db.query(EnrollmentRun).filter(EnrollmentRun.status == "pending").all()
+            for run in pending_runs:
+                # Atomic acquire
+                stmt = (
+                    update(EnrollmentRun)
+                    .where(EnrollmentRun.id == run.id, EnrollmentRun.status == "pending")
+                    .values(status="scraping")
+                )
+                result = db.execute(stmt)
+                db.commit()
+                
+                if result.rowcount == 1:
+                    logger.info(f"Acquired lock for run {run.id}, starting background task.")
+                    asyncio.create_task(self._execute_run(run.id, run.user_id, run.progress_data.get("settings", {})))
+        except Exception as e:
+            logger.exception("Error polling pending runs")
+        finally:
+            db.close()
+
+    async def _execute_run(self, run_id: int, user_id: int, settings_dict: dict):
+        """Restore session and execute enrollment run."""
+        db: Session = SessionLocal()
+        try:
+            user = db.get(User, user_id)
+            if not user or not user.udemy_cookies:
+                run = db.get(EnrollmentRun, run_id)
+                if run:
+                    run.status = "failed"
+                    run.error_message = "User or cookies not found"
+                    db.commit()
+                return
+
+            client = UdemyClient(proxy=settings_dict.get("proxy_url"))
+            client.cookie_dict = user.udemy_cookies
+            try:
+                await client.get_session_info()
+            except Exception as e:
+                logger.error(f"Failed to restore session for run {run_id}: {e}")
+                run = db.get(EnrollmentRun, run_id)
+                if run:
+                    run.status = "failed"
+                    run.error_message = f"Failed to restore session: {e}"
+                    db.commit()
+                return
+
             manager = EnrollmentManager(client, settings_dict, db, user_id, close_client=True)
-            await manager.start()
+            manager.run_id = run_id
+            manager.status = "scraping"  # Update manager status since it starts right into phase 1
+            await manager._run_pipeline()
 
         except Exception as e:
-            logger.exception(f"Failed scheduled run for user {user_id}")
+            logger.exception(f"Failed to execute run {run_id}")
         finally:
-            # Note: DB session is closed by EnrollmentManager when pipeline finishes
-            # or here if it fails before starting. 
-            # Actually EnrollmentManager uses SessionLocal() inside its pipeline.
             db.close()

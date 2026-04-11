@@ -1,9 +1,9 @@
 """Course scraper service - asynchronously scrapes coupon sites for free Udemy courses."""
 
 import asyncio
-import logging
 import re
 import traceback
+from abc import ABC, abstractmethod
 from html import unescape
 from typing import List, Optional, Set
 from urllib.parse import parse_qs, unquote, urlparse
@@ -16,108 +16,43 @@ from app.services.http_client import AsyncHTTPClient
 from app.services.playwright_service import PlaywrightService
 from config.settings import get_settings
 
-SCRAPER_DICT: dict = {
-    "Real Discount": "rd",
-    "Courson": "cxyz",
-    "IDownloadCoupons": "idc",
-    "E-next": "en",
-    "Discudemy": "du",
-    "Udemy Freebies": "uf",
-    "Course Joiner": "cj",
-    "Course Vania": "cv",
-}
 
+class Scraper(ABC):
+    """Base scraper interface."""
 
-class ScraperService:
-    """Asynchronously scrapes multiple coupon websites for free Udemy course links."""
-
-    def __init__(self, sites_to_scrape: List[str] = None, proxy: Optional[str] = None, enable_headless: bool = False):
-        self.sites = sites_to_scrape or list(SCRAPER_DICT.keys())
-        self.http = AsyncHTTPClient(proxy=proxy)
+    def __init__(self, http_client: AsyncHTTPClient, proxy: Optional[str] = None, enable_headless: bool = False):
+        self.http = http_client
         self.proxy = proxy
         self.enable_headless = enable_headless
+        self.length = 0
+        self.progress = 0
+        self.done = False
+        self.error = ""
+        self.data: List[Course] = []
 
-        app_settings = get_settings()
-        site_count = max(1, len(self.sites))
-        site_concurrency = min(max(1, app_settings.MAX_SCRAPER_WORKERS), site_count)
-        self._site_semaphore = asyncio.Semaphore(site_concurrency)
-        self._detail_semaphore = asyncio.Semaphore(max(site_concurrency * 4, 8))
+    @property
+    @abstractmethod
+    def site_name(self) -> str:
+        """Full site name."""
+        pass
 
-        for site in self.sites:
-            code_name = SCRAPER_DICT.get(site, "")
-            if code_name:
-                setattr(self, f"{code_name}_length", 0)
-                setattr(self, f"{code_name}_data", [])
-                setattr(self, f"{code_name}_done", False)
-                setattr(self, f"{code_name}_progress", 0)
-                setattr(self, f"{code_name}_error", "")
+    @property
+    @abstractmethod
+    def code_name(self) -> str:
+        """Short code name for the scraper (used for legacy compatibility if needed)."""
+        pass
 
-    def get_progress(self) -> List[dict]:
-        progress = []
-        for site in self.sites:
-            code_name = SCRAPER_DICT.get(site, "")
-            if code_name:
-                progress.append({
-                    "site": site,
-                    "progress": getattr(self, f"{code_name}_progress", 0),
-                    "total": getattr(self, f"{code_name}_length", 0),
-                    "done": getattr(self, f"{code_name}_done", False),
-                    "error": getattr(self, f"{code_name}_error", ""),
-                })
-        return progress
+    @abstractmethod
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        """Perform the scraping."""
+        pass
 
-    async def scrape_all(self) -> List[Course]:
-        """Scrape all configured sites asynchronously and return unique courses."""
-        logger.info(f"Starting async scrape for sites: {self.sites}")
-
-        tasks = []
-        for site in self.sites:
-            code_name = SCRAPER_DICT.get(site)
-            if code_name and hasattr(self, code_name):
-                tasks.append(self._scrape_site_guarded(site))
-
-        try:
-            await asyncio.gather(*tasks)
-
-            scraped_data: Set[Course] = set()
-            for site in self.sites:
-                code_name = SCRAPER_DICT.get(site, "")
-                if code_name:
-                    courses = getattr(self, f"{code_name}_data", [])
-                    for course in courses:
-                        course.site = site
-                        scraped_data.add(course)
-
-            logger.info(f"Scraping finished. Found {len(scraped_data)} unique courses.")
-            return list(scraped_data)
-        finally:
-            await self.http.close()
-
-    async def _scrape_site_guarded(self, site: str):
-        async with self._site_semaphore:
-            await self._scrape_site(site)
-
-    async def _scrape_site(self, site: str):
-        code_name = SCRAPER_DICT[site]
-        try:
-            await getattr(self, code_name)()
-        except Exception:
-            logger.exception(f"Scraper {site} failed")
-            setattr(self, f"{code_name}_error", traceback.format_exc())
-            setattr(self, f"{code_name}_length", -1)
-        finally:
-            setattr(self, f"{code_name}_done", True)
-
-    async def _run_detail_task(self, fetcher, item):
-        async with self._detail_semaphore:
-            return await fetcher(item)
-
-    # ── Utility helpers ───────────────────────────────
-
-    def append_to_list(self, code_name: str, title: str, link: str):
+    def append_to_list(self, title: str, link: str):
         """Thread-safe append to a site's data list."""
         if title and link:
-            getattr(self, f"{code_name}_data").append(Course(title, link))
+            course = Course(title, link)
+            course.site = self.site_name
+            self.data.append(course)
 
     def parse_html(self, content: bytes) -> bs:
         return bs(content, "lxml")
@@ -144,16 +79,24 @@ class ScraperService:
             return None
         return None
 
-    # ── Site scrapers ─────────────────────────────────
+    async def _run_detail_task(self, detail_semaphore: asyncio.Semaphore, fetcher, item):
+        async with detail_semaphore:
+            return await fetcher(item)
 
-    async def du(self):
-        """Scrape Discudemy."""
-        code = "du"
+
+class DiscUdemyScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Discudemy"
+
+    @property
+    def code_name(self) -> str: return "du"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             head = {
                 "referer": "https://www.discudemy.com",
             }
-            setattr(self, f"{code}_length", 10)
+            self.length = 10
 
             # Phase 1: collect listing links
             all_items = []
@@ -164,7 +107,7 @@ class ScraperService:
                         if content:
                             soup = self.parse_html(content.encode())
                             all_items.extend(soup.find_all("a", {"class": "card-header"}))
-                        setattr(self, f"{code}_progress", page)
+                        self.progress = page
             else:
                 listing_tasks = [
                     self.http.get(f"https://www.discudemy.com/all/{page}", headers=head)
@@ -175,10 +118,10 @@ class ScraperService:
                     if resp:
                         soup = self.parse_html(resp.content)
                         all_items.extend(soup.find_all("a", {"class": "card-header"}))
-                    setattr(self, f"{code}_progress", i + 1)
+                    self.progress = i + 1
 
-            setattr(self, f"{code}_length", len(all_items))
-            setattr(self, f"{code}_progress", 0)
+            self.length = len(all_items)
+            self.progress = 0
 
             # Phase 2: resolve each listing
             async def _fetch_details(item):
@@ -201,24 +144,30 @@ class ScraperService:
                 except Exception:
                     return None, None
 
-            detail_tasks = [self._run_detail_task(_fetch_details, item) for item in all_items]
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, item) for item in all_items]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
                 if title and link:
                     link = self.cleanup_link(link)
                     if link:
-                        self.append_to_list(code, title, link)
-                setattr(self, f"{code}_progress", i + 1)
+                        self.append_to_list(title, link)
+                self.progress = i + 1
 
         except Exception:
             logger.exception("du scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
 
-    async def uf(self):
-        """Scrape Udemy Freebies."""
-        code = "uf"
+
+class UdemyFreebiesScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Udemy Freebies"
+
+    @property
+    def code_name(self) -> str: return "uf"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            setattr(self, f"{code}_length", 5)
+            self.length = 5
             listing_tasks = [
                 self.http.get(f"https://www.udemyfreebies.com/free-udemy-courses/{page}")
                 for page in range(1, 6)
@@ -229,10 +178,10 @@ class ScraperService:
                 if resp:
                     soup = self.parse_html(resp.content)
                     all_items.extend(soup.find_all("a", {"class": "theme-img"}))
-                setattr(self, f"{code}_progress", i + 1)
+                self.progress = i + 1
 
-            setattr(self, f"{code}_length", len(all_items))
-            setattr(self, f"{code}_progress", 0)
+            self.length = len(all_items)
+            self.progress = 0
 
             async def _fetch_details(item):
                 try:
@@ -255,22 +204,28 @@ class ScraperService:
                 except Exception:
                     return None, None
 
-            detail_tasks = [self._run_detail_task(_fetch_details, item) for item in all_items]
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, item) for item in all_items]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
                 if title and link and "udemy.com" in link:
                     link = self.cleanup_link(link)
                     if title and link:
-                        self.append_to_list(code, title, link)
-                setattr(self, f"{code}_progress", i + 1)
+                        self.append_to_list(title, link)
+                self.progress = i + 1
 
         except Exception:
             logger.exception("uf scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
 
-    async def rd(self):
-        """Scrape Real Discount."""
-        code = "rd"
+
+class RealDiscountScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Real Discount"
+
+    @property
+    def code_name(self) -> str: return "rd"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             headers = {
                 "Host": "cdn.real.discount",
@@ -285,10 +240,10 @@ class ScraperService:
                 return
 
             all_items = data.get("items", [])
-            setattr(self, f"{code}_length", len(all_items))
+            self.length = len(all_items)
 
             for index, item in enumerate(all_items):
-                setattr(self, f"{code}_progress", index + 1)
+                self.progress = index + 1
                 if item.get("store") == "Sponsored":
                     continue
                 title = item.get("name", "").strip()
@@ -297,14 +252,20 @@ class ScraperService:
                     continue
                 link = self.cleanup_link(raw_link)
                 if link:
-                    self.append_to_list(code, title, link)
+                    self.append_to_list(title, link)
         except Exception:
             logger.exception("rd scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
 
-    async def cv(self):
-        """Scrape Course Vania."""
-        code = "cv"
+
+class CourseVaniaScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Course Vania"
+
+    @property
+    def code_name(self) -> str: return "cv"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             resp = await self.http.get("https://coursevania.com/courses/")
             if not resp:
@@ -328,7 +289,7 @@ class ScraperService:
 
             soup = self.parse_html(ajax_data.get("content", "").encode())
             page_items = soup.find_all("div", {"class": "stm_lms_courses__single--title"})
-            setattr(self, f"{code}_length", len(page_items))
+            self.length = len(page_items)
 
             async def _fetch_details(item):
                 try:
@@ -346,23 +307,29 @@ class ScraperService:
                 except Exception:
                     return None, None
 
-            detail_tasks = [self._run_detail_task(_fetch_details, item) for item in page_items]
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, item) for item in page_items]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
                 if title and link and "udemy.com" in link:
                     link = self.cleanup_link(link)
                     if title and link:
-                        self.append_to_list(code, title, link)
-                setattr(self, f"{code}_progress", i + 1)
+                        self.append_to_list(title, link)
+                self.progress = i + 1
         except Exception:
             logger.exception("cv scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
 
-    async def idc(self):
-        """Scrape IDownloadCoupons."""
-        code = "idc"
+
+class IDownloadCouponsScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "IDownloadCoupons"
+
+    @property
+    def code_name(self) -> str: return "idc"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            setattr(self, f"{code}_length", 3)
+            self.length = 3
             listing_tasks = [
                 self.http.get(f"https://idownloadcoupon.com/wp-json/wp/v2/product?product_cat=15&per_page=100&page={page}")
                 for page in range(1, 4)
@@ -373,10 +340,10 @@ class ScraperService:
                 data = await self.http.safe_json(resp, f"idc page {i+1}")
                 if data:
                     all_items.extend(data)
-                setattr(self, f"{code}_progress", i + 1)
+                self.progress = i + 1
 
-            setattr(self, f"{code}_length", len(all_items))
-            setattr(self, f"{code}_progress", 0)
+            self.length = len(all_items)
+            self.progress = 0
 
             async def _fetch_details(item):
                 try:
@@ -401,21 +368,27 @@ class ScraperService:
                 except Exception:
                     return None, None
 
-            detail_tasks = [self._run_detail_task(_fetch_details, item) for item in all_items]
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, item) for item in all_items]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
                 if title and link:
-                    self.append_to_list(code, title, link)
-                setattr(self, f"{code}_progress", i + 1)
+                    self.append_to_list(title, link)
+                self.progress = i + 1
         except Exception:
             logger.exception("idc scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
 
-    async def en(self):
-        """Scrape E-next."""
-        code = "en"
+
+class ENextScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "E-next"
+
+    @property
+    def code_name(self) -> str: return "en"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            setattr(self, f"{code}_length", 5)
+            self.length = 5
             listing_tasks = [
                 self.http.get(f"https://jobs.e-next.in/course/udemy/{page}")
                 for page in range(1, 6)
@@ -426,10 +399,10 @@ class ScraperService:
                 if resp:
                     soup = self.parse_html(resp.content)
                     all_items.extend(soup.find_all("a", {"class": "btn btn-secondary btn-sm btn-block"}))
-                setattr(self, f"{code}_progress", i + 1)
+                self.progress = i + 1
 
-            setattr(self, f"{code}_length", len(all_items))
-            setattr(self, f"{code}_progress", 0)
+            self.length = len(all_items)
+            self.progress = 0
 
             async def _fetch_details(item):
                 try:
@@ -448,21 +421,27 @@ class ScraperService:
                 except Exception:
                     return None, None
 
-            detail_tasks = [self._run_detail_task(_fetch_details, item) for item in all_items]
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, item) for item in all_items]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
                 if title and link:
-                    self.append_to_list(code, title, link)
-                setattr(self, f"{code}_progress", i + 1)
+                    self.append_to_list(title, link)
+                self.progress = i + 1
         except Exception:
             logger.exception("en scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
 
-    async def cj(self):
-        """Scrape Course Joiner."""
-        code = "cj"
+
+class CourseJoinerScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Course Joiner"
+
+    @property
+    def code_name(self) -> str: return "cj"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            setattr(self, f"{code}_length", 4)
+            self.length = 4
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             }
@@ -484,19 +463,25 @@ class ScraperService:
                             soup = self.parse_html(item.get("content", {}).get("rendered", "").encode())
                             a_tag = soup.find("a", string="APPLY HERE")
                             if a_tag and "udemy.com" in a_tag.get("href", ""):
-                                self.append_to_list(code, title, a_tag["href"])
+                                self.append_to_list(title, a_tag["href"])
                         except Exception:
                             continue
-                setattr(self, f"{code}_progress", i + 1)
+                self.progress = i + 1
         except Exception:
             logger.exception("cj scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
 
-    async def cxyz(self):
-        """Scrape Courson."""
-        code = "cxyz"
+
+class CoursonScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Courson"
+
+    @property
+    def code_name(self) -> str: return "cxyz"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            setattr(self, f"{code}_length", 10)
+            self.length = 10
             listing_tasks = [
                 self.http.post("https://courson.xyz/load-more-coupons", json={"filters": {}, "offset": (page - 1) * 30})
                 for page in range(1, 11)
@@ -511,8 +496,89 @@ class ScraperService:
                         id_name = item.get("id_name", "")
                         coupon = item.get("coupon_code", "")
                         if title and id_name and coupon:
-                            self.append_to_list(code, title, f"https://www.udemy.com/course/{id_name}/?couponCode={coupon}")
-                setattr(self, f"{code}_progress", i + 1)
+                            self.append_to_list(title, f"https://www.udemy.com/course/{id_name}/?couponCode={coupon}")
+                self.progress = i + 1
         except Exception:
             logger.exception("cxyz scraper failed")
-            setattr(self, f"{code}_error", traceback.format_exc())
+            self.error = traceback.format_exc()
+
+
+SCRAPER_REGISTRY = {
+    "Real Discount": RealDiscountScraper,
+    "Courson": CoursonScraper,
+    "IDownloadCoupons": IDownloadCouponsScraper,
+    "E-next": ENextScraper,
+    "Discudemy": DiscUdemyScraper,
+    "Udemy Freebies": UdemyFreebiesScraper,
+    "Course Joiner": CourseJoinerScraper,
+    "Course Vania": CourseVaniaScraper,
+}
+
+
+class ScraperService:
+    """Asynchronously scrapes multiple coupon websites for free Udemy course links."""
+
+    def __init__(self, sites_to_scrape: List[str] = None, proxy: Optional[str] = None, enable_headless: bool = False):
+        self.sites = sites_to_scrape or list(SCRAPER_REGISTRY.keys())
+        self.http = AsyncHTTPClient(proxy=proxy)
+        self.proxy = proxy
+        self.enable_headless = enable_headless
+
+        app_settings = get_settings()
+        site_count = max(1, len(self.sites))
+        site_concurrency = min(max(1, app_settings.MAX_SCRAPER_WORKERS), site_count)
+        self._site_semaphore = asyncio.Semaphore(site_concurrency)
+        self._detail_semaphore = asyncio.Semaphore(max(site_concurrency * 4, 8))
+
+        self.scrapers: List[Scraper] = []
+        for site in self.sites:
+            scraper_cls = SCRAPER_REGISTRY.get(site)
+            if scraper_cls:
+                self.scrapers.append(scraper_cls(self.http, proxy=self.proxy, enable_headless=self.enable_headless))
+
+    def get_progress(self) -> List[dict]:
+        progress = []
+        for scraper in self.scrapers:
+            progress.append({
+                "site": scraper.site_name,
+                "progress": scraper.progress,
+                "total": scraper.length,
+                "done": scraper.done,
+                "error": scraper.error,
+            })
+        return progress
+
+    async def scrape_all(self) -> List[Course]:
+        """Scrape all configured sites asynchronously and return unique courses."""
+        logger.info(f"Starting async scrape for sites: {[s.site_name for s in self.scrapers]}")
+
+        tasks = []
+        for scraper in self.scrapers:
+            tasks.append(self._scrape_site_guarded(scraper))
+
+        try:
+            await asyncio.gather(*tasks)
+
+            scraped_data: Set[Course] = set()
+            for scraper in self.scrapers:
+                for course in scraper.data:
+                    scraped_data.add(course)
+
+            logger.info(f"Scraping finished. Found {len(scraped_data)} unique courses.")
+            return list(scraped_data)
+        finally:
+            await self.http.close()
+
+    async def _scrape_site_guarded(self, scraper: Scraper):
+        async with self._site_semaphore:
+            await self._scrape_site(scraper)
+
+    async def _scrape_site(self, scraper: Scraper):
+        try:
+            await scraper.scrape(self._detail_semaphore)
+        except Exception:
+            logger.exception(f"Scraper {scraper.site_name} failed")
+            scraper.error = traceback.format_exc()
+            scraper.length = -1
+        finally:
+            scraper.done = True
