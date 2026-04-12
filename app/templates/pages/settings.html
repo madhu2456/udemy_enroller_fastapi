@@ -93,13 +93,6 @@
                 <p class="text-xs text-gray-500 mt-1">Leave blank for direct connection</p>
             </div>
 
-            <!-- Schedule Interval -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Auto-Run Every (hours)</label>
-                <input type="number" id="schedule-interval" min="0" max="168" value="0"
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
-                <p class="text-xs text-gray-500 mt-1">Set to 0 to disable automated background runs</p>
-            </div>
         </div>
 
         <!-- Checkboxes -->
@@ -197,7 +190,6 @@ async function loadSettings() {
         document.getElementById('save-txt').checked = currentSettings.save_txt;
         document.getElementById('discounted-only').checked = currentSettings.discounted_only;
         document.getElementById('proxy-url').value = currentSettings.proxy_url || '';
-        document.getElementById('schedule-interval').value = currentSettings.schedule_interval || 0;
         document.getElementById('enable-headless').checked = currentSettings.enable_headless || false;
     } catch(e) { console.error('Failed to load settings:', e); }
 }
