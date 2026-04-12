@@ -95,6 +95,14 @@ app.add_middleware(
     max_age=3600,  # Cache preflight for 1 hour
 )
 
+@app.middleware("http")
+async def add_cache_headers(request: Request, call_next):
+    """Add long-lived cache headers to static files to improve Lighthouse score."""
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+    return response
+
 # Static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
