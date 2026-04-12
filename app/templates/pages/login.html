@@ -30,8 +30,8 @@
                         <i class="fas fa-bolt text-blue-400"></i>
                     </div>
                     <div>
-                        <h3 class="text-white font-semibold">Fully Automated</h3>
-                        <p class="text-gray-500 text-sm mt-1">Set your filters once, let the engine handle the rest.</p>
+                        <h2 class="text-white font-semibold">Fully Automated</h2>
+                        <p class="text-gray-400 text-sm mt-1">Set your filters once, let the engine handle the rest.</p>
                     </div>
                 </div>
                 <div class="flex items-start space-x-3">
@@ -39,8 +39,8 @@
                         <i class="fas fa-shield-alt text-emerald-400"></i>
                     </div>
                     <div>
-                        <h3 class="text-white font-semibold">100% Secure</h3>
-                        <p class="text-gray-500 text-sm mt-1">Direct API integration. No passwords stored permanently.</p>
+                        <h2 class="text-white font-semibold">100% Secure</h2>
+                        <p class="text-gray-400 text-sm mt-1">Direct API integration. No passwords stored permanently.</p>
                     </div>
                 </div>
                 <div class="flex items-start space-x-3">
@@ -48,8 +48,8 @@
                         <i class="fas fa-filter text-purple-400"></i>
                     </div>
                     <div>
-                        <h3 class="text-white font-semibold">Smart Filters</h3>
-                        <p class="text-gray-500 text-sm mt-1">Exclude specific instructors, languages, or low ratings.</p>
+                        <h2 class="text-white font-semibold">Smart Filters</h2>
+                        <p class="text-gray-400 text-sm mt-1">Exclude specific instructors, languages, or low ratings.</p>
                     </div>
                 </div>
                 <div class="flex items-start space-x-3">
@@ -57,8 +57,8 @@
                         <i class="fas fa-chart-line text-yellow-400"></i>
                     </div>
                     <div>
-                        <h3 class="text-white font-semibold">Track Savings</h3>
-                        <p class="text-gray-500 text-sm mt-1">Watch your lifetime educational savings grow in real-time.</p>
+                        <h2 class="text-white font-semibold">Track Savings</h2>
+                        <p class="text-gray-400 text-sm mt-1">Watch your lifetime educational savings grow in real-time.</p>
                     </div>
                 </div>
             </div>
@@ -190,18 +190,7 @@ function switchTab(tab) {
 // Start on Cookies tab (email login is blocked by Cloudflare on hosted servers)
 window.addEventListener('DOMContentLoaded', () => {
     switchTab('cookies');
-    checkIfAlreadyLoggedIn();
 });
-
-async function checkIfAlreadyLoggedIn() {
-    try {
-        const resp = await fetch('/api/auth/status');
-        const data = await resp.json();
-        if (data.authenticated) {
-            window.location.href = '/dashboard';
-        }
-    } catch (err) {}
-}
 
 function isLoginSuccess(data) {
     return !!data && (data.success === true || data.status === 'success');

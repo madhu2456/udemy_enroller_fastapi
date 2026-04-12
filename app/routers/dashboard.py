@@ -4,12 +4,19 @@ import logging
 import asyncio
 import os
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.models.database import get_db, User, EnrollmentRun, EnrolledCourse
+from app.models.database import (
+    get_db,
+    User,
+    UserSession,
+    EnrollmentRun,
+    EnrolledCourse,
+    _utcnow_naive,
+)
 from app.deps import get_current_user_id
 
 logger = logging.getLogger(__name__)
@@ -25,8 +32,22 @@ async def dashboard(request: Request):
 
 
 @router.get("/", response_class=HTMLResponse)
-async def login_page(request: Request):
-    """Login page."""
+async def login_page(request: Request, db: Session = Depends(get_db)):
+    """Login page.
+
+    Redirect authenticated users server-side to avoid an extra client-side
+    auth check request on initial page load.
+    """
+    token = request.cookies.get("session_id")
+    if token:
+        session = db.query(UserSession).filter(UserSession.token == token).first()
+        if session:
+            if session.expires_at and session.expires_at < _utcnow_naive():
+                db.delete(session)
+                db.commit()
+            else:
+                return RedirectResponse(url="/dashboard", status_code=303)
+
     return templates.TemplateResponse("pages/login.html", {"request": request})
 
 
