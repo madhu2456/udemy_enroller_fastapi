@@ -119,7 +119,6 @@ class TestHealthCheck:
         
         assert "status" in data
         assert "version" in data
-        assert "scheduler" in data
         assert data["status"] == "healthy"
 
 
@@ -192,7 +191,6 @@ class TestDatabaseModels:
                 UserSettings.user_id == user.id
             ).first()
             assert retrieved_settings is not None
-            assert retrieved_settings.schedule_interval == 0
             assert retrieved_settings.discounted_only is False
         finally:
             db.close()

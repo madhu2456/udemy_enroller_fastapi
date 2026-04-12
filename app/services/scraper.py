@@ -1,3 +1,4 @@
+from app.core import constants
 """Course scraper service - asynchronously scrapes coupon sites for free Udemy courses."""
 
 import asyncio
@@ -496,7 +497,7 @@ class CoursonScraper(Scraper):
                         id_name = item.get("id_name", "")
                         coupon = item.get("coupon_code", "")
                         if title and id_name and coupon:
-                            self.append_to_list(title, f"https://www.udemy.com/course/{id_name}/?couponCode={coupon}")
+                            self.append_to_list(title, f"{constants.UDEMY_BASE_URL}/course/{id_name}/?couponCode={coupon}")
                 self.progress = i + 1
         except Exception:
             logger.exception("cxyz scraper failed")

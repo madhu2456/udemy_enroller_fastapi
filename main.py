@@ -14,8 +14,8 @@ from app.logging_config import setup_logging
 from app.sentry_config import setup_sentry
 from app.models.database import create_tables
 from app.rate_limit_config import setup_rate_limiting, maybe_limit
-from app.routers import auth, settings, enrollment, dashboard
-from app.services.scheduler import EnrollmentScheduler
+from app.routers import auth, settings, enrollment, dashboard, seo
+from app.services.playwright_service import PlaywrightManager
 
 # Configure logging with JSON support
 setup_logging()
@@ -28,8 +28,6 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-
-scheduler = EnrollmentScheduler()
 
 
 @asynccontextmanager
@@ -67,13 +65,10 @@ async def lifespan(app: FastAPI):
     # Initialize app state
     app.state.udemy_clients = {}
 
-    # Start background scheduler
-    scheduler.start()
-
     yield
 
     # Shutdown
-    scheduler.stop()
+    await PlaywrightManager.close_browser()
     logger.info("Shutting down Udemy Course Enroller API")
 
 
@@ -104,6 +99,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include routers
+app.include_router(seo.router)
 app.include_router(dashboard.router)
 app.include_router(auth.router)
 app.include_router(settings.router)
@@ -117,7 +113,6 @@ async def health_check(request: Request):
     return {
         "status": "healthy",
         "version": app_settings.APP_VERSION,
-        "scheduler": "running" if scheduler.scheduler.running else "stopped",
         "environment": app_settings.SENTRY_ENVIRONMENT,
         "rate_limiting": app_settings.RATE_LIMIT_ENABLED,
     }

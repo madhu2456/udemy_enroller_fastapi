@@ -3,13 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Udemy Course Enroller{% endblock %}</title>
+    <title>{% block title %}Udemy Course Enroller - Automated Free Course Enrollment{% endblock %}</title>
     
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="{% block meta_title %}Udemy Course Enroller - Automated Free Course Enrollment{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Automate your learning journey. Find and enroll in 100% free Udemy courses automatically with Madhu Dadi's Udemy Course Enroller.{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}Udemy, Free Courses, Course Enroller, Automation, Madhu Dadi, Learning, Coupons{% endblock %}">
+    <meta name="author" content="Madhu Dadi">
+    <link rel="canonical" href="https://udemyenroller.madhudadi.in{{ request.url.path }}">
+
+    <!-- AEO and GEO specific link tags -->
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs profile">
+    <link rel="alternate" type="application/json" href="/ai-profile.json" title="AI profile JSON">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://udemyenroller.madhudadi.in{{ request.url.path }}">
+    <meta property="og:title" content="{% block og_title %}Udemy Course Enroller - Automated Free Course Enrollment{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Automate your learning journey. Find and enroll in 100% free Udemy courses automatically with Madhu Dadi's Udemy Course Enroller.{% endblock %}">
+    <meta property="og:image" content="https://udemyenroller.madhudadi.in/static/images/icon-512.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://udemyenroller.madhudadi.in{{ request.url.path }}">
+    <meta property="twitter:title" content="{% block twitter_title %}Udemy Course Enroller - Automated Free Course Enrollment{% endblock %}">
+    <meta property="twitter:description" content="{% block twitter_description %}Automate your learning journey. Find and enroll in 100% free Udemy courses automatically with Madhu Dadi's Udemy Course Enroller.{% endblock %}">
+    <meta property="twitter:image" content="https://udemyenroller.madhudadi.in/static/images/icon-512.png">
+
     <!-- Icons and Meta Images -->
     <link rel="icon" type="image/png" sizes="512x512" href="/static/images/icon-512.png">
     <link rel="apple-touch-icon" href="/static/images/icon-512.png">
-    <meta property="og:image" content="/static/images/icon-512.png">
-    <meta name="twitter:image" content="/static/images/icon-512.png">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Udemy Course Enroller",
+      "operatingSystem": "Web",
+      "applicationCategory": "EducationalApplication",
+      "description": "An automated system to find and enroll in 100% free discounted Udemy courses.",
+      "url": "https://udemyenroller.madhudadi.in",
+      "author": {
+        "@type": "Person",
+        "name": "Madhu Dadi",
+        "url": "https://madhudadi.in"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -37,6 +83,7 @@
                 <a href="/" class="text-xl font-bold text-blue-400 hover:text-blue-300">
                     <i class="fas fa-graduation-cap mr-2"></i>Udemy Enroller
                 </a>
+                {% if request.url.path != '/login' %}
                 <div class="hidden md:flex space-x-1" id="nav-links">
                     <a href="/" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
                         <i class="fas fa-chart-bar mr-1"></i>Dashboard
@@ -48,6 +95,7 @@
                         <i class="fas fa-history mr-1"></i>History
                     </a>
                 </div>
+                {% endif %}
             </div>
             <div class="flex items-center space-x-4">
                 <span id="user-info" class="text-sm text-gray-400"></span>
@@ -64,9 +112,23 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 border-t border-gray-700 px-6 py-4 mt-auto">
-        <div class="max-w-7xl mx-auto text-center text-sm text-gray-500">
-            Udemy Course Enroller &mdash; Built with FastAPI
+    <footer class="bg-gray-900 border-t border-gray-800 px-6 py-8 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-sm text-gray-500">
+            <div class="flex items-center space-x-2 mb-4 md:mb-0">
+                <i class="fas fa-graduation-cap text-gray-600 text-lg"></i>
+                <span class="font-medium text-gray-400">Udemy Course Enroller</span>
+                <span class="hidden md:inline px-2">&bull;</span>
+                <span class="text-gray-500">Automated Learning Infrastructure</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <span>Built with</span>
+                <i class="fas fa-heart text-red-500/80 animate-pulse px-1"></i> 
+                <span>by</span>
+                <a href="https://madhudadi.in" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors ml-1 relative group">
+                    Madhu Dadi
+                    <span class="absolute -bottom-0.5 left-0 w-0 h-[1px] bg-blue-400 transition-all group-hover:w-full"></span>
+                </a>
+            </div>
         </div>
     </footer>
 

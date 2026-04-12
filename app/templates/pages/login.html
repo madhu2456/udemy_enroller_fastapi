@@ -1,90 +1,163 @@
 {% extends "components/base.html" %}
-{% block title %}Login - Udemy Enroller{% endblock %}
+{% block title %}Udemy Course Enroller - Automate Your Learning{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto mt-16">
-    <div class="bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700">
-        <div class="text-center mb-8">
-            <i class="fas fa-graduation-cap text-5xl text-blue-400 mb-4"></i>
-            <h1 class="text-2xl font-bold text-white">Udemy Course Enroller</h1>
-            <p class="text-gray-400 mt-2">Login to start enrolling in free courses</p>
+<div class="max-w-6xl mx-auto mt-8 md:mt-16">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <!-- Hero / Value Proposition -->
+        <div class="space-y-8">
+            <div class="inline-flex items-center space-x-2 bg-blue-900 bg-opacity-40 border border-blue-500 border-opacity-30 px-3 py-1 rounded-full text-blue-300 text-xs font-semibold">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                <span>Open Source Tool by Madhu Dadi</span>
+            </div>
+            
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
+                Unlock Premium <br/>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Udemy Courses</span> <br/>
+                For Free.
+            </h1>
+            
+            <p class="text-gray-400 text-lg leading-relaxed max-w-lg">
+                Stop paying for premium courses or hunting for expired coupons. Our automated engine monitors multiple coupon platforms and silently claims 100% free courses directly to your Udemy account.
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex items-start space-x-3">
+                    <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
+                        <i class="fas fa-bolt text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Fully Automated</h3>
+                        <p class="text-gray-500 text-sm mt-1">Set your filters once, let the engine handle the rest.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
+                        <i class="fas fa-shield-alt text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">100% Secure</h3>
+                        <p class="text-gray-500 text-sm mt-1">Direct API integration. No passwords stored permanently.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
+                        <i class="fas fa-filter text-purple-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Smart Filters</h3>
+                        <p class="text-gray-500 text-sm mt-1">Exclude specific instructors, languages, or low ratings.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
+                        <i class="fas fa-chart-line text-yellow-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Track Savings</h3>
+                        <p class="text-gray-500 text-sm mt-1">Watch your lifetime educational savings grow in real-time.</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Tab buttons -->
-        <div class="flex rounded-lg bg-gray-700 p-1 mb-6">
-            <button id="tab-email" onclick="switchTab('email')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white">
-                <i class="fas fa-envelope mr-1"></i>Email
-            </button>
-            <button id="tab-cookies" onclick="switchTab('cookies')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white">
-                <i class="fas fa-cookie mr-1"></i>Cookies
-            </button>
-        </div>
+        <!-- Login Card -->
+        <div class="bg-gray-800 bg-opacity-80 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-gray-700 relative overflow-hidden">
+            <!-- Decorative gradient -->
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-600 bg-opacity-20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-600 bg-opacity-20 rounded-full blur-3xl"></div>
+            
+            <div class="relative z-10">
+                <div class="text-center mb-8">
+                    <i class="fas fa-graduation-cap text-4xl text-blue-400 mb-3"></i>
+                    <h2 class="text-2xl font-bold text-white">Start Automating</h2>
+                    <p class="text-gray-400 mt-2 text-sm">Connect your Udemy account to begin</p>
+                </div>
 
-        <!-- Email Login Form -->
-        <form id="email-form" class="hidden" onsubmit="loginWithEmail(event)">
-            <div class="mb-4 p-3 bg-yellow-900/40 border border-yellow-600/50 rounded-lg text-yellow-300 text-xs">
-                <i class="fas fa-exclamation-triangle mr-1"></i>
-                Email/password login may be blocked by Udemy's security when running on a server.
-                If you see a CSRF error, switch to <strong>Cookie Login</strong> below.
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                <input type="email" id="email" required
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="your@email.com">
-            </div>
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                <input type="password" id="password" required
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="Your Udemy password">
-            </div>
-            <button type="submit" id="login-btn"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors">
-                <i class="fas fa-sign-in-alt mr-2"></i>Login
-            </button>
-        </form>
+                <!-- Tab buttons -->
+                <div class="flex rounded-lg bg-gray-900 bg-opacity-50 p-1 mb-6 border border-gray-700">
+                    <button id="tab-email" onclick="switchTab('email')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 text-gray-400 hover:text-white">
+                        <i class="fas fa-envelope mr-1"></i>Email
+                    </button>
+                    <button id="tab-cookies" onclick="switchTab('cookies')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-blue-600 shadow-md text-white">
+                        <i class="fas fa-cookie mr-1"></i>Cookies
+                    </button>
+                </div>
 
-        <!-- Cookie Login Form -->
-        <form id="cookies-form" onsubmit="loginWithCookies(event)">
-            <div class="mb-4 p-3 bg-blue-900/40 border border-blue-600/50 rounded-lg text-blue-300 text-xs">
-                <p class="font-semibold mb-1"><i class="fas fa-info-circle mr-1"></i>How to get your cookies:</p>
-                <ol class="list-decimal list-inside space-y-0.5 text-blue-200">
-                    <li>Open <a href="https://www.udemy.com" target="_blank" class="underline">udemy.com</a> and log in</li>
-                    <li>Press <strong>F12</strong> → <strong>Application</strong> tab → <strong>Cookies</strong> → <strong>https://www.udemy.com</strong></li>
-                    <li>Copy the values for <strong>access_token</strong>, <strong>client_id</strong>, and <strong>csrftoken</strong></li>
-                </ol>
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Access Token</label>
-                <input type="text" id="access_token" required
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                    placeholder="From browser cookies">
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Client ID</label>
-                <input type="text" id="client_id" required
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                    placeholder="From browser cookies">
-            </div>
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-300 mb-2">CSRF Token</label>
-                <input type="text" id="csrf_token" required
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                    placeholder="From browser cookies">
-            </div>
-            <button type="submit"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors">
-                <i class="fas fa-cookie mr-2"></i>Login with Cookies
-            </button>
-        </form>
+                <!-- Email Login Form -->
+                <form id="email-form" class="hidden space-y-5" onsubmit="loginWithEmail(event)">
+                    <div class="p-3 bg-yellow-900 bg-opacity-20 border border-yellow-600 border-opacity-30 rounded-lg text-yellow-400 text-opacity-90 text-xs flex items-start">
+                        <i class="fas fa-exclamation-triangle mt-0.5 mr-2"></i>
+                        <span>Email login may trigger a CAPTCHA if running on a server. If you see a CSRF error, switch to <strong>Cookie Login</strong>.</span>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1.5">Email Address</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-envelope text-gray-500"></i>
+                            </div>
+                            <input type="email" id="email" required
+                                class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                                placeholder="you@example.com">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-gray-500"></i>
+                            </div>
+                            <input type="password" id="password" required
+                                class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+                    <button type="submit" id="login-btn"
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 shadow-lg text-white font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-105">
+                        Connect Account <i class="fas fa-arrow-right ml-1 text-sm"></i>
+                    </button>
+                </form>
 
-        <!-- Status Message -->
-        <div id="login-message" class="mt-4 text-center text-sm hidden"></div>
+                <!-- Cookie Login Form -->
+                <form id="cookies-form" class="space-y-4" onsubmit="loginWithCookies(event)">
+                    <div class="p-3 bg-blue-900 bg-opacity-20 border border-blue-600 border-opacity-30 rounded-lg text-blue-300 text-opacity-90 text-xs">
+                        <p class="font-semibold mb-1 text-blue-300"><i class="fas fa-info-circle mr-1"></i>How to connect:</p>
+                        <ol class="list-decimal list-inside space-y-1 opacity-90">
+                            <li>Log in to <a href="https://www.udemy.com" target="_blank" class="underline hover:text-white transition-colors">udemy.com</a></li>
+                            <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong></li>
+                            <li>Copy the required values below:</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">access_token</label>
+                        <input type="text" id="access_token" required
+                            class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                            placeholder="eyJhbG...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">client_id</label>
+                        <input type="text" id="client_id" required
+                            class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                            placeholder="xxyyzz...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">csrftoken</label>
+                        <input type="text" id="csrf_token" required
+                            class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                            placeholder="abc123...">
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 shadow-lg text-white font-semibold py-3 mt-2 rounded-lg transition-all duration-200 transform hover:scale-105">
+                        Connect via Cookies <i class="fas fa-cookie-bite ml-1 text-sm"></i>
+                    </button>
+                </form>
 
-        <div class="mt-6 text-center text-xs text-gray-500">
-            <p>Your credentials are sent directly to Udemy's servers.</p>
-            <p class="mt-1">They are not stored permanently on this server.</p>
+                <!-- Status Message -->
+                <div id="login-message" class="mt-4 text-center text-sm font-medium hidden"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -98,16 +171,19 @@ function switchTab(tab) {
     const tabEmail = document.getElementById('tab-email');
     const tabCookies = document.getElementById('tab-cookies');
 
+    const activeClasses = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-blue-600 shadow-md text-white';
+    const inactiveClasses = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 text-gray-400 hover:text-white';
+
     if (tab === 'email') {
         emailForm.classList.remove('hidden');
         cookiesForm.classList.add('hidden');
-        tabEmail.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white';
-        tabCookies.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white';
+        tabEmail.className = activeClasses;
+        tabCookies.className = inactiveClasses;
     } else {
         emailForm.classList.add('hidden');
         cookiesForm.classList.remove('hidden');
-        tabCookies.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white';
-        tabEmail.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white';
+        tabCookies.className = activeClasses;
+        tabEmail.className = inactiveClasses;
     }
 }
 
@@ -133,7 +209,7 @@ function isLoginSuccess(data) {
 
 async function loginWithEmail(e) {
     e.preventDefault();
-    showMessage('Logging in...', 'blue');
+    showMessage('Connecting to Udemy...', 'blue');
     try {
         const resp = await fetch('/api/auth/login', {
             method: 'POST',
@@ -157,7 +233,7 @@ async function loginWithEmail(e) {
 
 async function loginWithCookies(e) {
     e.preventDefault();
-    showMessage('Logging in...', 'blue');
+    showMessage('Validating session...', 'blue');
     try {
         const resp = await fetch('/api/auth/login/cookies', {
             method: 'POST',
@@ -170,7 +246,7 @@ async function loginWithCookies(e) {
         });
         const data = await resp.json();
         if (isLoginSuccess(data)) {
-            showMessage(`Welcome, ${data.display_name}! Redirecting...`, 'green');
+            showMessage(`Welcome back, ${data.display_name}! Redirecting...`, 'green');
             setTimeout(() => window.location.href = '/', 1000);
         } else {
             showMessage(data.message, 'red');
@@ -182,7 +258,9 @@ async function loginWithCookies(e) {
 
 function showMessage(msg, color) {
     const el = document.getElementById('login-message');
-    el.className = `mt-4 text-center text-sm text-${color}-400`;
+    // Using Tailwind safelist or arbitrary values: text-blue-400 text-green-400 text-red-400
+    if (color === 'emerald') color = 'green';
+    el.className = `mt-4 text-center text-sm font-medium text-${color}-400`;
     el.textContent = msg;
     el.classList.remove('hidden');
 }
