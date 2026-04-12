@@ -27,7 +27,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="flex items-start space-x-3">
                     <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
-                        <i class="fas fa-bolt text-blue-400"></i>
+                        <span class="text-blue-400" aria-hidden="true">⚡</span>
                     </div>
                     <div>
                         <h2 class="text-white font-semibold">Fully Automated</h2>
@@ -36,7 +36,7 @@
                 </div>
                 <div class="flex items-start space-x-3">
                     <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
-                        <i class="fas fa-shield-alt text-emerald-400"></i>
+                        <span class="text-emerald-400" aria-hidden="true">🛡️</span>
                     </div>
                     <div>
                         <h2 class="text-white font-semibold">100% Secure</h2>
@@ -45,7 +45,7 @@
                 </div>
                 <div class="flex items-start space-x-3">
                     <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
-                        <i class="fas fa-filter text-purple-400"></i>
+                        <span class="text-purple-400" aria-hidden="true">🎯</span>
                     </div>
                     <div>
                         <h2 class="text-white font-semibold">Smart Filters</h2>
@@ -54,7 +54,7 @@
                 </div>
                 <div class="flex items-start space-x-3">
                     <div class="bg-gray-800 p-2 rounded-lg border border-gray-700">
-                        <i class="fas fa-chart-line text-yellow-400"></i>
+                        <span class="text-yellow-400" aria-hidden="true">📈</span>
                     </div>
                     <div>
                         <h2 class="text-white font-semibold">Track Savings</h2>
@@ -70,9 +70,9 @@
             <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-600 bg-opacity-20 rounded-full blur-3xl"></div>
             <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-600 bg-opacity-20 rounded-full blur-3xl"></div>
             
-            <div class="relative z-10">
-                <div class="text-center mb-8">
-                    <i class="fas fa-graduation-cap text-4xl text-blue-400 mb-3"></i>
+                <div class="relative z-10">
+                    <div class="text-center mb-8">
+                    <span class="text-4xl text-blue-400 mb-3 inline-block" aria-hidden="true">🎓</span>
                     <h2 class="text-2xl font-bold text-white">Start Automating</h2>
                     <p class="text-gray-400 mt-2 text-sm">Connect your Udemy account to begin</p>
                 </div>
@@ -80,24 +80,24 @@
                 <!-- Tab buttons -->
                 <div class="flex rounded-lg bg-gray-900 bg-opacity-50 p-1 mb-6 border border-gray-700">
                     <button id="tab-email" onclick="switchTab('email')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 text-gray-400 hover:text-white">
-                        <i class="fas fa-envelope mr-1"></i>Email
+                        <span class="mr-1" aria-hidden="true">✉️</span>Email
                     </button>
                     <button id="tab-cookies" onclick="switchTab('cookies')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-blue-600 shadow-md text-white">
-                        <i class="fas fa-cookie mr-1"></i>Cookies
+                        <span class="mr-1" aria-hidden="true">🍪</span>Cookies
                     </button>
                 </div>
 
                 <!-- Email Login Form -->
                 <form id="email-form" class="hidden space-y-5" onsubmit="loginWithEmail(event)">
                     <div class="p-3 bg-yellow-900 bg-opacity-20 border border-yellow-600 border-opacity-30 rounded-lg text-yellow-400 text-opacity-90 text-xs flex items-start">
-                        <i class="fas fa-exclamation-triangle mt-0.5 mr-2"></i>
+                        <span class="mt-0.5 mr-2" aria-hidden="true">⚠️</span>
                         <span>Email login may trigger a CAPTCHA if running on a server. If you see a CSRF error, switch to <strong>Cookie Login</strong>.</span>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1.5">Email Address</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-envelope text-gray-500"></i>
+                                <span class="text-gray-500" aria-hidden="true">✉️</span>
                             </div>
                             <input type="email" id="email" required
                                 class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
@@ -108,7 +108,7 @@
                         <label class="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-lock text-gray-500"></i>
+                                <span class="text-gray-500" aria-hidden="true">🔒</span>
                             </div>
                             <input type="password" id="password" required
                                 class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
@@ -117,14 +117,14 @@
                     </div>
                     <button type="submit" id="login-btn"
                         class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 shadow-lg text-white font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-105">
-                        Connect Account <i class="fas fa-arrow-right ml-1 text-sm"></i>
+                        Connect Account <span class="ml-1 text-sm" aria-hidden="true">→</span>
                     </button>
                 </form>
 
                 <!-- Cookie Login Form -->
                 <form id="cookies-form" class="space-y-4" onsubmit="loginWithCookies(event)">
                     <div class="p-3 bg-blue-900 bg-opacity-20 border border-blue-600 border-opacity-30 rounded-lg text-blue-300 text-opacity-90 text-xs">
-                        <p class="font-semibold mb-1 text-blue-300"><i class="fas fa-info-circle mr-1"></i>How to connect:</p>
+                        <p class="font-semibold mb-1 text-blue-300"><span class="mr-1" aria-hidden="true">ℹ️</span>How to connect:</p>
                         <ol class="list-decimal list-inside space-y-1 opacity-90">
                             <li>Log in to <a href="https://www.udemy.com" target="_blank" class="underline hover:text-white transition-colors">udemy.com</a></li>
                             <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong></li>
@@ -151,7 +151,7 @@
                     </div>
                     <button type="submit"
                         class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 shadow-lg text-white font-semibold py-3 mt-2 rounded-lg transition-all duration-200 transform hover:scale-105">
-                        Connect via Cookies <i class="fas fa-cookie-bite ml-1 text-sm"></i>
+                        Connect via Cookies <span class="ml-1 text-sm" aria-hidden="true">🍪</span>
                     </button>
                 </form>
 

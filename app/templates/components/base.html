@@ -57,12 +57,20 @@
     }
     </script>
 
+    {% if request.url.path == '/' %}
+    <link rel="preload" href="/static/css/tailwind-home.min.css" as="style">
+    <link href="/static/css/tailwind-home.min.css" rel="stylesheet">
+    {% else %}
     <link rel="preload" href="/static/css/tailwind.min.css" as="style">
     <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    {% endif %}
 
+    {% if request.url.path != '/' %}
+    <!-- Font Awesome is loaded only on non-home pages to avoid unused CSS on landing -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    {% endif %}
 
     <style>
         /* Critical CSS to prevent layout shift */
@@ -98,29 +106,6 @@
             .md\:flex-row { flex-direction: row; }
         }
 
-        /* FontAwesome font-display swap override to improve LCP */
-        @font-face {
-            font-family: 'Font Awesome 6 Free';
-            font-style: normal;
-            font-weight: 900;
-            font-display: swap;
-            src: url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2") format("woff2");
-        }
-        @font-face {
-            font-family: 'Font Awesome 6 Free';
-            font-style: normal;
-            font-weight: 400;
-            font-display: swap;
-            src: url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2") format("woff2");
-        }
-        @font-face {
-            font-family: 'Font Awesome 6 Brands';
-            font-style: normal;
-            font-weight: 400;
-            font-display: swap;
-            src: url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2") format("woff2");
-        }
-
         /* Custom styles */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
@@ -143,7 +128,7 @@
         @keyframes slideUp { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 
-        <!-- Google Tag Manager (Lazy load after first interaction/idle) -->
+        <!-- Google Tag Manager (load only after first user interaction) -->
     <script>
     (() => {
         const GTM_ID = "GTM-PBB2W9VG";
@@ -166,20 +151,11 @@
             firstScript.parentNode.insertBefore(script, firstScript);
         }
 
-        function scheduleIdleLoad() {
-            if ("requestIdleCallback" in window) {
-                requestIdleCallback(loadTagManager, { timeout: 5000 });
-            } else {
-                setTimeout(loadTagManager, 5000);
-            }
-        }
-
         window.addEventListener("load", () => {
             window.addEventListener("pointerdown", loadTagManager, { once: true });
             window.addEventListener("keydown", loadTagManager, { once: true });
             window.addEventListener("touchstart", loadTagManager, { once: true, passive: true });
             window.addEventListener("scroll", loadTagManager, { once: true, passive: true });
-            scheduleIdleLoad();
         });
     })();
     </script>
@@ -195,7 +171,12 @@
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <div class="flex items-center space-x-4">
                 <a href="/" class="text-xl font-bold text-blue-400 hover:text-blue-300">
-                    <i class="fas fa-graduation-cap mr-2"></i>Udemy Enroller
+                    {% if request.url.path == '/' %}
+                    <span class="mr-2" aria-hidden="true">🎓</span>
+                    {% else %}
+                    <i class="fas fa-graduation-cap mr-2"></i>
+                    {% endif %}
+                    Udemy Enroller
                 </a>
                 {% if request.url.path != '/' %}
                 <div class="hidden md:flex space-x-1" id="nav-links">
@@ -229,14 +210,18 @@
     <footer class="bg-gray-900 border-t border-gray-800 px-6 py-8 mt-auto">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-sm text-gray-400">
             <div class="flex items-center space-x-2 mb-4 md:mb-0">
+                {% if request.url.path == '/' %}
+                <span class="text-gray-400 text-lg" aria-hidden="true">🎓</span>
+                {% else %}
                 <i class="fas fa-graduation-cap text-gray-600 text-lg"></i>
+                {% endif %}
                 <span class="font-medium text-gray-400">Udemy Course Enroller</span>
                 <span class="hidden md:inline px-2">&bull;</span>
                 <span class="text-gray-400">Automated Learning Infrastructure</span>
             </div>
             <div class="flex items-center space-x-1">
                 <span>Built with</span>
-                <i class="fas fa-heart text-red-500/80 animate-pulse px-1"></i> 
+                <span class="text-red-400 px-1" aria-hidden="true">❤</span>
                 <span>by</span>
                 <a href="https://madhudadi.in" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors ml-1 relative group">
                     Madhu Dadi

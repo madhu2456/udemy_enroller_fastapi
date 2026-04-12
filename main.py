@@ -100,7 +100,7 @@ async def add_cache_headers(request: Request, call_next):
     """Add long-lived cache headers to static files to improve Lighthouse score."""
     response = await call_next(request)
     if request.url.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     return response
 
 # Static files

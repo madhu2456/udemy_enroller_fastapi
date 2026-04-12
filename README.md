@@ -136,6 +136,7 @@ npm run build:css
 ```
 
 This generates `app/static/css/tailwind.min.css`, a purged Tailwind bundle used by the app for better Lighthouse performance.
+It also generates `app/static/css/tailwind-home.min.css`, a smaller landing-page bundle to reduce unused CSS on `/`.
 ---
 
 ## 📊 Health Check
