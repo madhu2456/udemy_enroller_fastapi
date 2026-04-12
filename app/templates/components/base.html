@@ -60,14 +60,12 @@
     <!-- Resource Hints -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
 
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet"></noscript>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" as="style">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
 
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></noscript>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
     <style>
         /* Critical CSS to prevent layout shift */
@@ -140,7 +138,6 @@
         }
         .pulse-active { animation: pulse-glow 2s infinite; }
         #run-modal { backdrop-filter: blur(4px); }
-        * { transition-property: background-color, border-color, color; transition-duration: 150ms; }
         input[type="checkbox"] { cursor: pointer; }
         .toast {
             position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.75rem 1.5rem;
@@ -149,17 +146,45 @@
         @keyframes slideUp { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 
-        <!-- Google Tag Manager (Deferred) -->
+        <!-- Google Tag Manager (Lazy load after first interaction/idle) -->
     <script>
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-            })(window,document,'script','dataLayer','GTM-PBB2W9VG');
-        }, 2000);
-    });
+    (() => {
+        const GTM_ID = "GTM-PBB2W9VG";
+        let loaded = false;
+
+        function loadTagManager() {
+            if (loaded) return;
+            loaded = true;
+
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                "gtm.start": new Date().getTime(),
+                event: "gtm.js",
+            });
+
+            const firstScript = document.getElementsByTagName("script")[0];
+            const script = document.createElement("script");
+            script.async = true;
+            script.src = `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`;
+            firstScript.parentNode.insertBefore(script, firstScript);
+        }
+
+        function scheduleIdleLoad() {
+            if ("requestIdleCallback" in window) {
+                requestIdleCallback(loadTagManager, { timeout: 5000 });
+            } else {
+                setTimeout(loadTagManager, 5000);
+            }
+        }
+
+        window.addEventListener("load", () => {
+            window.addEventListener("pointerdown", loadTagManager, { once: true });
+            window.addEventListener("keydown", loadTagManager, { once: true });
+            window.addEventListener("touchstart", loadTagManager, { once: true, passive: true });
+            window.addEventListener("scroll", loadTagManager, { once: true, passive: true });
+            scheduleIdleLoad();
+        });
+    })();
     </script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen" style="background-color: #111827; color: #f3f4f6;">

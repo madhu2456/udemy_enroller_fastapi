@@ -191,19 +191,29 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 let progressInterval = null;
 let savingsChart = null;
+let chartJsPromise = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
+    initializeDashboard();
+});
+
+async function initializeDashboard() {
+    const isAuthenticated = await checkAuth();
+    if (!isAuthenticated) return;
+
     loadDashboardStats();
     loadRecentRuns();
     checkActiveRun();
     initAnalytics();
-    initLogStream();
-});
+
+    // Logs are useful but non-critical for first paint.
+    setTimeout(() => {
+        initLogStream();
+    }, 1000);
+}
 
 async function checkAuth() {
     try {
@@ -211,13 +221,30 @@ async function checkAuth() {
         const data = await resp.json();
         if (!data.authenticated) {
             window.location.href = '/';
-            return;
+            return false;
         }
         document.getElementById('user-info').textContent = data.display_name;
         document.getElementById('logout-btn').classList.remove('hidden');
+        return true;
     } catch (e) {
         window.location.href = '/';
+        return false;
     }
+}
+
+async function loadChartJs() {
+    if (window.Chart) return;
+    if (!chartJsPromise) {
+        chartJsPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+    await chartJsPromise;
 }
 
 async function loadDashboardStats() {
@@ -402,6 +429,7 @@ function updateProgress(data) {
 }
 
 async function initAnalytics() {
+    await loadChartJs();
     const ctx = document.getElementById('savings-chart').getContext('2d');
     savingsChart = new Chart(ctx, {
         type: 'line',
