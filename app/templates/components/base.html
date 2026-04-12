@@ -68,7 +68,53 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></noscript>
 
-    <link href="/static/css/style.css" rel="stylesheet">
+    <style>
+        /* FontAwesome font-display swap override to improve LCP */
+        @font-face {
+            font-family: 'Font Awesome 6 Free';
+            font-style: normal;
+            font-weight: 900;
+            font-display: swap;
+            src: url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2") format("woff2");
+        }
+        @font-face {
+            font-family: 'Font Awesome 6 Free';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2") format("woff2");
+        }
+        @font-face {
+            font-family: 'Font Awesome 6 Brands';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2") format("woff2");
+        }
+
+        /* Custom styles */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .nav-link.active { background-color: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); }
+        #progress-bar { transition: width 0.5s ease-in-out; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+        }
+        .pulse-active { animation: pulse-glow 2s infinite; }
+        #run-modal { backdrop-filter: blur(4px); }
+        * { transition-property: background-color, border-color, color; transition-duration: 150ms; }
+        input[type="checkbox"] { cursor: pointer; }
+        .toast {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; font-size: 0.875rem; z-index: 100; animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
         <!-- Google Tag Manager -->
     <script>
