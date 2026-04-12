@@ -42,6 +42,29 @@ async def history_page(request: Request):
     return templates.TemplateResponse("pages/history.html", {"request": request})
 
 
+from datetime import timedelta
+from functools import wraps
+from typing import Any
+
+# Cache for dashboard analytics and stats
+_analytics_cache = {}
+_stats_cache = {}
+CACHE_TTL = timedelta(minutes=5)
+
+def get_cached_or_compute(cache_dict: dict, user_id: int, compute_func: Any) -> Any:
+    """Helper to cache DB heavy responses for a short time."""
+    from datetime import datetime
+    now = datetime.utcnow()
+    
+    if user_id in cache_dict:
+        entry = cache_dict[user_id]
+        if now - entry["time"] < CACHE_TTL:
+            return entry["data"]
+            
+    data = compute_func()
+    cache_dict[user_id] = {"time": now, "data": data}
+    return data
+
 @router.get("/api/dashboard/stats")
 async def dashboard_stats(
     db: Session = Depends(get_db),
@@ -53,26 +76,29 @@ async def dashboard_stats(
     course, so they survive disconnects and incomplete runs).
     Total run count still comes from enrollment_runs.
     """
-    user = db.get(User, user_id)
-    if not user:
-        return {"total_runs": 0, "total_enrolled": 0, "total_amount_saved": 0.0,
-                "currency": "usd", "total_already_enrolled": 0,
-                "total_expired": 0, "total_excluded": 0}
+    def compute_stats():
+        user = db.get(User, user_id)
+        if not user:
+            return {"total_runs": 0, "total_enrolled": 0, "total_amount_saved": 0.0,
+                    "currency": "usd", "total_already_enrolled": 0,
+                    "total_expired": 0, "total_excluded": 0}
 
-    total_runs = db.query(func.count(EnrollmentRun.id)).filter(
-        EnrollmentRun.user_id == user_id,
-        EnrollmentRun.status != "deleted"
-    ).scalar() or 0
+        total_runs = db.query(func.count(EnrollmentRun.id)).filter(
+            EnrollmentRun.user_id == user_id,
+            EnrollmentRun.status != "deleted"
+        ).scalar() or 0
 
-    return {
-        "total_runs": total_runs,
-        "total_enrolled": user.total_enrolled or 0,
-        "total_amount_saved": float(user.total_amount_saved or 0),
-        "currency": user.currency or "usd",
-        "total_already_enrolled": user.total_already_enrolled or 0,
-        "total_expired": user.total_expired or 0,
-        "total_excluded": user.total_excluded or 0,
-    }
+        return {
+            "total_runs": total_runs,
+            "total_enrolled": user.total_enrolled or 0,
+            "total_amount_saved": float(user.total_amount_saved or 0),
+            "currency": user.currency or "usd",
+            "total_already_enrolled": user.total_already_enrolled or 0,
+            "total_expired": user.total_expired or 0,
+            "total_excluded": user.total_excluded or 0,
+        }
+        
+    return get_cached_or_compute(_stats_cache, user_id, compute_stats)
 
 
 @router.get("/api/dashboard/analytics")
@@ -81,31 +107,34 @@ async def dashboard_analytics(
     user_id: int = Depends(get_current_user_id),
 ):
     """Get historical analytics for the current user (savings per day for last 30 days)."""
-    # Aggregate successful enrollments by date
-    stats = (
-        db.query(
-            func.date(EnrolledCourse.enrolled_at).label("date"),
-            func.count(EnrolledCourse.id).label("count"),
-            func.sum(EnrolledCourse.price).label("savings")
+    def compute_analytics():
+        # Aggregate successful enrollments by date
+        stats = (
+            db.query(
+                func.date(EnrolledCourse.enrolled_at).label("date"),
+                func.count(EnrolledCourse.id).label("count"),
+                func.sum(EnrolledCourse.price).label("savings")
+            )
+            .join(EnrollmentRun)
+            .filter(
+                EnrollmentRun.user_id == user_id,
+                EnrolledCourse.status == "enrolled"
+            )
+            .group_by(func.date(EnrolledCourse.enrolled_at))
+            .order_by(func.date(EnrolledCourse.enrolled_at))
+            .all()
         )
-        .join(EnrollmentRun)
-        .filter(
-            EnrollmentRun.user_id == user_id,
-            EnrolledCourse.status == "enrolled"
-        )
-        .group_by(func.date(EnrolledCourse.enrolled_at))
-        .order_by(func.date(EnrolledCourse.enrolled_at))
-        .all()
-    )
 
-    return [
-        {
-            "date": str(s.date),
-            "count": s.count,
-            "savings": float(s.savings or 0)
-        }
-        for s in stats
-    ]
+        return [
+            {
+                "date": str(s.date),
+                "count": s.count,
+                "savings": float(s.savings or 0)
+            }
+            for s in stats
+        ]
+        
+    return get_cached_or_compute(_analytics_cache, user_id, compute_analytics)
 
 
 @router.get("/api/dashboard/logs/stream")

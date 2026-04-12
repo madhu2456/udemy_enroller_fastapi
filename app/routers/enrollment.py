@@ -103,6 +103,27 @@ async def stream_progress(db: Session = Depends(get_db), user_id: int = Depends(
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+from datetime import timedelta
+from functools import wraps
+from typing import Any
+import datetime
+
+# Cache for dashboard analytics and stats
+_history_cache = {}
+CACHE_TTL = timedelta(seconds=10)
+
+def get_cached_or_compute(cache_dict: dict, user_id: int, compute_func: Any) -> Any:
+    """Helper to cache DB heavy responses for a short time."""
+    now = datetime.datetime.utcnow()
+
+    if user_id in cache_dict:
+        entry = cache_dict[user_id]
+        if now - entry["time"] < CACHE_TTL:
+            return entry["data"]
+
+    data = compute_func()
+    cache_dict[user_id] = {"time": now, "data": data}
+    return data
 
 @router.get("/history", response_model=list[EnrollmentStatus])
 async def get_enrollment_history(
@@ -111,32 +132,36 @@ async def get_enrollment_history(
     user_id: int = Depends(get_current_user_id),
 ):
     """Get enrollment run history for the current user only."""
-    runs = (
-        db.query(EnrollmentRun)
-        .filter(EnrollmentRun.user_id == user_id)
-        .filter(EnrollmentRun.status != "deleted")
-        .order_by(EnrollmentRun.started_at.desc())
-        .limit(limit)
-        .all()
-    )
-    return [
-        EnrollmentStatus(
-            run_id=r.id,
-            status=r.status,
-            total_courses_found=r.total_courses_found,
-            total_processed=r.total_processed,
-            successfully_enrolled=r.successfully_enrolled,
-            already_enrolled=r.already_enrolled,
-            expired=r.expired,
-            excluded=r.excluded,
-            amount_saved=r.amount_saved,
-            currency=r.currency,
-            started_at=r.started_at,
-            completed_at=r.completed_at,
-            error_message=r.error_message,
+    def compute_history():
+        runs = (
+            db.query(EnrollmentRun)
+            .filter(EnrollmentRun.user_id == user_id)
+            .filter(EnrollmentRun.status != "deleted")
+            .order_by(EnrollmentRun.started_at.desc())
+            .limit(limit)
+            .all()
         )
-        for r in runs
-    ]
+
+        return [
+            EnrollmentStatus(
+                run_id=run.id,
+                status=run.status,
+                total_courses=run.total_courses,
+                processed=run.processed_courses,
+                successfully_enrolled=run.successful_enrollments,
+                already_enrolled=run.already_enrolled,
+                expired=run.expired_courses,
+                excluded=run.excluded_courses,
+                amount_saved=float(run.total_amount_saved or 0),
+                currency=run.currency,
+                started_at=run.started_at,
+                completed_at=run.completed_at,
+                error_message=run.error_message,
+            )
+            for run in runs
+        ]
+
+    return get_cached_or_compute(_history_cache, f"{user_id}_{limit}", compute_history)
 
 
 @router.get("/run/{run_id}")
