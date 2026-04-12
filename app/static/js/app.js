@@ -4,7 +4,7 @@ async function logout() {
     try {
         await fetch('/api/auth/logout', { method: 'POST' });
     } catch (e) {}
-    window.location.href = '/login';
+    window.location.href = '/';
 }
 
 // Highlight active nav link

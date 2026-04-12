@@ -27,12 +27,6 @@ async def sitemap_xml():
       <changefreq>daily</changefreq>
       <priority>1.0</priority>
    </url>
-   <url>
-      <loc>https://udemyenroller.madhudadi.in/login</loc>
-      <lastmod>{today}</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.8</priority>
-   </url>
 </urlset>"""
     return Response(content=content, media_type="application/xml")
 
