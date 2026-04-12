@@ -138,10 +138,10 @@ async function checkAuth() {
     try {
         const resp = await fetch('/api/auth/status');
         const data = await resp.json();
-        if (!data.authenticated) { window.location.href = '/login'; return; }
+        if (!data.authenticated) { window.location.href = '/'; return; }
         document.getElementById('user-info').textContent = data.display_name;
         document.getElementById('logout-btn').classList.remove('hidden');
-    } catch(e) { window.location.href = '/login'; }
+    } catch(e) { window.location.href = '/'; }
 }
 
 function setupTagInput(inputId, containerId) {

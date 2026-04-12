@@ -83,9 +83,9 @@
                 <a href="/" class="text-xl font-bold text-blue-400 hover:text-blue-300">
                     <i class="fas fa-graduation-cap mr-2"></i>Udemy Enroller
                 </a>
-                {% if request.url.path != '/login' %}
+                {% if request.url.path != '/' %}
                 <div class="hidden md:flex space-x-1" id="nav-links">
-                    <a href="/" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                    <a href="/dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
                         <i class="fas fa-chart-bar mr-1"></i>Dashboard
                     </a>
                     <a href="/settings" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">

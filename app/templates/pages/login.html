@@ -198,7 +198,7 @@ async function checkIfAlreadyLoggedIn() {
         const resp = await fetch('/api/auth/status');
         const data = await resp.json();
         if (data.authenticated) {
-            window.location.href = '/';
+            window.location.href = '/dashboard';
         }
     } catch (err) {}
 }
@@ -222,7 +222,7 @@ async function loginWithEmail(e) {
         const data = await resp.json();
         if (isLoginSuccess(data)) {
             showMessage(`Welcome, ${data.display_name}! Redirecting...`, 'green');
-            setTimeout(() => window.location.href = '/', 1000);
+            setTimeout(() => window.location.href = '/dashboard', 1000);
         } else {
             showMessage(data.message, 'red');
         }
@@ -247,7 +247,7 @@ async function loginWithCookies(e) {
         const data = await resp.json();
         if (isLoginSuccess(data)) {
             showMessage(`Welcome back, ${data.display_name}! Redirecting...`, 'green');
-            setTimeout(() => window.location.href = '/', 1000);
+            setTimeout(() => window.location.href = '/dashboard', 1000);
         } else {
             showMessage(data.message, 'red');
         }
