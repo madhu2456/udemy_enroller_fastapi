@@ -127,6 +127,15 @@ SQLite Database
 git clone https://github.com/madhu2456/udemy_enroller_fastapi.git
 cd udemy_enroller_fastapi
 ```
+
+### 🔹 Frontend CSS Build (when templates/classes change)
+
+```bash
+npm install
+npm run build:css
+```
+
+This generates `app/static/css/tailwind.min.css`, a purged Tailwind bundle used by the app for better Lighthouse performance.
 ---
 
 ## 📊 Health Check
