@@ -3,7 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build:css": "tailwindcss -c tailwind.config.js -i ./app/static/css/tailwind.input.css -o ./app/static/css/tailwind.min.css --minify"
+    "build:css:app": "tailwindcss -c tailwind.config.js -i ./app/static/css/tailwind.input.css -o ./app/static/css/tailwind.min.css --minify",
+    "build:css:home": "tailwindcss -c tailwind.home.config.js -i ./app/static/css/tailwind.input.css -o ./app/static/css/tailwind-home.min.css --minify",
+    "build:css": "npm run build:css:app && npm run build:css:home"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"
