@@ -5,7 +5,7 @@ import io
 import json
 import logging
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,7 @@ app_settings = get_app_settings()
 @maybe_limit(app_settings.RATE_LIMIT_API)
 async def start_enrollment(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
     client=Depends(get_udemy_client),
@@ -67,6 +68,9 @@ async def start_enrollment(
 
     manager = EnrollmentManager(client, settings_dict, db, user_id)
     run_id = await manager.start()
+    
+    # Start the actual scraping and enrollment pipeline in the background
+    background_tasks.add_task(manager._run_pipeline)
 
     return {"success": True, "run_id": run_id, "message": "Enrollment started"}
 

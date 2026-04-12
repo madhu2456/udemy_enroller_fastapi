@@ -39,7 +39,7 @@ slowapi==0.1.9
 playwright
 
 # Scheduling
-apscheduler==3.11.2
+# (Removed - manual start only)
 
 # Testing
 pytest==8.3.4

@@ -15,6 +15,7 @@ from loguru import logger
 
 from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient
+from app.core import constants
 
 
 class LoginException(Exception):
@@ -28,10 +29,10 @@ class UdemyClient:
     def __init__(self, proxy: Optional[str] = None):
         self.http = AsyncHTTPClient(proxy=proxy)
         self.http.client.headers.update({
-            "User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
+            "User-Agent": constants.DEFAULT_USER_AGENT,
             "Accept": "application/json, text/plain, */*",
             "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://www.udemy.com/",
+            "Referer": f"{constants.UDEMY_BASE_URL}/",
         })
 
         self.display_name: str = ""
@@ -67,8 +68,8 @@ class UdemyClient:
         logger.info(f"Attempting manual login for {email}")
         try:
             r = await self.http.get(
-                "https://www.udemy.com/join/signup-popup/?locale=en_US&response_type=html&next=https%3A%2F%2Fwww.udemy.com%2Flogout%2F",
-                headers={"User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)"}
+                constants.UDEMY_SIGNUP_POPUP_URL,
+                headers={"User-Agent": constants.DEFAULT_USER_AGENT}
             )
             if not r:
                 raise LoginException("Could not connect to Udemy.")
@@ -87,12 +88,12 @@ class UdemyClient:
             # POST for login
             self.http.client.cookies.update(r.cookies)
             self.http.client.headers.update({
-                "Referer": "https://www.udemy.com/join/login-popup/?passwordredirect=True&response_type=json",
-                "Origin": "https://www.udemy.com",
+                "Referer": constants.UDEMY_LOGIN_POPUP_URL,
+                "Origin": constants.UDEMY_BASE_URL,
             })
 
             resp = await self.http.post(
-                "https://www.udemy.com/join/login-popup/?passwordredirect=True&response_type=json",
+                constants.UDEMY_LOGIN_POPUP_URL,
                 data=data
             )
 
@@ -127,7 +128,7 @@ class UdemyClient:
         logger.info("Getting session info")
         try:
             resp = await self.http.get(
-                "https://www.udemy.com/api-2.0/contexts/me/?header=True",
+                constants.UDEMY_CONTEXT_URL,
                 cookies=self.cookie_dict
             )
             ctx = await self.http.safe_json(resp, "session info")
@@ -138,7 +139,7 @@ class UdemyClient:
 
             # Get currency
             cart_resp = await self.http.get(
-                "https://www.udemy.com/api-2.0/shopping-carts/me/",
+                constants.UDEMY_CART_URL,
                 cookies=self.cookie_dict
             )
             cart = await self.http.safe_json(cart_resp, "cart info")
@@ -156,8 +157,7 @@ class UdemyClient:
         """Fetch all enrolled courses asynchronously. Stops early if known courses are found."""
         logger.info("Fetching enrolled courses")
         next_page = (
-            "https://www.udemy.com/api-2.0/users/me/subscribed-courses/"
-            "?ordering=-enroll_time&fields[course]=enrollment_time,url&page_size=100"
+            f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}?ordering=-enroll_time&fields[course]=enrollment_time,url&page_size=100"
         )
         courses = {}
         page_num = 0
@@ -226,7 +226,7 @@ class UdemyClient:
         """Check coupon validity asynchronously."""
         if course.price is not None:
             return
-        url = f"https://www.udemy.com/api-2.0/course-landing-components/{course.course_id}/me/?components=purchase"
+        url = f"{constants.UDEMY_COURSE_LANDING_COMPONENTS_URL}{course.course_id}/me/?components=purchase"
         if course.coupon_code:
             url += f",redeem_coupon&couponCode={course.coupon_code}"
 
@@ -304,9 +304,9 @@ class UdemyClient:
 
     async def free_checkout(self, course: Course):
         """Enroll in a free course asynchronously."""
-        await self.http.get(f"https://www.udemy.com/course/subscribe/?courseId={course.course_id}", cookies=self.cookie_dict)
+        await self.http.get(f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}", cookies=self.cookie_dict)
         resp = await self.http.get(
-            f"https://www.udemy.com/api-2.0/users/me/subscribed-courses/{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private",
+            f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private",
             cookies=self.cookie_dict
         )
         if resp and resp.status_code == 200:
@@ -320,7 +320,7 @@ class UdemyClient:
         headers = {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://www.udemy.com/payment/checkout/",
+            "Referer": constants.UDEMY_CHECKOUT_URL,
             "X-CSRF-Token": self.http.client.cookies.get("csrftoken", ""),
         }
         result = await self._checkout_one(course, headers)
@@ -359,7 +359,7 @@ class UdemyClient:
         }
         
         for attempt in range(3):
-            resp = await self.http.post("https://www.udemy.com/payment/checkout-submit/", json=payload, headers=headers, cookies=self.cookie_dict)
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict)
             result = await self.http.safe_json(resp, "checkout one")
             
             if result and result.get("status") == "succeeded":
@@ -384,7 +384,7 @@ class UdemyClient:
         headers = {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://www.udemy.com/payment/checkout/",
+            "Referer": constants.UDEMY_CHECKOUT_URL,
             "X-CSRF-Token": self.http.client.cookies.get("csrftoken", ""),
         }
         
@@ -405,7 +405,7 @@ class UdemyClient:
                 "shopping_info": {"items": items, "is_cart": True},
             }
             
-            resp = await self.http.post("https://www.udemy.com/payment/checkout-submit/", json=payload, headers=headers, cookies=self.cookie_dict)
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict)
             result = await self.http.safe_json(resp, "bulk checkout")
             
             if result and result.get("status") == "succeeded":

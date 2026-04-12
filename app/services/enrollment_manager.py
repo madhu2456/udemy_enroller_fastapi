@@ -67,7 +67,7 @@ class EnrollmentManager:
         }
 
     async def start(self) -> int:
-        """Create the run record then return the run_id. Let the scheduler pick it up."""
+        """Create the run record and return the run_id. Pipeline is executed via BackgroundTasks."""
         active = self.get_active_run(self._request_db, self.user_id)
         if active:
             raise RuntimeError("An enrollment run is already active for this user")

@@ -1,6 +1,6 @@
 """SQLAlchemy database setup and models."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text, JSON,
     create_engine, ForeignKey
@@ -68,6 +68,7 @@ class UserSession(Base):
     token = Column(String(64), unique=True, index=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=_utcnow_naive)
+    expires_at = Column(DateTime, default=lambda: _utcnow_naive() + timedelta(days=30))
 
     user = relationship("User", back_populates="sessions")
 
@@ -121,7 +122,6 @@ class UserSettings(Base):
     # Advanced Features
     proxy_url = Column(String(500), nullable=True)
     enable_headless = Column(Boolean, default=False)
-    schedule_interval = Column(Integer, default=0)  # 0 = disabled, else hours
 
     created_at = Column(DateTime, default=_utcnow_naive)
     updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)

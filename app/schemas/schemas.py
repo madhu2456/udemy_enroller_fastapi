@@ -68,7 +68,6 @@ class SettingsUpdate(BaseModel):
     discounted_only: Optional[bool] = None
     proxy_url: Optional[str] = None
     enable_headless: Optional[bool] = None
-    schedule_interval: Optional[int] = None
 
     @field_validator("proxy_url")
     @classmethod
@@ -97,14 +96,6 @@ class SettingsUpdate(BaseModel):
             raise ValueError("course_update_threshold_months must be non-negative")
         return v
 
-    @field_validator("schedule_interval")
-    @classmethod
-    def validate_schedule(cls, v: Optional[int]) -> Optional[int]:
-        """Validate schedule_interval is non-negative."""
-        if v is not None and v < 0:
-            raise ValueError("schedule_interval must be non-negative")
-        return v
-
 
 class SettingsResponse(BaseModel):
     sites: dict
@@ -118,7 +109,6 @@ class SettingsResponse(BaseModel):
     discounted_only: bool
     proxy_url: Optional[str]
     enable_headless: bool
-    schedule_interval: int
 
     model_config = ConfigDict(from_attributes=True)
 

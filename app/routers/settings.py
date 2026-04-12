@@ -37,7 +37,6 @@ async def get_settings(
         discounted_only=settings.discounted_only or False,
         proxy_url=settings.proxy_url,
         enable_headless=settings.enable_headless or False,
-        schedule_interval=settings.schedule_interval or 0,
     )
 
 
@@ -96,7 +95,6 @@ async def reset_settings(
     settings.discounted_only = False
     settings.proxy_url = None
     settings.enable_headless = False
-    settings.schedule_interval = 0
 
     db.commit()
     logger.info(f"Settings reset to defaults for user {user_id}")

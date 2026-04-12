@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from loguru import logger
 
-from app.models.database import get_db, User, UserSettings, UserSession
+from app.models.database import get_db, User, UserSettings, UserSession, _utcnow_naive
 from app.rate_limit_config import maybe_limit
 from app.schemas.schemas import LoginRequest, CookieLoginRequest, LoginResponse
 from app.services.udemy_client import UdemyClient, LoginException
@@ -167,18 +167,35 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
     if not session:
         return {"authenticated": False}
 
+    # Check session expiration
+    if session.expires_at and session.expires_at < _utcnow_naive():
+        db.delete(session)
+        db.commit()
+        if hasattr(request.app.state, "udemy_clients"):
+            request.app.state.udemy_clients.pop(token, None)
+        return {"authenticated": False}
+
     # Check in-memory client
     clients = getattr(request.app.state, "udemy_clients", {})
     client = clients.get(token)
+    
     if not client or not client.is_authenticated:
-        # Session exists in DB but client not in memory (server restarted)
-        return {
-            "authenticated": True,  # DB session valid, just needs re-auth for active enrollment
-            "display_name": session.user.udemy_display_name,
-            "currency": session.user.currency,
-            "enrolled_courses_count": 0,
-            "needs_reauth": True,
-        }
+        # Reconstruct client from db cookies
+        user = session.user
+        if user.udemy_cookies:
+            client = UdemyClient()
+            client.cookie_dict = user.udemy_cookies
+            client.http.client.cookies.update(user.udemy_cookies)
+            client.display_name = user.udemy_display_name
+            client.currency = user.currency
+            client.is_authenticated = True
+            
+            if not hasattr(request.app.state, "udemy_clients"):
+                request.app.state.udemy_clients = {}
+            request.app.state.udemy_clients[token] = client
+            logger.info(f"Reconstructed session for {client.display_name}")
+        else:
+            return {"authenticated": False}
 
     return {
         "authenticated": True,
