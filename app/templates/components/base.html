@@ -59,17 +59,20 @@
 
     {% if request.url.path == '/' %}
     <link rel="preload" href="/static/css/tailwind-home.min.css" as="style">
-    <link href="/static/css/tailwind-home.min.css" rel="stylesheet">
+    <link href="/static/css/tailwind-home.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="/static/css/tailwind-home.min.css" rel="stylesheet"></noscript>
     {% else %}
     <link rel="preload" href="/static/css/tailwind.min.css" as="style">
-    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link href="/static/css/tailwind.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="/static/css/tailwind.min.css" rel="stylesheet"></noscript>
     {% endif %}
 
     {% if request.url.path != '/' %}
     <!-- Font Awesome is loaded only on non-home pages to avoid unused CSS on landing -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></noscript>
     {% endif %}
 
     <style>
