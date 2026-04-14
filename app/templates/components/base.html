@@ -58,9 +58,7 @@
     </script>
 
     {% if request.url.path == '/' %}
-    <link rel="preload" href="/static/css/tailwind-home.min.css" as="style">
-    <link href="/static/css/tailwind-home.min.css" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="/static/css/tailwind-home.min.css" rel="stylesheet"></noscript>
+    <style>{% include 'components/tailwind-home.min.css' %}</style>
     {% else %}
     <link rel="preload" href="/static/css/tailwind.min.css" as="style">
     <link href="/static/css/tailwind.min.css" rel="stylesheet" media="print" onload="this.media='all'">
