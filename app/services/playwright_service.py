@@ -30,11 +30,11 @@ class PlaywrightManager:
         async with cls._lock:
             try:
                 if cls._browser:
-                    # Use wait_for to prevent hanging forever
-                    await asyncio.wait_for(cls._browser.close(), timeout=10.0)
+                    # Use short timeout for faster shutdown
+                    await asyncio.wait_for(cls._browser.close(), timeout=2.0)
                     cls._browser = None
                 if cls._pw:
-                    await asyncio.wait_for(cls._pw.stop(), timeout=5.0)
+                    await asyncio.wait_for(cls._pw.stop(), timeout=1.0)
                     cls._pw = None
                 logger.info("Stopped global Playwright browser.")
             except asyncio.TimeoutError:
@@ -85,3 +85,59 @@ class PlaywrightService:
             return ""
         finally:
             await page.close()
+
+
+async def extract_udemy_cookies_interactive(timeout_seconds: int = 300) -> dict:
+    """Launch a visible browser and poll for Udemy auth cookies."""
+    logger.info("Launching interactive browser for cookie extraction...")
+    
+    async with async_playwright() as p:
+        # Launch visible browser
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
+        
+        # Navigate to Udemy login
+        try:
+            from app.core import constants
+            await page.goto(constants.UDEMY_LOGIN_POPUP_URL, wait_until="networkidle")
+        except Exception as e:
+            logger.error(f"Failed to navigate to Udemy: {e}")
+            await browser.close()
+            return {}
+
+        start_time = asyncio.get_event_loop().time()
+        extracted_cookies = {}
+
+        try:
+            while asyncio.get_event_loop().time() - start_time < timeout_seconds:
+                # Check if browser is still open
+                if browser.is_connected() is False or len(browser.contexts) == 0:
+                    break
+
+                cookies = await context.cookies()
+                cookie_map = {c["name"]: c["value"] for c in cookies if ".udemy.com" in c["domain"]}
+                
+                # We need access_token, client_id, and csrftoken
+                access_token = cookie_map.get("access_token")
+                client_id = cookie_map.get("client_id")
+                csrf_token = cookie_map.get("csrftoken") or cookie_map.get("csrf_token")
+
+                if access_token and client_id and csrf_token:
+                    extracted_cookies = {
+                        "access_token": access_token,
+                        "client_id": client_id,
+                        "csrf_token": csrf_token
+                    }
+                    logger.info("Successfully extracted Udemy cookies via interactive browser.")
+                    break
+                
+                await asyncio.sleep(2)
+        except Exception as e:
+            logger.error(f"Error during cookie polling: {e}")
+        finally:
+            await browser.close()
+            
+        return extracted_cookies

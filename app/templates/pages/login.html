@@ -124,11 +124,21 @@
                 <!-- Cookie Login Form -->
                 <form id="cookies-form" class="space-y-4" onsubmit="loginWithCookies(event)">
                     <div class="p-3 bg-blue-900 bg-opacity-20 border border-blue-600 border-opacity-30 rounded-lg text-blue-300 text-opacity-90 text-xs">
-                        <p class="font-semibold mb-1 text-blue-300"><span class="mr-1" aria-hidden="true">ℹ️</span>How to connect:</p>
-                        <ol class="list-decimal list-inside space-y-1 opacity-90">
+                        <p class="font-semibold mb-2 text-blue-300"><span class="mr-1" aria-hidden="true">✨</span>New: Automated Extraction</p>
+                        <button type="button" id="auto-extract-btn" onclick="autoExtractCookies()"
+                            class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded mb-3 transition-colors flex items-center justify-center space-x-2">
+                            <span>Auto-Extract from Browser</span>
+                            <span id="auto-spinner" class="hidden animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                        </button>
+                        <p class="opacity-75 text-[10px] leading-tight">Launches a visible browser window. Log in to Udemy there, and we'll grab the tokens automatically.</p>
+                        
+                        <div class="border-t border-blue-500 border-opacity-20 my-3"></div>
+
+                        <p class="font-semibold mb-1 text-blue-300 opacity-70"><span class="mr-1" aria-hidden="true">ℹ️</span>Manual Method:</p>
+                        <ol class="list-decimal list-inside space-y-1 opacity-70 scale-95 origin-left">
                             <li>Log in to <a href="https://www.udemy.com" target="_blank" class="underline hover:text-white transition-colors">udemy.com</a></li>
                             <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong></li>
-                            <li>Copy the required values below:</li>
+                            <li>Copy values below:</li>
                         </ol>
                     </div>
                     <div>
@@ -245,11 +255,40 @@ async function loginWithCookies(e) {
     }
 }
 
+async function autoExtractCookies() {
+    const btn = document.getElementById('auto-extract-btn');
+    const spinner = document.getElementById('auto-spinner');
+    
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+    showMessage('Opening browser... Please log in to Udemy if prompted.', 'blue');
+    
+    try {
+        const resp = await fetch('/api/auth/extract-cookies', {
+            method: 'POST'
+        });
+        const data = await resp.json();
+        
+        if (isLoginSuccess(data)) {
+            showMessage(`Success! Welcome, ${data.display_name}. Redirecting...`, 'green');
+            setTimeout(() => window.location.href = '/dashboard', 1000);
+        } else {
+            showMessage(data.message || 'Extraction failed.', 'red');
+            btn.disabled = false;
+            spinner.classList.add('hidden');
+        }
+    } catch (err) {
+        showMessage('Extraction failed. Make sure server has display access.', 'red');
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+    }
+}
+
 function showMessage(msg, color) {
     const el = document.getElementById('login-message');
     // Using Tailwind safelist or arbitrary values: text-blue-400 text-green-400 text-red-400
     if (color === 'emerald') color = 'green';
-    el.className = `mt-4 text-center text-sm font-medium text-${color}-400`;
+    el.className = `mt-4 text-center text-sm font-medium text-${color}-400 px-2 break-words max-w-full`;
     el.textContent = msg;
     el.classList.remove('hidden');
 }

@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
         with SessionLocal() as db:
             db.execute(
                 update(EnrollmentRun)
-                .where(EnrollmentRun.status.in_(["scraping", "enrolling"]))
+                .where(EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]))
                 .values(status="failed", error_message="Server restarted")
             )
             db.commit()
@@ -69,31 +69,44 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
+    from app.core.constants import shutdown_event
+    shutdown_event.set()
+    
     logger.info("Server shutting down, cancelling active tasks...")
-    from app.services.enrollment_manager import EnrollmentManager
-    
-    tasks = list(EnrollmentManager.active_tasks.values())
-    for task in tasks:
-        task.cancel()
-    
-    if tasks:
-        try:
-            await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=10.0)
-            logger.info(f"Cancelled {len(tasks)} active enrollment tasks.")
-        except asyncio.TimeoutError:
-            logger.warning("Timed out waiting for enrollment tasks to cancel.")
+    try:
+        from app.services.enrollment_manager import EnrollmentManager
+        
+        tasks = list(EnrollmentManager.active_tasks.values())
+        if tasks:
+            logger.info(f"Found {len(tasks)} active enrollment tasks to cancel.")
+            for task in tasks:
+                task.cancel()
+            
+            try:
+                # Wait for tasks to handle cancellation (includes DB updates)
+                await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=5.0)
+                logger.info("All enrollment tasks cancelled successfully.")
+            except asyncio.TimeoutError:
+                logger.warning("Timed out waiting for enrollment tasks to cancel.")
+            except Exception as e:
+                logger.error(f"Error during enrollment task cancellation: {e}")
 
-    # Close all udemy clients
-    clients = getattr(app.state, "udemy_clients", {})
-    for client in clients.values():
-        try:
-            await client.close()
-        except Exception:
-            pass
-    if clients:
-        logger.info(f"Closed {len(clients)} Udemy client sessions.")
+        # Close all udemy clients
+        clients = getattr(app.state, "udemy_clients", {})
+        if clients:
+            logger.info(f"Closing {len(clients)} Udemy client sessions...")
+            for token, client in clients.items():
+                try:
+                    await client.close()
+                except Exception as e:
+                    logger.error(f"Error closing client {token}: {e}")
+            logger.info("All Udemy client sessions closed.")
 
-    await PlaywrightManager.close_browser()
+        # Final browser cleanup
+        await PlaywrightManager.close_browser()
+        
+    except Exception as e:
+        logger.error(f"Unexpected error during shutdown: {e}")
 
     logger.info("Shutting down Udemy Course Enroller API")
 
