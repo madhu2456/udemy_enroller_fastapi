@@ -230,7 +230,12 @@ async def logout(request: Request, db: Session = Depends(get_db)):
         if hasattr(request.app.state, "udemy_clients"):
             client = request.app.state.udemy_clients.pop(token, None)
             if client:
-                await client.close()
+                try:
+                    close_res = client.close()
+                    if asyncio.iscoroutine(close_res):
+                        await close_res
+                except Exception as e:
+                    logger.error(f"Error closing client {token} during logout: {e}")
                 logger.info(f"Closed Udemy client session for user {user_id} due to logout.")
 
     response = JSONResponse(content={"success": True, "message": "Logged out"})
