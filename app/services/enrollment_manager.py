@@ -178,51 +178,64 @@ class EnrollmentManager:
                 else:
                     logger.debug(f"Processing {index + 1}/{self.total_courses}: {course.title}")
 
+                course_status = "failed"
+                error_msg = None
+
                 if await self.udemy.is_already_enrolled(course):
                     self.udemy.already_enrolled_c += 1
-                    await self._save_course(db, run, course, "already_enrolled")
+                    course_status = "already_enrolled"
                 else:
                     await self.udemy.get_course_id(course)
 
                     if not course.is_valid:
                         self.udemy.excluded_c += 1
-                        await self._save_course(db, run, course, "invalid", course.error)
+                        course_status = "invalid"
+                        error_msg = course.error
                     elif await self.udemy.is_already_enrolled(course):
                         self.udemy.already_enrolled_c += 1
-                        await self._save_course(db, run, course, "already_enrolled")
+                        course_status = "already_enrolled"
                     else:
                         # Apply user filters
                         self.udemy.is_course_excluded(course, self.settings)
                         if course.is_excluded:
                             self.udemy.excluded_c += 1
-                            await self._save_course(db, run, course, "excluded", course.error)
-                            continue
-
-                        if course.is_free:
+                            course_status = "excluded"
+                            error_msg = course.error
+                        elif course.is_free:
                             if self.settings.get("discounted_only", False):
                                 self.udemy.excluded_c += 1
-                                await self._save_course(db, run, course, "excluded", "Free course (discounted only)")
+                                course_status = "excluded"
+                                error_msg = "Free course (discounted only)"
                             else:
                                 await self.udemy.free_checkout(course)
                                 if course.status:
                                     self.udemy.successfully_enrolled_c += 1
-                                    await self._save_course(db, run, course, "enrolled")
+                                    course_status = "enrolled"
                                 else:
                                     self.udemy.expired_c += 1
-                                    await self._save_course(db, run, course, "failed")
+                                    course_status = "failed"
                         else:
                             await self.udemy.check_course(course)
                             if not course.is_coupon_valid:
                                 self.udemy.expired_c += 1
-                                await self._save_course(db, run, course, "expired")
+                                course_status = "expired"
                             else:
                                 batch.append(course)
                                 if len(batch) >= 10:
                                     await process_batch()
+                                # Status will be set by process_batch for items in batch
+                                # but for loop purposes, we skip _save_course here
+                                course_status = "batched"
 
-                await self._update_run_stats(db, run)
+                if course_status != "batched":
+                    await self._save_course(db, run, course, course_status, error_msg)
+
+                # Update stats and commit every 5 courses or on the last one
+                if (index + 1) % 5 == 0 or (index + 1) == self.total_courses:
+                    await self._update_run_stats(db, run)
+                
                 # Small sleep to prevent tight loop blocking and respect rate limits
-                await asyncio.sleep(1.5)
+                await asyncio.sleep(1.0)
 
             # Process remaining batch
             await process_batch()
@@ -295,7 +308,8 @@ class EnrollmentManager:
 
     async def _save_course(self, db: Session, run: EnrollmentRun, course: Course,
                            status: str, error: str = None):
-        """Save one course record and update user stats."""
+        """Add course record and update user stats in the current transaction. 
+        Note: Does not commit; caller must commit (e.g., via _update_run_stats)."""
         try:
             db.add(EnrolledCourse(
                 enrollment_run_id=run.id,
@@ -329,9 +343,8 @@ class EnrollmentManager:
             elif status in ("excluded", "invalid"):
                 db.execute(update(User).where(User.id == self.user_id).values(total_excluded=User.total_excluded + 1))
 
-            db.commit()
         except Exception as e:
-            logger.error(f"Failed to save course record: {e}")
+            logger.error(f"Failed to prepare course record: {e}")
             db.rollback()
 
     async def _fail(self, db: Session, run: EnrollmentRun, message: str):

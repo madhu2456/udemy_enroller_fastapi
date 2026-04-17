@@ -77,8 +77,11 @@ async def lifespan(app: FastAPI):
         task.cancel()
     
     if tasks:
-        await asyncio.gather(*tasks, return_exceptions=True)
-        logger.info(f"Cancelled {len(tasks)} active enrollment tasks.")
+        try:
+            await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=10.0)
+            logger.info(f"Cancelled {len(tasks)} active enrollment tasks.")
+        except asyncio.TimeoutError:
+            logger.warning("Timed out waiting for enrollment tasks to cancel.")
 
     # Close all udemy clients
     clients = getattr(app.state, "udemy_clients", {})

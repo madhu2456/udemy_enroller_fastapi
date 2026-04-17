@@ -2,8 +2,19 @@
 
 async function logout() {
     try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (e) {}
+        // Use a timeout for the logout request so it doesn't hang the UI if the server is busy
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        await fetch('/api/auth/logout', { 
+            method: 'POST',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+    } catch (e) {
+        console.warn('Logout request failed or timed out:', e);
+    }
+    // Always redirect to home/login page
     window.location.href = '/';
 }
 
