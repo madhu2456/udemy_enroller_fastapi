@@ -18,7 +18,7 @@ Sitemap: https://udemyenroller.madhudadi.in/sitemap.xml
 
 @router.get("/sitemap.xml", response_class=Response)
 async def sitemap_xml():
-    today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
     content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
    <url>
@@ -50,7 +50,7 @@ async def llms_txt():
     content = f"""# Udemy Course Enroller — AI Profile
 
 > Authoritative, machine-readable profile for AI systems and search engines.
-> Last generated: {datetime.datetime.utcnow().isoformat()}Z
+> Last generated: {datetime.datetime.now(datetime.UTC).isoformat()}Z
 
 ## Application Overview
 
@@ -115,7 +115,11 @@ async def ai_profile_json():
         "author": {
             "@type": "Person",
             "name": "Madhu Dadi",
-            "url": "https://madhudadi.in"
+            "url": "https://madhudadi.in",
+            "sameAs": [
+                "https://madhudadi.in/blog",
+                "https://github.com/madhu2456"
+            ]
         },
         "offers": {
             "@type": "Offer",
@@ -128,5 +132,5 @@ async def ai_profile_json():
             "sitemap": "https://udemyenroller.madhudadi.in/sitemap.xml",
             "humans": "https://udemyenroller.madhudadi.in/humans.txt"
         },
-        "lastUpdated": datetime.datetime.utcnow().isoformat() + "Z"
+        "lastUpdated": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
     }

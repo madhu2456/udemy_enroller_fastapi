@@ -79,35 +79,53 @@ class UserSettings(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
 
+    @staticmethod
+    def default_sites():
+        return {
+            "Real Discount": True,
+            "Courson": True,
+            "IDownloadCoupons": True,
+            "E-next": True,
+            "Discudemy": True,
+            "Udemy Freebies": True,
+            "Course Joiner": True,
+            "Course Vania": True,
+            "Course Coupon Club": True,
+            "Coupon Scorpion": True,
+            "Reddit /r/udemyfreebies": True,
+            "TutorialBar": True,
+            "FreeWebCart": True,
+            "Easy Learn": True,
+        }
+
+    @staticmethod
+    def default_languages():
+        return {
+            "Arabic": True, "Chinese": True, "Dutch": True, "English": True,
+            "French": True, "German": True, "Hindi": True, "Indonesian": True,
+            "Italian": True, "Japanese": True, "Korean": True, "Nepali": True,
+            "Polish": True, "Portuguese": True, "Romanian": True, "Russian": True,
+            "Spanish": True, "Thai": True, "Turkish": True, "Urdu": True, "Vietnamese": True,
+        }
+
+    @staticmethod
+    def default_categories():
+        return {
+            "Business": True, "Design": True, "Development": True,
+            "Finance & Accounting": True, "Health & Fitness": True,
+            "IT & Software": True, "Lifestyle": True, "Marketing": True,
+            "Music": True, "Office Productivity": True, "Personal Development": True,
+            "Photography & Video": True, "Teaching & Academics": True,
+        }
+
     # Sites to scrape
-    sites = Column(JSON, default=lambda: {
-        "Real Discount": True,
-        "Courson": True,
-        "IDownloadCoupons": True,
-        "E-next": True,
-        "Discudemy": True,
-        "Udemy Freebies": True,
-        "Course Joiner": True,
-        "Course Vania": True,
-    })
+    sites = Column(JSON, default=default_sites)
 
     # Language filters
-    languages = Column(JSON, default=lambda: {
-        "Arabic": True, "Chinese": True, "Dutch": True, "English": True,
-        "French": True, "German": True, "Hindi": True, "Indonesian": True,
-        "Italian": True, "Japanese": True, "Korean": True, "Nepali": True,
-        "Polish": True, "Portuguese": True, "Romanian": True, "Russian": True,
-        "Spanish": True, "Thai": True, "Turkish": True, "Urdu": True, "Vietnamese": True,
-    })
+    languages = Column(JSON, default=default_languages)
 
     # Category filters
-    categories = Column(JSON, default=lambda: {
-        "Business": True, "Design": True, "Development": True,
-        "Finance & Accounting": True, "Health & Fitness": True,
-        "IT & Software": True, "Lifestyle": True, "Marketing": True,
-        "Music": True, "Office Productivity": True, "Personal Development": True,
-        "Photography & Video": True, "Teaching & Academics": True,
-    })
+    categories = Column(JSON, default=default_categories)
 
     # Exclusions
     instructor_exclude = Column(JSON, default=list)

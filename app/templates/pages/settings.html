@@ -22,7 +22,9 @@
         <h2 class="text-lg font-semibold text-white mb-4">
             <i class="fas fa-globe mr-2 text-cyan-400"></i>Coupon Websites
         </h2>
-        <div id="sites-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+        <div id="sites-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+             <div class="col-span-full py-4 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading sites...</div>
+        </div>
     </div>
 
     <!-- Languages -->
@@ -30,7 +32,9 @@
         <h2 class="text-lg font-semibold text-white mb-4">
             <i class="fas fa-language mr-2 text-cyan-400"></i>Languages
         </h2>
-        <div id="languages-grid" class="grid grid-cols-3 md:grid-cols-7 gap-3"></div>
+        <div id="languages-grid" class="grid grid-cols-3 md:grid-cols-7 gap-3">
+            <div class="col-span-full py-4 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading languages...</div>
+        </div>
     </div>
 
     <!-- Categories -->
@@ -38,7 +42,9 @@
         <h2 class="text-lg font-semibold text-white mb-4">
             <i class="fas fa-tags mr-2 text-cyan-400"></i>Categories
         </h2>
-        <div id="categories-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+        <div id="categories-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="col-span-full py-4 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading categories...</div>
+        </div>
     </div>
 
     <!-- Advanced Settings -->
@@ -118,11 +124,16 @@
 
 {% block scripts %}
 <script>
+/**
+ * SETTINGS PAGE LOGIC
+ */
 let currentSettings = {};
 
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
-    loadSettings();
+document.addEventListener('DOMContentLoaded', async () => {
+    const authed = await checkAuth();
+    if (authed) {
+        await loadSettings();
+    }
     setupTagInput('instructor-input', 'instructor-tags');
     setupTagInput('title-input', 'title-tags');
 });
@@ -131,15 +142,17 @@ async function checkAuth() {
     try {
         const resp = await fetch('/api/auth/status');
         const data = await resp.json();
-        if (!data.authenticated) { window.location.href = '/'; return; }
+        if (!data.authenticated) { window.location.href = '/'; return false; }
         document.getElementById('user-info').textContent = data.display_name;
         document.getElementById('logout-btn').classList.remove('hidden');
-    } catch(e) { window.location.href = '/'; }
+        return true;
+    } catch(e) { window.location.href = '/'; return false; }
 }
 
 function setupTagInput(inputId, containerId) {
     const input = document.getElementById(inputId);
     const container = document.getElementById(containerId);
+    if (!input || !container) return;
 
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -162,23 +175,29 @@ function addTag(container, text) {
     tag.innerHTML = `
         <span class="tag-text">${text}</span>
         <button type="button" onclick="this.parentElement.remove()" class="ml-2 text-blue-400 hover:text-white">
-            <i class="fas fa-times"></i>
+            <i class="fas fa-times text-[10px]"></i>
         </button>
     `;
     container.insertBefore(tag, container.querySelector('input'));
 }
 
 async function loadSettings() {
+    console.log("Fetching settings...");
     try {
         const resp = await fetch('/api/settings/');
-        currentSettings = await resp.json();
-        renderCheckboxGrid('sites-grid', currentSettings.sites);
-        renderCheckboxGrid('languages-grid', currentSettings.languages);
-        renderCheckboxGrid('categories-grid', currentSettings.categories);
-        document.getElementById('min-rating').value = currentSettings.min_rating;
-        document.getElementById('update-threshold').value = currentSettings.course_update_threshold_months;
+        if (!resp.ok) throw new Error("Load failed");
         
-        // Clear and Render Tags
+        currentSettings = await resp.json();
+        console.log("Settings data received:", currentSettings);
+        
+        renderCheckboxGrid('sites-grid', currentSettings.sites || {});
+        renderCheckboxGrid('languages-grid', currentSettings.languages || {});
+        renderCheckboxGrid('categories-grid', currentSettings.categories || {});
+        
+        document.getElementById('min-rating').value = currentSettings.min_rating || 0;
+        document.getElementById('update-threshold').value = currentSettings.course_update_threshold_months || 24;
+        
+        // Render Tags
         const instContainer = document.getElementById('instructor-tags');
         instContainer.querySelectorAll('.flex').forEach(t => t.remove());
         (currentSettings.instructor_exclude || []).forEach(t => addTag(instContainer, t));
@@ -187,20 +206,32 @@ async function loadSettings() {
         titleContainer.querySelectorAll('.flex').forEach(t => t.remove());
         (currentSettings.title_exclude || []).forEach(t => addTag(titleContainer, t));
 
-        document.getElementById('save-txt').checked = currentSettings.save_txt;
-        document.getElementById('discounted-only').checked = currentSettings.discounted_only;
+        document.getElementById('save-txt').checked = !!currentSettings.save_txt;
+        document.getElementById('discounted-only').checked = !!currentSettings.discounted_only;
         document.getElementById('proxy-url').value = currentSettings.proxy_url || '';
-        document.getElementById('enable-headless').checked = currentSettings.enable_headless || false;
-    } catch(e) { console.error('Failed to load settings:', e); }
+        document.getElementById('enable-headless').checked = !!currentSettings.enable_headless;
+        
+    } catch(e) { 
+        console.error('Failed to load settings:', e);
+        showMsg('Error: Could not retrieve settings from server', 'red');
+    }
 }
 
 function renderCheckboxGrid(containerId, items) {
     const container = document.getElementById(containerId);
-    container.innerHTML = Object.entries(items).map(([key, val]) => `
-        <label class="flex items-center space-x-2 bg-gray-700 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-600 transition-colors">
+    if (!container) return;
+
+    const entries = Object.entries(items);
+    if (entries.length === 0) {
+        container.innerHTML = '<p class="col-span-full text-center text-gray-500 text-xs py-2 italic">No options found.</p>';
+        return;
+    }
+    
+    container.innerHTML = entries.map(([key, val]) => `
+        <label class="flex items-center space-x-2 bg-gray-700/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-600 transition-all border border-gray-700/50">
             <input type="checkbox" data-group="${containerId}" data-key="${key}" ${val ? 'checked' : ''}
-                class="rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500">
-            <span class="text-sm text-gray-300 truncate">${key}</span>
+                class="rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500 h-4 w-4">
+            <span class="text-xs text-gray-300 truncate font-medium">${key}</span>
         </label>
     `).join('');
 }
@@ -234,6 +265,11 @@ function gatherSettings() {
 }
 
 async function saveSettings() {
+    const btn = document.querySelector('button[onclick="saveSettings()"]');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Saving...';
+
     const settings = gatherSettings();
     try {
         const resp = await fetch('/api/settings/', {
@@ -242,25 +278,34 @@ async function saveSettings() {
             body: JSON.stringify(settings)
         });
         const data = await resp.json();
-        showMsg(data.success ? 'Settings saved!' : 'Failed to save', data.success ? 'green' : 'red');
-    } catch(e) { showMsg('Error saving settings', 'red'); }
+        const success = data.status === 'success' || data.success === true;
+        showMsg(success ? 'Settings updated successfully!' : (data.detail || 'Failed to update settings'), success ? 'green' : 'red');
+    } catch(e) { 
+        showMsg('Network error while saving settings', 'red'); 
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
 
 async function resetSettings() {
-    if (!confirm('Reset all settings to defaults?')) return;
+    if (!confirm('Discard all changes and reset to factory defaults?')) return;
     try {
-        await fetch('/api/settings/reset', { method: 'POST' });
-        loadSettings();
-        showMsg('Settings reset to defaults', 'blue');
-    } catch(e) { showMsg('Error resetting', 'red'); }
+        const r = await fetch('/api/settings/reset', { method: 'POST' });
+        if (r.ok) {
+            await loadSettings();
+            showMsg('Settings reset to defaults', 'blue');
+        }
+    } catch(e) { showMsg('Reset failed', 'red'); }
 }
 
 function showMsg(msg, color) {
     const el = document.getElementById('settings-message');
-    el.className = `text-center text-sm text-${color}-400`;
+    el.className = `fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-[100] transition-all
+        ${color === 'green' ? 'bg-green-600 text-white' : color === 'red' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`;
     el.textContent = msg;
     el.classList.remove('hidden');
-    setTimeout(() => el.classList.add('hidden'), 3000);
+    setTimeout(() => el.classList.add('hidden'), 4000);
 }
 </script>
 {% endblock %}

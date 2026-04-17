@@ -2,28 +2,44 @@
 {% block title %}History - Udemy Enroller{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <h1 class="text-2xl font-bold text-white mb-6">
-        <i class="fas fa-history mr-2 text-blue-400"></i>Enrollment History
-    </h1>
-
-    <div id="history-list" class="space-y-4">
-        <div class="text-center text-gray-500 py-8">
-            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-            <p>Loading history...</p>
+<div class="max-w-6xl mx-auto pb-20">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+        <div>
+            <h1 class="text-4xl font-black text-white tracking-tight">Activity History</h1>
+            <p class="text-gray-500 mt-2">Comprehensive logs of your automated enrollment sessions.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button onclick="fetchHistory()" class="flex items-center bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-2xl border border-gray-700 transition-all active:scale-95">
+                <i class="fas fa-sync-alt mr-2"></i>Sync Data
+            </button>
         </div>
     </div>
 
-    <!-- Run Detail Modal -->
-    <div id="run-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 max-w-4xl w-full max-h-screen overflow-y-auto p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold text-white">Run Details</h2>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-white">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            <div id="modal-content"></div>
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
+            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Lifetime Enrolled</p>
+            <p id="total-enrolled" class="text-2xl font-black text-green-400">...</p>
+        </div>
+        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
+            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Total Saved</p>
+            <p id="total-saved" class="text-2xl font-black text-emerald-400">...</p>
+        </div>
+        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
+            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Runs Performed</p>
+            <p id="total-runs" class="text-2xl font-black text-blue-400">...</p>
+        </div>
+        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
+            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Average Success</p>
+            <p id="avg-success" class="text-2xl font-black text-white">...</p>
+        </div>
+    </div>
+
+    <!-- History Feed -->
+    <div id="history-feed" class="space-y-6">
+        <div class="text-center py-20 bg-gray-800/20 rounded-3xl border border-dashed border-gray-700">
+            <i class="fas fa-circle-notch fa-spin text-blue-500 text-3xl mb-4"></i>
+            <p class="text-gray-500 font-medium">Connecting to learning infrastructure...</p>
         </div>
     </div>
 </div>
@@ -31,154 +47,277 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
-    loadHistory();
-});
+/**
+ * NO-MODAL HISTORY ENGINE v3
+ * 100% Inline Expansion | High-Contrast Design
+ */
 
-async function checkAuth() {
+// Time Formatter
+const formatTime = (ts) => {
+    if (!ts) return "N/A";
+    return new Date(ts).toLocaleString(undefined, { 
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
+};
+
+// Duration Calculator
+const getRunTime = (start, end) => {
+    if (!start || !end) return "Active";
+    const diff = new Date(end) - new Date(start);
+    if (isNaN(diff) || diff < 0) return "0s";
+    const mins = Math.floor(diff / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+};
+
+// Global Data Store
+const sessionCache = new Map();
+
+/**
+ * Fetch Stats
+ */
+async function loadSummaryStats() {
     try {
-        const resp = await fetch('/api/auth/status');
-        const data = await resp.json();
-        if (!data.authenticated) { window.location.href = '/'; return; }
-        document.getElementById('user-info').textContent = data.display_name;
-        document.getElementById('logout-btn').classList.remove('hidden');
-    } catch(e) { window.location.href = '/'; }
+        const r = await fetch('/api/dashboard/stats');
+        const d = await r.json();
+        document.getElementById('total-enrolled').textContent = d.total_enrolled;
+        document.getElementById('total-saved').textContent = `$${d.total_amount_saved.toFixed(2)}`;
+        document.getElementById('total-runs').textContent = d.total_runs;
+        const rate = d.total_processed > 0 ? (d.total_enrolled / d.total_processed * 100).toFixed(1) : 0;
+        document.getElementById('avg-success').textContent = `${rate}%`;
+    } catch (e) {}
 }
 
-async function loadHistory() {
-    try {
-        const resp = await fetch('/api/enrollment/history?limit=50');
-        const runs = await resp.json();
-        const container = document.getElementById('history-list');
+/**
+ * Fetch and Render Feed
+ */
+async function fetchHistory() {
+    const feed = document.getElementById('history-feed');
+    loadSummaryStats();
 
-        if (runs.length === 0) {
-            container.innerHTML = '<p class="text-center text-gray-500 py-8">No enrollment runs found.</p>';
+    try {
+        const response = await fetch('/api/enrollment/history?limit=50');
+        if (!response.ok) throw new Error("API Connection Failed");
+        const data = await response.json();
+
+        if (!data || data.length === 0) {
+            feed.innerHTML = `
+                <div class="bg-gray-800/40 rounded-3xl p-20 text-center border border-gray-700">
+                    <p class="text-gray-500 italic mb-6">Your history log is currently empty.</p>
+                    <a href="/dashboard" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-black transition-all">Start Automated Enrollment</a>
+                </div>
+            `;
             return;
         }
 
-        container.innerHTML = runs.map(run => `
-            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 cursor-pointer hover:border-blue-500 transition-colors relative"
-                 onclick="showRunDetails(${run.run_id})">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <span class="px-3 py-1 rounded-full text-xs font-medium
-                            ${run.status === 'completed' ? 'bg-green-900 text-green-300' :
-                              run.status === 'failed' ? 'bg-red-900 text-red-300' :
-                              'bg-yellow-900 text-yellow-300'}">
-                            ${run.status}
-                        </span>
-                        <span class="text-sm text-gray-400">${new Date(run.started_at).toLocaleString()}</span>
-                        ${run.completed_at ? `<span class="text-xs text-gray-500">Duration: ${getDuration(run.started_at, run.completed_at)}</span>` : ''}
+        feed.innerHTML = data.map(run => {
+            const isSuccess = run.status === 'completed';
+            const isError = run.status === 'failed';
+            const badgeClass = isSuccess ? 'bg-green-900/30 text-green-400 border-green-800/50' : 
+                               (isError ? 'bg-red-900/30 text-red-400 border-red-800/50' : 'bg-yellow-900/30 text-yellow-400 border-yellow-800/50');
+
+            return `
+                <div class="run-card group bg-gray-800/40 rounded-3xl border border-gray-800 transition-all duration-300 hover:border-gray-600 overflow-hidden" id="card-${run.run_id}">
+                    <!-- Main Header (Clickable) -->
+                    <div class="p-6 md:p-8 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6" onclick="handleCardToggle(${run.run_id})">
+                        <div class="flex items-center gap-6">
+                            <div class="hidden md:flex w-14 h-14 rounded-2xl bg-gray-800 border border-gray-700 items-center justify-center text-gray-500 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-all">
+                                <i class="fas fa-terminal text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-3 mb-1">
+                                    <span class="text-white font-black text-lg tracking-tight">Run #${run.run_id}</span>
+                                    <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border ${badgeClass}">${run.status}</span>
+                                </div>
+                                <div class="flex items-center gap-4 text-xs text-gray-500 font-medium">
+                                    <span>${formatTime(run.started_at)}</span>
+                                    <span class="opacity-30">|</span>
+                                    <span><i class="far fa-clock mr-1"></i>${getRunTime(run.started_at, run.completed_at)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between md:justify-end gap-8 md:gap-12">
+                            <div class="flex gap-8">
+                                <div class="text-center md:text-left">
+                                    <p class="text-[9px] text-gray-500 font-black uppercase tracking-tighter mb-0.5">Courses Claimed</p>
+                                    <p class="text-xl font-black text-green-400 leading-none">${run.successfully_enrolled}</p>
+                                </div>
+                                <div class="text-center md:text-left">
+                                    <p class="text-[9px] text-gray-500 font-black uppercase tracking-tighter mb-0.5">Total Savings</p>
+                                    <p class="text-xl font-black text-emerald-400 leading-none">$${(run.amount_saved || 0).toFixed(2)}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="event.stopPropagation(); requestDelete(${run.run_id})" class="w-10 h-10 rounded-xl bg-gray-800/50 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-900/20 transition-all">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <div class="text-gray-700 group-hover:text-blue-500 transition-all transform duration-300" id="chevron-${run.run_id}">
+                                    <i class="fas fa-chevron-down text-lg"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <button onclick="event.stopPropagation(); deleteRun(${run.run_id})" class="text-red-400 hover:text-red-300 transition-colors" title="Delete Run" ${['pending', 'scraping', 'enrolling'].includes(run.status) ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                        <i class="fas fa-chevron-right text-gray-500"></i>
+
+                    <!-- Expansion Area -->
+                    <div id="expansion-${run.run_id}" class="hidden border-t border-gray-700/30 bg-black/10">
+                        <div class="p-8" id="details-${run.run_id}">
+                            <div class="flex justify-center py-10"><i class="fas fa-circle-notch fa-spin text-blue-500"></i></div>
+                        </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
-                    <div><p class="text-xs text-gray-500">Found</p><p class="text-lg font-bold text-white">${run.total_courses_found}</p></div>
-                    <div><p class="text-xs text-gray-500">Enrolled</p><p class="text-lg font-bold text-green-400">${run.successfully_enrolled}</p></div>
-                    <div><p class="text-xs text-gray-500">Already</p><p class="text-lg font-bold text-cyan-400">${run.already_enrolled}</p></div>
-                    <div><p class="text-xs text-gray-500">Expired</p><p class="text-lg font-bold text-red-400">${run.expired}</p></div>
-                    <div><p class="text-xs text-gray-500">Excluded</p><p class="text-lg font-bold text-yellow-400">${run.excluded}</p></div>
-                    <div><p class="text-xs text-gray-500">Saved</p><p class="text-lg font-bold text-emerald-400">${run.amount_saved.toFixed(2)} ${run.currency.toUpperCase()}</p></div>
-                </div>
-                ${run.error_message ? `<p class="text-red-400 text-sm mt-2"><i class="fas fa-exclamation-triangle mr-1"></i>${run.error_message}</p>` : ''}
-            </div>
-        `).join('');
-    } catch(e) {
-        console.error('Failed to load history:', e);
-        document.getElementById('history-list').innerHTML = '<p class="text-center text-red-400 py-8">Failed to load history.</p>';
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error(e);
+        feed.innerHTML = `<div class="p-10 bg-red-900/10 border border-red-900/50 rounded-3xl text-center"><p class="text-red-500 font-bold">Network synchronization error. Please check your connection.</p></div>`;
     }
 }
 
-async function deleteRun(runId) {
-    if (!confirm('Are you sure you want to delete this run? Your lifetime metrics will be kept, but the specific course records for this run will be permanently deleted.')) {
+/**
+ * Handle Card Toggle
+ */
+async function handleCardToggle(id) {
+    const card = document.getElementById(`card-${id}`);
+    const box = document.getElementById(`expansion-${id}`);
+    const chevron = document.getElementById(`chevron-${id}`);
+    const content = document.getElementById(`details-${id}`);
+
+    const isClosed = box.classList.contains('hidden');
+
+    if (!isClosed) {
+        box.classList.add('hidden');
+        chevron.style.transform = 'rotate(0deg)';
         return;
     }
-    
+
+    // Open
+    box.classList.remove('hidden');
+    chevron.style.transform = 'rotate(180deg)';
+
+    // Load if needed
+    if (sessionCache.has(id)) return;
+
     try {
-        const resp = await fetch(`/api/enrollment/run/${runId}`, { method: 'DELETE' });
-        const data = await resp.json();
+        const r = await fetch(`/api/enrollment/run/${id}`);
+        const data = await r.json();
         
-        if (resp.ok && data.success) {
-            showToast('Run deleted successfully', 'success');
-            loadHistory();
-        } else {
-            showToast(data.detail || data.message || 'Failed to delete run', 'error');
-        }
-    } catch (e) {
-        console.error('Error deleting run:', e);
-        showToast('Error communicating with the server', 'error');
-    }
-}
+        if (!data || !data.run) throw new Error("Incomplete record");
 
-async function showRunDetails(runId) {
-    document.getElementById('run-modal').classList.remove('hidden');
-    document.getElementById('modal-content').innerHTML = '<p class="text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i>Loading...</p>';
-
-    try {
-        const resp = await fetch(`/api/enrollment/run/${runId}`);
-        const data = await resp.json();
         const courses = data.courses || [];
-
         const enrolled = courses.filter(c => c.status === 'enrolled');
         const other = courses.filter(c => c.status !== 'enrolled');
 
-        document.getElementById('modal-content').innerHTML = `
-            <div class="mb-4">
-                <h3 class="text-green-400 font-semibold mb-2">Enrolled Courses (${enrolled.length})</h3>
-                ${enrolled.length > 0 ? `
-                    <div class="space-y-2 max-h-64 overflow-y-auto">
-                        ${enrolled.map(c => `
-                            <div class="bg-gray-700 rounded-lg p-3">
-                                <a href="${c.url}" target="_blank" class="text-blue-400 hover:underline text-sm">${c.title}</a>
-                                <div class="flex items-center space-x-3 text-xs text-gray-400 mt-1">
-                                    ${c.category ? `<span>${c.category}</span>` : ''}
-                                    ${c.language ? `<span>${c.language}</span>` : ''}
-                                    ${c.price ? `<span class="text-emerald-400">$${c.price}</span>` : ''}
-                                    ${c.site_source ? `<span>via ${c.site_source}</span>` : ''}
+        content.innerHTML = `
+            <div class="space-y-12">
+                <!-- Data Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/30">
+                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-2">Internal Status</p>
+                        <p class="text-xs text-white font-bold uppercase">${data.run.status}</p>
+                    </div>
+                    <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/30">
+                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-2">Sources Found</p>
+                        <p class="text-xs text-white font-bold">${data.run.total_courses_found} valid links</p>
+                    </div>
+                    <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/30">
+                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-2">Run Duration</p>
+                        <p class="text-xs text-white font-bold">${getRunTime(data.run.started_at, data.run.completed_at)}</p>
+                    </div>
+                    <div class="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-900/30">
+                        <p class="text-[9px] text-emerald-500/70 font-black uppercase tracking-widest mb-2">Net Value</p>
+                        <p class="text-xl font-black text-emerald-400">$${(data.run.amount_saved || 0).toFixed(2)}</p>
+                    </div>
+                </div>
+
+                <!-- Dual Columns for Course Breakdown -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                    <!-- Column 1: Enrolled -->
+                    <div>
+                        <h4 class="text-green-400 font-black text-[11px] uppercase tracking-[0.2em] mb-6 flex items-center">
+                            <i class="fas fa-check-double mr-2"></i>Claimed Successfully (${enrolled.length})
+                        </h4>
+                        <div class="space-y-3">
+                            ${enrolled.length > 0 ? enrolled.map(c => `
+                                <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700/50 hover:border-blue-500/30 transition-all group/item">
+                                    <a href="${c.url}" target="_blank" class="text-sm font-black text-blue-400 group-hover/item:text-blue-300 block mb-2 leading-snug">${c.title || 'Untitled'}</a>
+                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-gray-500 font-bold">
+                                        <span class="bg-emerald-900/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/30">$${(c.price || 0).toFixed(2)}</span>
+                                        <span class="flex items-center"><i class="fas fa-tag mr-1.5 opacity-40"></i>${c.category || 'Course'}</span>
+                                        <span class="flex items-center"><i class="fas fa-language mr-1.5 opacity-40"></i>${c.language || 'English'}</span>
+                                        <span class="opacity-60 italic">Src: ${c.site_source || 'Web'}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('')}
+                            `).join('') : '<p class="text-gray-600 text-xs italic py-10 text-center bg-gray-800/20 rounded-2xl border border-dashed border-gray-800">No new courses were claimed in this specific session.</p>'}
+                        </div>
                     </div>
-                ` : '<p class="text-gray-500 text-sm">None</p>'}
-            </div>
-            <div>
-                <h3 class="text-gray-400 font-semibold mb-2">Other Courses (${other.length})</h3>
-                ${other.length > 0 ? `
-                    <div class="space-y-1 max-h-48 overflow-y-auto">
-                        ${other.map(c => `
-                            <div class="flex items-center justify-between text-sm py-1">
-                                <span class="text-gray-300 truncate mr-2">${c.title}</span>
-                                <span class="text-xs px-2 py-0.5 rounded
-                                    ${c.status === 'expired' ? 'bg-red-900 text-red-300' :
-                                      c.status === 'excluded' ? 'bg-yellow-900 text-yellow-300' :
-                                      c.status === 'already_enrolled' ? 'bg-cyan-900 text-cyan-300' :
-                                      'bg-gray-600 text-gray-300'}">${c.status}</span>
+
+                    <!-- Column 2: Others -->
+                    <div>
+                        <h4 class="text-gray-500 font-black text-[11px] uppercase tracking-[0.2em] mb-6 flex items-center">
+                            <i class="fas fa-history mr-2 opacity-50"></i>Other Attempts (${other.length})
+                        </h4>
+                        <div class="bg-gray-800/30 rounded-3xl border border-gray-800/50 overflow-hidden divide-y divide-gray-800">
+                            <div class="max-h-[500px] overflow-y-auto custom-scrollbar p-2">
+                                ${other.length > 0 ? other.map(c => `
+                                    <div class="flex items-center justify-between p-4 hover:bg-gray-800/50 rounded-xl transition-colors gap-4">
+                                        <span class="text-gray-400 text-[11px] font-bold truncate flex-grow">${c.title || 'Untitled Session Item'}</span>
+                                        <span class="text-[8px] font-black uppercase px-2 py-1 rounded-md whitespace-nowrap border
+                                            ${c.status === 'expired' ? 'bg-red-900/20 text-red-400 border-red-900/50' :
+                                              c.status === 'excluded' ? 'bg-yellow-900/20 text-yellow-500 border-yellow-900/50' :
+                                              c.status === 'already_enrolled' ? 'bg-cyan-900/20 text-cyan-400 border-cyan-900/50' :
+                                              'bg-gray-700 text-gray-500 border-gray-600'}">${(c.status || 'skip').replace(/_/g, ' ')}</span>
+                                    </div>
+                                `).join('') : '<p class="text-gray-600 text-xs italic p-10 text-center">No other course events logged.</p>'}
                             </div>
-                        `).join('')}
+                        </div>
                     </div>
-                ` : '<p class="text-gray-500 text-sm">None</p>'}
+                </div>
             </div>
         `;
-    } catch(e) {
-        document.getElementById('modal-content').innerHTML = '<p class="text-red-400">Failed to load details</p>';
+        sessionCache.set(id, true);
+
+    } catch (e) {
+        console.error(e);
+        content.innerHTML = `<div class="p-10 text-center"><p class="text-red-500 font-black">UNABLE TO PARSE SESSION LOGS</p><p class="text-gray-600 text-xs mt-2">${e.message}</p></div>`;
     }
 }
 
-function closeModal() {
-    document.getElementById('run-modal').classList.add('hidden');
+/**
+ * Request Deletion
+ */
+async function requestDelete(id) {
+    if (!confirm('Permanently purge this enrollment session from the logs? Metrics will be preserved.')) return;
+    try {
+        const r = await fetch(`/api/enrollment/run/${id}`, { method: 'DELETE' });
+        if (r.ok) {
+            const el = document.getElementById(`card-${id}`);
+            el.style.opacity = '0';
+            el.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                el.remove();
+                loadSummaryStats();
+            }, 300);
+            showToast("Session purged from history", "success");
+        }
+    } catch (e) { showToast("Critical connection error", "error"); }
 }
 
-function getDuration(start, end) {
-    const ms = new Date(end) - new Date(start);
-    const mins = Math.floor(ms / 60000);
-    const secs = Math.floor((ms % 60000) / 1000);
-    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-}
+// Initial Kickoff
+document.addEventListener('DOMContentLoaded', fetchHistory);
 </script>
+
+<style>
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* Animation Hook */
+.run-card {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+</style>
 {% endblock %}
