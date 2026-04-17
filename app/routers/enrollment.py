@@ -67,6 +67,7 @@ async def start_enrollment(
     # Sync client proxy with current user settings
     client.set_proxy(settings_dict["proxy_url"])
 
+    logger.debug(f"Starting enrollment with settings: {settings_dict}")
     manager = EnrollmentManager(client, settings_dict, db, user_id)
     run_id = await manager.start()
     

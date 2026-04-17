@@ -3,6 +3,16 @@
 import os
 import sys
 import asyncio
+
+# Windows-specific event loop policy for subprocess support (required for Playwright)
+# MUST be set before any other imports that might initialize a loop
+if sys.platform == "win32":
+    try:
+        from asyncio import WindowsProactorEventLoopPolicy
+        asyncio.set_event_loop_policy(WindowsProactorEventLoopPolicy())
+    except ImportError:
+        pass # Fallback for older python versions if any
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -37,6 +47,13 @@ async def lifespan(app: FastAPI):
     # Startup
     os.makedirs("logs", exist_ok=True)
     os.makedirs("Courses", exist_ok=True)
+    
+    if sys.platform == "win32":
+        loop = asyncio.get_running_loop()
+        logger.info(f"Active event loop: {type(loop).__name__}")
+        if "Selector" in type(loop).__name__:
+            logger.error("CRITICAL: SelectorEventLoop is active on Windows. Subprocesses (Playwright) will FAIL.")
+    
     logger.info("Starting Udemy Course Enroller API v2 (Async)")
     logger.info(f"Environment: {get_settings().SENTRY_ENVIRONMENT}")
     logger.info(f"Log format: {get_settings().LOG_FORMAT}")
