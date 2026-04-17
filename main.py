@@ -2,6 +2,7 @@
 
 import os
 import sys
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -68,8 +69,31 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
+    logger.info("Server shutting down, cancelling active tasks...")
+    from app.services.enrollment_manager import EnrollmentManager
+    
+    tasks = list(EnrollmentManager.active_tasks.values())
+    for task in tasks:
+        task.cancel()
+    
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info(f"Cancelled {len(tasks)} active enrollment tasks.")
+
+    # Close all udemy clients
+    clients = getattr(app.state, "udemy_clients", {})
+    for client in clients.values():
+        try:
+            await client.close()
+        except Exception:
+            pass
+    if clients:
+        logger.info(f"Closed {len(clients)} Udemy client sessions.")
+
     await PlaywrightManager.close_browser()
+
     logger.info("Shutting down Udemy Course Enroller API")
+
 
 
 app_settings = get_settings()

@@ -10,19 +10,19 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from loguru import logger
 
-from app.models.database import SessionLocal, EnrollmentRun, EnrolledCourse, User
+from app.models.database import SessionLocal, EnrollmentRun, EnrolledCourse, User, _utcnow_naive
 from app.services.course import Course
 from app.services.scraper import ScraperService
 from app.services.udemy_client import UdemyClient
 
 
+from app.core.cache import clear_user_caches
+
 class EnrollmentManager:
+
     """Manages the full enrollment pipeline asynchronously: scrape -> validate -> enroll."""
 
-    @staticmethod
-    def _utcnow_naive() -> datetime:
-        """Return current UTC timestamp without tzinfo for DB DateTime columns."""
-        return datetime.now(UTC).replace(tzinfo=None)
+    active_tasks: Dict[int, asyncio.Task] = {}
 
     def __init__(self, udemy_client: UdemyClient, settings: dict, db: Session, user_id: int, close_client: bool = False):
         self.udemy = udemy_client
@@ -106,6 +106,10 @@ class EnrollmentManager:
             if not enabled_sites:
                 await self._fail(db, run, "No sites enabled for scraping")
                 return
+
+            run.status = "scraping"
+            db.commit()
+            self.status = "scraping"
 
             self.scraper = ScraperService(
                 enabled_sites,
@@ -231,6 +235,19 @@ class EnrollmentManager:
             self.status = "completed"
             logger.info("Enrollment pipeline completed successfully")
 
+        except asyncio.CancelledError:
+            logger.info(f"Enrollment pipeline {self.run_id} cancelled by user")
+            try:
+                run = db.get(EnrollmentRun, self.run_id)
+                if run:
+                    run.status = "cancelled"
+                    run.error_message = "Cancelled by user"
+                    run.completed_at = self._utcnow_naive()
+                    db.commit()
+            except Exception:
+                pass
+            self.status = "cancelled"
+            raise
         except Exception as e:
             logger.exception("Enrollment pipeline failed")
             try:
@@ -244,7 +261,12 @@ class EnrollmentManager:
                 pass
             self.status = "failed"
         finally:
+            # Clear cache so UI shows final state immediately
+            clear_user_caches(self.user_id)
+            
+            EnrollmentManager.active_tasks.pop(self.run_id, None)
             db.close()
+
             if self.close_client:
                 await self.udemy.close()
 

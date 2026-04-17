@@ -69,7 +69,8 @@ class UdemyClient:
         try:
             r = await self.http.get(
                 constants.UDEMY_SIGNUP_POPUP_URL,
-                headers={"User-Agent": constants.DEFAULT_USER_AGENT}
+                headers={"User-Agent": constants.DEFAULT_USER_AGENT},
+                randomize_headers=False
             )
             if not r:
                 raise LoginException("Could not connect to Udemy.")
@@ -129,7 +130,8 @@ class UdemyClient:
         try:
             resp = await self.http.get(
                 constants.UDEMY_CONTEXT_URL,
-                cookies=self.cookie_dict
+                cookies=self.cookie_dict,
+                randomize_headers=False
             )
             ctx = await self.http.safe_json(resp, "session info")
             if not ctx or not ctx.get("header", {}).get("isLoggedIn"):
@@ -140,7 +142,8 @@ class UdemyClient:
             # Get currency
             cart_resp = await self.http.get(
                 constants.UDEMY_CART_URL,
-                cookies=self.cookie_dict
+                cookies=self.cookie_dict,
+                randomize_headers=False
             )
             cart = await self.http.safe_json(cart_resp, "cart info")
             if cart:
@@ -359,7 +362,7 @@ class UdemyClient:
         }
         
         for attempt in range(3):
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict)
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=False)
             result = await self.http.safe_json(resp, "checkout one")
             
             if result and result.get("status") == "succeeded":
@@ -405,7 +408,7 @@ class UdemyClient:
                 "shopping_info": {"items": items, "is_cart": True},
             }
             
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict)
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=False)
             result = await self.http.safe_json(resp, "bulk checkout")
             
             if result and result.get("status") == "succeeded":

@@ -4,9 +4,10 @@ from app.core import constants
 import asyncio
 import re
 import traceback
+import random
 from abc import ABC, abstractmethod
 from html import unescape
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Union
 from urllib.parse import parse_qs, unquote, urlparse
 
 from bs4 import BeautifulSoup as bs
@@ -55,7 +56,9 @@ class Scraper(ABC):
             course.site = self.site_name
             self.data.append(course)
 
-    def parse_html(self, content: bytes) -> bs:
+    def parse_html(self, content: Union[bytes, str]) -> bs:
+        if isinstance(content, str):
+            content = content.encode("utf-8")
         return bs(content, "lxml")
 
     def cleanup_link(self, link: str) -> Optional[str]:
@@ -231,6 +234,7 @@ class RealDiscountScraper(Scraper):
             headers = {
                 "Host": "cdn.real.discount",
                 "referer": "https://www.real.discount/",
+                "Accept": "application/json",
             }
             resp = await self.http.get(
                 "https://cdn.real.discount/api/courses?page=1&limit=500&sortBy=sale_start&store=Udemy&freeOnly=true",
@@ -274,7 +278,7 @@ class CourseVaniaScraper(Scraper):
 
             try:
                 nonce = re.search(
-                    r"load_content\"\:\"(.*?)\"", resp.content.decode("utf-8"), re.DOTALL
+                    r"load_content\"\:\"(.*?)\"", resp.text, re.DOTALL
                 ).group(1)
             except (AttributeError, IndexError):
                 return
@@ -331,15 +335,21 @@ class IDownloadCouponsScraper(Scraper):
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             self.length = 3
+            # They moved from /product to /posts endpoint
             listing_tasks = [
-                self.http.get(f"https://idownloadcoupon.com/wp-json/wp/v2/product?product_cat=15&per_page=100&page={page}")
+                self.http.get(
+                    f"https://idownloadcoupon.com/wp-json/wp/v2/posts?per_page=100&page={page}",
+                    headers={"Accept": "application/json"},
+                    log_failures=False,
+                    raise_for_status=False
+                )
                 for page in range(1, 4)
             ]
             all_items = []
             for i, task in enumerate(asyncio.as_completed(listing_tasks)):
                 resp = await task
                 data = await self.http.safe_json(resp, f"idc page {i+1}")
-                if data:
+                if isinstance(data, list):
                     all_items.extend(data)
                 self.progress = i + 1
 
@@ -348,24 +358,32 @@ class IDownloadCouponsScraper(Scraper):
 
             async def _fetch_details(item):
                 try:
-                    title = item.get("title", {}).get("rendered", "").strip()
+                    title = unescape(item.get("title", {}).get("rendered", "")).strip()
+                    content = item.get("content", {}).get("rendered", "")
+                    if not title or not content:
+                        return None, None
+                    
+                    soup = self.parse_html(content)
+                    a_tag = soup.find("a", href=lambda h: h and "udemy.com" in h)
+                    if a_tag:
+                        return title, self.cleanup_link(a_tag["href"])
+                    
+                    # Fallback to old link_num method if content doesn't have it
                     link_num = item.get("id")
-                    if not title or not link_num:
-                        return None, None
-                    url = f"https://idownloadcoupon.com/udemy/{link_num}/"
-                    # Manual redirect check for this specific site
-                    r = await self.http.get(
-                        url,
-                        follow_redirects=False,
-                        raise_for_status=False,
-                        attempts=1,
-                        log_failures=False,
-                    )
-                    location = r.headers.get("Location", "") if r else ""
-                    if not location:
-                        return None, None
-                    link = unquote(location)
-                    return title, self.cleanup_link(link)
+                    if link_num:
+                        url = f"https://idownloadcoupon.com/udemy/{link_num}/"
+                        r = await self.http.get(
+                            url,
+                            follow_redirects=False,
+                            raise_for_status=False,
+                            attempts=1,
+                            log_failures=False,
+                        )
+                        location = r.headers.get("Location", "") if r else ""
+                        if location:
+                            return title, self.cleanup_link(unquote(location))
+                            
+                    return None, None
                 except Exception:
                     return None, None
 
@@ -377,6 +395,63 @@ class IDownloadCouponsScraper(Scraper):
                 self.progress = i + 1
         except Exception:
             logger.exception("idc scraper failed")
+            self.error = traceback.format_exc()
+
+
+class TutorialBarScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "TutorialBar"
+
+    @property
+    def code_name(self) -> str: return "tb"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            self.length = 3
+            listing_tasks = [
+                self.http.get(f"https://www.tutorialbar.com/page/{page}/")
+                for page in range(1, 4)
+            ]
+            all_items = []
+            for i, task in enumerate(asyncio.as_completed(listing_tasks)):
+                resp = await task
+                if resp:
+                    soup = self.parse_html(resp.content)
+                    for a in soup.find_all("a", href=True):
+                        href = a["href"]
+                        if "tutorialbar.com" in href:
+                            if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/"]):
+                                if href != "https://www.tutorialbar.com/" and href != "https://www.tutorialbar.com":
+                                    if href not in all_items and len(href) > 30:
+                                        all_items.append(href)
+                self.progress = i + 1
+
+            self.length = len(all_items)
+            self.progress = 0
+
+            async def _fetch_details(url):
+                try:
+                    page = await self.http.get(url, attempts=1, log_failures=False)
+                    if not page: return None, None
+                    soup = self.parse_html(page.content)
+                    title = soup.title.string.split("|")[0].strip() if soup.title else "Untitled"
+                    a_tag = soup.find("a", href=lambda h: h and "udemy.com" in h)
+                    if a_tag:
+                        return title, a_tag["href"]
+                    return None, None
+                except Exception:
+                    return None, None
+
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, url) for url in all_items]
+            for i, task in enumerate(asyncio.as_completed(detail_tasks)):
+                title, link = await task
+                if title and link:
+                    cleaned = self.cleanup_link(link)
+                    if cleaned:
+                        self.append_to_list(title, cleaned)
+                self.progress = i + 1
+        except Exception:
+            logger.exception("tb scraper failed")
             self.error = traceback.format_exc()
 
 
@@ -445,6 +520,7 @@ class CourseJoinerScraper(Scraper):
             self.length = 4
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/json",
             }
             listing_tasks = [
                 self.http.get(
@@ -456,7 +532,7 @@ class CourseJoinerScraper(Scraper):
             for i, task in enumerate(asyncio.as_completed(listing_tasks)):
                 resp = await task
                 data = await self.http.safe_json(resp, f"cj page {i+1}")
-                if data:
+                if isinstance(data, list):
                     for item in data:
                         try:
                             title = unescape(item["title"]["rendered"])
@@ -484,7 +560,11 @@ class CoursonScraper(Scraper):
         try:
             self.length = 10
             listing_tasks = [
-                self.http.post("https://courson.xyz/load-more-coupons", json={"filters": {}, "offset": (page - 1) * 30})
+                self.http.post(
+                    "https://courson.xyz/load-more-coupons", 
+                    json={"filters": {}, "offset": (page - 1) * 30},
+                    headers={"Accept": "application/json"}
+                )
                 for page in range(1, 11)
             ]
             for i, task in enumerate(asyncio.as_completed(listing_tasks)):
@@ -504,6 +584,356 @@ class CoursonScraper(Scraper):
             self.error = traceback.format_exc()
 
 
+class CourseCouponClubScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Course Coupon Club"
+
+    @property
+    def code_name(self) -> str: return "ccc"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            self.length = 4
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/json",
+            }
+            listing_tasks = [
+                self.http.get(
+                    f"https://coursecouponclub.com/wp-json/wp/v2/posts?per_page=100&page={page}",
+                    headers=headers
+                )
+                for page in range(1, 5)
+            ]
+            for i, task in enumerate(asyncio.as_completed(listing_tasks)):
+                resp = await task
+                data = await self.http.safe_json(resp, f"ccc page {i+1}")
+                if isinstance(data, list):
+                    for item in data:
+                        try:
+                            post_title = unescape(item.get("title", {}).get("rendered", ""))
+                            post_title = post_title.replace("–", "-").replace("—", "-").strip()
+                            content = item.get("content", {}).get("rendered", "")
+                            
+                            soup = self.parse_html(content.encode())
+                            a_tags = soup.find_all("a", href=True)
+                            for a_tag in a_tags:
+                                if "udemy.com" in a_tag["href"]:
+                                    course_title = post_title
+                                    
+                                    # Attempt to find specific title for this course in the block
+                                    p = a_tag.find_parent("div", class_="rehub_bordered_block")
+                                    if p:
+                                        title_div = p.find(class_=lambda c: c and "rehub-main-font" in c)
+                                        if title_div and title_div.get_text(strip=True):
+                                            course_title = title_div.get_text(strip=True)
+                                        else:
+                                            img = p.find("img", alt=True)
+                                            if img and img["alt"]:
+                                                course_title = img["alt"]
+                                                
+                                    link = self.cleanup_link(a_tag["href"])
+                                    if link:
+                                        self.append_to_list(course_title, link)
+                        except Exception:
+                            continue
+                self.progress = i + 1
+        except Exception:
+            logger.exception("ccc scraper failed")
+            self.error = traceback.format_exc()
+
+
+class CouponScorpionScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Coupon Scorpion"
+
+    @property
+    def code_name(self) -> str: return "cs"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            self.length = 3
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/json",
+            }
+            listing_tasks = [
+                self.http.get(
+                    f"https://couponscorpion.com/wp-json/wp/v2/posts?per_page=100&page={page}",
+                    headers=headers
+                )
+                for page in range(1, 4)
+            ]
+            
+            all_items = []
+            for i, task in enumerate(asyncio.as_completed(listing_tasks)):
+                resp = await task
+                data = await self.http.safe_json(resp, f"cs page {i+1}")
+                if isinstance(data, list):
+                    all_items.extend(data)
+                self.progress = i + 1
+
+            self.length = len(all_items)
+            self.progress = 0
+
+            async def _fetch_details(item):
+                try:
+                    title = unescape(item.get("title", {}).get("rendered", ""))
+                    title = title.replace("–", "-").replace("—", "-").strip()
+                    post_link = item.get("link")
+                    if not post_link:
+                        return None, None
+                    
+                    page_resp = await self.http.get(post_link, headers=headers, attempts=1, log_failures=False)
+                    if not page_resp:
+                        return None, None
+                        
+                    soup = self.parse_html(page_resp.content)
+                    a_tag = soup.find("a", href=lambda h: h and "/scripts/udemy/out.php" in h)
+                    if not a_tag:
+                        return None, None
+                        
+                    out_link = a_tag["href"]
+                    if out_link.startswith("/"):
+                        out_link = f"https://couponscorpion.com{out_link}"
+                    # Fetch redirect
+                    redir_resp = await self.http.get(
+                        out_link,
+                        headers=headers,
+                        follow_redirects=False,
+                        raise_for_status=False,
+                        attempts=1,
+                        log_failures=False
+                    )
+                    
+                    udemy_link = redir_resp.headers.get("Location") if redir_resp else None
+                    if udemy_link:
+                        return title, udemy_link
+                    return None, None
+                except Exception:
+                    return None, None
+
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, item) for item in all_items]
+            for i, task in enumerate(asyncio.as_completed(detail_tasks)):
+                title, udemy_link = await task
+                if title and udemy_link:
+                    cleaned_link = self.cleanup_link(udemy_link)
+                    if cleaned_link:
+                        self.append_to_list(title, cleaned_link)
+                self.progress = i + 1
+                
+        except Exception:
+            logger.exception("cs scraper failed")
+            self.error = traceback.format_exc()
+
+
+class FreeWebCartScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "FreeWebCart"
+
+    @property
+    def code_name(self) -> str: return "fwc"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            self.length = 3
+            listing_tasks = [
+                self.http.get(f"https://freewebcart.com/?page={page}")
+                for page in range(1, 4)
+            ]
+            all_items = []
+            for i, task in enumerate(asyncio.as_completed(listing_tasks)):
+                resp = await task
+                if resp:
+                    soup = self.parse_html(resp.content)
+                    for a in soup.find_all("a", href=True):
+                        href = a["href"]
+                        if "/course/" in href:
+                            if href.startswith("/course/"):
+                                href = "https://freewebcart.com" + href
+                            if href not in all_items:
+                                all_items.append(href)
+                self.progress = i + 1
+
+            self.length = len(all_items)
+            self.progress = 0
+
+            async def _fetch_details(url):
+                try:
+                    page = await self.http.get(url, attempts=1, log_failures=False)
+                    if not page: return None, None
+                    soup = self.parse_html(page.content)
+                    title = soup.title.string.split("|")[0].strip() if soup.title else "Untitled"
+                    a_tag = soup.find("a", href=lambda h: h and "udemy.com" in h)
+                    if a_tag:
+                        return title, a_tag["href"]
+                    return None, None
+                except Exception:
+                    return None, None
+
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, url) for url in all_items]
+            for i, task in enumerate(asyncio.as_completed(detail_tasks)):
+                title, link = await task
+                if title and link:
+                    cleaned = self.cleanup_link(link)
+                    if cleaned:
+                        self.append_to_list(title, cleaned)
+                self.progress = i + 1
+        except Exception:
+            logger.exception("fwc scraper failed")
+            self.error = traceback.format_exc()
+
+
+class EasyLearnScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Easy Learn"
+
+    @property
+    def code_name(self) -> str: return "el"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            resp = await self.http.get("https://www.easylearn.ing/sitemap.xml")
+            if not resp: return
+            
+            import re
+            locs = re.findall(r"<loc>(.*?)</loc>", resp.text)
+            all_items = [l for l in locs if "/course/" in l]
+            # Take newest 100
+            all_items = all_items[-100:] if len(all_items) > 100 else all_items
+            self.length = len(all_items)
+            self.progress = 0
+
+            async def _fetch_details(url):
+                try:
+                    page = await self.http.get(url, attempts=1, log_failures=False)
+                    if not page: return None, None
+                    soup = self.parse_html(page.content)
+                    title = soup.title.string.split("|")[0].strip() if soup.title else "Untitled"
+                    a_tag = soup.find("a", href=lambda h: h and "udemy.com" in h)
+                    if a_tag:
+                        return title, a_tag["href"]
+                    return None, None
+                except Exception:
+                    return None, None
+
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, url) for url in all_items]
+            for i, task in enumerate(asyncio.as_completed(detail_tasks)):
+                title, link = await task
+                if title and link:
+                    cleaned = self.cleanup_link(link)
+                    if cleaned:
+                        self.append_to_list(title, cleaned)
+                self.progress = i + 1
+        except Exception:
+            logger.exception("el scraper failed")
+            self.error = traceback.format_exc()
+
+
+class RedditUdemyFreebiesScraper(Scraper):
+    @property
+    def site_name(self) -> str: return "Reddit /r/udemyfreebies"
+
+    @property
+    def code_name(self) -> str: return "reddit_uf"
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            import time
+            headers = {
+                "User-Agent": "UdemyEnrollerBot/1.0 (Windows NT 10.0; Win64; x64)"
+            }
+            
+            # Domains we already have dedicated scrapers for - skip them to avoid redundancy
+            skipped_domains = {
+                "freewebcart.com", "easylearn.ing", "idownloadcoupon.com", 
+                "tutorialbar.com", "discudemy.com", "udemyfreebies.com",
+                "coursecouponclub.com", "couponscorpion.com", "coursejoiner.com",
+                "courson.xyz", "jobs.e-next.in", "e-next.in"
+            }
+
+            resp = await self.http.get("https://www.reddit.com/r/udemyfreebies/new.json?limit=100", headers=headers)
+            data = await self.http.safe_json(resp, "reddit API")
+            if not data or "data" not in data or "children" not in data["data"]:
+                return
+
+            current_time = time.time()
+            all_items = []
+            
+            for child in data["data"]["children"]:
+                post = child.get("data", {})
+                created = post.get("created_utc", 0)
+                if current_time - created <= 86400: # 24 hours
+                    title = post.get("title", "")
+                    title = title.replace("[FREE]", "").replace("[100% OFF]", "").strip()
+                    link = post.get("url", "")
+                    selftext = post.get("selftext", "")
+                    
+                    target_url = None
+                    if link and link.startswith("http") and "reddit.com" not in link:
+                        target_url = link
+                    else:
+                        match = re.search(r"https?://[^\s\]\)]+", selftext)
+                        if match:
+                            target_url = match.group(0)
+                    
+                    if title and target_url:
+                        domain = urlparse(target_url).netloc.lower().replace("www.", "")
+                        if domain not in skipped_domains:
+                            all_items.append((title, target_url))
+
+            self.length = len(all_items)
+            self.progress = 0
+
+            async def _fetch_details(item):
+                title, target_url = item
+                try:
+                    if "udemy.com" in target_url:
+                        return title, target_url
+                        
+                    # Fetch redirect or page
+                    page_resp = await self.http.get(
+                        target_url,
+                        headers=headers,
+                        follow_redirects=False,
+                        raise_for_status=False,
+                        attempts=1,
+                        log_failures=False
+                    )
+                    
+                    if not page_resp:
+                        return None, None
+                        
+                    # Check redirect
+                    location = page_resp.headers.get("Location")
+                    if location and "udemy.com" in location:
+                        return title, location
+                        
+                    # Parse HTML
+                    soup = self.parse_html(page_resp.content)
+                    for a_tag in soup.find_all("a", href=True):
+                        href = a_tag["href"]
+                        if "udemy.com" in href:
+                            return title, href
+                            
+                    return None, None
+                except Exception:
+                    return None, None
+
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, item) for item in all_items]
+            for i, task in enumerate(asyncio.as_completed(detail_tasks)):
+                title, udemy_link = await task
+                if title and udemy_link:
+                    cleaned_link = self.cleanup_link(udemy_link)
+                    if cleaned_link:
+                        self.append_to_list(title, cleaned_link)
+                self.progress = i + 1
+                
+        except Exception:
+            logger.exception("reddit_uf scraper failed")
+            self.error = traceback.format_exc()
+
+
 SCRAPER_REGISTRY = {
     "Real Discount": RealDiscountScraper,
     "Courson": CoursonScraper,
@@ -513,6 +943,12 @@ SCRAPER_REGISTRY = {
     "Udemy Freebies": UdemyFreebiesScraper,
     "Course Joiner": CourseJoinerScraper,
     "Course Vania": CourseVaniaScraper,
+    "Course Coupon Club": CourseCouponClubScraper,
+    "Coupon Scorpion": CouponScorpionScraper,
+    "Reddit /r/udemyfreebies": RedditUdemyFreebiesScraper,
+    "TutorialBar": TutorialBarScraper,
+    "FreeWebCart": FreeWebCartScraper,
+    "Easy Learn": EasyLearnScraper,
 }
 
 
@@ -521,21 +957,31 @@ class ScraperService:
 
     def __init__(self, sites_to_scrape: List[str] = None, proxy: Optional[str] = None, enable_headless: bool = False):
         self.sites = sites_to_scrape or list(SCRAPER_REGISTRY.keys())
-        self.http = AsyncHTTPClient(proxy=proxy)
-        self.proxy = proxy
         self.enable_headless = enable_headless
 
         app_settings = get_settings()
+        
+        self.proxies = []
+        if proxy:
+            self.proxies.append(proxy)
+        elif app_settings.PROXIES:
+            self.proxies = [p.strip() for p in app_settings.PROXIES.split(",") if p.strip()]
+
+        self.http_clients: List[AsyncHTTPClient] = []
+
         site_count = max(1, len(self.sites))
         site_concurrency = min(max(1, app_settings.MAX_SCRAPER_WORKERS), site_count)
         self._site_semaphore = asyncio.Semaphore(site_concurrency)
         self._detail_semaphore = asyncio.Semaphore(max(site_concurrency * 4, 8))
 
         self.scrapers: List[Scraper] = []
-        for site in self.sites:
+        for i, site in enumerate(self.sites):
             scraper_cls = SCRAPER_REGISTRY.get(site)
             if scraper_cls:
-                self.scrapers.append(scraper_cls(self.http, proxy=self.proxy, enable_headless=self.enable_headless))
+                assigned_proxy = self.proxies[i % len(self.proxies)] if self.proxies else None
+                client = AsyncHTTPClient(proxy=assigned_proxy)
+                self.http_clients.append(client)
+                self.scrapers.append(scraper_cls(client, proxy=assigned_proxy, enable_headless=self.enable_headless))
 
     def get_progress(self) -> List[dict]:
         progress = []
@@ -551,14 +997,26 @@ class ScraperService:
 
     async def scrape_all(self) -> List[Course]:
         """Scrape all configured sites asynchronously and return unique courses."""
-        logger.info(f"Starting async scrape for sites: {[s.site_name for s in self.scrapers]}")
+        # Shuffle scrapers to avoid hitting sites in the same order every time
+        shuffled_scrapers = list(self.scrapers)
+        random.shuffle(shuffled_scrapers)
+        
+        logger.info(f"Starting async scrape for sites: {[s.site_name for s in shuffled_scrapers]}")
 
-        tasks = []
-        for scraper in self.scrapers:
-            tasks.append(self._scrape_site_guarded(scraper))
-
+        running_tasks = []
         try:
-            await asyncio.gather(*tasks)
+            # Stagger the start of each scraper slightly
+            for i, scraper in enumerate(shuffled_scrapers):
+                if i > 0:
+                    await asyncio.sleep(random.uniform(0.5, 2.0))
+                
+                # Create the task and track it
+                task = asyncio.create_task(self._scrape_site_guarded(scraper))
+                running_tasks.append(task)
+            
+            # Wait for all started tasks to finish
+            # Since they are wrapped in semaphores, concurrency is still controlled
+            await asyncio.gather(*running_tasks)
 
             scraped_data: Set[Course] = set()
             for scraper in self.scrapers:
@@ -568,7 +1026,8 @@ class ScraperService:
             logger.info(f"Scraping finished. Found {len(scraped_data)} unique courses.")
             return list(scraped_data)
         finally:
-            await self.http.close()
+            for client in self.http_clients:
+                await client.close()
 
     async def _scrape_site_guarded(self, scraper: Scraper):
         async with self._site_semaphore:

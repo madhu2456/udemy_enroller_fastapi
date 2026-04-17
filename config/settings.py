@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     MAX_SCRAPER_WORKERS: int = 5
     SCRAPER_TIMEOUT: int = 30
     ENROLLMENT_BATCH_SIZE: int = 5
+    PROXIES: str = ""  # Comma-separated list of proxy URLs
 
     # Logging
     LOG_LEVEL: str = "INFO"

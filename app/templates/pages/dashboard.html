@@ -56,10 +56,19 @@
         <h2 class="text-xl font-bold text-white">
             <i class="fas fa-rocket mr-2 text-blue-400"></i>Enrollment Control
         </h2>
-        <button id="start-btn" onclick="startEnrollment()"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition-colors">
-            <i class="fas fa-play mr-2"></i>Start Enrollment
-        </button>
+        <div class="flex space-x-2">
+            <a href="/settings" class="bg-gray-700 hover:bg-gray-600 text-white font-medium px-4 py-2 text-sm md:px-6 md:py-3 md:text-base rounded-lg transition-colors flex items-center">
+                <i class="fas fa-cog md:mr-2"></i><span class="hidden md:inline">Settings</span>
+            </a>
+            <button id="stop-btn" onclick="stopEnrollment()"
+                class="hidden bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 text-sm md:px-6 md:py-3 md:text-base rounded-lg transition-colors">
+                <i class="fas fa-stop md:mr-2"></i><span class="hidden md:inline">Stop</span>
+            </button>
+            <button id="start-btn" onclick="startEnrollment()"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 text-sm md:px-6 md:py-3 md:text-base rounded-lg transition-colors">
+                <i class="fas fa-play md:mr-2"></i><span class="hidden md:inline">Start</span> Enrollment
+            </button>
+        </div>
     </div>
 
     <!-- Progress Panel (hidden by default) -->
@@ -165,13 +174,17 @@
         <div class="relative z-10 text-sm text-gray-300 space-y-4">
             <p>
                 <strong>Udemy Course Enroller</strong> is an open-source educational tool designed and developed by 
-                <a href="https://madhudadi.in" target="_blank" rel="noopener" class="text-blue-400 font-medium hover:text-blue-300 underline decoration-blue-500/30 underline-offset-2">Madhu Dadi</a>.
+                <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-400 font-medium hover:text-blue-300 underline decoration-blue-500/30 underline-offset-2">Madhu Dadi</a>.
             </p>
             <p>
                 As a software engineer specializing in AI and full-stack development, Madhu built this application using <strong>FastAPI, Playwright, and SQLAlchemy</strong> to automate premium learning access.
             </p>
             
             <div class="pt-4 border-t border-gray-700 flex flex-col space-y-2">
+                <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="flex items-center text-gray-400 hover:text-white transition-colors group">
+                    <i class="fas fa-pen-nib w-5 text-center mr-2 text-gray-500 group-hover:text-purple-400"></i>
+                    Read technical blog
+                </a>
                 <a href="https://madhudadi.in/case-studies" target="_blank" rel="noopener" class="flex items-center text-gray-400 hover:text-white transition-colors group">
                     <i class="fas fa-book-open w-5 text-center mr-2 text-gray-500 group-hover:text-blue-400"></i>
                     Read technical case studies
@@ -338,9 +351,34 @@ async function startEnrollment() {
     }
 }
 
+async function stopEnrollment() {
+    const btn = document.getElementById('stop-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin md:mr-2"></i><span class="hidden md:inline">Stopping...</span>';
+
+    try {
+        const resp = await fetch('/api/enrollment/stop', { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-stop md:mr-2"></i><span class="hidden md:inline">Stop</span>';
+        }
+    } catch (e) {
+        showToast('Error stopping enrollment', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-stop md:mr-2"></i><span class="hidden md:inline">Stop</span>';
+    }
+}
+
 function showProgressPanel() {
     document.getElementById('progress-panel').classList.remove('hidden');
     document.getElementById('start-btn').classList.add('hidden');
+    document.getElementById('stop-btn').classList.remove('hidden');
+    document.getElementById('stop-btn').disabled = false;
+    document.getElementById('stop-btn').innerHTML = '<i class="fas fa-stop md:mr-2"></i><span class="hidden md:inline">Stop</span>';
 }
 
 async function checkActiveRun() {
@@ -368,6 +406,7 @@ function startProgressPolling() {
                 document.getElementById('start-btn').classList.remove('hidden');
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('start-btn').innerHTML = '<i class="fas fa-play mr-2"></i>Start Enrollment';
+                document.getElementById('stop-btn').classList.add('hidden');
                 loadDashboardStats();
                 loadRecentRuns();
                 updateAnalytics();
@@ -381,7 +420,10 @@ function startProgressPolling() {
 function updateProgress(data) {
     // Status
     const statusEl = document.getElementById('run-status');
-    if (data.status === 'scraping') {
+    if (data.status === 'pending') {
+        statusEl.innerHTML = '<i class="fas fa-hourglass-half mr-1"></i>Starting...';
+        statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300';
+    } else if (data.status === 'scraping') {
         statusEl.innerHTML = '<i class="fas fa-search mr-1"></i>Scraping courses...';
         statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-900 text-yellow-300';
     } else if (data.status === 'enrolling') {

@@ -20,25 +20,36 @@ async def get_settings(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
-    """Get current user settings."""
+    """Get current user settings with guaranteed defaults."""
     settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
 
+    def safe_merge(user_val, default_func):
+        defaults = default_func()
+        if not isinstance(user_val, dict) or not user_val:
+            return defaults
+        # Ensure all default keys exist in the user dict
+        merged = defaults.copy()
+        merged.update(user_val)
+        return merged
+
     return SettingsResponse(
-        sites=settings.sites or {},
-        languages=settings.languages or {},
-        categories=settings.categories or {},
+        sites=safe_merge(settings.sites, UserSettings.default_sites),
+        languages=safe_merge(settings.languages, UserSettings.default_languages),
+        categories=safe_merge(settings.categories, UserSettings.default_categories),
         instructor_exclude=settings.instructor_exclude or [],
         title_exclude=settings.title_exclude or [],
-        min_rating=settings.min_rating or 0.0,
-        course_update_threshold_months=settings.course_update_threshold_months or 24,
-        save_txt=settings.save_txt or False,
-        discounted_only=settings.discounted_only or False,
+        min_rating=float(settings.min_rating or 0.0),
+        course_update_threshold_months=int(settings.course_update_threshold_months or 24),
+        save_txt=bool(settings.save_txt),
+        discounted_only=bool(settings.discounted_only),
         proxy_url=settings.proxy_url,
-        enable_headless=settings.enable_headless or False,
+        enable_headless=bool(settings.enable_headless),
     )
 
+
+from app.core.cache import clear_user_caches
 
 @router.put("/")
 @maybe_limit(app_settings.RATE_LIMIT_API)
@@ -67,6 +78,10 @@ async def update_settings(
 
     db.commit()
     logger.info(f"Settings updated for user {user_id}")
+    
+    # Clear cache to ensure any stats derived from settings are refreshed
+    clear_user_caches(user_id)
+    
     return {"status": "success", "message": "Settings updated"}
 
 
@@ -82,11 +97,10 @@ async def reset_settings(
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
 
-    # Reset to defaults
-    defaults = UserSettings(user_id=user_id)
-    settings.sites = defaults.sites
-    settings.languages = defaults.languages
-    settings.categories = defaults.categories
+    # Reset using static default methods
+    settings.sites = UserSettings.default_sites()
+    settings.languages = UserSettings.default_languages()
+    settings.categories = UserSettings.default_categories()
     settings.instructor_exclude = []
     settings.title_exclude = []
     settings.min_rating = 0.0
@@ -98,4 +112,9 @@ async def reset_settings(
 
     db.commit()
     logger.info(f"Settings reset to defaults for user {user_id}")
+    
+    # Clear cache to ensure any stats derived from settings are refreshed
+    clear_user_caches(user_id)
+    
     return {"status": "success", "message": "Settings reset to defaults"}
+

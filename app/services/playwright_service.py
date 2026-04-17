@@ -28,13 +28,24 @@ class PlaywrightManager:
     @classmethod
     async def close_browser(cls):
         async with cls._lock:
-            if cls._browser:
-                await cls._browser.close()
+            try:
+                if cls._browser:
+                    # Use wait_for to prevent hanging forever
+                    await asyncio.wait_for(cls._browser.close(), timeout=10.0)
+                    cls._browser = None
+                if cls._pw:
+                    await asyncio.wait_for(cls._pw.stop(), timeout=5.0)
+                    cls._pw = None
+                logger.info("Stopped global Playwright browser.")
+            except asyncio.TimeoutError:
+                logger.warning("Playwright browser close timed out.")
+                # Force cleanup of references anyway
                 cls._browser = None
-            if cls._pw:
-                await cls._pw.stop()
                 cls._pw = None
-            logger.info("Stopped global Playwright browser.")
+            except Exception as e:
+                logger.error(f"Error closing Playwright browser: {e}")
+                cls._browser = None
+                cls._pw = None
 
 
 class PlaywrightService:

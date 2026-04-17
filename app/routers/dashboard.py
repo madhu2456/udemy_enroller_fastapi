@@ -63,28 +63,7 @@ async def history_page(request: Request):
     return templates.TemplateResponse("pages/history.html", {"request": request})
 
 
-from datetime import timedelta
-from functools import wraps
-from typing import Any
-
-# Cache for dashboard analytics and stats
-_analytics_cache = {}
-_stats_cache = {}
-CACHE_TTL = timedelta(minutes=5)
-
-def get_cached_or_compute(cache_dict: dict, user_id: int, compute_func: Any) -> Any:
-    """Helper to cache DB heavy responses for a short time."""
-    from datetime import datetime
-    now = datetime.utcnow()
-    
-    if user_id in cache_dict:
-        entry = cache_dict[user_id]
-        if now - entry["time"] < CACHE_TTL:
-            return entry["data"]
-            
-    data = compute_func()
-    cache_dict[user_id] = {"time": now, "data": data}
-    return data
+from app.core.cache import _analytics_cache, _stats_cache, get_cached_or_compute
 
 @router.get("/api/dashboard/stats")
 async def dashboard_stats(
@@ -119,7 +98,7 @@ async def dashboard_stats(
             "total_excluded": user.total_excluded or 0,
         }
         
-    return get_cached_or_compute(_stats_cache, user_id, compute_stats)
+    return get_cached_or_compute(_stats_cache, user_id, compute_stats, ttl_seconds=300)
 
 
 @router.get("/api/dashboard/analytics")
@@ -155,7 +134,8 @@ async def dashboard_analytics(
             for s in stats
         ]
         
-    return get_cached_or_compute(_analytics_cache, user_id, compute_analytics)
+    return get_cached_or_compute(_analytics_cache, user_id, compute_analytics, ttl_seconds=300)
+
 
 
 @router.get("/api/dashboard/logs/stream")
@@ -168,11 +148,16 @@ async def stream_logs(request: Request):
             return
 
         # Start by tailing the file, only last few lines then live
-        with open(log_file, "r", encoding="utf-8") as f:
+        with open(log_file, "r", encoding="utf-8", errors="replace") as f:
             # Get last 20 lines
             f.seek(0, os.SEEK_END)
             end_pos = f.tell()
-            f.seek(max(0, end_pos - 4000))  # approx 20 lines
+            if end_pos > 0:
+                f.seek(max(0, end_pos - 4000))  # approx 20-40 lines
+                if f.tell() > 0:
+                    # Discard the first partial line since seek might land in the middle
+                    f.readline()
+                
             lines = f.readlines()
             for line in lines[-20:]:
                 yield f"data: {line.strip()}\n\n"

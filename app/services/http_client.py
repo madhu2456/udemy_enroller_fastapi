@@ -1,15 +1,23 @@
-"""Unified asynchronous HTTP client for the Udemy Enroller."""
-
 import asyncio
 import logging
-from typing import Optional, Dict, Any, Union
+import random
+from typing import Optional, Dict, Any, Union, List
 
 import httpx
 from loguru import logger
 
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.1; rv:109.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+]
 
 class AsyncHTTPClient:
-    """Wraps httpx.AsyncClient with retries and timeout management."""
+    """Wraps httpx.AsyncClient with retries, timeout management, and anti-ban features."""
 
     def __init__(self, proxy: Optional[str] = None, max_concurrency: int = 20):
         self.proxy = proxy
@@ -19,28 +27,62 @@ class AsyncHTTPClient:
             timeout=httpx.Timeout(15.0, connect=30.0),
             follow_redirects=True,
             limits=httpx.Limits(max_connections=40, max_keepalive_connections=20, keepalive_expiry=20.0),
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept-Language": "en-US,en;q=0.9",
-                "DNT": "1",
-            }
         )
+
+    def _get_headers(self, custom_headers: Optional[Dict] = None) -> Dict[str, str]:
+        """Generate randomized headers for each request, respecting existing ones."""
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": random.choice(["en-US,en;q=0.9", "en-GB,en;q=0.8", "en;q=0.7"]),
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "DNT": "1",
+        }
+        
+        # Only add a random User-Agent if one isn't already present in custom_headers or client.headers
+        if not custom_headers or "User-Agent" not in custom_headers:
+            client_ua = self.client.headers.get("User-Agent")
+            if client_ua:
+                headers["User-Agent"] = client_ua
+            else:
+                headers["User-Agent"] = random.choice(USER_AGENTS)
+
+        if custom_headers:
+            headers.update(custom_headers)
+        return headers
 
     async def close(self):
         await self.client.aclose()
 
     async def get(self, url: str, **kwargs) -> Optional[httpx.Response]:
-        """Perform an async GET request with retries."""
+        """Perform an async GET request with retries and anti-ban delays."""
         attempts = kwargs.pop("attempts", 4)
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
+        randomize = kwargs.pop("randomize_headers", True)
+        
+        if randomize:
+            headers = self._get_headers(kwargs.pop("headers", None))
+        else:
+            headers = kwargs.pop("headers", None)
+        
         last_attempt = 0
         last_error: Optional[Exception] = None
+        
+        # Add a small random jitter before the request to avoid pattern detection
+        if randomize:
+            await asyncio.sleep(random.uniform(0.1, 0.5))
+
         for attempt in range(attempts):
             last_attempt = attempt + 1
             try:
                 async with self._request_semaphore:
-                    response = await self.client.get(url, **kwargs)
+                    response = await self.client.get(url, headers=headers, **kwargs)
                 if raise_for_status:
                     response.raise_for_status()
                 return response
@@ -48,24 +90,36 @@ class AsyncHTTPClient:
                 last_error = e
                 if log_failures:
                     logger.debug(f"GET attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}")
+                
                 should_retry = attempt < attempts - 1
                 if isinstance(e, httpx.HTTPStatusError):
                     status = e.response.status_code
-                    # Retry only on rate limiting and 5xx server errors.
-                    if status != 429 and status < 500:
+                    if status == 403: # Forbidden often means bot detection, maybe retry with different headers?
+                         should_retry = True
+                    elif status != 429 and status < 500:
                         should_retry = False
+                
                 if should_retry:
-                    delay = 2 * (attempt + 1)
+                    # Exponential backoff with jitter
+                    delay = (2 ** attempt) + random.uniform(1, 3)
                     if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
                         retry_after = e.response.headers.get("Retry-After")
                         delay = int(retry_after) if retry_after and retry_after.isdigit() else 30
-                        if log_failures:
-                            logger.warning(f"Rate limited (429). Waiting {delay}s before retrying GET...")
+                        logger.warning(f"Rate limited (429) on {url}. Waiting {delay}s...")
+                    
+                    # If we got a 403, maybe try to change the User-Agent if we were randomizing
+                    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 403 and randomize:
+                        if headers and "User-Agent" in headers:
+                             headers["User-Agent"] = random.choice(USER_AGENTS)
+
                     await asyncio.sleep(delay)
                 else:
                     break
+        
         if log_failures:
             reason = f"{type(last_error).__name__}" if last_error else "UnknownError"
+            if isinstance(last_error, httpx.HTTPStatusError):
+                reason += f" ({last_error.response.status_code})"
             logger.warning(f"GET failed after {last_attempt} attempt(s) [{reason}]: {url}")
         return None
 
@@ -74,13 +128,24 @@ class AsyncHTTPClient:
         attempts = kwargs.pop("attempts", 4)
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
+        randomize = kwargs.pop("randomize_headers", True)
+        
+        if randomize:
+            headers = self._get_headers(kwargs.pop("headers", None))
+        else:
+            headers = kwargs.pop("headers", None)
+
         last_attempt = 0
         last_error: Optional[Exception] = None
+        
+        if randomize:
+            await asyncio.sleep(random.uniform(0.1, 0.5))
+
         for attempt in range(attempts):
             last_attempt = attempt + 1
             try:
                 async with self._request_semaphore:
-                    response = await self.client.post(url, **kwargs)
+                    response = await self.client.post(url, headers=headers, **kwargs)
                 if raise_for_status:
                     response.raise_for_status()
                 return response
@@ -88,33 +153,85 @@ class AsyncHTTPClient:
                 last_error = e
                 if log_failures:
                     logger.debug(f"POST attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}")
+                
                 should_retry = attempt < attempts - 1
                 if isinstance(e, httpx.HTTPStatusError):
                     status = e.response.status_code
-                    # Retry only on rate limiting and 5xx server errors.
                     if status != 429 and status < 500:
                         should_retry = False
+                
                 if should_retry:
-                    delay = 2 * (attempt + 1)
+                    delay = (2 ** attempt) + random.uniform(1, 3)
                     if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
                         retry_after = e.response.headers.get("Retry-After")
                         delay = int(retry_after) if retry_after and retry_after.isdigit() else 30
-                        if log_failures:
-                            logger.warning(f"Rate limited (429). Waiting {delay}s before retrying POST...")
                     await asyncio.sleep(delay)
                 else:
                     break
+        
         if log_failures:
             reason = f"{type(last_error).__name__}" if last_error else "UnknownError"
+            if isinstance(last_error, httpx.HTTPStatusError):
+                reason += f" ({last_error.response.status_code})"
             logger.warning(f"POST failed after {last_attempt} attempt(s) [{reason}]: {url}")
         return None
 
     async def safe_json(self, response: Optional[httpx.Response], context: str = "") -> Union[Dict, list, None]:
-        """Safely parse JSON from a response."""
+        """Safely parse JSON from a response, handling manual decompression if needed."""
         if response is None:
             return None
+        
         try:
             return response.json()
-        except Exception as e:
-            logger.error(f"JSON error in {context or 'unknown'}: {e}. Body: {response.text[:200]}")
+        except Exception as initial_e:
+            content = response.content
+            text = None
+            decompression_method = None
+            
+            # 1. Try Brotli
+            try:
+                import brotli
+                text = brotli.decompress(content).decode('utf-8', errors='replace')
+                decompression_method = "brotli"
+            except Exception:
+                pass
+            
+            # 2. Try Gzip
+            if not text:
+                try:
+                    import gzip
+                    text = gzip.decompress(content).decode('utf-8', errors='replace')
+                    decompression_method = "gzip"
+                except Exception:
+                    pass
+            
+            # 3. Try Zlib (with and without header)
+            if not text:
+                try:
+                    import zlib
+                    try:
+                        text = zlib.decompress(content).decode('utf-8', errors='replace')
+                        decompression_method = "zlib"
+                    except Exception:
+                        text = zlib.decompress(content, -zlib.MAX_WBITS).decode('utf-8', errors='replace')
+                        decompression_method = "raw_deflate"
+                except Exception:
+                    pass
+
+            # If we have decompressed text, try to parse it as JSON
+            if text:
+                import json
+                try:
+                    return json.loads(text)
+                except Exception as json_e:
+                    logger.error(f"JSONDecodeError after manual {decompression_method} decompression in {context or 'unknown'}: {json_e}. Text preview: {text[:200]}")
+                    return None
+
+            # If we couldn't decompress or it wasn't compressed data, log the original error
+            try:
+                body_preview = response.text[:200]
+            except Exception:
+                body_preview = f"<binary data: {len(content)} bytes>"
+            
+            logger.error(f"JSON error in {context or 'unknown'}: {initial_e}. Body: {body_preview}")
             return None

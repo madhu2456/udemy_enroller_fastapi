@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import logging
+import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.models.database import get_db, UserSettings, EnrollmentRun, EnrolledCourse
 from app.deps import get_current_user_id, get_udemy_client
 from app.rate_limit_config import maybe_limit
-from app.schemas.schemas import EnrollmentStatus, CourseInfo
+from app.schemas.schemas import EnrollmentStatus, CourseInfo, RunDetail
 from app.services.enrollment_manager import EnrollmentManager
 from config.settings import get_settings as get_app_settings
 
@@ -69,10 +70,40 @@ async def start_enrollment(
     manager = EnrollmentManager(client, settings_dict, db, user_id)
     run_id = await manager.start()
     
+    # Invalidate cache so the new run appears in history immediately
+    clear_user_caches(user_id)
+
     # Start the actual scraping and enrollment pipeline in the background
-    background_tasks.add_task(manager._run_pipeline)
+    task = asyncio.create_task(manager._run_pipeline())
+
+    EnrollmentManager.active_tasks[run_id] = task
 
     return {"success": True, "run_id": run_id, "message": "Enrollment started"}
+
+
+@router.post("/stop")
+async def stop_enrollment(db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
+    """Stop the active enrollment run."""
+    active = EnrollmentManager.get_active_run(db, user_id)
+    if not active:
+        return {"success": False, "message": "No active enrollment run to stop"}
+
+    task = EnrollmentManager.active_tasks.get(active.id)
+    if task:
+        task.cancel()
+        return {"success": True, "message": "Enrollment stopping..."}
+    else:
+        # Fallback if task is not in memory
+        active.status = "cancelled"
+        active.error_message = "Cancelled by user"
+        active.completed_at = EnrollmentManager._utcnow_naive()
+        db.commit()
+
+        # Invalidate cache
+        clear_user_caches(user_id)
+
+        return {"success": True, "message": "Enrollment run marked as cancelled"}
+
 
 
 @router.get("/progress")
@@ -85,11 +116,13 @@ async def get_progress(db: Session = Depends(get_db), user_id: int = Depends(get
 
 
 @router.get("/progress/stream")
-async def stream_progress(db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
+async def stream_progress(request: Request, db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
     """Server-Sent Events stream for real-time progress updates."""
     async def event_generator():
-        import asyncio
         while True:
+            if await request.is_disconnected():
+                break
+                
             # Need to get a fresh session per loop since this is async streaming
             from app.models.database import SessionLocal
             with SessionLocal() as stream_db:
@@ -103,27 +136,8 @@ async def stream_progress(db: Session = Depends(get_db), user_id: int = Depends(
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-from datetime import timedelta
-from functools import wraps
-from typing import Any
-import datetime
 
-# Cache for dashboard analytics and stats
-_history_cache = {}
-CACHE_TTL = timedelta(seconds=10)
-
-def get_cached_or_compute(cache_dict: dict, user_id: int, compute_func: Any) -> Any:
-    """Helper to cache DB heavy responses for a short time."""
-    now = datetime.datetime.utcnow()
-
-    if user_id in cache_dict:
-        entry = cache_dict[user_id]
-        if now - entry["time"] < CACHE_TTL:
-            return entry["data"]
-
-    data = compute_func()
-    cache_dict[user_id] = {"time": now, "data": data}
-    return data
+from app.core.cache import _history_cache, get_cached_or_compute, clear_user_caches
 
 @router.get("/history", response_model=list[EnrollmentStatus])
 async def get_enrollment_history(
@@ -161,10 +175,12 @@ async def get_enrollment_history(
             for run in runs
         ]
 
-    return get_cached_or_compute(_history_cache, f"{user_id}_{limit}", compute_history)
+    return get_cached_or_compute(_history_cache, f"{user_id}_{limit}", compute_history, ttl_seconds=10)
 
 
-@router.get("/run/{run_id}")
+from app.schemas.schemas import EnrollmentStatus, CourseInfo, RunDetail
+
+@router.get("/run/{run_id}", response_model=RunDetail)
 async def get_run_details(
     run_id: int,
     db: Session = Depends(get_db),
@@ -179,14 +195,28 @@ async def get_run_details(
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
 
-    courses = db.query(EnrolledCourse).filter(
+    courses_models = db.query(EnrolledCourse).filter(
         EnrolledCourse.enrollment_run_id == run_id
     ).all()
 
-    return {
-        "run": run,
-        "courses": courses,
-    }
+    return RunDetail(
+        run=EnrollmentStatus(
+            run_id=run.id,
+            status=run.status,
+            total_courses_found=run.total_courses_found,
+            total_processed=run.total_processed,
+            successfully_enrolled=run.successfully_enrolled,
+            already_enrolled=run.already_enrolled,
+            expired=run.expired,
+            excluded=run.excluded,
+            amount_saved=float(run.amount_saved or 0),
+            currency=run.currency,
+            started_at=run.started_at,
+            completed_at=run.completed_at,
+            error_message=run.error_message,
+        ),
+        courses=[CourseInfo.model_validate(c) for c in courses_models]
+    )
 
 
 @router.delete("/run/{run_id}")
@@ -200,16 +230,19 @@ async def delete_run(
         EnrollmentRun.id == run_id,
         EnrollmentRun.user_id == user_id,
     ).first()
-    
+
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
-        
+
     if run.status in ["pending", "scraping", "enrolling"]:
         raise HTTPException(status_code=400, detail="Cannot delete an active run")
 
     run.status = "deleted"
     run.progress_data = {}  # Clear large JSON data to save space
     db.commit()
+
+    # Invalidate cache for UI consistency
+    clear_user_caches(user_id)
 
     return {"success": True, "message": "Run deleted successfully"}
 

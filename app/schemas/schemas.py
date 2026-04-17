@@ -155,6 +155,11 @@ class CourseInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RunDetail(BaseModel):
+    run: EnrollmentStatus
+    courses: list[CourseInfo]
+
+
 # ── Dashboard ─────────────────────────────────────────
 class DashboardStats(BaseModel):
     total_runs: int

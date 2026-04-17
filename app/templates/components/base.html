@@ -36,25 +36,47 @@
 
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Udemy Course Enroller",
-      "operatingSystem": "Web",
-      "applicationCategory": "EducationalApplication",
-      "description": "An automated system to find and enroll in 100% free discounted Udemy courses.",
-      "url": "https://udemyenroller.madhudadi.in",
-      "author": {
-        "@type": "Person",
-        "name": "Madhu Dadi",
-        "url": "https://madhudadi.in"
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Udemy Course Enroller",
+        "operatingSystem": "Web",
+        "applicationCategory": "EducationalApplication",
+        "description": "An automated system to find and enroll in 100% free discounted Udemy courses, developed by Madhu Dadi.",
+        "url": "https://udemyenroller.madhudadi.in",
+        "author": {
+          "@type": "Person",
+          "name": "Madhu Dadi",
+          "url": "https://madhudadi.in",
+          "sameAs": [
+            "https://madhudadi.in/blog",
+            "https://github.com/madhu2456",
+            "https://twitter.com/madhudadi",
+            "https://linkedin.com/in/madhudadi"
+          ]
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
       },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://madhudadi.in/#person",
+        "name": "Madhu Dadi",
+        "url": "https://madhudadi.in",
+        "jobTitle": "Software Engineer & AI Specialist",
+        "description": "Developer of automated educational tools and AI-driven applications.",
+        "sameAs": [
+          "https://madhudadi.in/blog",
+          "https://github.com/madhu2456",
+          "https://twitter.com/madhudadi"
+        ]
       }
-    }
+    ]
     </script>
 
     {% if request.url.path == '/' %}
@@ -180,14 +202,14 @@
                     Udemy Enroller
                 </a>
                 {% if request.url.path != '/' %}
-                <div class="hidden md:flex space-x-1" id="nav-links">
-                    <a href="/dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar" id="nav-links">
+                    <a href="/dashboard" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
                         <i class="fas fa-chart-bar mr-1"></i>Dashboard
                     </a>
-                    <a href="/settings" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                    <a href="/settings" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
                         <i class="fas fa-cog mr-1"></i>Settings
                     </a>
-                    <a href="/history" class="nav-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                    <a href="/history" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
                         <i class="fas fa-history mr-1"></i>History
                     </a>
                 </div>
@@ -224,7 +246,7 @@
                 <span>Built with</span>
                 <span class="text-red-400 px-1" aria-hidden="true">❤</span>
                 <span>by</span>
-                <a href="https://madhudadi.in" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors ml-1 relative group">
+                <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors ml-1 relative group">
                     Madhu Dadi
                     <span class="absolute -bottom-0.5 left-0 w-0 h-[1px] bg-blue-400 transition-all group-hover:w-full"></span>
                 </a>
