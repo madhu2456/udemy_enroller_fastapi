@@ -968,6 +968,9 @@ class ScraperService:
             self.proxies = [p.strip() for p in app_settings.PROXIES.split(",") if p.strip()]
 
         self.http_clients: List[AsyncHTTPClient] = []
+        # Shared client for service-level operations (backwards compatibility with tests)
+        self.http = AsyncHTTPClient(proxy=proxy)
+        self.http_clients.append(self.http)
 
         site_count = max(1, len(self.sites))
         site_concurrency = min(max(1, app_settings.MAX_SCRAPER_WORKERS), site_count)
