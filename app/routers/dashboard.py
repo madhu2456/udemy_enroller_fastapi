@@ -163,7 +163,8 @@ async def stream_logs(request: Request):
                 yield f"data: {line.strip()}\n\n"
 
             # Live tail
-            while True:
+            from app.core.constants import shutdown_event
+            while not shutdown_event.is_set():
                 if await request.is_disconnected():
                     break
                 line = f.readline()

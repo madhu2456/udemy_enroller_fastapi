@@ -243,22 +243,28 @@ class EnrollmentManager:
 
             # Mark complete
             run.status = "completed"
-            run.completed_at = self._utcnow_naive()
+            run.completed_at = _utcnow_naive()
             db.commit()
             self.status = "completed"
             logger.info("Enrollment pipeline completed successfully")
 
         except asyncio.CancelledError:
-            logger.info(f"Enrollment pipeline {self.run_id} cancelled by user")
+            logger.info(f"Enrollment pipeline {self.run_id} cancelled (Shutdown or Logout)")
+            # Use a fresh DB session for cleanup to avoid issues with the potentially stalled session
+            cleanup_db = SessionLocal()
             try:
-                run = db.get(EnrollmentRun, self.run_id)
+                run = cleanup_db.get(EnrollmentRun, self.run_id)
                 if run:
                     run.status = "cancelled"
-                    run.error_message = "Cancelled by user"
-                    run.completed_at = self._utcnow_naive()
-                    db.commit()
-            except Exception:
-                pass
+                    run.error_message = "Cancelled by system/user"
+                    run.completed_at = _utcnow_naive()
+                    cleanup_db.commit()
+                    logger.info(f"Enrollment run {self.run_id} marked as cancelled in DB.")
+            except Exception as e:
+                logger.error(f"Failed to mark run {self.run_id} as cancelled: {e}")
+            finally:
+                cleanup_db.close()
+            
             self.status = "cancelled"
             raise
         except Exception as e:
@@ -268,7 +274,7 @@ class EnrollmentManager:
                 if run:
                     run.status = "failed"
                     run.error_message = str(e)
-                    run.completed_at = self._utcnow_naive()
+                    run.completed_at = _utcnow_naive()
                     db.commit()
             except Exception:
                 pass
@@ -350,6 +356,6 @@ class EnrollmentManager:
     async def _fail(self, db: Session, run: EnrollmentRun, message: str):
         run.status = "failed"
         run.error_message = message
-        run.completed_at = self._utcnow_naive()
+        run.completed_at = _utcnow_naive()
         db.commit()
         self.status = "failed"

@@ -18,3 +18,6 @@ UDEMY_COURSE_SUBSCRIBE_URL = f"{UDEMY_BASE_URL}/course/subscribe/"
 
 # Common Headers
 DEFAULT_USER_AGENT = "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)"
+
+import asyncio
+shutdown_event = asyncio.Event()

@@ -1015,7 +1015,6 @@ class ScraperService:
                 running_tasks.append(task)
             
             # Wait for all started tasks to finish
-            # Since they are wrapped in semaphores, concurrency is still controlled
             await asyncio.gather(*running_tasks)
 
             scraped_data: Set[Course] = set()
@@ -1025,9 +1024,19 @@ class ScraperService:
 
             logger.info(f"Scraping finished. Found {len(scraped_data)} unique courses.")
             return list(scraped_data)
+        except asyncio.CancelledError:
+            logger.info("Scraping cancelled, cleaning up tasks...")
+            for task in running_tasks:
+                task.cancel()
+            if running_tasks:
+                await asyncio.gather(*running_tasks, return_exceptions=True)
+            raise
         finally:
             for client in self.http_clients:
-                await client.close()
+                try:
+                    await client.close()
+                except Exception:
+                    pass
 
     async def _scrape_site_guarded(self, scraper: Scraper):
         async with self._site_semaphore:

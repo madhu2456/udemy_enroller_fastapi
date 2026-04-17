@@ -119,7 +119,8 @@ async def get_progress(db: Session = Depends(get_db), user_id: int = Depends(get
 async def stream_progress(request: Request, db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
     """Server-Sent Events stream for real-time progress updates."""
     async def event_generator():
-        while True:
+        from app.core.constants import shutdown_event
+        while not shutdown_event.is_set():
             if await request.is_disconnected():
                 break
                 
