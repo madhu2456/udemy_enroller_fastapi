@@ -10,7 +10,6 @@ from app.models.database import get_db, User, UserSettings, UserSession, _utcnow
 from app.rate_limit_config import maybe_limit
 from app.schemas.schemas import LoginRequest, CookieLoginRequest, LoginResponse
 from app.services.udemy_client import UdemyClient, LoginException
-from app.services.playwright_service import extract_udemy_cookies_interactive
 from app.security import hash_password
 from app.sentry_config import capture_exception
 from config.settings import get_settings
@@ -237,57 +236,3 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     response = JSONResponse(content={"success": True, "message": "Logged out"})
     response.delete_cookie("session_id")
     return response
-
-
-@router.post("/extract-cookies", response_model=LoginResponse)
-@maybe_limit(settings.RATE_LIMIT_AUTH)
-async def extract_cookies(request: Request, db: Session = Depends(get_db)):
-    """Launch interactive browser to extract Udemy cookies and login."""
-    cookies = await extract_udemy_cookies_interactive()
-    if not cookies:
-        return LoginResponse(
-            success=False, 
-            status="error", 
-            message="Cookie extraction failed. Browser closed or timed out."
-        )
-    
-    # Process login with the extracted cookies
-    client = UdemyClient()
-    try:
-        client.cookie_login(
-            cookies["access_token"],
-            cookies["client_id"],
-            cookies["csrf_token"],
-        )
-        await client.get_session_info()
-
-        user = db.query(User).filter(User.udemy_display_name == client.display_name).first()
-        if not user:
-            user = User(
-                email=f"{client.display_name.replace(' ', '_').lower()}@udemy.local",
-                udemy_display_name=client.display_name,
-                udemy_cookies=client.cookie_dict,
-                currency=client.currency,
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-            db.add(UserSettings(user_id=user.id))
-            db.commit()
-            logger.info(f"New user via auto-cookie: {client.display_name}")
-        else:
-            user.udemy_cookies = client.cookie_dict
-            user.currency = client.currency
-            db.commit()
-            logger.info(f"User auto-cookies updated: {client.display_name}")
-
-        token = _create_session(user, client, request, db)
-        logger.info(f"Auto-cookie login successful: {client.display_name}")
-        return _login_response(client, token)
-
-    except LoginException as e:
-        logger.warning(f"Auto-cookie login rejected: {e}")
-        return LoginResponse(success=False, status="error", message=str(e))
-    except Exception as e:
-        logger.exception(f"Unexpected auto-cookie login error: {e}")
-        return LoginResponse(success=False, status="error", message="Auto-cookie authentication failed")

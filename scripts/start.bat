@@ -61,7 +61,7 @@ if not exist ".env" (
     echo [INFO] .env created. Edit it if needed.
 )
 
-REM Start the application
+REM Start the application via run.py to ensure Proactor loop on Windows
 echo.
 echo ========================================
 echo  Server starting at http://localhost:8005
@@ -69,6 +69,6 @@ echo  Press Ctrl+C to stop
 echo ========================================
 echo.
 
-python -m uvicorn main:app --host 0.0.0.0 --port 8005 --reload
+python run.py
 
 pause

@@ -198,12 +198,42 @@ class UdemyClient:
                 self.enrolled_courses[slug] = ""
         logger.info(f"Fetched {page_num} page(s) of enrolled courses.")
 
-    async def get_course_id(self, course: Course):
-        """Fetch course ID and metadata asynchronously."""
+    async def get_course_id(self, course: Course, use_headless_fallback: bool = True):
+        """Fetch course ID and metadata asynchronously with optional headless fallback."""
         if course.course_id:
             return
         url = re.sub(r"\W+$", "", unquote(course.url))
         resp = await self.http.get(url)
+        
+        # Check if we need to fall back to Playwright due to Cloudflare
+        should_retry_headless = False
+        if not resp:
+            should_retry_headless = True
+        else:
+            soup = bs(resp.content, "lxml")
+            title = soup.find("title")
+            title_text = title.text.strip() if title else ""
+            if "Access Denied" in title_text or "Just a moment" in title_text or "Attention Required" in title_text:
+                should_retry_headless = True
+        
+        if should_retry_headless and use_headless_fallback:
+            logger.info(f"Cloudflare detected for {course.title}, falling back to headless browser...")
+            from app.services.playwright_service import PlaywrightService
+            async with PlaywrightService() as pw:
+                content = await pw.get_page_content(url)
+                if content:
+                    soup = bs(content, "lxml")
+                    body = soup.find("body")
+                    course_id = body.get("data-clp-course-id") if body else None
+                    if course_id:
+                        course.course_id = course_id
+                        try:
+                            dma = json.loads(body.get("data-module-args", "{}"))
+                            course.set_metadata(dma)
+                            return
+                        except Exception:
+                            pass
+
         if not resp:
             course.is_valid = False
             course.error = "Failed to fetch course page"
@@ -213,9 +243,14 @@ class UdemyClient:
         soup = bs(resp.content, "lxml")
         body = soup.find("body")
         course_id = body.get("data-clp-course-id") if body else None
+        
         if not course_id:
             course.is_valid = False
             course.error = "Course ID not found"
+            if body:
+                title = soup.find("title")
+                title_text = title.text.strip() if title else "No title"
+                logger.warning(f"Course ID not found for {course.title}. Page title: {title_text}")
             return
 
         course.course_id = course_id
@@ -253,57 +288,8 @@ class UdemyClient:
 
     def is_course_excluded(self, course: Course, settings: dict):
         """Check if course should be excluded based on settings."""
-        categories = [k for k, v in settings.get("categories", {}).items() if v]
-        languages = [k for k, v in settings.get("languages", {}).items() if v]
-        min_rating = settings.get("min_rating", 0.0)
-        instructor_exclude = settings.get("instructor_exclude", [])
-        title_exclude = settings.get("title_exclude", [])
-        threshold = settings.get("course_update_threshold_months", 24)
-
-        # Check last update
-        if course.last_update:
-            try:
-                last_update_date = datetime.strptime(course.last_update, "%Y-%m-%d")
-                current_date = datetime.now()
-                months_diff = (current_date.year - last_update_date.year) * 12 + (current_date.month - last_update_date.month)
-                if months_diff >= threshold:
-                    course.is_excluded = True
-                    course.error = f"Not updated in {months_diff} months (last: {course.last_update}, threshold: {threshold})"
-                    return
-            except ValueError:
-                pass
-
-        # Check instructor
-        for instructor in course.instructors:
-            if instructor in instructor_exclude:
-                course.is_excluded = True
-                course.error = f"Instructor excluded: {instructor}"
-                return
-
-        # Check title keywords
-        title_words = course.title.casefold().split()
-        for word in title_words:
-            if word.casefold() in [t.casefold() for t in title_exclude]:
-                course.is_excluded = True
-                course.error = f"Title keyword excluded: {word}"
-                return
-
-        # Check category
-        if course.category and course.category not in categories:
-            course.is_excluded = True
-            course.error = f"Category not enabled: {course.category}"
-            return
-
-        # Check language
-        if course.language and course.language not in languages:
-            course.is_excluded = True
-            course.error = f"Language not enabled: {course.language}"
-            return
-
-        # Check rating
-        if course.rating is not None and course.rating < min_rating:
-            course.is_excluded = True
-            course.error = f"Rating too low: {course.rating} (min: {min_rating})"
+        # DISABLED: User requested to never exclude any course.
+        return
 
     async def free_checkout(self, course: Course):
         """Enroll in a free course asynchronously."""
