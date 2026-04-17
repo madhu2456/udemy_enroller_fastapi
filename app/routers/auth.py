@@ -1,6 +1,7 @@
 """Authentication router for Udemy login."""
 
 import secrets
+import asyncio
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -212,6 +213,7 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     """Logout — delete DB session and clear cookie."""
     token = request.cookies.get("session_id")
     if token:
+        user_id = None
         # Find session to get user_id before deleting
         session = db.query(UserSession).filter(UserSession.token == token).first()
         if session:
@@ -236,7 +238,10 @@ async def logout(request: Request, db: Session = Depends(get_db)):
                         await close_res
                 except Exception as e:
                     logger.error(f"Error closing client {token} during logout: {e}")
-                logger.info(f"Closed Udemy client session for user {user_id} due to logout.")
+                
+                # Guard against user_id being None if session wasn't found
+                log_user_id = user_id if user_id is not None else "unknown"
+                logger.info(f"Closed Udemy client session for user {log_user_id} due to logout.")
 
     response = JSONResponse(content={"success": True, "message": "Logged out"})
     response.delete_cookie("session_id")
