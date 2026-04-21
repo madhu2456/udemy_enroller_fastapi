@@ -14,4 +14,7 @@ venv
 .venv
 logs/*.log
 Courses/*.txt
-udemy_enroller.db
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
