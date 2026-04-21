@@ -19,7 +19,13 @@ depends_on = None
 def upgrade() -> None:
     # Use batch mode for SQLite to support dropping indexes safely if needed,
     # but add_column is supported directly.
-    op.add_column('user_sessions', sa.Column('expires_at', sa.DateTime(), nullable=True))
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    columns = [c['name'] for c in inspector.get_columns('user_sessions')]
+    
+    if 'expires_at' not in columns:
+        op.add_column('user_sessions', sa.Column('expires_at', sa.DateTime(), nullable=True))
 
 
 def downgrade() -> None:

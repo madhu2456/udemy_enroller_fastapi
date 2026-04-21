@@ -40,14 +40,21 @@ try:
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
     has_users = cursor.fetchone() is not None
     
-    # Check for 'alembic_version' table
+    # Check for 'alembic_version' table and its content
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'")
-    has_alembic = cursor.fetchone() is not None
+    has_alembic_table = cursor.fetchone() is not None
+    
+    is_version_empty = True
+    if has_alembic_table:
+        cursor.execute("SELECT COUNT(*) FROM alembic_version")
+        count = cursor.fetchone()[0]
+        if count > 0:
+            is_version_empty = False
     
     conn.close()
     
-    if has_users and not has_alembic:
-        print("DETECTED: Existing 'users' table without Alembic version table.")
+    if has_users and is_version_empty:
+        print("DETECTED: Existing 'users' table but Alembic version is missing or empty.")
         sys.exit(10) # Custom exit code for "needs stamping"
     elif has_users:
         print("INFO: Database already has 'users' table and migration history.")
