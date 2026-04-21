@@ -10,21 +10,32 @@ from app.rate_limit_config import maybe_limit
 from app.schemas.schemas import SettingsUpdate, SettingsResponse
 from app.security import validate_proxy_url
 from config.settings import get_settings as get_app_settings
+from app.core.cache import clear_user_caches
 
 router = APIRouter(prefix="/api/settings", tags=["Settings"])
 app_settings = get_app_settings()
 
 
-@router.get("", response_model=SettingsResponse)
+def get_or_create_settings(db: Session, user_id: int) -> UserSettings:
+    """Helper to ensure a settings record exists for the user."""
+    settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
+    if not settings:
+        logger.info(f"Auto-creating missing UserSettings for user {user_id}")
+        settings = UserSettings(user_id=user_id)
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+
 @router.get("/", response_model=SettingsResponse)
+@router.get("", response_model=SettingsResponse, include_in_schema=False)
 async def get_settings(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
     """Get current user settings with guaranteed defaults."""
-    settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
-    if not settings:
-        raise HTTPException(status_code=404, detail="Settings not found")
+    settings = get_or_create_settings(db, user_id)
 
     def safe_merge(user_val, default_func):
         defaults = default_func()
@@ -50,10 +61,8 @@ async def get_settings(
     )
 
 
-from app.core.cache import clear_user_caches
-
+@router.put("/", include_in_schema=True)
 @router.put("", include_in_schema=False)
-@router.put("/")
 @maybe_limit(app_settings.RATE_LIMIT_API)
 async def update_settings(
     request: Request,
@@ -62,9 +71,7 @@ async def update_settings(
     user_id: int = Depends(get_current_user_id),
 ):
     """Update user settings."""
-    settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
-    if not settings:
-        raise HTTPException(status_code=404, detail="Settings not found")
+    settings = get_or_create_settings(db, user_id)
 
     update_data = settings_update.model_dump(exclude_unset=True)
     
@@ -95,9 +102,7 @@ async def reset_settings(
     user_id: int = Depends(get_current_user_id),
 ):
     """Reset settings to defaults."""
-    settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
-    if not settings:
-        raise HTTPException(status_code=404, detail="Settings not found")
+    settings = get_or_create_settings(db, user_id)
 
     # Reset using static default methods
     settings.sites = UserSettings.default_sites()
@@ -119,4 +124,3 @@ async def reset_settings(
     clear_user_caches(user_id)
     
     return {"status": "success", "message": "Settings reset to defaults"}
-
