@@ -21,7 +21,7 @@ from app.deps import get_current_user_id
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Dashboard"])
+router = APIRouter(tags=["Dashboard"], redirect_slashes=False)
 templates = Jinja2Templates(directory="app/templates")
 
 

@@ -11,7 +11,7 @@ from app.schemas.schemas import SettingsUpdate, SettingsResponse
 from app.security import validate_proxy_url
 from config.settings import get_settings as get_app_settings
 
-router = APIRouter(prefix="/api/settings", tags=["Settings"])
+router = APIRouter(prefix="/api/settings", tags=["Settings"], redirect_slashes=True)
 app_settings = get_app_settings()
 
 

@@ -3,7 +3,7 @@
 import datetime
 from fastapi import APIRouter, Response
 
-router = APIRouter(tags=["SEO"])
+router = APIRouter(tags=["SEO"], redirect_slashes=False)
 
 @router.get("/robots.txt", response_class=Response)
 async def robots_txt():
