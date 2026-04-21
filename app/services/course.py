@@ -75,22 +75,35 @@ class Course:
         try:
             if dma.get("view_restriction"):
                 self.is_valid = False
-                self.error = dma["serverSideProps"]["limitedAccess"]["errorMessage"]["title"]
+                self.error = dma.get("serverSideProps", {}).get("limitedAccess", {}).get("errorMessage", {}).get("title", "Access Restricted")
                 return
-            course_data = dma["serverSideProps"]["course"]
+            
+            # Check for course ID in DMA if we don't have it
+            if not self.course_id:
+                cid = dma.get("serverSideProps", {}).get("course", {}).get("id")
+                if cid:
+                    self.course_id = str(cid)
+
+            course_data = dma.get("serverSideProps", {}).get("course", {})
+            if not course_data:
+                return
+
             self.instructors = [
                 i["absolute_url"].split("/")[-2]
-                for i in course_data["instructors"]["instructors_info"]
-                if i["absolute_url"]
+                for i in course_data.get("instructors", {}).get("instructors_info", [])
+                if i.get("absolute_url")
             ]
-            self.language = course_data["localeSimpleEnglishTitle"]
-            self.category = dma["serverSideProps"]["topicMenu"]["breadcrumbs"][0]["title"]
-            self.rating = course_data["rating"]
-            self.last_update = course_data["lastUpdateDate"]
+            self.language = course_data.get("localeSimpleEnglishTitle")
+            
+            breadcrumbs = dma.get("serverSideProps", {}).get("topicMenu", {}).get("breadcrumbs", [])
+            if breadcrumbs:
+                self.category = breadcrumbs[0].get("title")
+                
+            self.rating = course_data.get("rating")
+            self.last_update = course_data.get("lastUpdateDate")
             self.is_free = not course_data.get("isPaid", True)
         except Exception as e:
-            self.is_valid = False
-            self.error = f"Error parsing course metadata: {str(e)}"
+            logger.debug(f"Metadata parse partially failed for {self.title}: {str(e)}")
 
     def to_dict(self):
         return {

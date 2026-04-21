@@ -198,6 +198,56 @@ class UdemyClient:
                 self.enrolled_courses[slug] = ""
         logger.info(f"Fetched {page_num} page(s) of enrolled courses.")
 
+    def _extract_course_id(self, soup: bs) -> Optional[str]:
+        """Extract course ID using multiple strategies."""
+        # Strategy 1: Traditional data attributes on body
+        body = soup.find("body")
+        if body:
+            cid = body.get("data-clp-course-id") or body.get("data-course-id")
+            if cid:
+                return str(cid)
+
+        # Strategy 2: Meta tags
+        meta_tags = [
+            ("meta", {"property": "udemy_com:course"}),
+            ("meta", {"name": "course-id"}),
+            ("meta", {"property": "og:url"}),
+        ]
+        for tag, attrs in meta_tags:
+            el = soup.find(tag, attrs)
+            if el:
+                content = el.get("content")
+                if content:
+                    # If it's the og:url, we might need to extract ID if it's in the URL
+                    # but usually it's a specific meta tag for the ID
+                    if attrs.get("property") == "udemy_com:course" or attrs.get("name") == "course-id":
+                        return str(content)
+
+        # Strategy 3: Script tags
+        scripts = soup.find_all("script")
+        for script in scripts:
+            if not script.string:
+                continue
+            
+            # 3a. Look for course_id or courseId in JSON/JS (supports quoted/unquoted keys, : or =)
+            # Patterns: "course_id": 123, courseId: 123, window.course_id = 123
+            patterns = [
+                r'["\']?course_?id["\']?\s*[:=]\s*(\d+)',
+                r'["\']?courseId["\']?\s*[:=]\s*(\d+)'
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, script.string, re.IGNORECASE)
+                if match:
+                    return match.group(1)
+            
+            # 3b. Specific window.UD pattern
+            if "visiting_course" in script.string or "course" in script.string:
+                match = re.search(r'id\s*[:=]\s*(\d+)', script.string)
+                if match:
+                    return match.group(1)
+
+        return None
+
     async def get_course_id(self, course: Course, use_headless_fallback: bool = True):
         """Fetch course ID and metadata asynchronously with optional headless fallback."""
         if course.course_id:
@@ -223,16 +273,21 @@ class UdemyClient:
                 content = await pw.get_page_content(url)
                 if content:
                     soup = bs(content, "lxml")
+                    # Try metadata first (DMA often has the ID)
                     body = soup.find("body")
-                    course_id = body.get("data-clp-course-id") if body else None
-                    if course_id:
-                        course.course_id = course_id
+                    if body:
                         try:
                             dma = json.loads(body.get("data-module-args", "{}"))
                             course.set_metadata(dma)
-                            return
                         except Exception:
                             pass
+                    
+                    # Then try direct extraction if still missing
+                    if not course.course_id:
+                        course.course_id = self._extract_course_id(soup)
+                    
+                    if course.course_id:
+                        return
 
         if not resp:
             course.is_valid = False
@@ -241,24 +296,26 @@ class UdemyClient:
 
         course.set_url(str(resp.url))
         soup = bs(resp.content, "lxml")
-        body = soup.find("body")
-        course_id = body.get("data-clp-course-id") if body else None
         
-        if not course_id:
+        # 1. Try metadata extraction first
+        body = soup.find("body")
+        if body:
+            try:
+                dma = json.loads(body.get("data-module-args", "{}"))
+                course.set_metadata(dma)
+            except Exception as e:
+                logger.debug(f"Metadata parse error for {course.title}: {e}")
+
+        # 2. If ID still missing, try multiple extraction strategies
+        if not course.course_id:
+            course.course_id = self._extract_course_id(soup)
+        
+        if not course.course_id:
             course.is_valid = False
             course.error = "Course ID not found"
-            if body:
-                title = soup.find("title")
-                title_text = title.text.strip() if title else "No title"
-                logger.warning(f"Course ID not found for {course.title}. Page title: {title_text}")
-            return
-
-        course.course_id = course_id
-        try:
-            dma = json.loads(body.get("data-module-args", "{}"))
-            course.set_metadata(dma)
-        except Exception as e:
-            logger.warning(f"Metadata parse error for {course.title}: {e}")
+            title = soup.find("title")
+            title_text = title.text.strip() if title else "No title"
+            logger.warning(f"Course ID not found for {course.title}. Page title: {title_text}")
 
     async def check_course(self, course: Course):
         """Check coupon validity asynchronously."""
