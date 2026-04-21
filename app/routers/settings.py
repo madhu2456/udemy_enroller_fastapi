@@ -11,10 +11,11 @@ from app.schemas.schemas import SettingsUpdate, SettingsResponse
 from app.security import validate_proxy_url
 from config.settings import get_settings as get_app_settings
 
-router = APIRouter(prefix="/api/settings", tags=["Settings"], redirect_slashes=True)
+router = APIRouter(prefix="/api/settings", tags=["Settings"])
 app_settings = get_app_settings()
 
 
+@router.get("", response_model=SettingsResponse)
 @router.get("/", response_model=SettingsResponse)
 async def get_settings(
     db: Session = Depends(get_db),
@@ -51,6 +52,7 @@ async def get_settings(
 
 from app.core.cache import clear_user_caches
 
+@router.put("", include_in_schema=False)
 @router.put("/")
 @maybe_limit(app_settings.RATE_LIMIT_API)
 async def update_settings(
