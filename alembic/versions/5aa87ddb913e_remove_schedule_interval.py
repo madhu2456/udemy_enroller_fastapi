@@ -17,8 +17,14 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table('user_settings') as batch_op:
-        batch_op.drop_column('schedule_interval')
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    columns = [c['name'] for c in inspector.get_columns('user_settings')]
+    
+    if 'schedule_interval' in columns:
+        with op.batch_alter_table('user_settings') as batch_op:
+            batch_op.drop_column('schedule_interval')
 
 
 def downgrade() -> None:
