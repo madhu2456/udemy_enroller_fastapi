@@ -253,11 +253,12 @@ class UdemyClient:
         if course.course_id:
             return
         url = re.sub(r"\W+$", "", unquote(course.url))
-        resp = await self.http.get(url)
+        resp = await self.http.get(url, log_failures=False, raise_for_status=False)
         
-        # Check if we need to fall back to Playwright due to Cloudflare
+        # Check if we need to fall back to Playwright due to Cloudflare OR 404
+        # (Udemy sometimes returns 404 for valid courses if the bot detection is high)
         should_retry_headless = False
-        if not resp:
+        if not resp or resp.status_code == 404:
             should_retry_headless = True
         else:
             soup = bs(resp.content, "lxml")
@@ -267,7 +268,7 @@ class UdemyClient:
                 should_retry_headless = True
         
         if should_retry_headless and use_headless_fallback:
-            logger.info(f"Cloudflare detected for {course.title}, falling back to headless browser...")
+            logger.info(f"Retrying with headless browser for {course.title} (Cloudflare/404 detected)...")
             from app.services.playwright_service import PlaywrightService
             async with PlaywrightService() as pw:
                 content = await pw.get_page_content(url)
@@ -289,9 +290,9 @@ class UdemyClient:
                     if course.course_id:
                         return
 
-        if not resp:
+        if not resp or resp.status_code != 200:
             course.is_valid = False
-            course.error = "Failed to fetch course page"
+            course.error = f"Failed to fetch course page ({resp.status_code if resp else 'No response'})"
             return
 
         course.set_url(str(resp.url))
@@ -363,11 +364,18 @@ class UdemyClient:
 
     async def checkout_single(self, course: Course) -> bool:
         """Asynchronously enroll in a single course with a coupon."""
+        csrf_token = self.http.client.cookies.get("csrftoken")
+        if not csrf_token:
+             # Try to get a fresh CSRF token if missing
+             logger.debug("CSRF token missing for checkout, attempting to refresh...")
+             await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
+             csrf_token = self.http.client.cookies.get("csrftoken", "")
+
         headers = {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
             "Referer": constants.UDEMY_CHECKOUT_URL,
-            "X-CSRF-Token": self.http.client.cookies.get("csrftoken", ""),
+            "X-CSRF-Token": csrf_token,
         }
         result = await self._checkout_one(course, headers)
         return result
@@ -406,6 +414,17 @@ class UdemyClient:
         
         for attempt in range(3):
             resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=False)
+            if not resp:
+                continue
+            
+            # If 403, we might need a fresh CSRF token
+            if resp.status_code == 403:
+                logger.warning(f"403 Forbidden on checkout for {course.title}. Possible CSRF/Session issue.")
+                # Try to refresh CSRF for next attempt
+                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
+                headers["X-CSRF-Token"] = self.http.client.cookies.get("csrftoken", "")
+                continue
+
             result = await self.http.safe_json(resp, "checkout one")
             
             if result and result.get("status") == "succeeded":
@@ -427,11 +446,16 @@ class UdemyClient:
         outcomes: Dict[Course, str] = {c: "failed" for c in courses}
         if not courses: return outcomes
         
+        csrf_token = self.http.client.cookies.get("csrftoken", "")
+        if not csrf_token:
+             await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
+             csrf_token = self.http.client.cookies.get("csrftoken", "")
+
         headers = {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
             "Referer": constants.UDEMY_CHECKOUT_URL,
-            "X-CSRF-Token": self.http.client.cookies.get("csrftoken", ""),
+            "X-CSRF-Token": csrf_token,
         }
         
         remaining = list(courses)
@@ -452,6 +476,15 @@ class UdemyClient:
             }
             
             resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=False)
+            if not resp:
+                continue
+                
+            # Handle 403
+            if resp.status_code == 403:
+                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
+                headers["X-CSRF-Token"] = self.http.client.cookies.get("csrftoken", "")
+                continue
+
             result = await self.http.safe_json(resp, "bulk checkout")
             
             if result and result.get("status") == "succeeded":
