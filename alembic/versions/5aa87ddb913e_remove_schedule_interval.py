@@ -20,6 +20,10 @@ def upgrade() -> None:
     from sqlalchemy import inspect
     conn = op.get_bind()
     inspector = inspect(conn)
+    
+    if 'user_settings' not in inspector.get_table_names():
+        return
+
     columns = [c['name'] for c in inspector.get_columns('user_settings')]
     
     if 'schedule_interval' in columns:

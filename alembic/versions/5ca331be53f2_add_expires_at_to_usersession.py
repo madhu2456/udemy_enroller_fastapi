@@ -22,6 +22,10 @@ def upgrade() -> None:
     from sqlalchemy import inspect
     conn = op.get_bind()
     inspector = inspect(conn)
+    
+    if 'user_sessions' not in inspector.get_table_names():
+        return
+
     columns = [c['name'] for c in inspector.get_columns('user_sessions')]
     
     if 'expires_at' not in columns:
