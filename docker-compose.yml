@@ -10,7 +10,7 @@ services:
       - APP_NAME=Udemy Course Enroller
       - DEBUG=false
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
-      - DATABASE_URL=sqlite:///./udemy_enroller.db
+      - DATABASE_URL=sqlite:////app/data/udemy_enroller.db
       - LOG_LEVEL=INFO
     volumes:
       - app-data:/app/data

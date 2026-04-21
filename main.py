@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
     # Startup
     os.makedirs("logs", exist_ok=True)
     os.makedirs("Courses", exist_ok=True)
+    os.makedirs("data", exist_ok=True)
     
     if sys.platform == "win32":
         loop = asyncio.get_running_loop()

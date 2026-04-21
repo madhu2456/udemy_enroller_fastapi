@@ -25,8 +25,9 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p logs Courses
+# Create necessary directories and set permissions for entrypoint
+RUN mkdir -p logs Courses data && \
+    chmod +x docker-entrypoint.sh
 
 # Expose port
 EXPOSE 8000
@@ -35,5 +36,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
 
-# Run with uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Run with entrypoint
+ENTRYPOINT ["./docker-entrypoint.sh"]
