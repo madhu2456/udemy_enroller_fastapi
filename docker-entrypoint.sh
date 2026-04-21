@@ -27,6 +27,8 @@ if [ -f "$DB_PATH" ]; then
     
     # Use Python to check for tables and migration history
     # We use -u for unbuffered output to ensure logs appear in order
+    # Disable exit on error temporarily to capture the custom exit code
+    set +e
     python3 -u <<EOF
 import sqlite3
 import sys
@@ -66,6 +68,7 @@ except Exception as e:
     sys.exit(1)
 EOF
     EXIT_CODE=$?
+    set -e
     
     if [ $EXIT_CODE -eq 10 ]; then
         echo "Stamping database with initial revision (20260411_0001)..."
