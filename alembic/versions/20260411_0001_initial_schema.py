@@ -19,13 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Create initial schema."""
+    """Create initial schema if tables are missing."""
     from sqlalchemy import inspect
     
     conn = op.get_bind()
     inspector = inspect(conn)
     existing_tables = inspector.get_table_names()
 
+    # 1. users
     if "users" not in existing_tables:
         op.create_table(
             "users",
@@ -48,28 +49,8 @@ def upgrade() -> None:
         )
         op.create_index(op.f("ix_users_email"), "users", ["email"], unique=False)
         op.create_index(op.f("ix_users_id"), "users", ["id"], unique=False)
-    else:
-        # Table exists, check for missing columns (e.g. from legacy DB)
-        existing_columns = [c['name'] for c in inspector.get_columns('users')]
-        if 'password_hash' not in existing_columns:
-            op.add_column('users', sa.Column('password_hash', sa.String(length=255), nullable=True))
-        if 'udemy_display_name' not in existing_columns:
-            op.add_column('users', sa.Column('udemy_display_name', sa.String(length=255), nullable=True))
-        if 'udemy_cookies' not in existing_columns:
-            op.add_column('users', sa.Column('udemy_cookies', sa.JSON(), nullable=True))
-        if 'currency' not in existing_columns:
-            op.add_column('users', sa.Column('currency', sa.String(length=10), nullable=False, server_default="usd"))
-        if 'total_enrolled' not in existing_columns:
-            op.add_column('users', sa.Column('total_enrolled', sa.Integer(), nullable=False, server_default="0"))
-        if 'total_already_enrolled' not in existing_columns:
-            op.add_column('users', sa.Column('total_already_enrolled', sa.Integer(), nullable=False, server_default="0"))
-        if 'total_expired' not in existing_columns:
-            op.add_column('users', sa.Column('total_expired', sa.Integer(), nullable=False, server_default="0"))
-        if 'total_excluded' not in existing_columns:
-            op.add_column('users', sa.Column('total_excluded', sa.Integer(), nullable=False, server_default="0"))
-        if 'total_amount_saved' not in existing_columns:
-            op.add_column('users', sa.Column('total_amount_saved', sa.Float(), nullable=False, server_default="0.0"))
 
+    # 2. user_sessions
     if "user_sessions" not in existing_tables:
         op.create_table(
             "user_sessions",
@@ -83,12 +64,8 @@ def upgrade() -> None:
         )
         op.create_index(op.f("ix_user_sessions_id"), "user_sessions", ["id"], unique=False)
         op.create_index(op.f("ix_user_sessions_token"), "user_sessions", ["token"], unique=False)
-    else:
-        existing_columns = [c['name'] for c in inspector.get_columns('user_sessions')]
-        # expires_at is handled in a separate migration, but good to be safe if it's missing here
-        # Actually, best to stick to what this migration SHOULD have.
-        pass
 
+    # 3. user_settings
     if "user_settings" not in existing_tables:
         op.create_table(
             "user_settings",
@@ -113,25 +90,8 @@ def upgrade() -> None:
             sa.UniqueConstraint("user_id"),
         )
         op.create_index(op.f("ix_user_settings_id"), "user_settings", ["id"], unique=False)
-    else:
-        existing_columns = [c['name'] for c in inspector.get_columns('user_settings')]
-        if 'sites' not in existing_columns:
-            op.add_column('user_settings', sa.Column('sites', sa.JSON(), nullable=True))
-        if 'languages' not in existing_columns:
-            op.add_column('user_settings', sa.Column('languages', sa.JSON(), nullable=True))
-        if 'categories' not in existing_columns:
-            op.add_column('user_settings', sa.Column('categories', sa.JSON(), nullable=True))
-        if 'min_rating' not in existing_columns:
-            op.add_column('user_settings', sa.Column('min_rating', sa.Float(), nullable=False, server_default="0.0"))
-        if 'save_txt' not in existing_columns:
-            op.add_column('user_settings', sa.Column('save_txt', sa.Boolean(), nullable=False, server_default=sa.text("0")))
-        if 'discounted_only' not in existing_columns:
-            op.add_column('user_settings', sa.Column('discounted_only', sa.Boolean(), nullable=False, server_default=sa.text("0")))
-        if 'proxy_url' not in existing_columns:
-            op.add_column('user_settings', sa.Column('proxy_url', sa.String(length=500), nullable=True))
-        if 'enable_headless' not in existing_columns:
-            op.add_column('user_settings', sa.Column('enable_headless', sa.Boolean(), nullable=False, server_default=sa.text("0")))
 
+    # 4. enrollment_runs
     if "enrollment_runs" not in existing_tables:
         op.create_table(
             "enrollment_runs",
@@ -154,11 +114,8 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
         )
         op.create_index(op.f("ix_enrollment_runs_id"), "enrollment_runs", ["id"], unique=False)
-    else:
-        existing_columns = [c['name'] for c in inspector.get_columns('enrollment_runs')]
-        if 'progress_data' not in existing_columns:
-            op.add_column('enrollment_runs', sa.Column('progress_data', sa.JSON(), nullable=True))
 
+    # 5. enrolled_courses
     if "enrolled_courses" not in existing_tables:
         op.create_table(
             "enrolled_courses",
@@ -181,14 +138,6 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
         )
         op.create_index(op.f("ix_enrolled_courses_id"), "enrolled_courses", ["id"], unique=False)
-    else:
-        existing_columns = [c['name'] for c in inspector.get_columns('enrolled_courses')]
-        if 'rating' not in existing_columns:
-            op.add_column('enrolled_courses', sa.Column('rating', sa.Float(), nullable=True))
-        if 'site_source' not in existing_columns:
-            op.add_column('enrolled_courses', sa.Column('site_source', sa.String(length=100), nullable=True))
-
-
 
 
 def downgrade() -> None:
