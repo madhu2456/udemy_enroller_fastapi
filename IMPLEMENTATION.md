@@ -71,43 +71,42 @@ CORS_ORIGINS=["http://localhost:3000", "http://localhost:8000", "https://yourdom
 ### Changes Made
 - **Files**: 
   - `MIGRATIONS.md` - Comprehensive migration guide
-  - `scripts/migration_001_initial.py` - Initial schema migration example
-  - `scripts/init_alembic.py` - Alembic initialization helper
+  - `alembic/env.py` - Enhanced with automatic directory creation for SQLite
+  - `alembic/versions/eb426d9d141e_ensure_schema_integrity.py` - Master repair migration
+  - `alembic/versions/6f7e8d9c0a1b_force_schema_repair.py` - Aggressive catch-all repair
+
+### Key Features
+- **Idempotency**: All migrations check for existing tables/columns before acting.
+- **Automated Repair**: A specialized migration force-adds any missing columns defined in the SQLAlchemy models, ensuring 100% schema parity for legacy databases.
+- **Automatic Directory Management**: Parent folders for SQLite files are created automatically.
+- **Docker Integration**: `docker-entrypoint.sh` automatically stamps and upgrades existing databases on startup.
 
 ### Key Commands
 ```bash
-# Apply all pending migrations
+# Apply all pending migrations and repairs
 alembic upgrade head
 
-# Apply N migrations
-alembic upgrade +2
-
-# Rollback N migrations
-alembic downgrade -2
-
-# Create automatic migration
-alembic revision --autogenerate -m "Add new feature"
-
-# View migration history
-alembic history
-```
-
-### Initial Setup
-```bash
-# Create alembic directory structure
-python scripts/init_alembic.py
-
-# Apply initial migration
+# Synchronize legacy database
+alembic stamp 20260411_0001
 alembic upgrade head
 ```
 
-### Best Practices
-- Keep migrations small and focused
-- Always create reversible migrations
-- Test in staging before production
-- Back up database before migrations
+---
 
-See `MIGRATIONS.md` for detailed documentation.
+## 9. Data Isolation & Multi-tenancy
+
+### Changes Made
+- **File**: `app/deps.py`
+  - `get_current_user_id` resolves user ID directly from secure session tokens.
+- **Routers**: `dashboard.py`, `enrollment.py`, `settings.py`
+  - All database queries are strictly filtered by `user_id`.
+- **File**: `app/routers/settings.py`
+  - Added `get_or_create_settings` to automatically initialize settings for any user (legacy or new) to prevent 404 errors.
+
+### Security Benefits
+- **Zero Visibility**: User A cannot see User B's statistics, enrollment history, or settings.
+- **Non-spoofable**: User context is derived from server-side session lookup, not client-side parameters.
+- **Robustness**: Automatic settings initialization ensures new features don't break existing user accounts.
 
 ---
 

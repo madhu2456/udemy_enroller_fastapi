@@ -99,6 +99,10 @@ class EnrollmentManager:
         # Use a new DB session for the background task
         db = SessionLocal()
         try:
+            if self.run_id is None:
+                logger.error("EnrollmentManager: run_id is None in _run_pipeline")
+                return
+
             run = db.get(EnrollmentRun, self.run_id)
 
             # Phase 1: Scrape

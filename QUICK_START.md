@@ -194,12 +194,14 @@ python scripts/init_alembic.py
 ```
 
 ### Apply Migrations
+The system handles migrations and schema repairs **automatically** on container startup. To run manually:
 ```bash
-# Latest version
+# Latest version & Repair
 alembic upgrade head
 
-# Specific migration
-alembic upgrade 001_initial_schema
+# Synchronization for legacy DB
+alembic stamp 20260411_0001
+alembic upgrade head
 ```
 
 ### Create New Migration

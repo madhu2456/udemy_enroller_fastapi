@@ -210,39 +210,24 @@
 
 ---
 
-### 8. ✅ Rate Limiting (slowapi)
-**Files**: `main.py`, `config/settings.py`
+### 9. ✅ Automated Schema Repair & Integrity
+**Files**: `alembic/env.py`, `alembic/versions/eb426d9d141e_ensure_schema_integrity.py`
 
 **Implementation Details:**
-- [x] Limiter initialized with IP-based key function
-- [x] Rate limit exception handler
-- [x] Health check endpoint rate limited (60/minute)
-- [x] Configuration settings for AUTH and API limits
-- [x] Conditional application (RATE_LIMIT_ENABLED)
-- [x] Error response format (JSON)
-- [x] Request parameter in health check for rate limiting
+- [x] Master repair migration that force-adds missing columns
+- [x] Automated directory creation for SQLite databases
+- [x] Idempotent migration scripts (check for table/column existence)
+- [x] Docker entrypoint automation (stamp + upgrade)
+- [x] 100% column parity between models and database
 
-**Current Limits:**
-- [x] Auth endpoints: 100/minute
-- [x] Health check: 60/minute
-- [x] API endpoints: 500/minute
+### 10. ✅ Multi-tenant Data Isolation
+**Files**: `app/routers/*.py`, `app/deps.py`
 
-**Features:**
-- [x] IP address tracking
-- [x] Per-endpoint configuration
-- [x] Enabled/disabled toggle
-- [x] Graceful error handling
-- [x] Environment-configurable limits
-
-**Test Coverage:**
-- [x] `TestRateLimiting::test_health_check_not_rate_limited`
-- [x] `TestRateLimiting::test_multiple_requests_allowed`
-- [x] `TestRateLimiting::test_rate_limit_config_imports`
-
-**Configuration:**
-- [x] RATE_LIMIT_ENABLED=True|False
-- [x] RATE_LIMIT_AUTH=100/minute
-- [x] RATE_LIMIT_API=500/minute
+**Implementation Details:**
+- [x] Strict `user_id` filtering on all sensitive queries
+- [x] Session-bound user identification (cannot spoof `user_id`)
+- [x] Automatic `UserSettings` creation for legacy/new users
+- [x] Ownership verification for specific resource access (e.g., `run_id`)
 
 ---
 
