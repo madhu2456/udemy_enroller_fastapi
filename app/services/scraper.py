@@ -191,6 +191,9 @@ class UdemyFreebiesScraper(Scraper):
                 try:
                     img = item.find("img")
                     title = img["alt"] if img else None
+                    if title and "100%OFF Udemy Coupons" in title:
+                        return None, None
+                    
                     parts = item.get("href", "").split("/")
                     if len(parts) < 5:
                         return None, None
