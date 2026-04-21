@@ -16,7 +16,7 @@ from app.sentry_config import capture_exception
 from config.settings import get_settings
 
 settings = get_settings()
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter(prefix="/api/auth", tags=["Authentication"], redirect_slashes=False)
 
 
 def _create_session(user: User, client: UdemyClient, request: Request, db: Session) -> str:

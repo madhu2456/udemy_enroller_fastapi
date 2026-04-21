@@ -19,7 +19,7 @@ from config.settings import get_settings as get_app_settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/enrollment", tags=["Enrollment"])
+router = APIRouter(prefix="/api/enrollment", tags=["Enrollment"], redirect_slashes=False)
 app_settings = get_app_settings()
 
 
