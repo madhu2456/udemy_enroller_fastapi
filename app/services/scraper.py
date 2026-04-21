@@ -407,10 +407,10 @@ class TutorialBarScraper(Scraper):
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            self.length = 3
+            self.length = 1
+            # They often 404 on /page/N, but home page usually works and has the latest
             listing_tasks = [
-                self.http.get(f"https://www.tutorialbar.com/page/{page}/")
-                for page in range(1, 4)
+                self.http.get("https://www.tutorialbar.com/")
             ]
             all_items = []
             for i, task in enumerate(asyncio.as_completed(listing_tasks)):
@@ -419,11 +419,11 @@ class TutorialBarScraper(Scraper):
                     soup = self.parse_html(resp.content)
                     for a in soup.find_all("a", href=True):
                         href = a["href"]
-                        if "tutorialbar.com" in href:
-                            if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/"]):
-                                if href != "https://www.tutorialbar.com/" and href != "https://www.tutorialbar.com":
-                                    if href not in all_items and len(href) > 30:
-                                        all_items.append(href)
+                        # Filter for potential course posts (usually long URLs with words)
+                        if "tutorialbar.com" in href and len(href) > 40:
+                            if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
+                                if href not in all_items:
+                                    all_items.append(href)
                 self.progress = i + 1
 
             self.length = len(all_items)
@@ -431,16 +431,22 @@ class TutorialBarScraper(Scraper):
 
             async def _fetch_details(url):
                 try:
+                    # TutorialBar is very sensitive, use a single attempt and no logging for 404s
                     page = await self.http.get(url, attempts=1, log_failures=False)
                     if not page: return None, None
                     soup = self.parse_html(page.content)
+                    # Title is usually the first part of the page title
                     title = soup.title.string.split("|")[0].strip() if soup.title else "Untitled"
+                    # Look for the Udemy link in the post content
                     a_tag = soup.find("a", href=lambda h: h and "udemy.com" in h)
                     if a_tag:
                         return title, a_tag["href"]
                     return None, None
                 except Exception:
                     return None, None
+
+            if not all_items:
+                 logger.warning("tb scraper found no listing links on home page")
 
             detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, url) for url in all_items]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
@@ -840,8 +846,10 @@ class RedditUdemyFreebiesScraper(Scraper):
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             import time
+            # Reddit blocks simple bots, use a real browser UA
             headers = {
-                "User-Agent": "UdemyEnrollerBot/1.0 (Windows NT 10.0; Win64; x64)"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/json",
             }
             
             # Domains we already have dedicated scrapers for - skip them to avoid redundancy
