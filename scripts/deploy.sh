@@ -39,7 +39,7 @@ echo "6. Creating .env file (if not exists)..."
 if [ ! -f .env ]; then
     cat > .env <<EOF
 SECRET_KEY=$(openssl rand -hex 32)
-DATABASE_URL=sqlite:///./udemy_enroller.db
+DATABASE_URL=sqlite:////app/data/udemy_enroller.db
 DEBUG=false
 LOG_LEVEL=INFO
 HOST=0.0.0.0
