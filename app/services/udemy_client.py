@@ -198,8 +198,9 @@ class UdemyClient:
                     slug = parts[3] if len(parts) > 3 and parts[2] == "draft" else parts[2]
                     courses[slug] = course.get("enrollment_time", "")
                     if slug in known_slugs:
-                        # Reached courses we already know about. Stop fetching.
+                        logger.info(f"Reached already known course '{slug}'. Stopping fetch at page {page_num}.")
                         stop_fetching = True
+                        break
                 except (IndexError, KeyError):
                     continue
 
@@ -210,7 +211,7 @@ class UdemyClient:
         for slug in known_slugs:
             if slug not in self.enrolled_courses:
                 self.enrolled_courses[slug] = ""
-        logger.info(f"Fetched {page_num} page(s) of enrolled courses.")
+        logger.info(f"Fetched {page_num} page(s) of enrolled courses (Total tracked: {len(self.enrolled_courses)}).")
 
     def _extract_course_id(self, soup: bs) -> Optional[str]:
         """Extract course ID using multiple strategies."""
@@ -219,6 +220,7 @@ class UdemyClient:
         if body:
             cid = body.get("data-clp-course-id") or body.get("data-course-id")
             if cid:
+                logger.debug(f"Found course ID {cid} via body data-attribute")
                 return str(cid)
 
         # Strategy 2: Meta tags
@@ -232,9 +234,8 @@ class UdemyClient:
             if el:
                 content = el.get("content")
                 if content:
-                    # If it's the og:url, we might need to extract ID if it's in the URL
-                    # but usually it's a specific meta tag for the ID
                     if attrs.get("property") == "udemy_com:course" or attrs.get("name") == "course-id":
+                        logger.debug(f"Found course ID {content} via meta tag {tag}")
                         return str(content)
 
         # Strategy 3: Script tags
@@ -243,22 +244,25 @@ class UdemyClient:
             if not script.string:
                 continue
             
-            # 3a. Look for course_id or courseId in JSON/JS (supports quoted/unquoted keys, : or =)
-            # Patterns: "course_id": 123, courseId: 123, window.course_id = 123
             patterns = [
-                r'["\']?course_?id["\']?\s*[:=]\s*(\d+)',
-                r'["\']?courseId["\']?\s*[:=]\s*(\d+)'
+                (r'["\']?course_?id["\']?\s*[:=]\s*(\d+)', "script regex course_id"),
+                (r'["\']?courseId["\']?\s*[:=]\s*(\d+)', "script regex courseId")
             ]
-            for pattern in patterns:
+            for pattern, name in patterns:
                 match = re.search(pattern, script.string, re.IGNORECASE)
                 if match:
-                    return match.group(1)
+                    cid = match.group(1)
+                    if cid and 4 < len(cid) < 12: # Sanity check for ID length
+                        logger.debug(f"Found course ID {cid} via {name}")
+                        return cid
             
-            # 3b. Specific window.UD pattern
             if "visiting_course" in script.string or "course" in script.string:
                 match = re.search(r'id\s*[:=]\s*(\d+)', script.string)
                 if match:
-                    return match.group(1)
+                    cid = match.group(1)
+                    if cid and 4 < len(cid) < 12:
+                        logger.debug(f"Found course ID {cid} via script visiting_course")
+                        return cid
 
         return None
 
@@ -269,8 +273,6 @@ class UdemyClient:
         url = re.sub(r"\W+$", "", unquote(course.url))
         resp = await self.http.get(url, log_failures=False, raise_for_status=False)
         
-        # Check if we need to fall back to Playwright due to Cloudflare OR 404
-        # (Udemy sometimes returns 404 for valid courses if the bot detection is high)
         should_retry_headless = False
         if not resp or resp.status_code == 404:
             should_retry_headless = True
@@ -288,16 +290,16 @@ class UdemyClient:
                 content = await pw.get_page_content(url)
                 if content:
                     soup = bs(content, "lxml")
-                    # Try metadata first (DMA often has the ID)
                     body = soup.find("body")
                     if body:
                         try:
                             dma = json.loads(body.get("data-module-args", "{}"))
                             course.set_metadata(dma)
+                            if course.course_id:
+                                logger.debug(f"Found course ID {course.course_id} via headless DMA")
                         except Exception:
                             pass
                     
-                    # Then try direct extraction if still missing
                     if not course.course_id:
                         course.course_id = self._extract_course_id(soup)
                     
@@ -312,16 +314,16 @@ class UdemyClient:
         course.set_url(str(resp.url))
         soup = bs(resp.content, "lxml")
         
-        # 1. Try metadata extraction first
         body = soup.find("body")
         if body:
             try:
                 dma = json.loads(body.get("data-module-args", "{}"))
                 course.set_metadata(dma)
+                if course.course_id:
+                    logger.debug(f"Found course ID {course.course_id} via DMA metadata")
             except Exception as e:
                 logger.debug(f"Metadata parse error for {course.title}: {e}")
 
-        # 2. If ID still missing, try multiple extraction strategies
         if not course.course_id:
             course.course_id = self._extract_course_id(soup)
         
@@ -331,6 +333,8 @@ class UdemyClient:
             title = soup.find("title")
             title_text = title.text.strip() if title else "No title"
             logger.warning(f"Course ID not found for {course.title}. Page title: {title_text}")
+        else:
+            logger.debug(f"Successfully identified course ID {course.course_id} for {course.title}")
 
     async def check_course(self, course: Course):
         """Check coupon validity asynchronously."""
@@ -353,9 +357,9 @@ class UdemyClient:
             status = r["redeem_coupon"]["discount_attempts"][0]["status"]
             course.is_coupon_valid = (discount == 100 and status == "applied")
 
-    async def is_already_enrolled(self, course: Course) -> bool:
+    async def is_already_enrolled(self, course: Course, known_slugs: set = None) -> bool:
         if self.enrolled_courses is None:
-            await self.get_enrolled_courses()
+            await self.get_enrolled_courses(known_slugs)
         return course.slug in self.enrolled_courses
 
     def is_course_excluded(self, course: Course, settings: dict):
@@ -365,10 +369,11 @@ class UdemyClient:
 
     async def free_checkout(self, course: Course):
         """Enroll in a free course asynchronously."""
-        await self.http.get(f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}", cookies=self.cookie_dict)
+        await self.http.get(f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}", cookies=self.cookie_dict, req_type="api")
         resp = await self.http.get(
             f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private",
-            cookies=self.cookie_dict
+            cookies=self.cookie_dict,
+            req_type="api"
         )
         if resp and resp.status_code == 200:
             data = await self.http.safe_json(resp, "free checkout check")
