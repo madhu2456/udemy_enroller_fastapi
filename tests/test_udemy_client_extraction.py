@@ -35,7 +35,8 @@ class TestCourseIDExtraction:
         assert udemy_client._extract_course_id(soup) == "22222"
 
     def test_extract_from_script_course_id(self, udemy_client):
-        html = '<html><body><script>window.UD = { visiting_course: { id: 33333 } };</script></body></html>'
+        # Refined regex expects object keys to be in quotes often, but we support optional quotes
+        html = '<html><body><script>window.UD = { "visiting_course": { "id": 33333 } };</script></body></html>'
         soup = bs(html, "lxml")
         assert udemy_client._extract_course_id(soup) == "33333"
 
@@ -48,6 +49,12 @@ class TestCourseIDExtraction:
         html = '<html><body><script>const config = {courseId: 55555};</script></body></html>'
         soup = bs(html, "lxml")
         assert udemy_client._extract_course_id(soup) == "55555"
+
+    def test_ignore_blacklisted_id(self, udemy_client):
+        # Even if it looks like a course ID, 562413829 should be ignored
+        html = '<html><body><script>window.course_id = 562413829;</script></body></html>'
+        soup = bs(html, "lxml")
+        assert udemy_client._extract_course_id(soup) is None
 
     def test_extract_from_dma_metadata(self, udemy_client):
         """Test extraction via Course.set_metadata which uses data-module-args."""

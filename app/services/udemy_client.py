@@ -215,11 +215,14 @@ class UdemyClient:
 
     def _extract_course_id(self, soup: bs) -> Optional[str]:
         """Extract course ID using multiple strategies."""
+        # Known false positives to ignore
+        BLACKLIST_IDS = {"562413829"}
+
         # Strategy 1: Traditional data attributes on body
         body = soup.find("body")
         if body:
             cid = body.get("data-clp-course-id") or body.get("data-course-id")
-            if cid:
+            if cid and str(cid) not in BLACKLIST_IDS:
                 logger.debug(f"Found course ID {cid} via body data-attribute")
                 return str(cid)
 
@@ -233,7 +236,7 @@ class UdemyClient:
             el = soup.find(tag, attrs)
             if el:
                 content = el.get("content")
-                if content:
+                if content and str(content) not in BLACKLIST_IDS:
                     if attrs.get("property") == "udemy_com:course" or attrs.get("name") == "course-id":
                         logger.debug(f"Found course ID {content} via meta tag {tag}")
                         return str(content)
@@ -244,7 +247,10 @@ class UdemyClient:
             if not script.string:
                 continue
             
+            # Refined patterns: search for ID within course objects
             patterns = [
+                (r'["\']?course["\']?\s*:\s*{\s*["\']?id["\']?\s*[:=]\s*(\d+)', "script course object id"),
+                (r'["\']?visiting_course["\']?\s*:\s*{\s*["\']?id["\']?\s*[:=]\s*(\d+)', "script visiting_course object id"),
                 (r'["\']?course_?id["\']?\s*[:=]\s*(\d+)', "script regex course_id"),
                 (r'["\']?courseId["\']?\s*[:=]\s*(\d+)', "script regex courseId")
             ]
@@ -252,16 +258,8 @@ class UdemyClient:
                 match = re.search(pattern, script.string, re.IGNORECASE)
                 if match:
                     cid = match.group(1)
-                    if cid and 4 < len(cid) < 12: # Sanity check for ID length
+                    if cid and 4 < len(cid) < 12 and cid not in BLACKLIST_IDS:
                         logger.debug(f"Found course ID {cid} via {name}")
-                        return cid
-            
-            if "visiting_course" in script.string or "course" in script.string:
-                match = re.search(r'id\s*[:=]\s*(\d+)', script.string)
-                if match:
-                    cid = match.group(1)
-                    if cid and 4 < len(cid) < 12:
-                        logger.debug(f"Found course ID {cid} via script visiting_course")
                         return cid
 
         return None

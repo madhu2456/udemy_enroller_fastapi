@@ -25,43 +25,39 @@ async def test_scraper_progress_structure():
 
 @pytest.mark.asyncio
 async def test_tutorialbar_scraper_parsing():
-    """Test that TutorialBarScraper can parse course links from HTML."""
+    """Test that TutorialBarScraper can parse course links from WordPress API."""
     from app.services.scraper import TutorialBarScraper
-    from unittest.mock import MagicMock
-    
-    mock_http = MagicMock()
-    scraper = TutorialBarScraper(mock_http)
-    
-    html = """
-    <html>
-        <body>
-            <a href="https://www.tutorialbar.com/python-programming-for-beginners-free-course-2026/">Course 1</a>
-            <a href="https://www.tutorialbar.com/category/ignore-me/">Category</a>
-            <a href="https://www.tutorialbar.com/complete-java-masterclass-zero-to-hero-2026-edition/">Course 2</a>
-        </body>
-    </html>
-    """
-    
-    # Mock the detail fetch
-    detail_html = '<html><head><title>Test Course | TutorialBar</title></head><body><a href="https://www.udemy.com/course/test/?couponCode=FREE">Get Link</a></body></html>'
-    detail_resp = MagicMock()
-    detail_resp.content = detail_html.encode()
-    
-    # Mock the home page fetch
-    home_resp = MagicMock()
-    home_resp.content = html.encode()
+    from unittest.mock import MagicMock, AsyncMock
 
-    async def side_effect(url, **kwargs):
-        if url == "https://www.tutorialbar.com/":
-            return home_resp
-        if "udemy.com" in url: 
-            return None
-        return detail_resp
-        
-    mock_http.get.side_effect = side_effect
-    
+    mock_http = MagicMock()
+    # Mock get and safe_json as AsyncMocks
+    mock_http.get = AsyncMock()
+    mock_http.safe_json = AsyncMock()
+
+    scraper = TutorialBarScraper(mock_http)
+
+    # Mock the WordPress API response
+    api_data = [
+        {
+            "title": {"rendered": "Course 1 | TutorialBar"},
+            "content": {"rendered": '<a href="https://www.udemy.com/course/test1/?couponCode=FREE1">Link</a>'}
+        },
+        {
+            "title": {"rendered": "Course 2 | TutorialBar"},
+            "content": {"rendered": '<a href="https://www.udemy.com/course/test2/?couponCode=FREE2">Link</a>'}
+        }
+    ]
+
+    mock_http.safe_json.return_value = api_data
+
+    # Mock the initial API request
+    mock_resp = MagicMock()
+    mock_http.get.return_value = mock_resp
+
     semaphore = asyncio.Semaphore(1)
     await scraper.scrape(semaphore)
-    
+
     assert len(scraper.data) >= 2
-    assert "udemy.com/course/test/" in scraper.data[0].url
+    assert scraper.data[0].title == "Course 1"
+    assert "udemy.com/course/test1" in scraper.data[0].url
+
