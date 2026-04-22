@@ -32,7 +32,6 @@ class AsyncHTTPClient:
 
         # Basic common headers in Chrome order
         headers = {
-            "Host": "www.udemy.com",
             "Connection": "keep-alive",
         }
 
