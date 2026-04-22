@@ -189,6 +189,7 @@ class EnrollmentManager:
                 if await self.udemy.is_already_enrolled(course, enrolled_slugs):
                     self.udemy.already_enrolled_c += 1
                     course_status = "already_enrolled"
+                    logger.debug(f"  Status: Already enrolled (Slug: {course.slug})")
                 else:
                     await self.udemy.get_course_id(course)
 
@@ -196,9 +197,11 @@ class EnrollmentManager:
                         self.udemy.excluded_c += 1
                         course_status = "invalid"
                         error_msg = course.error
+                        logger.info(f"  Status: Invalid - {error_msg}")
                     elif await self.udemy.is_already_enrolled(course, enrolled_slugs):
                         self.udemy.already_enrolled_c += 1
                         course_status = "already_enrolled"
+                        logger.debug(f"  Status: Already enrolled (ID match)")
                     else:
                         # Apply user filters
                         self.udemy.is_course_excluded(course, self.settings)
@@ -206,30 +209,34 @@ class EnrollmentManager:
                             self.udemy.excluded_c += 1
                             course_status = "excluded"
                             error_msg = course.error
+                            logger.info(f"  Status: Excluded - {error_msg}")
                         elif course.is_free:
                             if self.settings.get("discounted_only", False):
                                 self.udemy.excluded_c += 1
                                 course_status = "excluded"
                                 error_msg = "Free course (discounted only)"
+                                logger.info(f"  Status: Excluded - {error_msg}")
                             else:
                                 await self.udemy.free_checkout(course)
                                 if course.status:
                                     self.udemy.successfully_enrolled_c += 1
                                     course_status = "enrolled"
+                                    logger.info(f"  Status: Enrolled (Free)")
                                 else:
                                     self.udemy.expired_c += 1
                                     course_status = "failed"
+                                    logger.info(f"  Status: Failed (Free checkout error)")
                         else:
                             await self.udemy.check_course(course)
                             if not course.is_coupon_valid:
                                 self.udemy.expired_c += 1
                                 course_status = "expired"
+                                logger.info(f"  Status: Expired - {course.error or 'Coupon no longer valid'}")
                             else:
+                                logger.info(f"  Status: Added to batch (Price: {course.price})")
                                 batch.append(course)
                                 if len(batch) >= 10:
                                     await process_batch()
-                                # Status will be set by process_batch for items in batch
-                                # but for loop purposes, we skip _save_course here
                                 course_status = "batched"
 
                 if course_status != "batched":

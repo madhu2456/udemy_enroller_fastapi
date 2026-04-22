@@ -54,6 +54,87 @@ class UdemyClient:
 
         self.is_authenticated = False
 
+    async def _firecrawl_scrape(self, url: str, schema: Optional[Dict] = None, use_cookies: bool = True) -> Optional[Dict]:
+        """Perform a stealthy scrape using Firecrawl API."""
+        if not self.firecrawl_api_key:
+            return None
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.firecrawl_api_key}", "Content-Type": "application/json"}
+            payload = {"url": url}
+            
+            if schema:
+                payload["params"] = {"extract": {"schema": schema}}
+                
+            if use_cookies and self.cookie_dict:
+                # Firecrawl expects cookies in header or specific param depending on version, 
+                # we'll pass them as a Cookie header in the request context
+                cookie_str = "; ".join([f"{k}={v}" for k, v in self.cookie_dict.items()])
+                payload["pageOptions"] = {"headers": {"Cookie": cookie_str}}
+
+            resp = await self.http.post("https://api.firecrawl.dev/v0/scrape", json=payload, headers=headers, req_type="api", log_failures=False)
+            data = await self.http.safe_json(resp, "firecrawl request")
+            
+            if data and data.get("success") and "data" in data:
+                return data["data"]
+            return None
+        except Exception as e:
+            logger.debug(f"Firecrawl request failed for {url}: {e}")
+            return None
+
+    async def _playwright_request(self, url: str, method: str = "GET", data: Optional[Dict] = None, req_type: str = "xhr") -> Optional[httpx.Response]:
+        """Perform a stealthy request using a real headless browser."""
+        from app.services.playwright_service import PlaywrightService
+        try:
+            async with PlaywrightService(proxy=self.http.proxy) as pw:
+                # Add our session cookies to the browser context
+                cookies = []
+                for k, v in self.cookie_dict.items():
+                    cookies.append({"name": k, "value": v, "url": "https://www.udemy.com"})
+                await pw._context.add_cookies(cookies)
+                
+                page = await pw._context.new_page()
+                
+                # We use page.evaluate to make the request from WITHIN the browser environment
+                # This ensures perfect fingerprinting (TLS, headers, etc.)
+                js_script = f"""
+                async () => {{
+                    const response = await fetch("{url}", {{
+                        method: "{method}",
+                        headers: {{
+                            "Accept": "application/json, text/plain, */*",
+                            "Content-Type": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                            "X-CSRF-Token": "{self.cookie_dict.get('csrf_token') or self.cookie_dict.get('csrftoken', '')}"
+                        }},
+                        {f'body: JSON.stringify({json.dumps(data)})' if data else ''}
+                    }});
+                    return {{
+                        status: response.status,
+                        content: await response.text(),
+                        url: response.url
+                    }};
+                }}
+                """
+                # First navigate to udemy to ensure same-origin for XHR
+                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="networkidle")
+                
+                result = await page.evaluate(js_script)
+                await page.close()
+                
+                if result:
+                    # Mock an httpx-like response object
+                    mock_resp = httpx.Response(
+                        status_code=result['status'],
+                        content=result['content'].encode(),
+                        request=httpx.Request(method, url)
+                    )
+                    return mock_resp
+                return None
+        except Exception as e:
+            logger.error(f"Playwright request failed for {url}: {e}")
+            return None
+
     async def close(self):
         await self.http.close()
 
@@ -270,25 +351,45 @@ class UdemyClient:
         return None
 
     async def get_course_id(self, course: Course, use_headless_fallback: bool = True):
-        """Fetch course ID and metadata asynchronously with optional Firecrawl/headless fallbacks."""
+        """Fetch course ID and metadata with Firecrawl-first, Playwright fallback chain."""
         if course.course_id:
             return
         url = re.sub(r"\W+$", "", unquote(course.url))
         
-        # 1. Try standard request
+        # 1. Firecrawl First (Stealthiest)
+        if self.firecrawl_api_key:
+            logger.info(f"Stealth: Fetching course ID for {course.title} via Firecrawl...")
+            fc_schema = {"type": "object", "properties": {"course_id": {"type": "string"}, "title": {"type": "string"}}}
+            fc_data = await self._firecrawl_scrape(url, schema=fc_schema)
+            if fc_data and "extract" in fc_data:
+                cid = fc_data["extract"].get("course_id")
+                if cid and str(cid) not in BLACKLIST_IDS:
+                    course.course_id = str(cid)
+                    logger.debug(f"  Success: Found ID {course.course_id} via Firecrawl")
+                    return
+
+        # 2. Playwright Fallback
+        if use_headless_fallback:
+            logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
+            resp = await self._playwright_request(url, req_type="document")
+            if resp and resp.status_code == 200:
+                soup = bs(resp.content, "lxml")
+                body = soup.find("body")
+                if body:
+                    try:
+                        dma = json.loads(body.get("data-module-args", "{}"))
+                        course.set_metadata(dma)
+                    except Exception: pass
+                if not course.course_id:
+                    course.course_id = self._extract_course_id(soup)
+                if course.course_id:
+                    logger.debug(f"  Success: Found ID {course.course_id} via Playwright")
+                    return
+
+        # 3. Standard Request
+        logger.info(f"Standard: Fetching course ID for {course.title}...")
         resp = await self.http.get(url, log_failures=False, raise_for_status=False)
-        
-        should_retry = False
-        if not resp or resp.status_code == 404:
-            should_retry = True
-        else:
-            soup = bs(resp.content, "lxml")
-            title = soup.find("title")
-            title_text = title.text.strip() if title else ""
-            if "Access Denied" in title_text or "Just a moment" in title_text or "Attention Required" in title_text:
-                should_retry = True
-        
-        if not should_retry and resp and resp.status_code == 200:
+        if resp and resp.status_code == 200:
             course.set_url(str(resp.url))
             soup = bs(resp.content, "lxml")
             body = soup.find("body")
@@ -302,84 +403,82 @@ class UdemyClient:
             if course.course_id:
                 return
 
-        # 2. Premium Fallback: Firecrawl (Higher priority than local Playwright if key exists)
-        if should_retry and self.firecrawl_api_key:
-            logger.info(f"Using Firecrawl fallback for {course.title}...")
-            try:
-                headers = {"Authorization": f"Bearer {self.firecrawl_api_key}", "Content-Type": "application/json"}
-                fc_payload = {
-                    "url": url,
-                    "params": {
-                        "extract": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "course_id": {"type": "string"},
-                                    "title": {"type": "string"}
-                                }
-                            }
-                        }
-                    }
-                }
-                fc_resp = await self.http.post("https://api.firecrawl.dev/v0/scrape", json=fc_payload, headers=headers, req_type="api")
-                fc_data = await self.http.safe_json(fc_resp, "firecrawl course id")
-                if fc_data and "data" in fc_data and "extract" in fc_data["data"]:
-                    ext = fc_data["data"]["extract"]
-                    if ext.get("course_id"):
-                        course.course_id = str(ext["course_id"])
-                        logger.debug(f"Found course ID {course.course_id} via Firecrawl")
-                        return
-            except Exception as e:
-                logger.error(f"Firecrawl failed: {e}")
-
-        # 3. Local Fallback: Playwright
-        if should_retry and use_headless_fallback:
-            logger.info(f"Retrying with headless browser for {course.title}...")
-            from app.services.playwright_service import PlaywrightService
-            async with PlaywrightService() as pw:
-                content = await pw.get_page_content(url)
-                if content:
-                    soup = bs(content, "lxml")
-                    body = soup.find("body")
-                    if body:
-                        try:
-                            dma = json.loads(body.get("data-module-args", "{}"))
-                            course.set_metadata(dma)
-                        except Exception: pass
-                    if not course.course_id:
-                        course.course_id = self._extract_course_id(soup)
-                    if course.course_id:
-                        return
-
         # Final failure state
         if not course.course_id:
             course.is_valid = False
-            if resp and resp.status_code == 200 and not should_retry:
+            if resp and resp.status_code == 200:
                 course.error = "Course ID not found"
             else:
                 course.error = f"Failed to fetch course page ({resp.status_code if resp else 'No response'})"
-            logger.warning(f"Course ID not found for {course.title}")
+            logger.warning(f"Failed to identify course: {course.title}")
 
     async def check_course(self, course: Course):
-        """Check coupon validity asynchronously."""
+        """Check coupon validity with Firecrawl-first, Playwright fallback chain."""
         if course.price is not None:
             return
+        
         url = f"{constants.UDEMY_COURSE_LANDING_COMPONENTS_URL}{course.course_id}/me/?components=purchase"
         if course.coupon_code:
             url += f",redeem_coupon&couponCode={course.coupon_code}"
 
-        resp = await self.http.get(url, cookies=self.cookie_dict)
-        r = await self.http.safe_json(resp, "check course")
+        r = None
+        # 1. Firecrawl First
+        if self.firecrawl_api_key:
+            logger.info(f"Stealth: Checking coupon for {course.title} via Firecrawl...")
+            fc_data = await self._firecrawl_scrape(url)
+            if fc_data and "content" in fc_data:
+                try:
+                    r = json.loads(fc_data["content"])
+                except Exception: pass
+
+        # 2. Playwright Fallback
         if not r:
+            logger.info(f"Stealth: Checking coupon for {course.title} via Playwright...")
+            resp = await self._playwright_request(url)
+            if resp and resp.status_code == 200:
+                r = await self.http.safe_json(resp, "playwright check course")
+
+        # 3. Standard Request
+        if not r:
+            logger.info(f"Standard: Checking coupon for {course.title}...")
+            resp = await self.http.get(url, cookies=self.cookie_dict)
+            r = await self.http.safe_json(resp, "standard check course")
+
+        if not r:
+            course.is_coupon_valid = False
+            course.error = "Failed to fetch course price info"
             return
 
-        amount = r.get("purchase", {}).get("data", {}).get("list_price", {}).get("amount")
+        purchase_data = r.get("purchase", {}).get("data", {})
+        amount = purchase_data.get("list_price", {}).get("amount")
         course.price = Decimal(str(amount)) if amount is not None else None
 
-        if course.coupon_code and "redeem_coupon" in r:
-            discount = r["purchase"]["data"]["pricing_result"]["discount_percent"]
-            status = r["redeem_coupon"]["discount_attempts"][0]["status"]
-            course.is_coupon_valid = (discount == 100 and status == "applied")
+        if course.coupon_code:
+            if "redeem_coupon" in r:
+                discount_attempts = r["redeem_coupon"].get("discount_attempts", [])
+                if discount_attempts:
+                    status = discount_attempts[0].get("status")
+                    pricing = purchase_data.get("pricing_result", {})
+                    discount = pricing.get("discount_percent")
+                    
+                    if status == "applied" and discount == 100:
+                        course.is_coupon_valid = True
+                    else:
+                        course.is_coupon_valid = False
+                        if status != "applied":
+                            course.error = f"Coupon status: {status}"
+                        elif discount != 100:
+                            course.error = f"Coupon only {discount}% off (not 100%)"
+                else:
+                    course.is_coupon_valid = False
+                    course.error = "No discount attempts returned"
+            else:
+                course.is_coupon_valid = False
+                course.error = "Coupon not found in response"
+        else:
+            # Paid course without coupon code
+            course.is_coupon_valid = False
+            course.error = "No coupon code provided"
 
     async def is_already_enrolled(self, course: Course, known_slugs: set = None) -> bool:
         if self.enrolled_courses is None:
@@ -392,15 +491,28 @@ class UdemyClient:
         return
 
     async def free_checkout(self, course: Course):
-        """Enroll in a free course asynchronously."""
-        await self.http.get(f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}", cookies=self.cookie_dict, req_type="api")
-        resp = await self.http.get(
-            f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private",
-            cookies=self.cookie_dict,
-            req_type="api"
-        )
+        """Enroll in a free course with Playwright-first stealth fallback."""
+        sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
+        status_url = f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private"
+        
+        logger.info(f"Stealth: Enrolling in free course {course.title} via Playwright...")
+        # 1. Stealth First: Playwright
+        resp = await self._playwright_request(sub_url)
         if resp and resp.status_code == 200:
-            data = await self.http.safe_json(resp, "free checkout check")
+            check_resp = await self._playwright_request(status_url)
+            if check_resp and check_resp.status_code == 200:
+                data = await self.http.safe_json(check_resp, "playwright free checkout check")
+                course.status = data.get("_class") == "course" if data else False
+                if course.status: 
+                    logger.debug(f"  Success: Enrolled in {course.title} via Playwright")
+                    return
+
+        # 2. Standard Fallback
+        logger.info(f"Standard: Enrolling in free course {course.title}...")
+        await self.http.get(sub_url, cookies=self.cookie_dict, req_type="api")
+        resp = await self.http.get(status_url, cookies=self.cookie_dict, req_type="api")
+        if resp and resp.status_code == 200:
+            data = await self.http.safe_json(resp, "standard free checkout check")
             course.status = data.get("_class") == "course" if data else False
         else:
             course.status = False
@@ -441,6 +553,7 @@ class UdemyClient:
         return 0
 
     async def _checkout_one(self, course: Course, headers: dict) -> bool:
+        """Enroll with coupon via Playwright-first stealth chain (POST required)."""
         if self.cookie_dict.get("access_token"):
             headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
@@ -458,8 +571,15 @@ class UdemyClient:
             },
         }
         
+        # Playwright is our primary stealth method for checkout POST.
         for attempt in range(3):
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
+            logger.info(f"Stealth: Executing checkout for {course.title} via Playwright...")
+            resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
+            
+            if not resp or resp.status_code != 200:
+                logger.info(f"Standard: Falling back to HTTPX checkout for {course.title}...")
+                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
+            
             if not resp:
                 continue
             
@@ -488,7 +608,7 @@ class UdemyClient:
         return False
 
     async def bulk_checkout(self, courses: List[Course]) -> Dict[Course, str]:
-        """Asynchronously enroll in a batch of courses."""
+        """Asynchronously enroll in a batch of courses with stealth priority."""
         outcomes: Dict[Course, str] = {c: "failed" for c in courses}
         if not courses: return outcomes
         
@@ -500,7 +620,7 @@ class UdemyClient:
         headers = {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
-            "Referer": constants.UDEMY_CHECKOUT_URL,
+            "Referer": "https://www.udemy.com/payment/checkout/",
             "X-CSRF-Token": csrf_token,
         }
         if self.cookie_dict.get("access_token"):
@@ -526,7 +646,13 @@ class UdemyClient:
                 "shopping_info": {"items": items, "is_cart": True},
             }
             
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
+            logger.info(f"Stealth: Executing bulk checkout for {len(remaining)} courses via Playwright...")
+            resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
+            
+            if not resp or resp.status_code != 200:
+                logger.info("Standard: Falling back to HTTPX for bulk checkout...")
+                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
+            
             if not resp:
                 continue
                 
