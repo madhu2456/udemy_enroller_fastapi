@@ -117,7 +117,7 @@ class UdemyClient:
                 }}
                 """
                 # First navigate to udemy to ensure same-origin for XHR
-                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="networkidle")
+                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="domcontentloaded", timeout=30000)
                 
                 result = await page.evaluate(js_script)
                 await page.close()

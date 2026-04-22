@@ -21,7 +21,7 @@ class AsyncHTTPClient:
             limits=httpx.Limits(max_connections=40, max_keepalive_connections=20, keepalive_expiry=20.0),
         )
 
-    def _get_headers(self, custom_headers: Optional[Dict] = None, req_type: str = "document") -> Dict[str, str]:
+    def _get_headers(self, url: str, custom_headers: Optional[Dict] = None, req_type: str = "document") -> Dict[str, str]:
         """Generate randomized headers for each request, respecting existing ones."""
         # Selection of a consistent UA to match Client Hints
         ua = DEFAULT_USER_AGENT
@@ -30,8 +30,12 @@ class AsyncHTTPClient:
         elif self.client.headers.get("User-Agent"):
             ua = self.client.headers.get("User-Agent")
 
-        # Basic common headers in Chrome order
+        from urllib.parse import urlparse
+        parsed_url = urlparse(url)
+
+        # Basic common headers in Chrome order, starting with Host
         headers = {
+            "Host": parsed_url.netloc,
             "Connection": "keep-alive",
         }
 
@@ -51,7 +55,7 @@ class AsyncHTTPClient:
                 "Sec-Fetch-Mode": "navigate",
                 "Sec-Fetch-User": "?1",
                 "Sec-Fetch-Dest": "document",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": "en-US,en;q=0.9",
             })
         elif req_type in ["api", "xhr"]:
@@ -62,7 +66,7 @@ class AsyncHTTPClient:
                 "Sec-Fetch-Site": "same-origin",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Dest": "empty",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": "en-US,en;q=0.9",
             })
             

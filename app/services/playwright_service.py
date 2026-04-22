@@ -79,7 +79,7 @@ class PlaywrightService:
             
         page: Page = await self._context.new_page()
         try:
-            await page.goto(url, wait_until="networkidle", timeout=60000)
+            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
             if wait_for_selector:
                 await page.wait_for_selector(wait_for_selector, timeout=30000)
             return await page.content()
