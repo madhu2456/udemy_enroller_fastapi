@@ -31,29 +31,50 @@ class AsyncHTTPClient:
 
     def _get_headers(self, custom_headers: Optional[Dict] = None, req_type: str = "document") -> Dict[str, str]:
         """Generate randomized headers for each request, respecting existing ones."""
+        # Selection of a consistent UA to match Client Hints
+        ua = random.choice(USER_AGENTS)
+        if custom_headers and "User-Agent" in custom_headers:
+            ua = custom_headers["User-Agent"]
+        elif self.client.headers.get("User-Agent"):
+            ua = self.client.headers.get("User-Agent")
+
+        # Basic common headers in Chrome order
         headers = {
-            "Accept-Language": random.choice(["en-US,en;q=0.9", "en-GB,en;q=0.8", "en;q=0.7"]),
-            "Accept-Encoding": "gzip, deflate, br",
+            "Host": "www.udemy.com",
             "Connection": "keep-alive",
-            "DNT": "1",
         }
+
+        # Add Client Hints (Crucial for modern bot bypass)
+        headers.update({
+            "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+        })
 
         if req_type == "document":
             headers.update({
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                 "Upgrade-Insecure-Requests": "1",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
+                "User-Agent": ua,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                 "Sec-Fetch-Site": "none",
+                "Sec-Fetch-Mode": "navigate",
                 "Sec-Fetch-User": "?1",
+                "Sec-Fetch-Dest": "document",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "en-US,en;q=0.9",
             })
         elif req_type in ["api", "xhr"]:
             headers.update({
+                "User-Agent": ua,
                 "Accept": "application/json, text/plain, */*",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
+                "X-Requested-With": "XMLHttpRequest",
                 "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Dest": "empty",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "en-US,en;q=0.9",
             })
+            
             if "Referer" in headers:
                 try:
                     ref_origin = f"{urlparse(headers['Referer']).scheme}://{urlparse(headers['Referer']).netloc}"
@@ -61,14 +82,6 @@ class AsyncHTTPClient:
                 except Exception:
                     pass
         
-        # Only add a random User-Agent if one isn't already present in custom_headers or client.headers
-        if not custom_headers or "User-Agent" not in custom_headers:
-            client_ua = self.client.headers.get("User-Agent")
-            if client_ua:
-                headers["User-Agent"] = client_ua
-            else:
-                headers["User-Agent"] = random.choice(USER_AGENTS)
-
         if custom_headers:
             headers.update(custom_headers)
         return headers
