@@ -184,7 +184,10 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
         # Reconstruct client from db cookies
         user = session.user
         if user.udemy_cookies:
-            client = UdemyClient()
+            client = UdemyClient(
+                proxy=user.settings.proxy_url if user.settings else None,
+                firecrawl_api_key=user.settings.firecrawl_api_key if user.settings else None
+            )
             client.cookie_dict = user.udemy_cookies
             client.http.client.cookies.update(user.udemy_cookies)
             client.display_name = user.udemy_display_name

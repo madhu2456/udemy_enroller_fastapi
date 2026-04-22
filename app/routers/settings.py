@@ -59,6 +59,7 @@ async def get_settings(
         discounted_only=bool(settings.discounted_only),
         proxy_url=settings.proxy_url,
         enable_headless=bool(settings.enable_headless),
+        firecrawl_api_key=settings.firecrawl_api_key,
     )
 
 
@@ -117,6 +118,7 @@ async def reset_settings(
     settings.discounted_only = False
     settings.proxy_url = None
     settings.enable_headless = False
+    settings.firecrawl_api_key = None
 
     db.commit()
     logger.info(f"Settings reset to defaults for user {user_id}")

@@ -99,6 +99,15 @@
                 <p class="text-xs text-gray-500 mt-1">Leave blank for direct connection</p>
             </div>
 
+            <!-- Firecrawl API Key -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Firecrawl API Key</label>
+                <input type="password" id="firecrawl-api-key" 
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    placeholder="fc-xxxxxxxxxxxxxxxxxxxxxxxx">
+                <p class="text-xs text-gray-500 mt-1">Get your key from <a href="https://www.firecrawl.dev/app" target="_blank" class="text-blue-400 hover:underline">firecrawl.dev</a> for high-reliability scraping.</p>
+            </div>
+
         </div>
 
         <!-- Checkboxes -->
@@ -226,6 +235,7 @@ async function loadSettings() {
         document.getElementById('discounted-only').checked = !!currentSettings.discounted_only;
         document.getElementById('proxy-url').value = currentSettings.proxy_url || '';
         document.getElementById('enable-headless').checked = !!currentSettings.enable_headless;
+        document.getElementById('firecrawl-api-key').value = currentSettings.firecrawl_api_key || '';
         
     } catch(e) { 
         console.error('Failed to load settings:', e);
@@ -277,6 +287,7 @@ function gatherSettings() {
         discounted_only: document.getElementById('discounted-only').checked,
         proxy_url: document.getElementById('proxy-url').value.trim() || null,
         enable_headless: document.getElementById('enable-headless').checked,
+        firecrawl_api_key: document.getElementById('firecrawl-api-key').value.trim() || null,
     };
 }
 

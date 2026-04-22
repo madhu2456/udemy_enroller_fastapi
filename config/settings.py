@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     SCRAPER_TIMEOUT: int = 30
     ENROLLMENT_BATCH_SIZE: int = 5
     PROXIES: str = ""  # Comma-separated list of proxy URLs
+    FIRECRAWL_API_KEY: str = ""
 
     # Logging
     LOG_LEVEL: str = "INFO"

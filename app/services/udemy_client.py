@@ -26,8 +26,9 @@ class LoginException(Exception):
 class UdemyClient:
     """Handles asynchronous authentication and enrollment with the Udemy API."""
 
-    def __init__(self, proxy: Optional[str] = None):
+    def __init__(self, proxy: Optional[str] = None, firecrawl_api_key: Optional[str] = None):
         self.http = AsyncHTTPClient(proxy=proxy)
+        self.firecrawl_api_key = firecrawl_api_key
         self.http.client.headers.update({
             "User-Agent": constants.DEFAULT_USER_AGENT,
             "Accept": "application/json, text/plain, */*",
@@ -265,24 +266,71 @@ class UdemyClient:
         return None
 
     async def get_course_id(self, course: Course, use_headless_fallback: bool = True):
-        """Fetch course ID and metadata asynchronously with optional headless fallback."""
+        """Fetch course ID and metadata asynchronously with optional Firecrawl/headless fallbacks."""
         if course.course_id:
             return
         url = re.sub(r"\W+$", "", unquote(course.url))
+        
+        # 1. Try standard request
         resp = await self.http.get(url, log_failures=False, raise_for_status=False)
         
-        should_retry_headless = False
+        should_retry = False
         if not resp or resp.status_code == 404:
-            should_retry_headless = True
+            should_retry = True
         else:
             soup = bs(resp.content, "lxml")
             title = soup.find("title")
             title_text = title.text.strip() if title else ""
             if "Access Denied" in title_text or "Just a moment" in title_text or "Attention Required" in title_text:
-                should_retry_headless = True
+                should_retry = True
         
-        if should_retry_headless and use_headless_fallback:
-            logger.info(f"Retrying with headless browser for {course.title} (Cloudflare/404 detected)...")
+        if not should_retry and resp and resp.status_code == 200:
+            course.set_url(str(resp.url))
+            soup = bs(resp.content, "lxml")
+            body = soup.find("body")
+            if body:
+                try:
+                    dma = json.loads(body.get("data-module-args", "{}"))
+                    course.set_metadata(dma)
+                except Exception: pass
+            if not course.course_id:
+                course.course_id = self._extract_course_id(soup)
+            if course.course_id:
+                return
+
+        # 2. Premium Fallback: Firecrawl (Higher priority than local Playwright if key exists)
+        if should_retry and self.firecrawl_api_key:
+            logger.info(f"Using Firecrawl fallback for {course.title}...")
+            try:
+                headers = {"Authorization": f"Bearer {self.firecrawl_api_key}", "Content-Type": "application/json"}
+                fc_payload = {
+                    "url": url,
+                    "params": {
+                        "extract": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "course_id": {"type": "string"},
+                                    "title": {"type": "string"}
+                                }
+                            }
+                        }
+                    }
+                }
+                fc_resp = await self.http.post("https://api.firecrawl.dev/v0/scrape", json=fc_payload, headers=headers, req_type="api")
+                fc_data = await self.http.safe_json(fc_resp, "firecrawl course id")
+                if fc_data and "data" in fc_data and "extract" in fc_data["data"]:
+                    ext = fc_data["data"]["extract"]
+                    if ext.get("course_id"):
+                        course.course_id = str(ext["course_id"])
+                        logger.debug(f"Found course ID {course.course_id} via Firecrawl")
+                        return
+            except Exception as e:
+                logger.error(f"Firecrawl failed: {e}")
+
+        # 3. Local Fallback: Playwright
+        if should_retry and use_headless_fallback:
+            logger.info(f"Retrying with headless browser for {course.title}...")
             from app.services.playwright_service import PlaywrightService
             async with PlaywrightService() as pw:
                 content = await pw.get_page_content(url)
@@ -293,46 +341,20 @@ class UdemyClient:
                         try:
                             dma = json.loads(body.get("data-module-args", "{}"))
                             course.set_metadata(dma)
-                            if course.course_id:
-                                logger.debug(f"Found course ID {course.course_id} via headless DMA")
-                        except Exception:
-                            pass
-                    
+                        except Exception: pass
                     if not course.course_id:
                         course.course_id = self._extract_course_id(soup)
-                    
                     if course.course_id:
                         return
 
-        if not resp or resp.status_code != 200:
-            course.is_valid = False
-            course.error = f"Failed to fetch course page ({resp.status_code if resp else 'No response'})"
-            return
-
-        course.set_url(str(resp.url))
-        soup = bs(resp.content, "lxml")
-        
-        body = soup.find("body")
-        if body:
-            try:
-                dma = json.loads(body.get("data-module-args", "{}"))
-                course.set_metadata(dma)
-                if course.course_id:
-                    logger.debug(f"Found course ID {course.course_id} via DMA metadata")
-            except Exception as e:
-                logger.debug(f"Metadata parse error for {course.title}: {e}")
-
-        if not course.course_id:
-            course.course_id = self._extract_course_id(soup)
-        
+        # Final failure state
         if not course.course_id:
             course.is_valid = False
-            course.error = "Course ID not found"
-            title = soup.find("title")
-            title_text = title.text.strip() if title else "No title"
-            logger.warning(f"Course ID not found for {course.title}. Page title: {title_text}")
-        else:
-            logger.debug(f"Successfully identified course ID {course.course_id} for {course.title}")
+            if resp and resp.status_code == 200 and not should_retry:
+                course.error = "Course ID not found"
+            else:
+                course.error = f"Failed to fetch course page ({resp.status_code if resp else 'No response'})"
+            logger.warning(f"Course ID not found for {course.title}")
 
     async def check_course(self, course: Course):
         """Check coupon validity asynchronously."""
@@ -433,7 +455,7 @@ class UdemyClient:
         }
         
         for attempt in range(3):
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="api")
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
             if not resp:
                 continue
             
@@ -484,6 +506,9 @@ class UdemyClient:
         for attempt in range(len(courses) + 2):
             if not remaining: break
             
+            if attempt > 0:
+                await asyncio.sleep(random.uniform(1.0, 3.0))
+
             items = [{
                 "buyable": {"id": str(c.course_id), "type": "course"},
                 "discountInfo": {"code": c.coupon_code},
@@ -497,7 +522,7 @@ class UdemyClient:
                 "shopping_info": {"items": items, "is_cart": True},
             }
             
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="api")
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
             if not resp:
                 continue
                 

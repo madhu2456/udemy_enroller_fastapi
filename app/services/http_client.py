@@ -47,13 +47,19 @@ class AsyncHTTPClient:
                 "Sec-Fetch-Site": "none",
                 "Sec-Fetch-User": "?1",
             })
-        else: # api / xhr
+        elif req_type in ["api", "xhr"]:
             headers.update({
                 "Accept": "application/json, text/plain, */*",
                 "Sec-Fetch-Dest": "empty",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Site": "same-origin",
             })
+            if "Referer" in headers:
+                try:
+                    ref_origin = f"{urlparse(headers['Referer']).scheme}://{urlparse(headers['Referer']).netloc}"
+                    headers["Origin"] = ref_origin
+                except Exception:
+                    pass
         
         # Only add a random User-Agent if one isn't already present in custom_headers or client.headers
         if not custom_headers or "User-Agent" not in custom_headers:
@@ -174,7 +180,9 @@ class AsyncHTTPClient:
                 should_retry = attempt < attempts - 1
                 if isinstance(e, httpx.HTTPStatusError):
                     status = e.response.status_code
-                    if status != 429 and status < 500:
+                    if status == 403: 
+                        should_retry = True
+                    elif status != 429 and status < 500:
                         should_retry = False
                 
                 if should_retry:
@@ -182,6 +190,11 @@ class AsyncHTTPClient:
                     if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
                         retry_after = e.response.headers.get("Retry-After")
                         delay = int(retry_after) if retry_after and retry_after.isdigit() else 30
+                    
+                    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 403 and randomize:
+                        if headers and "User-Agent" in headers:
+                             headers["User-Agent"] = random.choice(USER_AGENTS)
+
                     await asyncio.sleep(delay)
                 else:
                     break

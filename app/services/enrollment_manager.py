@@ -118,7 +118,8 @@ class EnrollmentManager:
             self.scraper = ScraperService(
                 enabled_sites,
                 proxy=self.settings.get("proxy_url"),
-                enable_headless=self.settings.get("enable_headless", False)
+                enable_headless=self.settings.get("enable_headless", False),
+                firecrawl_api_key=self.settings.get("firecrawl_api_key")
             )
 
             async def _update_scraping_progress():

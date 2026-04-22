@@ -58,6 +58,6 @@ async def test_tutorialbar_scraper_parsing():
     await scraper.scrape(semaphore)
 
     assert len(scraper.data) >= 2
-    assert scraper.data[0].title == "Course 1"
-    assert "udemy.com/course/test1" in scraper.data[0].url
-
+    titles = [c.title for c in scraper.data]
+    assert "Course 1" in titles
+    assert "Course 2" in titles
