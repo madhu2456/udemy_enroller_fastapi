@@ -452,18 +452,31 @@ class TutorialBarScraper(Scraper):
                     self.progress = i + 1
                 return
 
-            # Fallback to home page scraping if API fails
-            logger.info("tb API failed or empty, falling back to home page scraping")
-            resp = await self.http.get("https://www.tutorialbar.com/")
+            # Fallback to home page scraping
+            logger.info("tb API failed or empty, trying home page scraping")
             all_items = []
-            if resp:
-                soup = self.parse_html(resp.content)
-                for a in soup.find_all("a", href=True):
-                    href = a["href"]
-                    if "tutorialbar.com" in href and len(href) > 35:
-                        if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
-                            if href not in all_items:
-                                all_items.append(href)
+            
+            if self.enable_headless:
+                async with PlaywrightService(proxy=self.proxy) as pw:
+                    content = await pw.get_page_content("https://www.tutorialbar.com/")
+                    if content:
+                        soup = self.parse_html(content.encode())
+                        for a in soup.find_all("a", href=True):
+                            href = a["href"]
+                            if "tutorialbar.com" in href and len(href) > 35:
+                                if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
+                                    if href not in all_items:
+                                        all_items.append(href)
+            else:
+                resp = await self.http.get("https://www.tutorialbar.com/")
+                if resp:
+                    soup = self.parse_html(resp.content)
+                    for a in soup.find_all("a", href=True):
+                        href = a["href"]
+                        if "tutorialbar.com" in href and len(href) > 35:
+                            if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
+                                if href not in all_items:
+                                    all_items.append(href)
 
             self.length = len(all_items)
             self.progress = 0
@@ -896,7 +909,12 @@ class RedditUdemyFreebiesScraper(Scraper):
                 "courson.xyz", "jobs.e-next.in", "e-next.in"
             }
 
-            resp = await self.http.get("https://www.reddit.com/r/udemyfreebies/new.json?limit=100", headers=headers)
+            resp = await self.http.get(
+                "https://www.reddit.com/r/udemyfreebies/new.json?limit=100", 
+                headers=headers,
+                randomize_headers=False,
+                req_type="api"
+            )
             data = await self.http.safe_json(resp, "reddit API")
             if not data or "data" not in data or "children" not in data["data"]:
                 return
@@ -999,9 +1017,10 @@ SCRAPER_REGISTRY = {
 class ScraperService:
     """Asynchronously scrapes multiple coupon websites for free Udemy course links."""
 
-    def __init__(self, sites_to_scrape: List[str] = None, proxy: Optional[str] = None, enable_headless: bool = False):
+    def __init__(self, sites_to_scrape: List[str] = None, proxy: Optional[str] = None, enable_headless: bool = False, firecrawl_api_key: Optional[str] = None):
         self.sites = sites_to_scrape or list(SCRAPER_REGISTRY.keys())
         self.enable_headless = enable_headless
+        self.firecrawl_api_key = firecrawl_api_key
 
         app_settings = get_settings()
         

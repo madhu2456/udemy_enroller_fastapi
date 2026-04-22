@@ -57,7 +57,10 @@ async def get_udemy_client(request: Request, session: UserSession = Depends(get_
     if not access_token or not client_id:
         raise HTTPException(status_code=401, detail="Udemy credentials invalid. Please log in again.")
 
-    restored_client = UdemyClient(proxy=user.settings.proxy_url if user.settings else None)
+    restored_client = UdemyClient(
+        proxy=user.settings.proxy_url if user.settings else None,
+        firecrawl_api_key=user.settings.firecrawl_api_key if user.settings else None
+    )
     restored_client.cookie_login(access_token, client_id, csrf_token)
     
     try:

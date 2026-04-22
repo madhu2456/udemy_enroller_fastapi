@@ -68,6 +68,7 @@ class SettingsUpdate(BaseModel):
     discounted_only: Optional[bool] = None
     proxy_url: Optional[str] = None
     enable_headless: Optional[bool] = None
+    firecrawl_api_key: Optional[str] = None
 
     @field_validator("proxy_url")
     @classmethod
@@ -109,6 +110,7 @@ class SettingsResponse(BaseModel):
     discounted_only: bool
     proxy_url: Optional[str]
     enable_headless: bool
+    firecrawl_api_key: Optional[str]
 
     model_config = ConfigDict(from_attributes=True)
 
