@@ -14,6 +14,7 @@ from app.models.database import SessionLocal, EnrollmentRun, EnrolledCourse, Use
 from app.services.course import Course
 from app.services.scraper import ScraperService
 from app.services.udemy_client import UdemyClient
+from config.settings import get_settings
 
 
 from app.core.cache import clear_user_caches
@@ -235,7 +236,7 @@ class EnrollmentManager:
                             else:
                                 logger.info(f"  Status: Added to batch (Price: {course.price})")
                                 batch.append(course)
-                                if len(batch) >= 10:
+                                if len(batch) >= get_settings().ENROLLMENT_BATCH_SIZE:
                                     await process_batch()
                                 course_status = "batched"
 
