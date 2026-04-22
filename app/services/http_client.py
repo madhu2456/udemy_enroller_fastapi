@@ -93,7 +93,7 @@ class AsyncHTTPClient:
         req_type = kwargs.pop("req_type", "document")
         
         if randomize:
-            headers = self._get_headers(kwargs.pop("headers", None), req_type=req_type)
+            headers = self._get_headers(url, kwargs.pop("headers", None), req_type=req_type)
         else:
             headers = kwargs.pop("headers", None)
         
@@ -161,7 +161,7 @@ class AsyncHTTPClient:
         req_type = kwargs.pop("req_type", "api")
         
         if randomize:
-            headers = self._get_headers(kwargs.pop("headers", None), req_type=req_type)
+            headers = self._get_headers(url, kwargs.pop("headers", None), req_type=req_type)
         else:
             headers = kwargs.pop("headers", None)
 
