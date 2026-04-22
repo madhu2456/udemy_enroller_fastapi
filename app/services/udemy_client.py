@@ -534,12 +534,53 @@ class UdemyClient:
                     else:
                         logger.debug(f"  Firecrawl found ID {course.course_id} but no coupon. Continuing to fallback...")
 
+        consecutive_403 = 0
+        max_403_retries = 2
+        
         if use_headless_fallback:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
-            resp = await self._playwright_request(url, req_type="document")
+            while consecutive_403 < max_403_retries:
+                resp = await self._playwright_request(url, req_type="document")
+                if resp and resp.status_code == 200:
+                    final_url = str(resp.url)
+                    logger.debug(f"  Playwright resolved to: {final_url}")
+                    course.set_url(final_url)
+                    soup = bs(resp.content, "lxml")
+                    body = soup.find("body")
+                    if body:
+                        try:
+                            dma = json.loads(body.get("data-module-args", "{}"))
+                            course.set_metadata(dma)
+                        except Exception: pass
+                    if not course.course_id:
+                        course.course_id = self._extract_course_id(soup)
+                    if course.course_id:
+                        if course.coupon_code:
+                            logger.debug(f"  Success: Found ID {course.course_id} and coupon via Playwright")
+                        else:
+                            logger.debug(f"  Success: Found ID {course.course_id} via Playwright (still no coupon)")
+                        return
+                    break
+                elif resp and resp.status_code == 403:
+                    consecutive_403 += 1
+                    if consecutive_403 < max_403_retries:
+                        logger.warning(f"403 Forbidden on course fetch for {course.title}. Refreshing session (attempt {consecutive_403}/{max_403_retries})...")
+                        if await self._refresh_csrf_stealth():
+                            await asyncio.sleep(1)
+                            continue
+                    logger.error(f"Too many 403 errors ({consecutive_403}) on Playwright course fetch. Falling back to standard.")
+                    break
+                else:
+                    logger.debug(f"Playwright returned {resp.status_code if resp else 'None'}. Falling back to standard.")
+                    break
+
+        logger.info(f"Standard: Fetching course ID for {course.title}...")
+        consecutive_403 = 0
+        while consecutive_403 < max_403_retries:
+            resp = await self.http.get(url, log_failures=False, raise_for_status=False)
             if resp and resp.status_code == 200:
                 final_url = str(resp.url)
-                logger.debug(f"  Playwright resolved to: {final_url}")
+                logger.debug(f"  Standard Request resolved to: {final_url}")
                 course.set_url(final_url)
                 soup = bs(resp.content, "lxml")
                 body = soup.find("body")
@@ -551,29 +592,20 @@ class UdemyClient:
                 if not course.course_id:
                     course.course_id = self._extract_course_id(soup)
                 if course.course_id:
-                    if course.coupon_code:
-                        logger.debug(f"  Success: Found ID {course.course_id} and coupon via Playwright")
-                    else:
-                        logger.debug(f"  Success: Found ID {course.course_id} via Playwright (still no coupon)")
                     return
-
-        logger.info(f"Standard: Fetching course ID for {course.title}...")
-        resp = await self.http.get(url, log_failures=False, raise_for_status=False)
-        if resp and resp.status_code == 200:
-            final_url = str(resp.url)
-            logger.debug(f"  Standard Request resolved to: {final_url}")
-            course.set_url(final_url)
-            soup = bs(resp.content, "lxml")
-            body = soup.find("body")
-            if body:
-                try:
-                    dma = json.loads(body.get("data-module-args", "{}"))
-                    course.set_metadata(dma)
-                except Exception: pass
-            if not course.course_id:
-                course.course_id = self._extract_course_id(soup)
-            if course.course_id:
-                return
+                break
+            elif resp and resp.status_code == 403:
+                consecutive_403 += 1
+                if consecutive_403 < max_403_retries:
+                    logger.warning(f"403 Forbidden on course fetch for {course.title}. Refreshing session (attempt {consecutive_403}/{max_403_retries})...")
+                    if await self._refresh_csrf_stealth():
+                        await asyncio.sleep(1)
+                        continue
+                logger.error(f"Too many 403 errors ({consecutive_403}) on standard course fetch. Giving up.")
+                break
+            else:
+                logger.debug(f"Standard request returned {resp.status_code if resp else 'None'}.")
+                break
 
         if not course.course_id:
             course.is_valid = False
