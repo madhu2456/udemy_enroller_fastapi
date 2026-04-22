@@ -265,32 +265,60 @@ class EnrollmentManager:
             logger.info(f"Enrollment pipeline {self.run_id} cancelled (Shutdown or Logout)")
             # Use a fresh DB session for cleanup to avoid issues with the potentially stalled session
             cleanup_db = SessionLocal()
+            max_cleanup_retries = 3
+            cleanup_retry_delay = 0.5
+            
+            cleanup_success = False
             try:
-                run = cleanup_db.get(EnrollmentRun, self.run_id)
-                if run:
-                    run.status = "cancelled"
-                    run.error_message = "Cancelled by system/user"
-                    run.completed_at = _utcnow_naive()
-                    cleanup_db.commit()
-                    logger.info(f"Enrollment run {self.run_id} marked as cancelled in DB.")
-            except Exception as e:
-                logger.error(f"Failed to mark run {self.run_id} as cancelled: {e}")
+                for cleanup_attempt in range(max_cleanup_retries):
+                    try:
+                        run = cleanup_db.get(EnrollmentRun, self.run_id)
+                        if run:
+                            run.status = "cancelled"
+                            run.error_message = "Cancelled by system/user"
+                            run.completed_at = _utcnow_naive()
+                            cleanup_db.commit()
+                            logger.info(f"Enrollment run {self.run_id} marked as cancelled in DB.")
+                            cleanup_success = True
+                            break
+                    except Exception as e:
+                        cleanup_db.rollback()
+                        if "database is locked" in str(e).lower() and cleanup_attempt < max_cleanup_retries - 1:
+                            logger.debug(f"Database locked during cleanup (attempt {cleanup_attempt + 1}/{max_cleanup_retries}). Retrying...")
+                            await asyncio.sleep(cleanup_retry_delay * (2 ** cleanup_attempt))
+                            continue
+                        logger.error(f"Failed to mark run {self.run_id} as cancelled: {e}")
+                        break
             finally:
                 cleanup_db.close()
+            
+            if not cleanup_success:
+                logger.warning(f"Could not persist cancellation status for run {self.run_id} to database")
             
             self.status = "cancelled"
             raise
         except Exception as e:
             logger.exception("Enrollment pipeline failed")
-            try:
-                run = db.get(EnrollmentRun, self.run_id)
-                if run:
-                    run.status = "failed"
-                    run.error_message = str(e)
-                    run.completed_at = _utcnow_naive()
-                    db.commit()
-            except Exception:
-                pass
+            max_error_retries = 3
+            error_retry_delay = 0.5
+            
+            for error_attempt in range(max_error_retries):
+                try:
+                    run = db.get(EnrollmentRun, self.run_id)
+                    if run:
+                        run.status = "failed"
+                        run.error_message = str(e)
+                        run.completed_at = _utcnow_naive()
+                        db.commit()
+                    break
+                except Exception as db_e:
+                    db.rollback()
+                    if "database is locked" in str(db_e).lower() and error_attempt < max_error_retries - 1:
+                        logger.debug(f"Database locked during error cleanup (attempt {error_attempt + 1}/{max_error_retries}). Retrying...")
+                        asyncio.create_task(asyncio.sleep(error_retry_delay * (2 ** error_attempt)))
+                        continue
+                    logger.debug(f"Could not update run status on error: {db_e}")
+                    break
             self.status = "failed"
         finally:
             # Clear cache so UI shows final state immediately
@@ -303,27 +331,37 @@ class EnrollmentManager:
                 await self.udemy.close()
 
     async def _update_run_stats(self, db: Session, run: EnrollmentRun):
-        """Flush in-memory counters to the run record."""
-        try:
-            run.total_processed = self.processed
-            run.successfully_enrolled = self.udemy.successfully_enrolled_c
-            run.already_enrolled = self.udemy.already_enrolled_c
-            run.expired = self.udemy.expired_c
-            run.excluded = self.udemy.excluded_c
-            run.amount_saved = float(self.udemy.amount_saved_c)
-            
-            pd = run.progress_data or {}
-            pd["current_course_title"] = self.current_course_title
-            pd["current_course_url"] = self.current_course_url
-            if self.scraper:
-                pd["scraping_progress"] = self.scraper.get_progress()
-            
-            run.progress_data = pd
-            flag_modified(run, "progress_data")
-            
-            db.commit()
-        except Exception:
-            db.rollback()
+        """Flush in-memory counters to the run record with retry logic for database locks."""
+        max_retries = 3
+        retry_delay = 0.5
+        
+        for attempt in range(max_retries):
+            try:
+                run.total_processed = self.processed
+                run.successfully_enrolled = self.udemy.successfully_enrolled_c
+                run.already_enrolled = self.udemy.already_enrolled_c
+                run.expired = self.udemy.expired_c
+                run.excluded = self.udemy.excluded_c
+                run.amount_saved = float(self.udemy.amount_saved_c)
+                
+                pd = run.progress_data or {}
+                pd["current_course_title"] = self.current_course_title
+                pd["current_course_url"] = self.current_course_url
+                if self.scraper:
+                    pd["scraping_progress"] = self.scraper.get_progress()
+                
+                run.progress_data = pd
+                flag_modified(run, "progress_data")
+                
+                db.commit()
+                return
+            except Exception as e:
+                db.rollback()
+                if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay * (2 ** attempt))
+                    continue
+                logger.debug(f"Failed to update run stats (attempt {attempt + 1}/{max_retries}): {e}")
+                break
 
     async def _save_course(self, db: Session, run: EnrollmentRun, course: Course,
                            status: str, error: str = None):
