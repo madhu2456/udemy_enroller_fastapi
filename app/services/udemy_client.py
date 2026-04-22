@@ -110,11 +110,16 @@ class UdemyClient:
                 
                 js_template = """
                 async () => {
-                    const response = await fetch("URL_PLACEHOLDER", {
+                    const options = {
                         method: "METHOD_PLACEHOLDER",
-                        headers: HEADERS_PLACEHOLDER,
-                        body: BODY_PLACEHOLDER === "null" ? null : JSON.stringify(BODY_PLACEHOLDER)
-                    });
+                        headers: HEADERS_PLACEHOLDER
+                    };
+                    const bodyData = BODY_PLACEHOLDER;
+                    if (bodyData !== "null" && bodyData !== null) {
+                        options.body = JSON.stringify(bodyData);
+                    }
+                    
+                    const response = await fetch("URL_PLACEHOLDER", options);
                     return {
                         status: response.status,
                         content: await response.text(),
