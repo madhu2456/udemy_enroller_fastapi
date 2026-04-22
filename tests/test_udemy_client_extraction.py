@@ -90,7 +90,8 @@ class TestGetCourseIDFlow:
         mock_resp.content = mock_html
         mock_resp.url = "https://udemy.com/course/test/"
         
-        with patch.object(udemy_client.http, 'get', return_value=mock_resp):
+        # Mock Playwright request to return our test HTML
+        with patch.object(udemy_client, '_playwright_request', return_value=mock_resp):
             await udemy_client.get_course_id(course)
             
         assert course.course_id == "88888"
@@ -110,7 +111,8 @@ class TestGetCourseIDFlow:
         mock_resp.content = mock_html
         mock_resp.url = "https://udemy.com/course/test/"
         
-        with patch.object(udemy_client.http, 'get', return_value=mock_resp):
+        # Mock Playwright request to return our test HTML
+        with patch.object(udemy_client, '_playwright_request', return_value=mock_resp):
             await udemy_client.get_course_id(course)
             
         assert course.course_id == "77777"
@@ -126,8 +128,10 @@ class TestGetCourseIDFlow:
         mock_resp.content = mock_html
         mock_resp.url = "https://udemy.com/course/test/"
         
-        with patch.object(udemy_client.http, 'get', return_value=mock_resp):
-            await udemy_client.get_course_id(course)
+        # Mock Playwright to return 403, then HTTP to return no ID
+        with patch.object(udemy_client, '_playwright_request', return_value=MagicMock(status_code=403)):
+            with patch.object(udemy_client.http, 'get', return_value=mock_resp):
+                await udemy_client.get_course_id(course)
             
         assert course.course_id is None
         assert course.is_valid is False

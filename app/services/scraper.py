@@ -410,52 +410,13 @@ class TutorialBarScraper(Scraper):
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            self.length = 3
-            # Try WordPress API first as it's more reliable
-            headers = {"Accept": "application/json"}
-            listing_tasks = [
-                self.http.get(f"https://www.tutorialbar.com/wp-json/wp/v2/posts?per_page=100&page={page}", headers=headers, log_failures=False)
-                for page in range(1, 4)
-            ]
+            self.length = 1
+            # TutorialBar has moved to /blog/ and WordPress API is empty
+            # Scrape blog posts directly from the blog page
+            logger.info("tb scraper: Fetching from blog page at /blog/")
             
-            api_items = []
-            for i, task in enumerate(asyncio.as_completed(listing_tasks)):
-                resp = await task
-                data = await self.http.safe_json(resp, f"tb api page {i+1}")
-                if isinstance(data, list):
-                    api_items.extend(data)
-                self.progress = i + 1
-
-            if api_items:
-                self.length = len(api_items)
-                self.progress = 0
-                
-                async def _fetch_api_details(item):
-                    try:
-                        title = unescape(item.get("title", {}).get("rendered", "")).split("|")[0].strip()
-                        content = item.get("content", {}).get("rendered", "")
-                        soup = self.parse_html(content)
-                        a_tag = soup.find("a", href=lambda h: h and "udemy.com" in h)
-                        if a_tag:
-                            return title, a_tag["href"]
-                        return None, None
-                    except Exception:
-                        return None, None
-
-                detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_api_details, item) for item in api_items]
-                for i, task in enumerate(asyncio.as_completed(detail_tasks)):
-                    title, link = await task
-                    if title and link:
-                        cleaned = self.cleanup_link(link)
-                        if cleaned:
-                            self.append_to_list(title, cleaned)
-                    self.progress = i + 1
-                return
-
-            # Fallback to home page scraping
-            logger.info("tb API failed or empty, trying home page scraping")
             all_items = []
-            targets = ["https://www.tutorialbar.com/"]
+            targets = ["https://www.tutorialbar.com/blog/"]
             
             if self.enable_headless:
                 async with PlaywrightService(proxy=self.proxy) as pw:
@@ -463,33 +424,53 @@ class TutorialBarScraper(Scraper):
                         content = await pw.get_page_content(target)
                         if content:
                             soup = self.parse_html(content.encode())
+                            # Look for blog post links on the blog page
                             for a in soup.find_all("a", href=True):
                                 href = a["href"]
-                                if "tutorialbar.com" in href and len(href) > 35:
-                                    if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
+                                # Blog posts have long URLs like /blog/best-free-python-courses-for-beginners-2026/
+                                if "/blog/" in href and "tutorialbar.com" in href and len(href) > 35:
+                                    if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/"]):
                                         if href not in all_items:
                                             all_items.append(href)
             else:
                 for target in targets:
-                    resp = await self.http.get(target)
+                    resp = await self.http.get(target, log_failures=False)
                     if resp:
                         soup = self.parse_html(resp.content)
+                        # Look for blog post links on the blog page
                         for a in soup.find_all("a", href=True):
                             href = a["href"]
-                            if "tutorialbar.com" in href and len(href) > 35:
-                                if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
+                            # Blog posts have long URLs like /blog/best-free-python-courses-for-beginners-2026/
+                            if "/blog/" in href and "tutorialbar.com" in href and len(href) > 35:
+                                if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/"]):
                                     if href not in all_items:
                                         all_items.append(href)
 
             self.length = len(all_items)
             self.progress = 0
 
-            async def _fetch_details(url):
+            if not all_items:
+                 logger.warning("tb scraper: No blog posts found on /blog/ page")
+                 return
+
+            async def _fetch_blog_post(url):
                 try:
                     page = await self.http.get(url, attempts=1, log_failures=False)
                     if not page: return None, None
                     soup = self.parse_html(page.content)
-                    title = soup.title.string.split("|")[0].strip() if soup.title else "Untitled"
+                    
+                    # Get title from page heading or meta title
+                    title = None
+                    h1 = soup.find("h1")
+                    if h1:
+                        title = h1.get_text(strip=True).split("|")[0].strip()
+                    if not title and soup.title:
+                        title = soup.title.string.split("|")[0].strip()
+                    
+                    if not title:
+                        title = "Untitled"
+                    
+                    # Look for Udemy course link in the blog post
                     a_tag = soup.find("a", href=lambda h: h and "udemy.com" in h)
                     if a_tag:
                         return title, a_tag["href"]
@@ -497,10 +478,7 @@ class TutorialBarScraper(Scraper):
                 except Exception:
                     return None, None
 
-            if not all_items:
-                 logger.warning("tb scraper found no listing links on home page")
-
-            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_details, url) for url in all_items]
+            detail_tasks = [self._run_detail_task(detail_semaphore, _fetch_blog_post, url) for url in all_items]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
                 if title and link:
