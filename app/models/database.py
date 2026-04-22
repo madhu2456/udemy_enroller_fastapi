@@ -12,8 +12,16 @@ settings = get_settings()
 
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in settings.DATABASE_URL else {},
+    connect_args={
+        "check_same_thread": False,
+        "timeout": 30
+    } if "sqlite" in settings.DATABASE_URL else {},
     pool_pre_ping=True,
+    # Prevent connection pool issues
+    pool_size=5,
+    max_overflow=10,
+    pool_recycle=3600,
+    echo=False,
 )
 
 # Enable WAL mode for SQLite
@@ -24,6 +32,8 @@ if "sqlite" in settings.DATABASE_URL:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=30000")  # 30 second timeout for locks
+        cursor.execute("PRAGMA wal_autocheckpoint=1000")  # Reduce checkpoint frequency
         cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
