@@ -455,28 +455,31 @@ class TutorialBarScraper(Scraper):
             # Fallback to home page scraping
             logger.info("tb API failed or empty, trying home page scraping")
             all_items = []
+            targets = ["https://www.tutorialbar.com/", "https://www.tutorialbar.com/all-courses/"]
             
             if self.enable_headless:
                 async with PlaywrightService(proxy=self.proxy) as pw:
-                    content = await pw.get_page_content("https://www.tutorialbar.com/")
-                    if content:
-                        soup = self.parse_html(content.encode())
+                    for target in targets:
+                        content = await pw.get_page_content(target)
+                        if content:
+                            soup = self.parse_html(content.encode())
+                            for a in soup.find_all("a", href=True):
+                                href = a["href"]
+                                if "tutorialbar.com" in href and len(href) > 35:
+                                    if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
+                                        if href not in all_items:
+                                            all_items.append(href)
+            else:
+                for target in targets:
+                    resp = await self.http.get(target)
+                    if resp:
+                        soup = self.parse_html(resp.content)
                         for a in soup.find_all("a", href=True):
                             href = a["href"]
                             if "tutorialbar.com" in href and len(href) > 35:
                                 if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
                                     if href not in all_items:
                                         all_items.append(href)
-            else:
-                resp = await self.http.get("https://www.tutorialbar.com/")
-                if resp:
-                    soup = self.parse_html(resp.content)
-                    for a in soup.find_all("a", href=True):
-                        href = a["href"]
-                        if "tutorialbar.com" in href and len(href) > 35:
-                            if not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/", "/wp-json/", "/wp-login"]):
-                                if href not in all_items:
-                                    all_items.append(href)
 
             self.length = len(all_items)
             self.progress = 0

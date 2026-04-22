@@ -24,7 +24,8 @@ class AsyncHTTPClient:
     def _get_headers(self, url: str, custom_headers: Optional[Dict] = None, req_type: str = "document") -> Dict[str, str]:
         """Generate randomized headers for each request, respecting existing ones."""
         # Selection of a consistent UA to match Client Hints
-        ua = DEFAULT_USER_AGENT
+        # Using Chrome 120 as a stable, modern target
+        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         if custom_headers and "User-Agent" in custom_headers:
             ua = custom_headers["User-Agent"]
         elif self.client.headers.get("User-Agent"):
@@ -41,7 +42,7 @@ class AsyncHTTPClient:
 
         # Add Client Hints (Crucial for modern bot bypass)
         headers.update({
-            "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+            "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": '"Windows"',
         })
