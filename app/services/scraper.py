@@ -917,7 +917,26 @@ class RedditUdemyFreebiesScraper(Scraper):
                 headers=headers,
                 randomize_headers=False
             )
-            data = await self.http.safe_json(resp, "reddit API")
+            data = None
+            if resp and resp.status_code == 200:
+                data = await self.http.safe_json(resp, "reddit API")
+            
+            if not data and self.enable_headless:
+                logger.info("Reddit API blocked (403), trying Playwright stealth fetch...")
+                async with PlaywrightService(proxy=self.proxy) as pw:
+                    content = await pw.get_page_content("https://www.reddit.com/r/udemyfreebies/new.json?limit=100")
+                    if content:
+                        try:
+                            # Playwright returns raw text, we need to parse it as JSON
+                            import json
+                            # Clean content if it contains HTML (sometimes happens on blocks)
+                            if content.strip().startswith("{"):
+                                data = json.loads(content)
+                            else:
+                                logger.warning("Reddit returned HTML instead of JSON via Playwright")
+                        except Exception as e:
+                            logger.error(f"Failed to parse Reddit JSON from Playwright: {e}")
+
             if not data or "data" not in data or "children" not in data["data"]:
                 return
 

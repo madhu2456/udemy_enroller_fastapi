@@ -95,30 +95,37 @@ class UdemyClient:
                 
                 page = await pw._context.new_page()
                 
-                # We use page.evaluate to make the request from WITHIN the browser environment
-                # This ensures perfect fingerprinting (TLS, headers, etc.)
-                js_script = f"""
-                async () => {{
-                    const response = await fetch("{url}", {{
-                        method: "{method}",
-                        headers: {
-                            "Accept": "application/json, text/plain, */*",
-                            "Content-Type": "application/json",
-                            "X-Requested-With": "XMLHttpRequest",
-                            "X-CSRF-Token": "{self.cookie_dict.get('csrf_token') or self.cookie_dict.get('csrftoken', '')}",
-                            "Sec-Fetch-Site": "same-origin",
-                            "Sec-Fetch-Mode": "cors",
-                            "Sec-Fetch-Dest": "empty"
-                        },
-                        {f'body: JSON.stringify({json.dumps(data)})' if data else ''}
-                    }});
-                    return {{
+                # Construct JS script safely using template replacement instead of f-strings
+                # to avoid "Invalid format specifier" errors caused by colons in headers.
+                headers_json = json.dumps({
+                    "Accept": "application/json, text/plain, */*",
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-Token": self.cookie_dict.get('csrf_token') or self.cookie_dict.get('csrftoken', ''),
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Dest": "empty"
+                })
+                body_json = json.dumps(data) if data else "null"
+                
+                js_template = """
+                async () => {
+                    const response = await fetch("URL_PLACEHOLDER", {
+                        method: "METHOD_PLACEHOLDER",
+                        headers: HEADERS_PLACEHOLDER,
+                        body: BODY_PLACEHOLDER === "null" ? null : JSON.stringify(BODY_PLACEHOLDER)
+                    });
+                    return {
                         status: response.status,
                         content: await response.text(),
                         url: response.url
-                    }};
-                }}
+                    };
+                }
                 """
+                js_script = js_template.replace("URL_PLACEHOLDER", url) \
+                                      .replace("METHOD_PLACEHOLDER", method) \
+                                      .replace("HEADERS_PLACEHOLDER", headers_json) \
+                                      .replace("BODY_PLACEHOLDER", body_json)
                 # Use a lighter page to establish origin for same-origin XHR
                 try:
                     await page.goto(f"{constants.UDEMY_BASE_URL}/robots.txt", wait_until="commit", timeout=15000)
