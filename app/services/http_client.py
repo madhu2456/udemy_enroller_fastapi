@@ -7,13 +7,13 @@ import httpx
 from loguru import logger
 
 USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.1; rv:109.0) Gecko/20100101 Firefox/121.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:124.0) Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 ]
 
 class AsyncHTTPClient:
@@ -29,20 +29,31 @@ class AsyncHTTPClient:
             limits=httpx.Limits(max_connections=40, max_keepalive_connections=20, keepalive_expiry=20.0),
         )
 
-    def _get_headers(self, custom_headers: Optional[Dict] = None) -> Dict[str, str]:
+    def _get_headers(self, custom_headers: Optional[Dict] = None, req_type: str = "document") -> Dict[str, str]:
         """Generate randomized headers for each request, respecting existing ones."""
         headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": random.choice(["en-US,en;q=0.9", "en-GB,en;q=0.8", "en;q=0.7"]),
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
             "DNT": "1",
         }
+
+        if req_type == "document":
+            headers.update({
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+            })
+        else: # api / xhr
+            headers.update({
+                "Accept": "application/json, text/plain, */*",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+            })
         
         # Only add a random User-Agent if one isn't already present in custom_headers or client.headers
         if not custom_headers or "User-Agent" not in custom_headers:
@@ -65,9 +76,10 @@ class AsyncHTTPClient:
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
         randomize = kwargs.pop("randomize_headers", True)
+        req_type = kwargs.pop("req_type", "document")
         
         if randomize:
-            headers = self._get_headers(kwargs.pop("headers", None))
+            headers = self._get_headers(kwargs.pop("headers", None), req_type=req_type)
         else:
             headers = kwargs.pop("headers", None)
         
@@ -92,7 +104,11 @@ class AsyncHTTPClient:
                     logger.debug(f"GET attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}")
                 
                 should_retry = attempt < attempts - 1
-                if isinstance(e, httpx.HTTPStatusError):
+                
+                if isinstance(e, httpx.TooManyRedirects):
+                    # Redirect loops are fatal for the current session/client state
+                    should_retry = False 
+                elif isinstance(e, httpx.HTTPStatusError):
                     status = e.response.status_code
                     if status == 403: # Forbidden often means bot detection, maybe retry with different headers?
                          should_retry = True
@@ -129,9 +145,10 @@ class AsyncHTTPClient:
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
         randomize = kwargs.pop("randomize_headers", True)
+        req_type = kwargs.pop("req_type", "api")
         
         if randomize:
-            headers = self._get_headers(kwargs.pop("headers", None))
+            headers = self._get_headers(kwargs.pop("headers", None), req_type=req_type)
         else:
             headers = kwargs.pop("headers", None)
 

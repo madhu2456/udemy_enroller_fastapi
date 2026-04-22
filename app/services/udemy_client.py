@@ -70,7 +70,8 @@ class UdemyClient:
             r = await self.http.get(
                 constants.UDEMY_SIGNUP_POPUP_URL,
                 headers={"User-Agent": constants.DEFAULT_USER_AGENT},
-                randomize_headers=False
+                randomize_headers=False,
+                req_type="document"
             )
             if not r:
                 raise LoginException("Could not connect to Udemy.")
@@ -95,7 +96,8 @@ class UdemyClient:
 
             resp = await self.http.post(
                 constants.UDEMY_LOGIN_POPUP_URL,
-                data=data
+                data=data,
+                req_type="api"
             )
 
             if resp and "returnUrl" in resp.text:
@@ -128,10 +130,16 @@ class UdemyClient:
         """Fetch session info asynchronously."""
         logger.info("Getting session info")
         try:
+            headers = {"req_type": "api"}
+            if self.cookie_dict.get("access_token"):
+                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+
             resp = await self.http.get(
                 constants.UDEMY_CONTEXT_URL,
                 cookies=self.cookie_dict,
-                randomize_headers=False
+                headers=headers,
+                randomize_headers=True,
+                req_type="api"
             )
             ctx = await self.http.safe_json(resp, "session info")
             if not ctx or not ctx.get("header", {}).get("isLoggedIn"):
@@ -143,7 +151,9 @@ class UdemyClient:
             cart_resp = await self.http.get(
                 constants.UDEMY_CART_URL,
                 cookies=self.cookie_dict,
-                randomize_headers=False
+                headers=headers,
+                randomize_headers=True,
+                req_type="api"
             )
             cart = await self.http.safe_json(cart_resp, "cart info")
             if cart:
@@ -167,9 +177,13 @@ class UdemyClient:
         known_slugs = known_slugs or set()
         stop_fetching = False
 
+        common_headers = {}
+        if self.cookie_dict.get("access_token"):
+            common_headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+
         while next_page and page_num < 50 and not stop_fetching:
             page_num += 1
-            resp = await self.http.get(next_page, cookies=self.cookie_dict)
+            resp = await self.http.get(next_page, cookies=self.cookie_dict, headers=common_headers, req_type="api")
             data = await self.http.safe_json(resp, f"enrolled courses page {page_num}")
             if not data:
                 break
@@ -398,6 +412,9 @@ class UdemyClient:
         return 0
 
     async def _checkout_one(self, course: Course, headers: dict) -> bool:
+        if self.cookie_dict.get("access_token"):
+            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+
         payload = {
             "checkout_environment": "Marketplace",
             "checkout_event": "Submit",
@@ -413,7 +430,7 @@ class UdemyClient:
         }
         
         for attempt in range(3):
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=False)
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="api")
             if not resp:
                 continue
             
@@ -421,7 +438,7 @@ class UdemyClient:
             if resp.status_code == 403:
                 logger.warning(f"403 Forbidden on checkout for {course.title}. Possible CSRF/Session issue.")
                 # Try to refresh CSRF for next attempt
-                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
+                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=True)
                 headers["X-CSRF-Token"] = self.http.client.cookies.get("csrftoken", "")
                 continue
 
@@ -448,7 +465,7 @@ class UdemyClient:
         
         csrf_token = self.http.client.cookies.get("csrftoken", "")
         if not csrf_token:
-             await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
+             await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=True)
              csrf_token = self.http.client.cookies.get("csrftoken", "")
 
         headers = {
@@ -457,6 +474,8 @@ class UdemyClient:
             "Referer": constants.UDEMY_CHECKOUT_URL,
             "X-CSRF-Token": csrf_token,
         }
+        if self.cookie_dict.get("access_token"):
+            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
         
         remaining = list(courses)
         for attempt in range(len(courses) + 2):
@@ -475,13 +494,13 @@ class UdemyClient:
                 "shopping_info": {"items": items, "is_cart": True},
             }
             
-            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=False)
+            resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="api")
             if not resp:
                 continue
                 
             # Handle 403
             if resp.status_code == 403:
-                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
+                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=True)
                 headers["X-CSRF-Token"] = self.http.client.cookies.get("csrftoken", "")
                 continue
 
