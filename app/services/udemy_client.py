@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import asyncio
+import random
 from datetime import UTC, datetime
 from decimal import Decimal
 from urllib.parse import unquote
@@ -16,6 +17,9 @@ from loguru import logger
 from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient
 from app.core import constants
+
+# Known false-positive IDs from Udemy (e.g. tracking/user IDs appearing on blocked pages)
+BLACKLIST_IDS = {"562413829"}
 
 
 class LoginException(Exception):

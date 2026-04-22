@@ -72,6 +72,7 @@ class Course:
         self.coupon_code = params.get("couponCode", [None])[0]
 
     def set_metadata(self, dma):
+        from app.services.udemy_client import BLACKLIST_IDS
         try:
             if dma.get("view_restriction"):
                 self.is_valid = False
@@ -81,7 +82,7 @@ class Course:
             # Check for course ID in DMA if we don't have it
             if not self.course_id:
                 cid = dma.get("serverSideProps", {}).get("course", {}).get("id")
-                if cid:
+                if cid and str(cid) not in BLACKLIST_IDS:
                     self.course_id = str(cid)
 
             course_data = dma.get("serverSideProps", {}).get("course", {})
