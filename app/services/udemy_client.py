@@ -116,8 +116,12 @@ class UdemyClient:
                     }};
                 }}
                 """
-                # First navigate to udemy to ensure same-origin for XHR
-                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="domcontentloaded", timeout=30000)
+                # Use a lighter page to establish origin for same-origin XHR
+                try:
+                    await page.goto(f"{constants.UDEMY_BASE_URL}/robots.txt", wait_until="commit", timeout=15000)
+                except Exception as e:
+                    logger.debug(f"Playwright initial navigation to robots.txt timed out or failed: {e}")
+                    # Continue anyway, as evaluate might still work if we managed to reach the origin
                 
                 result = await page.evaluate(js_script)
                 await page.close()
@@ -127,7 +131,7 @@ class UdemyClient:
                     mock_resp = httpx.Response(
                         status_code=result['status'],
                         content=result['content'].encode(),
-                        request=httpx.Request(method, url)
+                        request=httpx.Request(method, result.get('url', url))
                     )
                     return mock_resp
                 return None
@@ -365,6 +369,10 @@ class UdemyClient:
                 cid = fc_data["extract"].get("course_id")
                 if cid and str(cid) not in BLACKLIST_IDS:
                     course.course_id = str(cid)
+                    # Update URL if possible to get final redirect with coupon
+                    final_url = fc_data.get("metadata", {}).get("pageUrl")
+                    if final_url and "udemy.com" in final_url:
+                        course.set_url(final_url)
                     logger.debug(f"  Success: Found ID {course.course_id} via Firecrawl")
                     return
 
@@ -373,6 +381,7 @@ class UdemyClient:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
             resp = await self._playwright_request(url, req_type="document")
             if resp and resp.status_code == 200:
+                course.set_url(str(resp.url))
                 soup = bs(resp.content, "lxml")
                 body = soup.find("body")
                 if body:
@@ -461,11 +470,13 @@ class UdemyClient:
                     pricing = purchase_data.get("pricing_result", {})
                     discount = pricing.get("discount_percent")
                     
-                    if status == "applied" and discount == 100:
+                    # 'unused' often means the coupon is valid but the request was just a check.
+                    # We accept it if the discount is 100%.
+                    if (status == "applied" or status == "unused") and discount == 100:
                         course.is_coupon_valid = True
                     else:
                         course.is_coupon_valid = False
-                        if status != "applied":
+                        if status not in ("applied", "unused"):
                             course.error = f"Coupon status: {status}"
                         elif discount != 100:
                             course.error = f"Coupon only {discount}% off (not 100%)"
