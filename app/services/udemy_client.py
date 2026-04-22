@@ -67,8 +67,6 @@ class UdemyClient:
                 payload["params"] = {"extract": {"schema": schema}}
                 
             if use_cookies and self.cookie_dict:
-                # Firecrawl expects cookies in header or specific param depending on version, 
-                # we'll pass them as a Cookie header in the request context
                 cookie_str = "; ".join([f"{k}={v}" for k, v in self.cookie_dict.items()])
                 payload["pageOptions"] = {"headers": {"Cookie": cookie_str}}
 
@@ -87,7 +85,6 @@ class UdemyClient:
         from app.services.playwright_service import PlaywrightService
         try:
             async with PlaywrightService(proxy=self.http.proxy) as pw:
-                # Add our session cookies to the browser context
                 cookies = []
                 for k, v in self.cookie_dict.items():
                     cookies.append({"name": k, "value": v, "url": "https://www.udemy.com"})
@@ -95,8 +92,6 @@ class UdemyClient:
                 
                 page = await pw._context.new_page()
                 
-                # Construct JS script safely using template replacement instead of f-strings
-                # to avoid "Invalid format specifier" errors caused by colons in headers.
                 headers_dict = {
                     "Accept": "application/json, text/plain, */*",
                     "Content-Type": "application/json",
@@ -117,40 +112,48 @@ class UdemyClient:
                 
                 js_template = """
                 async () => {
-                    const options = {
-                        method: "METHOD_PLACEHOLDER",
-                        headers: HEADERS_PLACEHOLDER,
-                        credentials: "include"
-                    };
-                    const bodyData = BODY_PLACEHOLDER;
-                    if (bodyData !== "null" && bodyData !== null) {
-                        options.body = JSON.stringify(bodyData);
+                    try {
+                        const options = {
+                            method: "METHOD_PLACEHOLDER",
+                            headers: HEADERS_PLACEHOLDER,
+                            credentials: "include"
+                        };
+                        const bodyData = BODY_PLACEHOLDER;
+                        if (bodyData !== "null" && bodyData !== null) {
+                            options.body = JSON.stringify(bodyData);
+                        }
+                        
+                        const response = await fetch("URL_PLACEHOLDER", options);
+                        return {
+                            status: response.status,
+                            content: await response.text(),
+                            url: response.url
+                        };
+                    } catch (e) {
+                        return { status: 0, content: e.message, url: "" };
                     }
-                    
-                    const response = await fetch("URL_PLACEHOLDER", options);
-                    return {
-                        status: response.status,
-                        content: await response.text(),
-                        url: response.url
-                    };
                 }
                 """
                 js_script = js_template.replace("URL_PLACEHOLDER", url) \
                                       .replace("METHOD_PLACEHOLDER", method) \
                                       .replace("HEADERS_PLACEHOLDER", headers_json) \
                                       .replace("BODY_PLACEHOLDER", body_json)
-                # Use a lighter page to establish origin for same-origin XHR
                 try:
-                    await page.goto(f"{constants.UDEMY_BASE_URL}/robots.txt", wait_until="commit", timeout=15000)
+                    await page.goto(f"{constants.UDEMY_BASE_URL}/robots.txt", wait_until="domcontentloaded", timeout=15000)
                 except Exception as e:
-                    logger.debug(f"Playwright initial navigation to robots.txt timed out or failed: {e}")
-                    # Continue anyway, as evaluate might still work if we managed to reach the origin
+                    logger.debug(f"Playwright navigation to robots.txt timed out: {e}")
                 
                 result = await page.evaluate(js_script)
                 await page.close()
                 
                 if result:
-                    # Mock an httpx-like response object
+                    if result['status'] == 0:
+                        logger.error(f"Playwright fetch error for {url}: {result['content']}")
+                        return None
+                    
+                    if result['status'] != 200:
+                        logger.debug(f"  Playwright request to {url} returned status {result['status']}")
+
                     mock_resp = httpx.Response(
                         status_code=result['status'],
                         content=result['content'].encode(),
@@ -168,7 +171,6 @@ class UdemyClient:
     def set_proxy(self, proxy: Optional[str]):
         """Update the proxy configuration."""
         if self.http.proxy != proxy:
-            # Re-initialize the AsyncHTTPClient with new proxy
             old_headers = self.http.client.headers
             old_cookies = self.http.client.cookies
             asyncio.create_task(self.http.close())
@@ -177,20 +179,18 @@ class UdemyClient:
             self.http.client.cookies.update(old_cookies)
 
     async def _refresh_csrf_stealth(self):
-        """Refresh CSRF token using Playwright when HTTPX is blocked."""
+        """Refresh CSRF token and all session cookies using Playwright."""
         from app.services.playwright_service import PlaywrightService
-        logger.info("Stealth: Refreshing CSRF token via Playwright...")
+        logger.info("Stealth: Refreshing CSRF token and cookies via Playwright...")
         try:
             async with PlaywrightService(proxy=self.http.proxy) as pw:
                 page = await pw._context.new_page()
-                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="domcontentloaded", timeout=30000)
+                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="networkidle", timeout=30000)
                 cookies = await pw._context.cookies()
                 for c in cookies:
+                    self.http.client.cookies.set(c['name'], c['value'])
+                    self.cookie_dict[c['name']] = c['value']
                     if c['name'] in ('csrftoken', 'csrf_token'):
-                        token = c['value']
-                        self.http.client.cookies.set(c['name'], token)
-                        if 'csrf_token' in self.cookie_dict: self.cookie_dict['csrf_token'] = token
-                        if 'csrftoken' in self.cookie_dict: self.cookie_dict['csrftoken'] = token
                         logger.debug(f"  Success: Refreshed {c['name']} via Playwright")
                 await page.close()
         except Exception as e:
@@ -220,7 +220,6 @@ class UdemyClient:
                 "password": password,
             }
 
-            # POST for login
             self.http.client.cookies.update(r.cookies)
             self.http.client.headers.update({
                 "Referer": constants.UDEMY_LOGIN_POPUP_URL,
@@ -280,7 +279,6 @@ class UdemyClient:
 
             self.display_name = ctx["header"]["user"]["display_name"]
 
-            # Get currency
             cart_resp = await self.http.get(
                 constants.UDEMY_CART_URL,
                 cookies=self.cookie_dict,
@@ -311,7 +309,6 @@ class UdemyClient:
         if self.cookie_dict.get("access_token"):
             common_headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
-        # Fetch first page to get total count or next links
         resp = await self.http.get(base_url, cookies=self.cookie_dict, headers=common_headers, req_type="api")
         data = await self.http.safe_json(resp, "enrolled courses page 1")
         if not data:
@@ -334,7 +331,6 @@ class UdemyClient:
             logger.info(f"Fetched 1 page of enrolled courses (Reached known courses).")
             return
 
-        # Fetch remaining pages in batches of 5
         batch_size = 5
         for start_page in range(2, 51, batch_size):
             tasks = []
@@ -357,7 +353,6 @@ class UdemyClient:
                 logger.info(f"Reached known courses or end of list at batch starting page {start_page}.")
                 break
 
-        # Merge with known_slugs
         for slug in known_slugs:
             if slug not in self.enrolled_courses:
                 self.enrolled_courses[slug] = ""
@@ -365,10 +360,8 @@ class UdemyClient:
 
     def _extract_course_id(self, soup: bs) -> Optional[str]:
         """Extract course ID using multiple strategies."""
-        # Known false positives to ignore
         BLACKLIST_IDS = {"562413829"}
 
-        # Strategy 1: Traditional data attributes on body
         body = soup.find("body")
         if body:
             cid = body.get("data-clp-course-id") or body.get("data-course-id")
@@ -376,7 +369,6 @@ class UdemyClient:
                 logger.debug(f"Found course ID {cid} via body data-attribute")
                 return str(cid)
 
-        # Strategy 2: Meta tags
         meta_tags = [
             ("meta", {"property": "udemy_com:course"}),
             ("meta", {"name": "course-id"}),
@@ -391,13 +383,11 @@ class UdemyClient:
                         logger.debug(f"Found course ID {content} via meta tag {tag}")
                         return str(content)
 
-        # Strategy 3: Script tags
         scripts = soup.find_all("script")
         for script in scripts:
             if not script.string:
                 continue
             
-            # Refined patterns: search for ID within course objects
             patterns = [
                 (r'["\']?course["\']?\s*:\s*{\s*["\']?id["\']?\s*[:=]\s*(\d+)', "script course object id"),
                 (r'["\']?visiting_course["\']?\s*:\s*{\s*["\']?id["\']?\s*[:=]\s*(\d+)', "script visiting_course object id"),
@@ -420,7 +410,6 @@ class UdemyClient:
             return
         url = re.sub(r"\W+$", "", unquote(course.url))
         
-        # 1. Firecrawl First (Stealthiest)
         if self.firecrawl_api_key:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Firecrawl...")
             fc_schema = {"type": "object", "properties": {"course_id": {"type": "string"}, "title": {"type": "string"}}}
@@ -429,7 +418,6 @@ class UdemyClient:
                 cid = fc_data["extract"].get("course_id")
                 if cid and str(cid) not in BLACKLIST_IDS:
                     course.course_id = str(cid)
-                    # Update URL if possible to get final redirect with coupon
                     final_url = fc_data.get("metadata", {}).get("pageUrl")
                     if final_url and "udemy.com" in final_url:
                         logger.debug(f"  Firecrawl redirected to: {final_url}")
@@ -441,7 +429,6 @@ class UdemyClient:
                     else:
                         logger.debug(f"  Firecrawl found ID {course.course_id} but no coupon. Continuing to fallback...")
 
-        # 2. Playwright Fallback
         if use_headless_fallback:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
             resp = await self._playwright_request(url, req_type="document")
@@ -465,7 +452,6 @@ class UdemyClient:
                         logger.debug(f"  Success: Found ID {course.course_id} via Playwright (still no coupon)")
                     return
 
-        # 3. Standard Request
         logger.info(f"Standard: Fetching course ID for {course.title}...")
         resp = await self.http.get(url, log_failures=False, raise_for_status=False)
         if resp and resp.status_code == 200:
@@ -484,7 +470,6 @@ class UdemyClient:
             if course.course_id:
                 return
 
-        # Final failure state
         if not course.course_id:
             course.is_valid = False
             if resp and resp.status_code == 200:
@@ -503,7 +488,6 @@ class UdemyClient:
             url += f",redeem_coupon&couponCode={course.coupon_code}"
 
         r = None
-        # 1. Firecrawl First
         if self.firecrawl_api_key:
             logger.info(f"Stealth: Checking coupon for {course.title} via Firecrawl...")
             fc_data = await self._firecrawl_scrape(url)
@@ -512,14 +496,12 @@ class UdemyClient:
                     r = json.loads(fc_data["content"])
                 except Exception: pass
 
-        # 2. Playwright Fallback
         if not r:
             logger.info(f"Stealth: Checking coupon for {course.title} via Playwright...")
             resp = await self._playwright_request(url)
             if resp and resp.status_code == 200:
                 r = await self.http.safe_json(resp, "playwright check course")
 
-        # 3. Standard Request
         if not r:
             logger.info(f"Standard: Checking coupon for {course.title}...")
             resp = await self.http.get(url, cookies=self.cookie_dict)
@@ -542,8 +524,6 @@ class UdemyClient:
                     pricing = purchase_data.get("pricing_result", {})
                     discount = pricing.get("discount_percent")
                     
-                    # 'unused' often means the coupon is valid but the request was just a check.
-                    # We accept it if the discount is 100%.
                     if (status == "applied" or status == "unused") and discount == 100:
                         course.is_coupon_valid = True
                     else:
@@ -559,7 +539,6 @@ class UdemyClient:
                 course.is_coupon_valid = False
                 course.error = "Coupon not found in response"
         else:
-            # Paid course without coupon code
             course.is_coupon_valid = False
             course.error = "No coupon code provided"
 
@@ -569,8 +548,6 @@ class UdemyClient:
         return course.slug in self.enrolled_courses
 
     def is_course_excluded(self, course: Course, settings: dict):
-        """Check if course should be excluded based on settings."""
-        # DISABLED: User requested to never exclude any course.
         return
 
     async def free_checkout(self, course: Course):
@@ -578,9 +555,10 @@ class UdemyClient:
         sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
         status_url = f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private"
         
+        csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
+        
         logger.info(f"Stealth: Enrolling in free course {course.title} via Playwright...")
-        # 1. Stealth First: Playwright
-        resp = await self._playwright_request(sub_url)
+        resp = await self._playwright_request(sub_url, method="POST")
         if resp and resp.status_code == 200:
             check_resp = await self._playwright_request(status_url)
             if check_resp and check_resp.status_code == 200:
@@ -590,33 +568,41 @@ class UdemyClient:
                     logger.debug(f"  Success: Enrolled in {course.title} via Playwright")
                     return
 
-        # 2. Standard Fallback
         logger.info(f"Standard: Enrolling in free course {course.title}...")
-        await self.http.get(sub_url, cookies=self.cookie_dict, req_type="api")
-        resp = await self.http.get(status_url, cookies=self.cookie_dict, req_type="api")
+        headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
+        await self.http.post(sub_url, cookies=self.cookie_dict, headers=headers, req_type="api", log_failures=False)
+        
+        resp = await self.http.get(status_url, cookies=self.cookie_dict, req_type="api", log_failures=False)
         if resp and resp.status_code == 200:
             data = await self.http.safe_json(resp, "standard free checkout check")
             course.status = data.get("_class") == "course" if data else False
-        else:
-            course.status = False
+            if course.status:
+                return
+
+        logger.info(f"Fallback: Using checkout pipeline for free course {course.title}...")
+        course.status = await self.checkout_single(course)
 
     async def checkout_single(self, course: Course) -> bool:
         """Asynchronously enroll in a single course with a coupon."""
-        csrf_token = self.http.client.cookies.get("csrftoken")
-        if not csrf_token:
-             # Try to get a fresh CSRF token if missing
-             logger.debug("CSRF token missing for checkout, attempting to refresh...")
-             await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=False)
-             csrf_token = self.http.client.cookies.get("csrftoken", "")
+        for attempt in range(2):
+            csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
+            if not csrf_token:
+                 await self._refresh_csrf_stealth()
+                 csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
 
-        headers = {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": constants.UDEMY_CHECKOUT_URL,
-            "X-CSRF-Token": csrf_token,
-        }
-        result = await self._checkout_one(course, headers)
-        return result
+            headers = {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": constants.UDEMY_CHECKOUT_URL,
+                "X-CSRF-Token": csrf_token,
+            }
+            if self.cookie_dict.get("access_token"):
+                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+
+            result = await self._checkout_one(course, headers)
+            if result: return True
+            await self._refresh_csrf_stealth()
+        return False
 
     @staticmethod
     def _title_overlap(a: str, b: str) -> float:
@@ -637,9 +623,6 @@ class UdemyClient:
 
     async def _checkout_one(self, course: Course, headers: dict) -> bool:
         """Enroll with coupon via Playwright-first stealth chain (POST required)."""
-        if self.cookie_dict.get("access_token"):
-            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
-
         payload = {
             "checkout_environment": "Marketplace",
             "checkout_event": "Submit",
@@ -654,8 +637,10 @@ class UdemyClient:
             },
         }
         
-        # Playwright is our primary stealth method for checkout POST.
         for attempt in range(3):
+            csrf = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
+            headers["X-CSRF-Token"] = csrf
+
             logger.info(f"Stealth: Executing checkout for {course.title} via Playwright...")
             resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
             
@@ -666,16 +651,12 @@ class UdemyClient:
             if not resp:
                 continue
             
-            # If 403, we might need a fresh CSRF token
             if resp.status_code == 403:
-                logger.warning(f"403 Forbidden on checkout for {course.title}. Possible CSRF/Session issue.")
-                # Try to refresh CSRF for next attempt
-                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=True)
-                headers["X-CSRF-Token"] = self.http.client.cookies.get("csrftoken", "")
+                logger.warning(f"403 Forbidden on checkout for {course.title}. Refreshing session...")
+                await self._refresh_csrf_stealth()
                 continue
 
             result = await self.http.safe_json(resp, "checkout one")
-            
             if result and result.get("status") == "succeeded":
                 self.amount_saved_c += Decimal(str(course.price or 0))
                 self.successfully_enrolled_c += 1
@@ -695,32 +676,26 @@ class UdemyClient:
         outcomes: Dict[Course, str] = {c: "failed" for c in courses}
         if not courses: return outcomes
         
-        csrf_token = self.http.client.cookies.get("csrftoken", "")
-        if not csrf_token:
-             # Try HTTPX first
-             await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=True, attempts=2)
-             csrf_token = self.http.client.cookies.get("csrftoken", "")
-             
-             if not csrf_token:
-                 # Stealth fallback
-                 await self._refresh_csrf_stealth()
-                 csrf_token = self.http.client.cookies.get("csrftoken", "")
-
-        headers = {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://www.udemy.com/payment/checkout/",
-            "X-CSRF-Token": csrf_token,
-        }
-        if self.cookie_dict.get("access_token"):
-            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
-        
         remaining = list(courses)
         for attempt in range(len(courses) + 2):
             if not remaining: break
             
             if attempt > 0:
                 await asyncio.sleep(random.uniform(1.0, 3.0))
+
+            csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
+            if not csrf_token:
+                 await self._refresh_csrf_stealth()
+                 csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
+
+            headers = {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": "https://www.udemy.com/payment/checkout/",
+                "X-CSRF-Token": csrf_token,
+            }
+            if self.cookie_dict.get("access_token"):
+                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
             items = [{
                 "buyable": {"id": str(c.course_id), "type": "course"},
@@ -745,10 +720,9 @@ class UdemyClient:
             if not resp:
                 continue
                 
-            # Handle 403
             if resp.status_code == 403:
-                await self.http.get(constants.UDEMY_BASE_URL, randomize_headers=True)
-                headers["X-CSRF-Token"] = self.http.client.cookies.get("csrftoken", "")
+                logger.warning("Bulk checkout hit 403 Forbidden. Refreshing session...")
+                await self._refresh_csrf_stealth()
                 continue
 
             result = await self.http.safe_json(resp, "bulk checkout")
@@ -762,7 +736,6 @@ class UdemyClient:
                     outcomes[c] = "enrolled"
                 break
             
-            # Handle "already enrolled" by finding the offender
             msg = result.get("message", "") if result else ""
             developer_message = (result or {}).get("developer_message", "")
             if "item_already_subscribed" in str(developer_message):
@@ -783,7 +756,6 @@ class UdemyClient:
                     outcomes[offender] = "already_enrolled"
                     continue
                 
-                # If we can't find it, fall back to single
                 for c in remaining:
                     success = await self.checkout_single(c)
                     outcomes[c] = "enrolled" if success else "failed"
