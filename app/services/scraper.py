@@ -895,9 +895,9 @@ class RedditUdemyFreebiesScraper(Scraper):
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             import time
-            # Reddit blocks simple bots, use a real browser UA
+            # Reddit explicitly blocks common browser UAs for JSON API requests
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "User-Agent": "UdemyEnrollerBot/1.0",
                 "Accept": "application/json",
             }
             
@@ -912,8 +912,7 @@ class RedditUdemyFreebiesScraper(Scraper):
             resp = await self.http.get(
                 "https://www.reddit.com/r/udemyfreebies/new.json?limit=100", 
                 headers=headers,
-                randomize_headers=False,
-                req_type="api"
+                randomize_headers=False
             )
             data = await self.http.safe_json(resp, "reddit API")
             if not data or "data" not in data or "children" not in data["data"]:
