@@ -6,15 +6,7 @@ from typing import Optional, Dict, Any, Union, List
 import httpx
 from loguru import logger
 
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:124.0) Gecko/20100101 Firefox/124.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-]
+from app.core.constants import DEFAULT_USER_AGENT
 
 class AsyncHTTPClient:
     """Wraps httpx.AsyncClient with retries, timeout management, and anti-ban features."""
@@ -32,7 +24,7 @@ class AsyncHTTPClient:
     def _get_headers(self, custom_headers: Optional[Dict] = None, req_type: str = "document") -> Dict[str, str]:
         """Generate randomized headers for each request, respecting existing ones."""
         # Selection of a consistent UA to match Client Hints
-        ua = random.choice(USER_AGENTS)
+        ua = DEFAULT_USER_AGENT
         if custom_headers and "User-Agent" in custom_headers:
             ua = custom_headers["User-Agent"]
         elif self.client.headers.get("User-Agent"):
@@ -144,8 +136,7 @@ class AsyncHTTPClient:
                     
                     # If we got a 403, maybe try to change the User-Agent if we were randomizing
                     if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 403 and randomize:
-                        if headers and "User-Agent" in headers:
-                             headers["User-Agent"] = random.choice(USER_AGENTS)
+                        pass # Kept consistent UA to match Client Hints
 
                     await asyncio.sleep(delay)
                 else:
@@ -205,8 +196,7 @@ class AsyncHTTPClient:
                         delay = int(retry_after) if retry_after and retry_after.isdigit() else 30
                     
                     if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 403 and randomize:
-                        if headers and "User-Agent" in headers:
-                             headers["User-Agent"] = random.choice(USER_AGENTS)
+                        pass # Kept consistent UA to match Client Hints
 
                     await asyncio.sleep(delay)
                 else:
