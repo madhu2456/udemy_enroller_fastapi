@@ -895,9 +895,9 @@ class RedditUdemyFreebiesScraper(Scraper):
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             import time
-            # Reddit explicitly blocks common browser UAs for JSON API requests
+            # Reddit explicitly blocks common bot UAs. Use a standard browser UA.
             headers = {
-                "User-Agent": "UdemyEnrollerBot/1.0",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "application/json",
             }
             

@@ -41,6 +41,7 @@ class Course:
     def set_url(self, url: str):
         self.url = self.normalize_link(url)
         self.set_slug()
+        self.extract_coupon_code()
 
     @staticmethod
     def normalize_link(url: str) -> str:
@@ -69,7 +70,9 @@ class Course:
 
     def extract_coupon_code(self):
         params = parse_qs(urlsplit(self.url).query)
-        self.coupon_code = params.get("couponCode", [None])[0]
+        coupon = params.get("couponCode", [None])[0]
+        if coupon:
+            self.coupon_code = coupon
 
     def set_metadata(self, dma):
         from app.services.udemy_client import BLACKLIST_IDS
