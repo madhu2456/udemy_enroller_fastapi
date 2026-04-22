@@ -455,7 +455,7 @@ class TutorialBarScraper(Scraper):
             # Fallback to home page scraping
             logger.info("tb API failed or empty, trying home page scraping")
             all_items = []
-            targets = ["https://www.tutorialbar.com/", "https://www.tutorialbar.com/all-courses/"]
+            targets = ["https://www.tutorialbar.com/"]
             
             if self.enable_headless:
                 async with PlaywrightService(proxy=self.proxy) as pw:

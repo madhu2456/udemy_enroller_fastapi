@@ -92,6 +92,7 @@ class AsyncHTTPClient:
         log_failures = kwargs.pop("log_failures", True)
         randomize = kwargs.pop("randomize_headers", True)
         req_type = kwargs.pop("req_type", "document")
+        retry_403 = kwargs.pop("retry_403", False)
         
         if randomize:
             headers = self._get_headers(url, kwargs.pop("headers", None), req_type=req_type)
@@ -125,8 +126,8 @@ class AsyncHTTPClient:
                     should_retry = False 
                 elif isinstance(e, httpx.HTTPStatusError):
                     status = e.response.status_code
-                    if status == 403: # Forbidden often means bot detection, maybe retry with different headers?
-                         should_retry = True
+                    if status == 403:
+                        should_retry = retry_403 and should_retry
                     elif status != 429 and status < 500:
                         should_retry = False
                 
@@ -160,6 +161,7 @@ class AsyncHTTPClient:
         log_failures = kwargs.pop("log_failures", True)
         randomize = kwargs.pop("randomize_headers", True)
         req_type = kwargs.pop("req_type", "api")
+        retry_403 = kwargs.pop("retry_403", False)
         
         if randomize:
             headers = self._get_headers(url, kwargs.pop("headers", None), req_type=req_type)
@@ -188,8 +190,8 @@ class AsyncHTTPClient:
                 should_retry = attempt < attempts - 1
                 if isinstance(e, httpx.HTTPStatusError):
                     status = e.response.status_code
-                    if status == 403: 
-                        should_retry = True
+                    if status == 403:
+                        should_retry = retry_403 and should_retry
                     elif status != 429 and status < 500:
                         should_retry = False
                 
