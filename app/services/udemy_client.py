@@ -97,7 +97,7 @@ class UdemyClient:
                 
                 # Construct JS script safely using template replacement instead of f-strings
                 # to avoid "Invalid format specifier" errors caused by colons in headers.
-                headers_json = json.dumps({
+                headers_dict = {
                     "Accept": "application/json, text/plain, */*",
                     "Content-Type": "application/json",
                     "X-Requested-With": "XMLHttpRequest",
@@ -105,14 +105,22 @@ class UdemyClient:
                     "Sec-Fetch-Site": "same-origin",
                     "Sec-Fetch-Mode": "cors",
                     "Sec-Fetch-Dest": "empty"
-                })
+                }
+                if method == "POST":
+                    headers_dict.update({
+                        "Origin": constants.UDEMY_BASE_URL,
+                        "Referer": f"{constants.UDEMY_BASE_URL}/payment/checkout/"
+                    })
+                
+                headers_json = json.dumps(headers_dict)
                 body_json = json.dumps(data) if data else "null"
                 
                 js_template = """
                 async () => {
                     const options = {
                         method: "METHOD_PLACEHOLDER",
-                        headers: HEADERS_PLACEHOLDER
+                        headers: HEADERS_PLACEHOLDER,
+                        credentials: "include"
                     };
                     const bodyData = BODY_PLACEHOLDER;
                     if (bodyData !== "null" && bodyData !== null) {
