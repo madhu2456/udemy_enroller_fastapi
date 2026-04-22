@@ -118,6 +118,22 @@
         </div>
     </div>
 
+    <!-- Danger Zone -->
+    <div class="bg-red-900/20 rounded-xl p-6 border border-red-900/50 mb-6">
+        <h2 class="text-lg font-semibold text-red-400 mb-2">
+            <i class="fas fa-exclamation-triangle mr-2"></i>Danger Zone
+        </h2>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-gray-300 font-medium">Clear All Enrollment Data</p>
+                <p class="text-xs text-gray-500">This will permanently delete all enrollment history, runs, and reset your lifetime statistics. This action cannot be undone.</p>
+            </div>
+            <button onclick="clearAllData()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0">
+                <i class="fas fa-trash-alt mr-2"></i>Clear All Data
+            </button>
+        </div>
+    </div>
+
     <div id="settings-message" class="text-center text-sm hidden mb-4"></div>
 </div>
 {% endblock %}
@@ -297,6 +313,24 @@ async function resetSettings() {
             showMsg('Settings reset to defaults', 'blue');
         }
     } catch(e) { showMsg('Reset failed', 'red'); }
+}
+
+async function clearAllData() {
+    if (!confirm('Are you absolutely sure you want to delete ALL enrollment history and statistics? This cannot be undone.')) return;
+    if (!confirm('REALLY? This will wipe your history and reset all counters to zero.')) return;
+    
+    try {
+        const r = await fetch('/api/settings/clear-data', { method: 'POST' });
+        const data = await r.json();
+        if (r.ok) {
+            alert('All data has been cleared successfully.');
+            window.location.reload();
+        } else {
+            showMsg(data.detail || 'Failed to clear data', 'red');
+        }
+    } catch(e) { 
+        showMsg('Network error while clearing data', 'red');
+    }
 }
 
 function showMsg(msg, color) {

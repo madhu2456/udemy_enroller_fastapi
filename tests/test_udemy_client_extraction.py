@@ -79,6 +79,7 @@ class TestGetCourseIDFlow:
         </body>
         """
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.content = mock_html
         mock_resp.url = "https://udemy.com/course/test/"
         
@@ -98,6 +99,7 @@ class TestGetCourseIDFlow:
         </body></html>
         """
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.content = mock_html
         mock_resp.url = "https://udemy.com/course/test/"
         
@@ -113,6 +115,7 @@ class TestGetCourseIDFlow:
         # Mock response content with nothing
         mock_html = "<html><body>No ID here</body></html>"
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.content = mock_html
         mock_resp.url = "https://udemy.com/course/test/"
         

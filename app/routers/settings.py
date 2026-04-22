@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from loguru import logger
 
-from app.models.database import get_db, UserSettings
+from app.models.database import get_db, UserSettings, User, EnrollmentRun, EnrolledCourse
 from app.deps import get_current_user_id
 from app.rate_limit_config import maybe_limit
 from app.schemas.schemas import SettingsUpdate, SettingsResponse
 from app.security import validate_proxy_url
 from config.settings import get_settings as get_app_settings
 from app.core.cache import clear_user_caches
+from sqlalchemy import delete, update
 
 router = APIRouter(prefix="/api/settings", tags=["Settings"])
 app_settings = get_app_settings()
@@ -124,3 +125,58 @@ async def reset_settings(
     clear_user_caches(user_id)
     
     return {"status": "success", "message": "Settings reset to defaults"}
+
+
+@router.post("/clear-data")
+@maybe_limit(app_settings.RATE_LIMIT_API)
+async def clear_data(
+    request: Request,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """Delete all enrollment runs and course data for the user, and reset lifetime stats."""
+    # Check for active run
+    active_run = db.query(EnrollmentRun).filter(
+        EnrollmentRun.user_id == user_id,
+        EnrollmentRun.status.in_(["pending", "scraping", "enrolling"])
+    ).first()
+    
+    if active_run:
+        raise HTTPException(status_code=400, detail="Cannot clear data while an enrollment run is active")
+
+    try:
+        # 1. Delete all enrolled courses associated with the user's runs
+        # Use a join to find courses belonging to the user
+        course_ids_to_delete = db.query(EnrolledCourse.id).join(EnrollmentRun).filter(EnrollmentRun.user_id == user_id).all()
+        course_ids = [c[0] for c in course_ids_to_delete]
+        
+        if course_ids:
+            db.execute(delete(EnrolledCourse).where(EnrolledCourse.id.in_(course_ids)))
+
+        # 2. Delete all enrollment runs
+        db.execute(delete(EnrollmentRun).where(EnrollmentRun.user_id == user_id))
+
+        # 3. Reset user lifetime stats
+        db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(
+                total_enrolled=0,
+                total_already_enrolled=0,
+                total_expired=0,
+                total_excluded=0,
+                total_amount_saved=0.0
+            )
+        )
+
+        db.commit()
+        logger.info(f"All data cleared and stats reset for user {user_id}")
+        
+        # Clear cache to ensure UI stats are refreshed
+        clear_user_caches(user_id)
+        
+        return {"status": "success", "message": "All enrollment history and statistics have been cleared"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to clear data for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to clear database records")

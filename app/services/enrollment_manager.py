@@ -185,7 +185,7 @@ class EnrollmentManager:
                 course_status = "failed"
                 error_msg = None
 
-                if await self.udemy.is_already_enrolled(course):
+                if await self.udemy.is_already_enrolled(course, enrolled_slugs):
                     self.udemy.already_enrolled_c += 1
                     course_status = "already_enrolled"
                 else:
@@ -195,7 +195,7 @@ class EnrollmentManager:
                         self.udemy.excluded_c += 1
                         course_status = "invalid"
                         error_msg = course.error
-                    elif await self.udemy.is_already_enrolled(course):
+                    elif await self.udemy.is_already_enrolled(course, enrolled_slugs):
                         self.udemy.already_enrolled_c += 1
                         course_status = "already_enrolled"
                     else:
