@@ -139,7 +139,8 @@ class UdemyClient:
                                       .replace("HEADERS_PLACEHOLDER", headers_json) \
                                       .replace("BODY_PLACEHOLDER", body_json)
                 try:
-                    await page.goto(f"{constants.UDEMY_BASE_URL}/robots.txt", wait_until="domcontentloaded", timeout=15000)
+                    await page.goto(f"{constants.UDEMY_BASE_URL}/robots.txt", wait_until="commit", timeout=15000)
+                    await asyncio.sleep(1) # Stabilization
                 except Exception as e:
                     logger.debug(f"Playwright navigation to robots.txt timed out: {e}")
                 
@@ -178,23 +179,31 @@ class UdemyClient:
             self.http.client.headers.update(old_headers)
             self.http.client.cookies.update(old_cookies)
 
-    async def _refresh_csrf_stealth(self):
-        """Refresh CSRF token and all session cookies using Playwright."""
+    async def _refresh_csrf_stealth(self) -> bool:
+        """Refresh CSRF token and all session cookies using Playwright. Returns True if successful."""
         from app.services.playwright_service import PlaywrightService
         logger.info("Stealth: Refreshing CSRF token and cookies via Playwright...")
+        csrf_found = False
         try:
             async with PlaywrightService(proxy=self.http.proxy) as pw:
                 page = await pw._context.new_page()
-                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="networkidle", timeout=30000)
+                # Use commit + sleep instead of networkidle which often timeouts on Udemy
+                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="commit", timeout=30000)
+                await asyncio.sleep(3) # Wait for background session initialization
                 cookies = await pw._context.cookies()
                 for c in cookies:
                     self.http.client.cookies.set(c['name'], c['value'])
                     self.cookie_dict[c['name']] = c['value']
                     if c['name'] in ('csrftoken', 'csrf_token'):
                         logger.debug(f"  Success: Refreshed {c['name']} via Playwright")
+                        csrf_found = True
                 await page.close()
+                if not csrf_found:
+                    logger.warning("CSRF token not found after Playwright refresh")
+                return csrf_found
         except Exception as e:
             logger.error(f"Failed to refresh CSRF via Playwright: {e}")
+            return False
 
     async def manual_login(self, email: str, password: str):
         """Asynchronously login using email and password."""
@@ -584,11 +593,24 @@ class UdemyClient:
 
     async def checkout_single(self, course: Course) -> bool:
         """Asynchronously enroll in a single course with a coupon."""
-        for attempt in range(2):
+        max_retry_attempts = 2
+        for retry_attempt in range(max_retry_attempts):
             csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
             if not csrf_token:
-                 await self._refresh_csrf_stealth()
+                 refresh_success = await self._refresh_csrf_stealth()
+                 if not refresh_success:
+                     logger.error(f"Failed to obtain CSRF token for {course.title}")
+                     if retry_attempt >= max_retry_attempts - 1:
+                         return False
+                     await asyncio.sleep(2)
+                     continue
                  csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
+                 if not csrf_token:
+                     logger.error(f"CSRF token still empty after refresh for {course.title}")
+                     if retry_attempt >= max_retry_attempts - 1:
+                         return False
+                     await asyncio.sleep(2)
+                     continue
 
             headers = {
                 "Content-Type": "application/json",
@@ -600,8 +622,8 @@ class UdemyClient:
                 headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
             result = await self._checkout_one(course, headers)
-            if result: return True
-            await self._refresh_csrf_stealth()
+            if result:
+                return True
         return False
 
     @staticmethod
@@ -637,25 +659,38 @@ class UdemyClient:
             },
         }
         
-        for attempt in range(3):
+        max_attempts = 3
+        consecutive_403_count = 0
+        max_403_consecutive = 2
+        
+        for attempt in range(max_attempts):
             csrf = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
             headers["X-CSRF-Token"] = csrf
 
-            logger.info(f"Stealth: Executing checkout for {course.title} via Playwright...")
+            logger.info(f"Stealth: Executing checkout for {course.title} via Playwright (attempt {attempt + 1}/{max_attempts})...")
             resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
             
             if not resp or resp.status_code != 200:
                 logger.info(f"Standard: Falling back to HTTPX checkout for {course.title}...")
-                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
+                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr", attempts=1, raise_for_status=False)
             
             if not resp:
                 continue
             
             if resp.status_code == 403:
-                logger.warning(f"403 Forbidden on checkout for {course.title}. Refreshing session...")
-                await self._refresh_csrf_stealth()
+                consecutive_403_count += 1
+                if consecutive_403_count > max_403_consecutive:
+                    logger.error(f"Too many 403 errors ({consecutive_403_count}) for {course.title}. Giving up.")
+                    return False
+                logger.warning(f"403 Forbidden on checkout for {course.title}. Refreshing session (attempt {consecutive_403_count}/{max_403_consecutive})...")
+                refresh_success = await self._refresh_csrf_stealth()
+                if not refresh_success:
+                    logger.error(f"Failed to refresh CSRF token for {course.title}. Session may be invalid.")
+                    if consecutive_403_count >= max_403_consecutive:
+                        return False
                 continue
 
+            consecutive_403_count = 0
             result = await self.http.safe_json(resp, "checkout one")
             if result and result.get("status") == "succeeded":
                 self.amount_saved_c += Decimal(str(course.price or 0))
@@ -666,27 +701,53 @@ class UdemyClient:
             
             wait = self._throttle_wait(result or {})
             if wait:
+                logger.info(f"Throttled. Waiting {wait} seconds before retry...")
                 await asyncio.sleep(wait)
                 continue
+            
+            logger.warning(f"Checkout failed with response status {resp.status_code}. Giving up.")
             break
         return False
 
     async def bulk_checkout(self, courses: List[Course]) -> Dict[Course, str]:
         """Asynchronously enroll in a batch of courses with stealth priority."""
         outcomes: Dict[Course, str] = {c: "failed" for c in courses}
-        if not courses: return outcomes
+        if not courses:
+            return outcomes
         
         remaining = list(courses)
-        for attempt in range(len(courses) + 2):
-            if not remaining: break
+        max_bulk_attempts = len(courses) + 2
+        consecutive_403_count = 0
+        max_403_consecutive = 3
+        
+        for attempt in range(max_bulk_attempts):
+            if not remaining:
+                break
             
             if attempt > 0:
-                await asyncio.sleep(random.uniform(1.0, 3.0))
+                backoff_delay = min(2 ** (attempt // 2), 10) + random.uniform(0.5, 2.0)
+                logger.info(f"Waiting {backoff_delay:.1f}s before bulk checkout retry (attempt {attempt + 1}/{max_bulk_attempts})...")
+                await asyncio.sleep(backoff_delay)
 
             csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
             if not csrf_token:
-                 await self._refresh_csrf_stealth()
+                 logger.info(f"No CSRF token for bulk checkout. Refreshing...")
+                 refresh_success = await self._refresh_csrf_stealth()
+                 if not refresh_success:
+                     logger.error(f"Failed to refresh CSRF token for bulk checkout")
+                     consecutive_403_count += 1
+                     if consecutive_403_count >= max_403_consecutive:
+                         logger.error(f"Too many consecutive refresh failures ({consecutive_403_count}). Giving up bulk checkout.")
+                         break
+                     continue
                  csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
+                 if not csrf_token:
+                     logger.error("CSRF token still empty after refresh")
+                     consecutive_403_count += 1
+                     if consecutive_403_count >= max_403_consecutive:
+                         logger.error(f"Too many consecutive CSRF failures. Giving up bulk checkout.")
+                         break
+                     continue
 
             headers = {
                 "Content-Type": "application/json",
@@ -710,21 +771,29 @@ class UdemyClient:
                 "shopping_info": {"items": items, "is_cart": True},
             }
             
-            logger.info(f"Stealth: Executing bulk checkout for {len(remaining)} courses via Playwright...")
+            logger.info(f"Stealth: Executing bulk checkout for {len(remaining)} courses via Playwright (attempt {attempt + 1}/{max_bulk_attempts})...")
             resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
             
             if not resp or resp.status_code != 200:
                 logger.info("Standard: Falling back to HTTPX for bulk checkout...")
-                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr")
+                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr", attempts=1, raise_for_status=False)
             
             if not resp:
+                logger.warning(f"No response from bulk checkout attempt {attempt + 1}")
                 continue
                 
             if resp.status_code == 403:
-                logger.warning("Bulk checkout hit 403 Forbidden. Refreshing session...")
-                await self._refresh_csrf_stealth()
+                consecutive_403_count += 1
+                if consecutive_403_count > max_403_consecutive:
+                    logger.error(f"Too many 403 errors ({consecutive_403_count}) on bulk checkout. Session may be blocked. Giving up.")
+                    break
+                logger.warning(f"Bulk checkout hit 403 Forbidden (attempt {consecutive_403_count}/{max_403_consecutive}). Refreshing session...")
+                refresh_success = await self._refresh_csrf_stealth()
+                if not refresh_success:
+                    logger.error("Failed to refresh CSRF after 403")
                 continue
 
+            consecutive_403_count = 0
             result = await self.http.safe_json(resp, "bulk checkout")
             
             if result and result.get("status") == "succeeded":
@@ -734,6 +803,7 @@ class UdemyClient:
                     if self.enrolled_courses is not None:
                         self.enrolled_courses[c.slug] = datetime.now(UTC).isoformat()
                     outcomes[c] = "enrolled"
+                logger.info(f"Bulk checkout succeeded for {len(remaining)} courses")
                 break
             
             msg = result.get("message", "") if result else ""
@@ -747,15 +817,19 @@ class UdemyClient:
                     best_score, best_course = 0.0, None
                     for c in remaining:
                         score = self._title_overlap(c.title, error_title)
-                        if score > best_score: best_score, best_course = score, c
-                    if best_score >= 0.4: offender = best_course
+                        if score > best_score:
+                            best_score, best_course = score, c
+                    if best_score >= 0.4:
+                        offender = best_course
                 
                 if offender:
+                    logger.info(f"Course {offender.title} already enrolled. Removing from batch...")
                     remaining.remove(offender)
                     self.already_enrolled_c += 1
                     outcomes[offender] = "already_enrolled"
                     continue
                 
+                logger.info(f"Conflict detected but couldn't identify specific course. Falling back to single enrollments...")
                 for c in remaining:
                     success = await self.checkout_single(c)
                     outcomes[c] = "enrolled" if success else "failed"
@@ -763,7 +837,11 @@ class UdemyClient:
 
             wait = self._throttle_wait(result or {})
             if wait:
+                logger.info(f"Throttled. Waiting {wait} seconds before retry...")
                 await asyncio.sleep(wait)
                 continue
+            
+            logger.warning(f"Bulk checkout failed (attempt {attempt + 1}). Response: {result}")
             break
+        
         return outcomes
