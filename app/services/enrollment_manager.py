@@ -168,13 +168,19 @@ class EnrollmentManager:
             # Phase 2: Process and enroll
             batch: List[Course] = []
             use_single_course = get_settings().SINGLE_COURSE_CHECKOUT
+            batch_size = self.settings.get("batch_size", 5) or 5  # Get from user settings with fallback to 5
+            
+            # Track batch failures for adaptive mode switching
+            batch_failure_count = 0
+            max_batch_failures_before_switch = 2  # Switch to single after 2 failed batches
             
             if use_single_course:
                 logger.info("🔄 Single-course checkout mode enabled (one at a time)")
             else:
-                logger.info(f"🔄 Bulk checkout mode enabled ({get_settings().ENROLLMENT_BATCH_SIZE} at a time)")
+                logger.info(f"🔄 Bulk checkout mode enabled ({batch_size} at a time)")
 
             async def process_batch():
+                nonlocal use_single_course, batch_failure_count
                 if not batch: return
                 # Add random delay before processing batch (respect server rate limits)
                 batch_delay = random.uniform(2.0, 5.0)
@@ -191,6 +197,18 @@ class EnrollmentManager:
                 failed = sum(1 for status in outcomes.values() if status == "failed")
                 logger.info(f"📦 Batch Complete: {enrolled}/{len(batch)} enrolled, "
                            f"{failed} failed, {batch_duration:.1f}s duration")
+                
+                # Check if batch had high failure rate (indicator of session blocking)
+                failure_rate = failed / len(batch) if batch else 0
+                if failure_rate >= 0.8:  # 80% or more failed = session likely blocked
+                    batch_failure_count += 1
+                    logger.warning(f"⚠️ High batch failure rate ({failure_rate:.0%}). Session may be blocked. "
+                                 f"Failure count: {batch_failure_count}/{max_batch_failures_before_switch}")
+                    
+                    # Auto-switch to single-course mode if repeated failures
+                    if batch_failure_count >= max_batch_failures_before_switch and not use_single_course:
+                        logger.warning(f"🔄 Auto-switching from bulk to single-course mode due to repeated batch failures")
+                        use_single_course = True
                 
                 for c, status in outcomes.items():
                     await self._save_course(db, run, c, status)
@@ -285,7 +303,7 @@ class EnrollmentManager:
                                     # Bulk mode: add to batch
                                     logger.info(f"  Status: Added to batch (Price: {course.price})")
                                     batch.append(course)
-                                    if len(batch) >= get_settings().ENROLLMENT_BATCH_SIZE:
+                                    if len(batch) >= batch_size:
                                         await process_batch()
                                     course_status = "batched"
 

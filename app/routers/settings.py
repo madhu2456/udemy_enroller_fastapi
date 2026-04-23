@@ -60,6 +60,8 @@ async def get_settings(
         proxy_url=settings.proxy_url,
         enable_headless=bool(settings.enable_headless),
         firecrawl_api_key=settings.firecrawl_api_key,
+        enrollment_mode=settings.enrollment_mode or "bulk",
+        batch_size=int(settings.batch_size or 5),
     )
 
 
@@ -119,6 +121,8 @@ async def reset_settings(
     settings.proxy_url = None
     settings.enable_headless = False
     settings.firecrawl_api_key = None
+    settings.enrollment_mode = "bulk"
+    settings.batch_size = 5
 
     db.commit()
     logger.info(f"Settings reset to defaults for user {user_id}")
