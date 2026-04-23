@@ -213,39 +213,55 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
 @router.post("/logout")
 @maybe_limit(settings.RATE_LIMIT_API)
 async def logout(request: Request, db: Session = Depends(get_db)):
-    """Logout — delete DB session and clear cookie."""
+    """Logout — delete DB session and clear all cookies."""
     token = request.cookies.get("session_id")
-    if token:
-        user_id = None
-        # Find session to get user_id before deleting
-        session = db.query(UserSession).filter(UserSession.token == token).first()
-        if session:
-            user_id = session.user_id
-            # Stop active enrollment for this user if any
-            from app.services.enrollment_manager import EnrollmentManager
-            active_run = EnrollmentManager.get_active_run(db, user_id)
-            if active_run:
-                task = EnrollmentManager.active_tasks.get(active_run.id)
-                if task:
-                    task.cancel()
-                    logger.info(f"Cancelled active enrollment for user {user_id} due to logout.")
+    user_id = None
+    
+    try:
+        if token:
+            # Find session to get user_id before deleting
+            session = db.query(UserSession).filter(UserSession.token == token).first()
+            if session:
+                user_id = session.user_id
+                # Stop active enrollment for this user if any
+                from app.services.enrollment_manager import EnrollmentManager
+                active_run = EnrollmentManager.get_active_run(db, user_id)
+                if active_run:
+                    task = EnrollmentManager.active_tasks.get(active_run.id)
+                    if task:
+                        task.cancel()
+                        logger.info(f"Cancelled active enrollment for user {user_id} due to logout.")
 
-        db.query(UserSession).filter(UserSession.token == token).delete()
-        db.commit()
-        if hasattr(request.app.state, "udemy_clients"):
-            client = request.app.state.udemy_clients.pop(token, None)
-            if client:
-                try:
-                    close_res = client.close()
-                    if asyncio.iscoroutine(close_res):
-                        await close_res
-                except Exception as e:
-                    logger.error(f"Error closing client {token} during logout: {e}")
-                
-                # Guard against user_id being None if session wasn't found
-                log_user_id = user_id if user_id is not None else "unknown"
-                logger.info(f"Closed Udemy client session for user {log_user_id} due to logout.")
+            # Delete session from DB
+            db.query(UserSession).filter(UserSession.token == token).delete()
+            db.commit()
+            
+            # Close in-memory client
+            if hasattr(request.app.state, "udemy_clients"):
+                client = request.app.state.udemy_clients.pop(token, None)
+                if client:
+                    try:
+                        close_res = client.close()
+                        if asyncio.iscoroutine(close_res):
+                            await close_res
+                    except Exception as e:
+                        logger.error(f"Error closing client {token} during logout: {e}")
+                    
+                    log_user_id = user_id if user_id is not None else "unknown"
+                    logger.info(f"Closed Udemy client session for user {log_user_id} due to logout.")
+    except Exception as e:
+        logger.error(f"Error during logout: {e}")
+        capture_exception(e, level="error")
 
-    response = JSONResponse(content={"success": True, "message": "Logged out"})
-    response.delete_cookie("session_id")
+    # Create response with explicit cache-control headers
+    response = JSONResponse(content={"success": True, "message": "Logged out successfully"})
+    
+    # Delete session cookie with explicit settings
+    response.delete_cookie("session_id", path="/", domain=None)
+    
+    # Prevent browser caching of authenticated pages
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     return response
