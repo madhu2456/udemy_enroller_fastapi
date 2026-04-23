@@ -53,6 +53,14 @@ class UdemyClient:
         self.amount_saved_c = Decimal(0)
 
         self.is_authenticated = False
+        
+        # Session recovery tracking for 403 errors
+        self.session_recovery_state = {
+            "consecutive_403_errors": 0,
+            "csrf_refresh_failures": 0,
+            "cloudflare_challenges_encountered": 0,
+            "last_error_time": None,
+        }
 
     async def _firecrawl_scrape(self, url: str, schema: Optional[Dict] = None, use_cookies: bool = True) -> Optional[Dict]:
         """Perform a stealthy scrape using Firecrawl API."""
@@ -181,19 +189,63 @@ class UdemyClient:
 
     async def _check_cloudflare_challenge(self, html: str) -> bool:
         """Detect if page is Cloudflare challenge. Returns True if Cloudflare challenge detected."""
-        cloudflare_indicators = [
+        # More specific indicators (cf_clearance alone isn't enough - it's set but challenge may persist)
+        cloudflare_challenge_indicators = [
             'Just a moment',
             'challenge-platform',
             'Checking your browser before accessing',
-            'Ray ID',
-            '__cf_bm',
-            'cf_clearance',
             'cfrequests',
-            'Cloudflare',
+            'Ray ID',
         ]
-        return any(indicator in html for indicator in cloudflare_indicators)
+        has_challenge = any(indicator in html for indicator in cloudflare_challenge_indicators)
+        
+        # Additional context: presence of auth indicators
+        has_auth = any(indicator in html for indicator in ['_udemy_u', 'access_token', 'user-id'])
+        
+        # If challenge indicators present, it's definitely a challenge
+        if has_challenge:
+            logger.debug("Cloudflare challenge HTML indicators detected")
+            return True
+        
+        # If no challenge indicators AND has auth, likely resolved
+        if has_auth:
+            logger.debug("Cloudflare challenge resolved - auth content detected")
+            return False
+        
+        logger.debug("Cloudflare challenge status unclear - no specific indicators found")
+        return False
 
-    async def _extract_csrf_from_html(self, html: str) -> Optional[str]:
+    async def _extract_csrf_with_retries(self, page, max_retries: int = 2) -> Optional[str]:
+        """Extract CSRF token from page with retries. Handles dynamic loading."""
+        for attempt in range(max_retries):
+            try:
+                # Wait for page to settle
+                await asyncio.sleep(1)
+                html_content = await page.content()
+                
+                # Try extract from HTML
+                csrf_token = await self._extract_csrf_from_html(html_content)
+                if csrf_token:
+                    logger.info(f"Successfully extracted CSRF from HTML (attempt {attempt + 1})")
+                    return csrf_token
+                
+                # Try to trigger any pending XHR requests by waiting
+                if attempt < max_retries - 1:
+                    logger.debug(f"CSRF not found, waiting for page to fully load (attempt {attempt + 1}/{max_retries})...")
+                    await asyncio.sleep(2)
+                    
+                    # Try to wait for any pending requests
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=3000)
+                    except:
+                        pass  # Timeout is ok, just a wait hint
+            except Exception as e:
+                logger.debug(f"CSRF extraction attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    logger.warning(f"CSRF extraction failed after {max_retries} attempts")
+                    return None
+        
+        return None
         """Extract CSRF token from HTML using various methods. Returns token value or None."""
         if not html:
             return None
@@ -261,10 +313,12 @@ class UdemyClient:
             logger.debug("Login CSRF token not available or failed. Fetching fresh CSRF token as fallback...")
             
             async with PlaywrightService(proxy=self.http.proxy) as pw:
-                # Attempt with multiple strategies
-                for strategy_attempt in range(2):
+                # Attempt with multiple strategies - increased to 3 for better resilience
+                for strategy_attempt in range(3):
                     if strategy_attempt == 1:
-                        logger.info("Trying alternate Cloudflare resolution strategy...")
+                        logger.info("Trying alternate Cloudflare resolution strategy (attempt 2/3)...")
+                    elif strategy_attempt == 2:
+                        logger.info("Trying fresh browser context strategy (attempt 3/3)...")
                     
                     # Create fresh page for each strategy attempt
                     page = await pw._context.new_page()
@@ -279,7 +333,8 @@ class UdemyClient:
                         is_cf_challenge = await self._check_cloudflare_challenge(html_content)
                         
                         if is_cf_challenge:
-                            logger.warning("Cloudflare challenge detected. Waiting for challenge resolution...")
+                            logger.warning(f"Cloudflare challenge detected (strategy {strategy_attempt + 1}/3). Waiting for resolution...")
+                            self.session_recovery_state["cloudflare_challenges_encountered"] += 1
                             challenge_resolved = False
                             
                             # EXTENDED WAIT: Try to resolve challenge with longer delays
@@ -305,8 +360,8 @@ class UdemyClient:
                                 except Exception as e:
                                     logger.debug(f"Page reload failed: {e}")
                             
-                            if not challenge_resolved and strategy_attempt < 1:
-                                logger.warning("Challenge still unresolved. Trying with fresh context...")
+                            if not challenge_resolved:
+                                logger.warning(f"Challenge still unresolved after strategy {strategy_attempt + 1}. Moving to next strategy...")
                                 await page.close()
                                 continue
                         
@@ -330,17 +385,31 @@ class UdemyClient:
                         
                         # If we have CSRF token from cookies, we're done
                         if csrf_found:
+                            logger.info("✓ CSRF token found in cookies - refresh successful")
                             break
                         
-                        # If we got cf_clearance but no CSRF token, Cloudflare challenge isn't fully resolved
-                        if cf_clearance_found and is_cf_challenge:
-                            logger.warning("Cloudflare clearance found but CSRF token missing from cookies. Session may not be fully authenticated.")
-                            if strategy_attempt < 1:
-                                logger.info("Retrying with fresh context...")
-                                await page.close()
-                                continue
+                        # PART 2: Try with retries if Cloudflare was involved but CSRF still missing
+                        if cf_clearance_found and is_cf_challenge and not csrf_found:
+                            logger.warning("Cloudflare clearance found but CSRF token missing from cookies. Retrying with extended wait...")
+                            
+                            # Additional wait and retry logic
+                            for retry_attempt in range(2):
+                                await asyncio.sleep(3)
+                                html_content = await page.content()
+                                
+                                csrf_token = await self._extract_csrf_with_retries(page, max_retries=2)
+                                if csrf_token:
+                                    self.http.client.headers['X-CSRFToken'] = csrf_token
+                                    self.cookie_dict['_csrf_from_page_retry'] = csrf_token
+                                    logger.info(f"Success: Extracted CSRF from page after retry (attempt {retry_attempt + 1})")
+                                    csrf_found = True
+                                    break
                         
-                        # PART 2: Extract from HTTP headers
+                        # If CSRF found via retries, we're done
+                        if csrf_found:
+                            break
+                        
+                        # PART 3: Extract from HTTP headers
                         if not csrf_found:
                             logger.debug("CSRF token not in cookies, attempting header extraction...")
                             try:
@@ -357,10 +426,10 @@ class UdemyClient:
                             except Exception as e:
                                 logger.debug(f"Header extraction failed: {e}")
                         
-                        # PART 3: Extract from HTML
+                        # PART 4: Extract from HTML with new retry logic
                         if not csrf_found:
-                            logger.debug("CSRF token not in cookies/headers, attempting HTML extraction...")
-                            csrf_token = await self._extract_csrf_from_html(html_content)
+                            logger.debug("CSRF token not in cookies/headers, attempting HTML extraction with retries...")
+                            csrf_token = await self._extract_csrf_with_retries(page, max_retries=2)
                             
                             if csrf_token:
                                 self.http.client.headers['X-CSRFToken'] = csrf_token
@@ -368,14 +437,15 @@ class UdemyClient:
                                 logger.info(f"Success: Extracted CSRF from HTML")
                                 csrf_found = True
                             else:
-                                logger.warning("Could not find CSRF token in HTML")
+                                logger.warning("Could not find CSRF token in HTML after retries")
                         
                         # If we found a token, we're done with strategies
                         if csrf_found:
+                            logger.info("✓ CSRF token successfully obtained")
                             break
                         
-                        # No more strategies to try if we already retried
-                        if strategy_attempt >= 1:
+                        # No more strategies to try if we already retried multiple times
+                        if strategy_attempt >= 2:
                             break
                     
                     finally:
@@ -388,21 +458,25 @@ class UdemyClient:
                 # FINAL ATTEMPT: If still no token, check session validity
                 if not csrf_found:
                     logger.error("No fresh CSRF token found after all strategies.")
+                    self.session_recovery_state["csrf_refresh_failures"] += 1
                     # Check if we have any auth cookies at all
                     auth_cookies = [c for c in cookies if any(name in c['name'].lower() for name in ['auth', 'access', 'sessionid', 'jwt'])]
                     if not auth_cookies:
                         logger.error("CRITICAL: No authentication cookies found. Session is not authenticated. This user needs to log in again.")
                     else:
                         logger.warning(f"Auth cookies exist ({len(auth_cookies)}) but fresh CSRF token extraction failed. Session may be temporarily blocked.")
+                        logger.info("Recommendation: Try again in 30-60 seconds, or use single-course checkout mode")
                 
                 if csrf_found:
                     logger.info("CSRF token refresh successful")
+                    self.session_recovery_state["consecutive_403_errors"] = 0  # Reset 403 counter
                 else:
                     logger.error("CSRF token refresh failed - no valid token obtained after all attempts")
                     
                 return csrf_found
         except Exception as e:
             logger.error(f"Failed to refresh CSRF via Playwright: {e}")
+            self.session_recovery_state["csrf_refresh_failures"] += 1
             return False
 
     async def manual_login(self, email: str, password: str):
@@ -1096,9 +1170,14 @@ class UdemyClient:
                 
             if resp.status_code == 403:
                 consecutive_403_count += 1
+                self.session_recovery_state["consecutive_403_errors"] += 1
+                self.session_recovery_state["last_error_time"] = datetime.now(UTC)
+                
                 if consecutive_403_count > max_403_consecutive:
                     logger.error(f"Too many 403 errors ({consecutive_403_count}) on bulk checkout. Session may be blocked. Giving up.")
                     metrics["session_blocks"] += 1
+                    logger.error(f"Session recovery state: {self.session_recovery_state}")
+                    logger.info("Recommendation: Wait 30-60 seconds and retry, or switch to single-course mode")
                     break
                 
                 logger.warning(f"Bulk checkout hit 403 Forbidden (attempt {consecutive_403_count}/{max_403_consecutive}). "
@@ -1109,7 +1188,7 @@ class UdemyClient:
                 jitter = random.uniform(0.5, 2.0)
                 backoff_delay = base_backoff + jitter
                 metrics["total_delay_time"] += backoff_delay
-                logger.debug(f"Waiting {backoff_delay:.1f}s before session refresh (base: {base_backoff}s)...")
+                logger.debug(f"Waiting {backoff_delay:.1f}s before session refresh (base: {base_backoff}s, jitter: {jitter:.1f}s)...")
                 await asyncio.sleep(backoff_delay)
                 
                 refresh_success = await self._refresh_csrf_stealth()
@@ -1120,6 +1199,7 @@ class UdemyClient:
                     await asyncio.sleep(2)
                 else:
                     logger.error("Failed to refresh CSRF after 403 - session may be blocked")
+                    logger.info("Current session recovery state: " + str(self.session_recovery_state))
                     metrics["failed_checkouts"] += 1
                 continue
 
