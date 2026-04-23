@@ -125,11 +125,54 @@ class UdemyClient:
                         "Referer": f"{constants.UDEMY_BASE_URL}/payment/checkout/",
                     })
 
-                # For POST (checkout), navigate to a Udemy page first so Cloudflare
-                # establishes clearance for this context before the API call.
-                # For GET (course page scraping), skip the warmup for speed — a
-                # pre-loaded cf_clearance cookie is usually enough.
-                if method == "POST":
+                if method == "GET":
+                    # Real browser page navigation for GET requests.
+                    # page.goto() executes JavaScript, so Cloudflare JS challenges resolve
+                    # automatically — context.request.get() cannot do this.
+                    page = await pw._context.new_page()
+                    try:
+                        nav_response = await page.goto(
+                            url, wait_until="domcontentloaded", timeout=30000
+                        )
+                        await asyncio.sleep(0.5)
+
+                        # If Cloudflare challenge, wait up to 30 s for JS to solve it
+                        html_content = await page.content()
+                        if await self._check_cloudflare_challenge(html_content):
+                            logger.debug("CF challenge on page navigation, waiting for JS resolution...")
+                            for _ in range(15):
+                                await asyncio.sleep(2)
+                                html_content = await page.content()
+                                if not await self._check_cloudflare_challenge(html_content):
+                                    break
+
+                        # Harvest any updated cookies (cf_clearance, csrftoken, etc.)
+                        for c in await pw._context.cookies():
+                            if c.get("name") and c.get("value"):
+                                self.cookie_dict[c["name"]] = c["value"]
+                                self.http.client.cookies.set(c["name"], c["value"])
+
+                        status = nav_response.status if nav_response else 200
+                        final_url = page.url
+
+                        if status != 200:
+                            logger.debug(f"  Playwright GET {url} returned status {status}")
+
+                        return httpx.Response(
+                            status_code=status,
+                            content=html_content.encode(),
+                            request=httpx.Request(method, final_url or url),
+                        )
+                    except Exception as nav_err:
+                        logger.debug(f"Playwright page navigation failed for {url}: {nav_err}")
+                        return None
+                    finally:
+                        await page.close()
+
+                else:
+                    # POST (checkout): navigate to a Udemy page first so Cloudflare
+                    # establishes clearance for this context, then use APIRequestContext
+                    # (Chromium TLS fingerprint, immune to JS execution destruction).
                     page = await pw._context.new_page()
                     try:
                         await page.goto(
@@ -138,38 +181,40 @@ class UdemyClient:
                             timeout=15000,
                         )
                         await asyncio.sleep(1)
+                        # Harvest any fresh cookies from the warmup navigation
+                        for c in await pw._context.cookies():
+                            if c.get("name") and c.get("value"):
+                                self.cookie_dict[c["name"]] = c["value"]
+                                self.http.client.cookies.set(c["name"], c["value"])
                     except Exception as nav_err:
                         logger.debug(f"Playwright warmup navigation failed (non-fatal): {nav_err}")
                     finally:
                         await page.close()
 
-                # Use APIRequestContext — same Chromium fingerprint as the browser,
-                # shares cookies with the context, immune to JS execution destruction.
-                try:
-                    if method == "POST":
+                    # Refresh CSRF token in headers after warmup
+                    csrf_token = (self.cookie_dict.get('csrf_token') or
+                                  self.cookie_dict.get('csrftoken', ''))
+                    headers_dict["X-CSRF-Token"] = csrf_token
+
+                    try:
                         body_bytes = json.dumps(data).encode() if data else None
                         pw_resp = await pw._context.request.post(
                             url, data=body_bytes, headers=headers_dict, timeout=30000
                         )
-                    else:
-                        pw_resp = await pw._context.request.get(
-                            url, headers=headers_dict, timeout=30000
+                        status = pw_resp.status
+                        body = await pw_resp.body()
+
+                        if status != 200:
+                            logger.debug(f"  Playwright POST {url} returned status {status}")
+
+                        return httpx.Response(
+                            status_code=status,
+                            content=body,
+                            request=httpx.Request(method, url),
                         )
-
-                    status = pw_resp.status
-                    body = await pw_resp.body()
-
-                    if status != 200:
-                        logger.debug(f"  Playwright request to {url} returned status {status}")
-
-                    return httpx.Response(
-                        status_code=status,
-                        content=body,
-                        request=httpx.Request(method, url),
-                    )
-                except Exception as req_err:
-                    logger.debug(f"Playwright APIRequestContext failed for {url}: {req_err}")
-                    return None
+                    except Exception as req_err:
+                        logger.debug(f"Playwright POST request failed for {url}: {req_err}")
+                        return None
 
         except Exception as e:
             logger.error(f"Playwright request failed for {url}: {e}")
@@ -296,23 +341,29 @@ class UdemyClient:
         logger.info("Stealth: Refreshing CSRF token and cookies via Playwright...")
         csrf_found = False
         try:
-            # PRIMARY STRATEGY: Try login CSRF token first (it's stable and constant)
+            # FAST PATH: Reuse the login CSRF token only when we already have a valid
+            # Cloudflare clearance cookie.  If cf_clearance is absent or stale, the fast
+            # path is useless — every request will still 403 — so we fall through to the
+            # full Playwright navigation which will obtain a fresh cf_clearance.
             login_csrf = self.cookie_dict.get("csrf_token_login")
-            if login_csrf:
+            cf_clearance = self.cookie_dict.get("cf_clearance")
+            if login_csrf and cf_clearance:
                 try:
-                    logger.info("Attempting to use login CSRF token (primary)...")
+                    logger.info("Fast path: reusing login CSRF token (cf_clearance present)...")
                     self.http.client.headers['X-CSRFToken'] = login_csrf
                     self.http.client.headers['X-CSRF-Token'] = login_csrf
                     self.cookie_dict['csrf_token'] = login_csrf
-                    csrf_found = True
                     logger.info(f"Using login CSRF token as primary (length: {len(login_csrf)})")
                     return True
                 except Exception as e:
-                    logger.warning(f"Login CSRF token encountered error: {e}. Falling back to fresh extraction...")
-                    csrf_found = False  # Allow fallback to fresh extraction
-            
-            # FALLBACK STRATEGY: If login token missing or errored, fetch fresh CSRF token
-            logger.debug("Login CSRF token not available or failed. Fetching fresh CSRF token as fallback...")
+                    logger.warning(f"Login CSRF token fast path error: {e}. Falling back to full refresh...")
+
+            # FULL STRATEGY: No cf_clearance (or fast path failed) — do a real Playwright
+            # navigation so Cloudflare issues a fresh clearance for this session.
+            if not cf_clearance:
+                logger.info("No cf_clearance found — forcing full Playwright session refresh...")
+            else:
+                logger.debug("Fetching fresh CSRF token via Playwright...")
 
             async with PlaywrightService(proxy=self.http.proxy) as pw:
                 # Load existing auth cookies into the Playwright context BEFORE any navigation.
