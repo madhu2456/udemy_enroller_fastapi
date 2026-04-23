@@ -20,7 +20,14 @@ class PlaywrightManager:
                 cls._pw = await async_playwright().start()
                 cls._browser = await cls._pw.chromium.launch(
                     headless=True,
-                    args=['--disable-dev-shm-usage', '--no-sandbox']
+                    args=[
+                        '--disable-dev-shm-usage',
+                        '--no-sandbox',
+                        # Removes the "Chrome is being controlled by automated software"
+                        # banner and strips navigator.webdriver from the browser object,
+                        # preventing JS-based headless detection.
+                        '--disable-blink-features=AutomationControlled',
+                    ]
                 )
                 logger.info("Started global Playwright browser.")
             return cls._browser
