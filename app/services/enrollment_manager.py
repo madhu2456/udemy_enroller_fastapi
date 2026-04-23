@@ -269,6 +269,8 @@ class EnrollmentManager:
             cleanup_retry_delay = 0.5
             
             cleanup_success = False
+            max_cleanup_retries = 5  # Increased from 3
+            cleanup_retry_delay = 1  # Start with 1 second
             try:
                 for cleanup_attempt in range(max_cleanup_retries):
                     try:
@@ -284,8 +286,10 @@ class EnrollmentManager:
                     except Exception as e:
                         cleanup_db.rollback()
                         if "database is locked" in str(e).lower() and cleanup_attempt < max_cleanup_retries - 1:
-                            logger.debug(f"Database locked during cleanup (attempt {cleanup_attempt + 1}/{max_cleanup_retries}). Retrying...")
-                            await asyncio.sleep(cleanup_retry_delay * (2 ** cleanup_attempt))
+                            # Exponential backoff: 1, 2, 4, 8, 16 seconds
+                            backoff_time = cleanup_retry_delay * (2 ** cleanup_attempt)
+                            logger.debug(f"Database locked during cleanup (attempt {cleanup_attempt + 1}/{max_cleanup_retries}). Retrying in {backoff_time}s...")
+                            await asyncio.sleep(backoff_time)
                             continue
                         logger.error(f"Failed to mark run {self.run_id} as cancelled: {e}")
                         break
@@ -299,8 +303,8 @@ class EnrollmentManager:
             raise
         except Exception as e:
             logger.exception("Enrollment pipeline failed")
-            max_error_retries = 3
-            error_retry_delay = 0.5
+            max_error_retries = 5  # Increased from 3
+            error_retry_delay = 1  # Increased from 0.5
             
             for error_attempt in range(max_error_retries):
                 try:
@@ -314,8 +318,10 @@ class EnrollmentManager:
                 except Exception as db_e:
                     db.rollback()
                     if "database is locked" in str(db_e).lower() and error_attempt < max_error_retries - 1:
-                        logger.debug(f"Database locked during error cleanup (attempt {error_attempt + 1}/{max_error_retries}). Retrying...")
-                        asyncio.create_task(asyncio.sleep(error_retry_delay * (2 ** error_attempt)))
+                        # Exponential backoff: 1, 2, 4, 8, 16 seconds
+                        backoff_time = error_retry_delay * (2 ** error_attempt)
+                        logger.debug(f"Database locked during error cleanup (attempt {error_attempt + 1}/{max_error_retries}). Retrying in {backoff_time}s...")
+                        await asyncio.sleep(backoff_time)
                         continue
                     logger.debug(f"Could not update run status on error: {db_e}")
                     break
@@ -332,8 +338,8 @@ class EnrollmentManager:
 
     async def _update_run_stats(self, db: Session, run: EnrollmentRun):
         """Flush in-memory counters to the run record with retry logic for database locks."""
-        max_retries = 3
-        retry_delay = 0.5
+        max_retries = 5  # Increased from 3
+        retry_delay = 1  # Increased from 0.5
         
         for attempt in range(max_retries):
             try:
@@ -358,7 +364,10 @@ class EnrollmentManager:
             except Exception as e:
                 db.rollback()
                 if "database is locked" in str(e).lower() and attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay * (2 ** attempt))
+                    # Exponential backoff: 1, 2, 4, 8, 16 seconds
+                    backoff_time = retry_delay * (2 ** attempt)
+                    logger.debug(f"Database locked during stats update (attempt {attempt + 1}/{max_retries}). Retrying in {backoff_time}s...")
+                    await asyncio.sleep(backoff_time)
                     continue
                 logger.debug(f"Failed to update run stats (attempt {attempt + 1}/{max_retries}): {e}")
                 break

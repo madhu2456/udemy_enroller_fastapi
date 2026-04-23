@@ -236,18 +236,21 @@ class UdemyClient:
                 page = await pw._context.new_page()
                 # Use commit + sleep instead of networkidle which often timeouts on Udemy
                 await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="commit", timeout=30000)
-                await asyncio.sleep(3) # Wait for background session initialization
+                await asyncio.sleep(2) # Initial wait for page load
                 
                 # Check if we hit Cloudflare challenge
                 html_content = await page.content()
                 if await self._check_cloudflare_challenge(html_content):
-                    logger.warning("Cloudflare challenge detected. Waiting longer for challenge to resolve...")
-                    # Wait additional time for Cloudflare to complete
-                    await asyncio.sleep(5)
-                    # Try to navigate again
-                    await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="commit", timeout=30000)
-                    await asyncio.sleep(3)
-                    html_content = await page.content()
+                    logger.warning("Cloudflare challenge detected. Waiting for challenge resolution...")
+                    # Wait significantly longer for Cloudflare to complete
+                    for wait_attempt in range(5):  # Try up to 5 times with 2-second intervals
+                        await asyncio.sleep(2)
+                        html_content = await page.content()
+                        if not await self._check_cloudflare_challenge(html_content):
+                            logger.info("Cloudflare challenge resolved")
+                            break
+                    else:
+                        logger.warning("Cloudflare challenge not resolved after 10 seconds")
                 
                 # PART 1: Extract cookies (standard method)
                 cookies = await pw._context.cookies()
@@ -264,37 +267,57 @@ class UdemyClient:
                         logger.debug(f"  Success: Found {c['name']} in cookies")
                         csrf_found = True
                 
-                # PART 2: Extract from HTML if not found in cookies (fallback method)
+                # PART 2: Extract from HTTP headers (Udemy uses X-CSRFToken header in responses)
                 if not csrf_found:
-                    logger.debug("CSRF token not in cookies, attempting HTML extraction...")
+                    logger.debug("CSRF token not in cookies, attempting header extraction...")
+                    try:
+                        # Get response headers from last navigation
+                        request = await page.evaluate("() => fetch(window.location.href, {method: 'HEAD'}).then(r => Object.fromEntries(r.headers))")
+                        if request and isinstance(request, dict):
+                            for header_name in ['x-csrftoken', 'X-CSRFToken', 'X-CSRF-Token']:
+                                if header_name in request:
+                                    csrf_token = request[header_name]
+                                    self.http.client.headers['X-CSRFToken'] = csrf_token
+                                    self.cookie_dict['_csrf_from_header'] = csrf_token
+                                    logger.info(f"Success: Extracted CSRF from response header ({header_name})")
+                                    csrf_found = True
+                                    break
+                    except Exception as e:
+                        logger.debug(f"Header extraction failed: {e}")
+                
+                # PART 3: Extract from HTML if not found in cookies or headers (fallback method)
+                if not csrf_found:
+                    logger.debug("CSRF token not in cookies/headers, attempting HTML extraction...")
                     csrf_token = await self._extract_csrf_from_html(html_content)
                     
                     if csrf_token:
                         # Store token in a custom header for checkout requests
                         self.http.client.headers['X-CSRFToken'] = csrf_token
                         self.cookie_dict['_csrf_from_html'] = csrf_token
-                        logger.info(f"  Success: Extracted CSRF from HTML, set X-CSRFToken header")
+                        logger.info(f"Success: Extracted CSRF from HTML, set X-CSRFToken header")
                         csrf_found = True
                     else:
                         logger.warning("Could not find CSRF token in HTML")
                 
-                # PART 3: Generate fallback CSRF token if none found
+                # If still no CSRF token found, do NOT generate fallback - session is invalid
                 if not csrf_found:
-                    logger.warning("No CSRF token found. Generating fallback token...")
-                    # Generate a UUID-style token as fallback
-                    import uuid
-                    fallback_token = str(uuid.uuid4())
-                    self.http.client.headers['X-CSRFToken'] = fallback_token
-                    self.cookie_dict['_csrf_fallback'] = fallback_token
-                    logger.info(f"Generated fallback CSRF token")
-                    csrf_found = True  # Accept fallback to allow checkout attempt
+                    logger.error("No CSRF token found after all methods exhausted. Session may be invalid or Cloudflare challenge not resolved.")
+                    # Wait a bit longer and try once more
+                    await asyncio.sleep(3)
+                    html_content = await page.content()
+                    csrf_token = await self._extract_csrf_from_html(html_content)
+                    if csrf_token:
+                        self.http.client.headers['X-CSRFToken'] = csrf_token
+                        self.cookie_dict['_csrf_from_html'] = csrf_token
+                        logger.info("Success: CSRF token found on second attempt")
+                        csrf_found = True
                 
                 await page.close()
                 
                 if csrf_found:
                     logger.info("CSRF token refresh successful")
                 else:
-                    logger.error("CSRF token not found after all methods exhausted")
+                    logger.error("CSRF token refresh failed - no valid token obtained")
                     
                 return csrf_found
         except Exception as e:
@@ -787,21 +810,34 @@ class UdemyClient:
             },
         }
         
-        max_attempts = 3
+        # Increase max attempts and implement exponential backoff
+        max_attempts = 5  # Increased from 3
         consecutive_403_count = 0
-        max_403_consecutive = 2
+        max_403_consecutive = 3  # Increased from 2
         
         for attempt in range(max_attempts):
-            # Try to get CSRF token from multiple sources
+            # Try to get CSRF token from multiple sources (prioritize real tokens)
             csrf = (self.http.client.cookies.get("csrftoken") or 
                    self.cookie_dict.get("csrf_token") or 
+                   self.cookie_dict.get("_csrf_from_header") or 
                    self.http.client.headers.get("X-CSRFToken") or 
                    self.cookie_dict.get("_csrf_from_html", ""))
-            headers["X-CSRF-Token"] = csrf
+            
+            # Log token source for debugging (real vs fallback)
             if csrf:
-                logger.debug(f"Using CSRF token (source: {('cookie' if 'csrf' in csrf else 'header/html')})")
+                token_source = "cookie"
+                if "_csrf_from_header" in self.cookie_dict and self.cookie_dict.get("_csrf_from_header") == csrf:
+                    token_source = "response_header"
+                elif "_csrf_from_html" in self.cookie_dict and self.cookie_dict.get("_csrf_from_html") == csrf:
+                    token_source = "html"
+                elif "_csrf_fallback" in self.cookie_dict and self.cookie_dict.get("_csrf_fallback") == csrf:
+                    token_source = "fallback_uuid"
+                    logger.warning(f"Using fallback UUID token for {course.title} - session may be invalid")
+                logger.debug(f"Using CSRF token from {token_source}: {csrf[:20]}..." if len(csrf) > 20 else f"Using CSRF token from {token_source}")
             else:
                 logger.warning("No CSRF token available for checkout")
+            
+            headers["X-CSRFToken"] = csrf
 
             logger.info(f"Stealth: Executing checkout for {course.title} via Playwright (attempt {attempt + 1}/{max_attempts})...")
             resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
@@ -818,12 +854,23 @@ class UdemyClient:
                 if consecutive_403_count > max_403_consecutive:
                     logger.error(f"Too many 403 errors ({consecutive_403_count}) for {course.title}. Giving up.")
                     return False
+                
                 logger.warning(f"403 Forbidden on checkout for {course.title}. Refreshing session (attempt {consecutive_403_count}/{max_403_consecutive})...")
+                
+                # Implement exponential backoff before refresh
+                backoff_delay = min(2 ** consecutive_403_count, 10)  # 2, 4, 8, 10 seconds
+                logger.debug(f"Waiting {backoff_delay} seconds before session refresh...")
+                await asyncio.sleep(backoff_delay)
+                
                 refresh_success = await self._refresh_csrf_stealth()
                 if not refresh_success:
                     logger.error(f"Failed to refresh CSRF token for {course.title}. Session may be invalid.")
                     if consecutive_403_count >= max_403_consecutive:
                         return False
+                else:
+                    # Extra wait after successful refresh to ensure cookies are synced
+                    await asyncio.sleep(2)
+                
                 continue
 
             consecutive_403_count = 0
