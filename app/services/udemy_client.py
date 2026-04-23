@@ -59,6 +59,12 @@ class UdemyClient:
         # subsequent page.goto() / context.request call in this session.
         self._pw_context = None
 
+        # True only after this Playwright context has itself navigated through a
+        # Cloudflare challenge and earned its OWN cf_clearance cookie.  The user's
+        # saved cf_clearance (from their desktop browser) has a different TLS
+        # fingerprint and is invalid for Playwright's Chromium instance.
+        self._pw_cf_clearance_earned = False
+
         # Session recovery tracking for 403 errors
         self.session_recovery_state = {
             "consecutive_403_errors": 0,
@@ -93,13 +99,19 @@ class UdemyClient:
                 viewport={"width": 1280, "height": 800},
                 ignore_https_errors=True,
             )
-            # Seed the fresh context with any existing auth cookies so Udemy
-            # recognises the session and Cloudflare inherits the clearance.
+            # Seed the fresh context with auth cookies so Udemy recognises the
+            # session.  We intentionally EXCLUDE cf_clearance: the user's saved value
+            # was issued to their desktop browser's TLS fingerprint (JA3/JA4) and
+            # will be rejected by Cloudflare when presented from Playwright's Chromium.
+            # Playwright will earn its own cf_clearance on first navigation.
+            EXCLUDE_FROM_SEED = {"cf_clearance", "cf_bm", "__cf_bm"}
             if self.cookie_dict:
                 seed_cookies = [
                     {"name": k, "value": v, "url": "https://www.udemy.com"}
                     for k, v in self.cookie_dict.items()
-                    if v and isinstance(v, str) and not k.startswith("_csrf_from")
+                    if v and isinstance(v, str)
+                    and not k.startswith("_csrf_from")
+                    and k not in EXCLUDE_FROM_SEED
                 ]
                 if seed_cookies:
                     await self._pw_context.add_cookies(seed_cookies)
@@ -305,13 +317,15 @@ class UdemyClient:
 
         except Exception as e:
             logger.error(f"Playwright request failed for {url}: {e}")
-            # Invalidate context so it's recreated fresh on next call
+            # Invalidate context so it's recreated fresh on next call.
+            # Also reset cf_clearance flag — the new context must re-earn it.
             try:
                 if self._pw_context:
                     await self._pw_context.close()
             except Exception:
                 pass
             self._pw_context = None
+            self._pw_cf_clearance_earned = False
             return None
 
     async def close(self):
@@ -321,6 +335,7 @@ class UdemyClient:
             except Exception:
                 pass
             self._pw_context = None
+            self._pw_cf_clearance_earned = False
         await self.http.close()
 
     def set_proxy(self, proxy: Optional[str]):
@@ -440,15 +455,15 @@ class UdemyClient:
         logger.info("Stealth: Refreshing CSRF token and cookies via Playwright...")
         csrf_found = False
         try:
-            # FAST PATH: Reuse the login CSRF token only when we already have a valid
-            # Cloudflare clearance cookie.  If cf_clearance is absent or stale, the fast
-            # path is useless — every request will still 403 — so we fall through to the
-            # full Playwright navigation which will obtain a fresh cf_clearance.
+            # FAST PATH: Reuse the login CSRF token only when Playwright's OWN context
+            # has already earned a cf_clearance via a real browser navigation.  The
+            # user's saved cf_clearance is TLS-fingerprint-bound to their desktop
+            # browser and will NOT work in Playwright.  self._pw_cf_clearance_earned
+            # is only set to True after a successful full navigation below.
             login_csrf = self.cookie_dict.get("csrf_token_login")
-            cf_clearance = self.cookie_dict.get("cf_clearance")
-            if login_csrf and cf_clearance:
+            if login_csrf and self._pw_cf_clearance_earned:
                 try:
-                    logger.info("Fast path: reusing login CSRF token (cf_clearance present)...")
+                    logger.info("Fast path: reusing login CSRF token (Playwright cf_clearance already earned)...")
                     self.http.client.headers['X-CSRFToken'] = login_csrf
                     self.http.client.headers['X-CSRF-Token'] = login_csrf
                     self.cookie_dict['csrf_token'] = login_csrf
@@ -460,8 +475,8 @@ class UdemyClient:
             # FULL STRATEGY: Navigate to udemy.com using the persistent context so
             # Cloudflare issues (or re-validates) cf_clearance, and we pick up a fresh
             # csrftoken cookie in the same pass.
-            if not cf_clearance:
-                logger.info("No cf_clearance — full Playwright session refresh needed...")
+            if not self._pw_cf_clearance_earned:
+                logger.info("Playwright context has no cf_clearance yet — full session refresh needed...")
             else:
                 logger.debug("Refreshing CSRF + session cookies via Playwright...")
 
@@ -477,12 +492,14 @@ class UdemyClient:
                     logger.info("Trying alternate Cloudflare resolution strategy (attempt 2/3)...")
                 elif strategy_attempt == 2:
                     logger.info("Trying fresh browser context strategy (attempt 3/3)...")
-                    # Last resort: recreate the persistent context entirely
+                    # Last resort: recreate the persistent context entirely.
+                    # Reset cf_clearance flag — the new context must earn it fresh.
                     try:
                         await self._pw_context.close()
                     except Exception:
                         pass
                     self._pw_context = None
+                    self._pw_cf_clearance_earned = False
                     ctx = await self._get_persistent_pw_context()
                     if ctx is None:
                         break
@@ -539,7 +556,10 @@ class UdemyClient:
                             csrf_found = True
                         if c["name"] == "cf_clearance":
                             cf_clearance_found = True
-                            logger.debug("Found Cloudflare clearance cookie")
+                            # Mark that THIS Playwright context has its own valid
+                            # cf_clearance — safe to use the CSRF fast path now.
+                            self._pw_cf_clearance_earned = True
+                            logger.info("✓ Playwright context earned its own cf_clearance")
 
                     if csrf_found:
                         logger.info("✓ CSRF token found in cookies - refresh successful")
@@ -867,18 +887,6 @@ class UdemyClient:
                 else:
                     logger.debug(f"Playwright returned {resp.status_code if resp else 'None'}.")
                     break
-
-        if not course.course_id:
-            # Traditional HTTP fallback as last resort (often 403s on servers but works locally)
-            if not resp or resp.status_code != 200:
-                logger.debug(f"  Attempting traditional HTTP fallback for {course.title}...")
-                resp = await self.http.get(url, cookies=self.cookie_dict)
-                if resp and resp.status_code == 200:
-                    soup = bs(resp.content, "lxml")
-                    course.course_id = self._extract_course_id(soup)
-                    if course.course_id:
-                        logger.debug(f"  Success: Found ID {course.course_id} via HTTP fallback")
-                        return
 
         if not course.course_id:
             course.is_valid = False
