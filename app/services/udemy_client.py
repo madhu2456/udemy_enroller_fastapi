@@ -89,87 +89,88 @@ class UdemyClient:
             return None
 
     async def _playwright_request(self, url: str, method: str = "GET", data: Optional[Dict] = None, req_type: str = "xhr") -> Optional[httpx.Response]:
-        """Perform a stealthy request using a real headless browser."""
+        """Perform a stealthy request using Playwright's APIRequestContext.
+
+        Uses context.request instead of page.evaluate(fetch()) so that:
+        - Requests share the Chromium TLS fingerprint → Cloudflare accepts cf_clearance
+        - Not affected by JS execution-context destruction from page navigation
+        """
         from app.services.playwright_service import PlaywrightService
         try:
             async with PlaywrightService(proxy=self.http.proxy) as pw:
-                cookies = []
-                for k, v in self.cookie_dict.items():
-                    cookies.append({"name": k, "value": v, "url": "https://www.udemy.com"})
-                await pw._context.add_cookies(cookies)
-                
-                page = await pw._context.new_page()
-                
+                # Load all known cookies so Cloudflare and Udemy recognise the session
+                cookies = [
+                    {"name": k, "value": v, "url": "https://www.udemy.com"}
+                    for k, v in self.cookie_dict.items()
+                    if v and isinstance(v, str)
+                ]
+                if cookies:
+                    await pw._context.add_cookies(cookies)
+
+                csrf_token = (self.cookie_dict.get('csrf_token') or
+                              self.cookie_dict.get('csrftoken', ''))
+
                 headers_dict = {
                     "Accept": "application/json, text/plain, */*",
                     "Content-Type": "application/json",
                     "X-Requested-With": "XMLHttpRequest",
-                    "X-CSRF-Token": self.cookie_dict.get('csrf_token') or self.cookie_dict.get('csrftoken', ''),
+                    "X-CSRF-Token": csrf_token,
                     "Sec-Fetch-Site": "same-origin",
                     "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Dest": "empty"
+                    "Sec-Fetch-Dest": "empty",
                 }
                 if method == "POST":
                     headers_dict.update({
                         "Origin": constants.UDEMY_BASE_URL,
-                        "Referer": f"{constants.UDEMY_BASE_URL}/payment/checkout/"
+                        "Referer": f"{constants.UDEMY_BASE_URL}/payment/checkout/",
                     })
-                
-                headers_json = json.dumps(headers_dict)
-                body_json = json.dumps(data) if data else "null"
-                
-                js_template = """
-                async () => {
-                    try {
-                        const options = {
-                            method: "METHOD_PLACEHOLDER",
-                            headers: HEADERS_PLACEHOLDER,
-                            credentials: "include"
-                        };
-                        const bodyData = BODY_PLACEHOLDER;
-                        if (bodyData !== "null" && bodyData !== null) {
-                            options.body = JSON.stringify(bodyData);
-                        }
-                        
-                        const response = await fetch("URL_PLACEHOLDER", options);
-                        return {
-                            status: response.status,
-                            content: await response.text(),
-                            url: response.url
-                        };
-                    } catch (e) {
-                        return { status: 0, content: e.message, url: "" };
-                    }
-                }
-                """
-                js_script = js_template.replace("URL_PLACEHOLDER", url) \
-                                      .replace("METHOD_PLACEHOLDER", method) \
-                                      .replace("HEADERS_PLACEHOLDER", headers_json) \
-                                      .replace("BODY_PLACEHOLDER", body_json)
-                try:
-                    await page.goto(f"{constants.UDEMY_BASE_URL}/robots.txt", wait_until="commit", timeout=15000)
-                    await asyncio.sleep(1) # Stabilization
-                except Exception as e:
-                    logger.debug(f"Playwright navigation to robots.txt timed out: {e}")
-                
-                result = await page.evaluate(js_script)
-                await page.close()
-                
-                if result:
-                    if result['status'] == 0:
-                        logger.error(f"Playwright fetch error for {url}: {result['content']}")
-                        return None
-                    
-                    if result['status'] != 200:
-                        logger.debug(f"  Playwright request to {url} returned status {result['status']}")
 
-                    mock_resp = httpx.Response(
-                        status_code=result['status'],
-                        content=result['content'].encode(),
-                        request=httpx.Request(method, result.get('url', url))
+                # For POST (checkout), navigate to a Udemy page first so Cloudflare
+                # establishes clearance for this context before the API call.
+                # For GET (course page scraping), skip the warmup for speed — a
+                # pre-loaded cf_clearance cookie is usually enough.
+                if method == "POST":
+                    page = await pw._context.new_page()
+                    try:
+                        await page.goto(
+                            f"{constants.UDEMY_BASE_URL}/cart/",
+                            wait_until="commit",
+                            timeout=15000,
+                        )
+                        await asyncio.sleep(1)
+                    except Exception as nav_err:
+                        logger.debug(f"Playwright warmup navigation failed (non-fatal): {nav_err}")
+                    finally:
+                        await page.close()
+
+                # Use APIRequestContext — same Chromium fingerprint as the browser,
+                # shares cookies with the context, immune to JS execution destruction.
+                try:
+                    if method == "POST":
+                        body_bytes = json.dumps(data).encode() if data else None
+                        pw_resp = await pw._context.request.post(
+                            url, data=body_bytes, headers=headers_dict, timeout=30000
+                        )
+                    else:
+                        pw_resp = await pw._context.request.get(
+                            url, headers=headers_dict, timeout=30000
+                        )
+
+                    status = pw_resp.status
+                    body = await pw_resp.body()
+
+                    if status != 200:
+                        logger.debug(f"  Playwright request to {url} returned status {status}")
+
+                    return httpx.Response(
+                        status_code=status,
+                        content=body,
+                        request=httpx.Request(method, url),
                     )
-                    return mock_resp
-                return None
+                except Exception as req_err:
+                    logger.debug(f"Playwright APIRequestContext failed for {url}: {req_err}")
+                    return None
+
         except Exception as e:
             logger.error(f"Playwright request failed for {url}: {e}")
             return None
