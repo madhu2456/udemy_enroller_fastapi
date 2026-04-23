@@ -139,12 +139,16 @@ class UdemyClient:
     async def _playwright_request(self, url: str, method: str = "GET", data: Optional[Dict] = None, req_type: str = "xhr") -> Optional[httpx.Response]:
         """Perform a stealthy request using the persistent Playwright BrowserContext.
 
-        GET  → real page.goto() so CF JS challenges resolve in the browser engine.
+        GET (req_type="document") → real page.goto() so CF JS challenges resolve in
+            the browser engine.  On 403 a homepage warmup + retry is attempted once.
+        GET (req_type="xhr"|"api", default) → context.request.get() using Chromium
+            TLS fingerprint.  Response body is raw bytes (correct for JSON API calls).
         POST → warmup page navigation then context.request.post() (Chromium TLS
                fingerprint, immune to JS execution-context destruction).
 
         The persistent context means cf_clearance is earned once and reused for every
-        subsequent request in this UdemyClient lifetime.
+        subsequent request in this UdemyClient lifetime.  HTTPX is never used here so
+        Python TLS fingerprints never reach Cloudflare-protected endpoints.
         """
         try:
             ctx = await self._get_persistent_pw_context()
@@ -171,47 +175,90 @@ class UdemyClient:
                 })
 
             if method == "GET":
-                # Real browser page — executes JavaScript so CF challenges auto-resolve.
-                page = await ctx.new_page()
-                try:
-                    nav_response = await page.goto(
-                        url, wait_until="domcontentloaded", timeout=30000
-                    )
-                    await asyncio.sleep(0.5)
+                if req_type == "document":
+                    # Real browser page — executes JavaScript so CF challenges auto-resolve.
+                    page = await ctx.new_page()
+                    try:
+                        nav_response = await page.goto(
+                            url, wait_until="domcontentloaded", timeout=30000
+                        )
+                        await asyncio.sleep(0.5)
 
-                    # Wait up to 30 s for any Cloudflare JS challenge to resolve
-                    html_content = await page.content()
-                    if await self._check_cloudflare_challenge(html_content):
-                        logger.debug("CF challenge detected during page.goto — waiting for JS resolution...")
-                        self.session_recovery_state["cloudflare_challenges_encountered"] += 1
-                        for _ in range(15):
-                            await asyncio.sleep(2)
-                            html_content = await page.content()
-                            if not await self._check_cloudflare_challenge(html_content):
-                                logger.debug("CF challenge resolved")
-                                break
+                        # Wait up to 30 s for any Cloudflare JS challenge to resolve
+                        html_content = await page.content()
+                        if await self._check_cloudflare_challenge(html_content):
+                            logger.debug("CF challenge detected during page.goto — waiting for JS resolution...")
+                            self.session_recovery_state["cloudflare_challenges_encountered"] += 1
+                            for _ in range(15):
+                                await asyncio.sleep(2)
+                                html_content = await page.content()
+                                if not await self._check_cloudflare_challenge(html_content):
+                                    logger.debug("CF challenge resolved")
+                                    break
 
-                    # Harvest updated cookies back into cookie_dict / httpx client
-                    for c in await ctx.cookies():
-                        if c.get("name") and c.get("value"):
-                            self.cookie_dict[c["name"]] = c["value"]
-                            self.http.client.cookies.set(c["name"], c["value"])
+                        # Harvest updated cookies back into cookie_dict / httpx client
+                        for c in await ctx.cookies():
+                            if c.get("name") and c.get("value"):
+                                self.cookie_dict[c["name"]] = c["value"]
+                                self.http.client.cookies.set(c["name"], c["value"])
 
-                    status = nav_response.status if nav_response else 200
-                    final_url = page.url
-                    if status != 200:
-                        logger.debug(f"  Playwright GET {url} → {status}")
+                        status = nav_response.status if nav_response else 200
+                        final_url = page.url
 
-                    return httpx.Response(
-                        status_code=status,
-                        content=html_content.encode(),
-                        request=httpx.Request(method, final_url or url),
-                    )
-                except Exception as nav_err:
-                    logger.debug(f"Playwright page navigation failed for {url}: {nav_err}")
-                    return None
-                finally:
-                    await page.close()
+                        # 403 on a document page — warm up via homepage, then retry once
+                        if status == 403:
+                            logger.debug(f"  Document 403 on {url} — warming up via homepage then retrying...")
+                            try:
+                                await page.goto(
+                                    f"{constants.UDEMY_BASE_URL}/",
+                                    wait_until="commit",
+                                    timeout=15000,
+                                )
+                                await asyncio.sleep(2)
+                                nav_response = await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                                await asyncio.sleep(0.5)
+                                html_content = await page.content()
+                                status = nav_response.status if nav_response else 403
+                                final_url = page.url
+                                for c in await ctx.cookies():
+                                    if c.get("name") and c.get("value"):
+                                        self.cookie_dict[c["name"]] = c["value"]
+                                        self.http.client.cookies.set(c["name"], c["value"])
+                            except Exception as warmup_err:
+                                logger.debug(f"Document warmup+retry failed (non-fatal): {warmup_err}")
+
+                        if status != 200:
+                            logger.debug(f"  Playwright GET {url} → {status}")
+
+                        return httpx.Response(
+                            status_code=status,
+                            content=html_content.encode(),
+                            request=httpx.Request(method, final_url or url),
+                        )
+                    except Exception as nav_err:
+                        logger.debug(f"Playwright page navigation failed for {url}: {nav_err}")
+                        return None
+                    finally:
+                        await page.close()
+
+                else:
+                    # API/XHR — use context.request.get() so the response body is raw JSON,
+                    # not an HTML page wrapping it.  Still uses Chromium TLS fingerprint so
+                    # Cloudflare bot detection is bypassed.
+                    try:
+                        pw_resp = await ctx.request.get(url, headers=headers_dict, timeout=30000)
+                        status = pw_resp.status
+                        body = await pw_resp.body()
+                        if status != 200:
+                            logger.debug(f"  Playwright XHR GET {url} → {status}")
+                        return httpx.Response(
+                            status_code=status,
+                            content=body,
+                            request=httpx.Request(method, url),
+                        )
+                    except Exception as req_err:
+                        logger.debug(f"Playwright XHR GET failed for {url}: {req_err}")
+                        return None
 
             else:  # POST
                 # Warmup: navigate to cart/ in a real page so CF establishes clearance
@@ -782,7 +829,8 @@ class UdemyClient:
 
         consecutive_403 = 0
         max_403_retries = 2
-        
+        resp = None
+
         if use_headless_fallback:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
             while consecutive_403 < max_403_retries:
@@ -814,44 +862,11 @@ class UdemyClient:
                         if await self._refresh_csrf_stealth():
                             await asyncio.sleep(1)
                             continue
-                    logger.error(f"Too many 403 errors ({consecutive_403}) on Playwright course fetch. Falling back to standard.")
+                    logger.error(f"Too many 403 errors ({consecutive_403}) on Playwright course fetch. Giving up.")
                     break
                 else:
-                    logger.debug(f"Playwright returned {resp.status_code if resp else 'None'}. Falling back to standard.")
+                    logger.debug(f"Playwright returned {resp.status_code if resp else 'None'}.")
                     break
-
-        logger.info(f"Standard: Fetching course ID for {course.title}...")
-        consecutive_403 = 0
-        while consecutive_403 < max_403_retries:
-            resp = await self.http.get(url, log_failures=False, raise_for_status=False)
-            if resp and resp.status_code == 200:
-                final_url = str(resp.url)
-                logger.debug(f"  Standard Request resolved to: {final_url}")
-                course.set_url(final_url)
-                soup = bs(resp.content, "lxml")
-                body = soup.find("body")
-                if body:
-                    try:
-                        dma = json.loads(body.get("data-module-args", "{}"))
-                        course.set_metadata(dma)
-                    except Exception: pass
-                if not course.course_id:
-                    course.course_id = self._extract_course_id(soup)
-                if course.course_id:
-                    return
-                break
-            elif resp and resp.status_code == 403:
-                consecutive_403 += 1
-                if consecutive_403 < max_403_retries:
-                    logger.warning(f"403 Forbidden on course fetch for {course.title}. Refreshing session (attempt {consecutive_403}/{max_403_retries})...")
-                    if await self._refresh_csrf_stealth():
-                        await asyncio.sleep(1)
-                        continue
-                logger.error(f"Too many 403 errors ({consecutive_403}) on standard course fetch. Giving up.")
-                break
-            else:
-                logger.debug(f"Standard request returned {resp.status_code if resp else 'None'}.")
-                break
 
         if not course.course_id:
             course.is_valid = False
@@ -884,11 +899,6 @@ class UdemyClient:
             resp = await self._playwright_request(url)
             if resp and resp.status_code == 200:
                 r = await self.http.safe_json(resp, "playwright check course")
-
-        if not r:
-            logger.info(f"Standard: Checking coupon for {course.title}...")
-            resp = await self.http.get(url, cookies=self.cookie_dict)
-            r = await self.http.safe_json(resp, "standard check course")
 
         if not r:
             course.is_coupon_valid = False
