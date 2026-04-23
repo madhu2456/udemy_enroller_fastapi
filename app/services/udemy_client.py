@@ -869,6 +869,18 @@ class UdemyClient:
                     break
 
         if not course.course_id:
+            # Traditional HTTP fallback as last resort (often 403s on servers but works locally)
+            if not resp or resp.status_code != 200:
+                logger.debug(f"  Attempting traditional HTTP fallback for {course.title}...")
+                resp = await self.http.get(url, cookies=self.cookie_dict)
+                if resp and resp.status_code == 200:
+                    soup = bs(resp.content, "lxml")
+                    course.course_id = self._extract_course_id(soup)
+                    if course.course_id:
+                        logger.debug(f"  Success: Found ID {course.course_id} via HTTP fallback")
+                        return
+
+        if not course.course_id:
             course.is_valid = False
             if resp and resp.status_code == 200:
                 course.error = "Course ID not found"
