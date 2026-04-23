@@ -242,15 +242,9 @@ class UdemyClient:
         logger.info("Stealth: Refreshing CSRF token and cookies via Playwright...")
         csrf_found = False
         try:
-            # CRITICAL: Check if we already have a CSRF token from login
-            existing_csrf = self.cookie_dict.get("csrf_token") or self.cookie_dict.get("csrftoken")
-            if existing_csrf:
-                logger.info(f"Using existing CSRF token from login/session (length: {len(existing_csrf)})")
-                # Ensure it's in headers
-                self.http.client.headers['X-CSRFToken'] = existing_csrf
-                self.http.client.headers['X-CSRF-Token'] = existing_csrf
-                logger.info("CSRF token refresh successful (reusing provided token)")
-                return True
+            # CRITICAL: Always fetch a fresh CSRF token from the server, never reuse from login
+            # The old approach of reusing login tokens was causing persistent 403 errors
+            logger.debug("Fetching fresh CSRF token (not reusing login token)...")
             
             async with PlaywrightService(proxy=self.http.proxy) as pw:
                 page = await pw._context.new_page()
@@ -817,7 +811,10 @@ class UdemyClient:
     async def checkout_single(self, course: Course) -> bool:
         """Asynchronously enroll in a single course with a coupon."""
         max_retry_attempts = 2
+        attempt_count = 0
+        
         for retry_attempt in range(max_retry_attempts):
+            attempt_count += 1
             csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
             if not csrf_token:
                  refresh_success = await self._refresh_csrf_stealth()
@@ -846,7 +843,10 @@ class UdemyClient:
 
             result = await self._checkout_one(course, headers)
             if result:
+                logger.debug(f"✓ Single-course checkout succeeded for {course.title} (attempt {attempt_count})")
                 return True
+        
+        logger.warning(f"✗ Single-course checkout failed for {course.title} after {attempt_count} attempts")
         return False
 
     @staticmethod
@@ -929,9 +929,11 @@ class UdemyClient:
                 
                 logger.warning(f"403 Forbidden on checkout for {course.title}. Refreshing session (attempt {consecutive_403_count}/{max_403_consecutive})...")
                 
-                # Implement exponential backoff before refresh
-                backoff_delay = min(2 ** consecutive_403_count, 12)  # 2, 4, 8, 12 seconds (capped at 12)
-                logger.debug(f"Waiting {backoff_delay} seconds before session refresh...")
+                # Implement improved exponential backoff with jitter
+                base_backoff = min(2 ** consecutive_403_count, 16)  # 2, 4, 8, 16 seconds (capped at 16)
+                jitter = random.uniform(0.5, 2.0)
+                backoff_delay = base_backoff + jitter
+                logger.debug(f"Waiting {backoff_delay:.1f}s before session refresh (base: {base_backoff}s, jitter: {jitter:.1f}s)...")
                 await asyncio.sleep(backoff_delay)
                 
                 # On repeated 403 errors, suggest using Firecrawl if available
@@ -996,19 +998,22 @@ class UdemyClient:
             metrics["total_attempts"] += 1
             
             if attempt > 0:
-                # Adaptive backoff: increase delay with consecutive 403s
-                base_delay = min(2 ** (attempt // 2), 10)
-                # Add extra delay if we've had 403s (adaptive)
+                # Improved exponential backoff with jitter
+                # Start at 2s, double each time: 2s, 4s, 8s, 16s (capped)
+                base_delay = min(2 ** (attempt), 16)  # Capped at 16 seconds
+                # Add extra delay if we've had 403s (adaptive multiplier)
                 if consecutive_403_count > 0:
-                    adaptive_multiplier = 1.0 + (consecutive_403_count * 0.5)  # 1.5x, 2.0x, 2.5x...
+                    adaptive_multiplier = 1.0 + (consecutive_403_count * 0.4)  # 1.4x, 1.8x, 2.2x...
                     base_delay *= adaptive_multiplier
                 
-                backoff_delay = min(base_delay + random.uniform(0.5, 2.0), 15)  # Cap at 15 seconds
+                jitter = random.uniform(0.5, 2.0)
+                backoff_delay = min(base_delay + jitter, 20)  # Cap final delay at 20 seconds
                 metrics["total_delay_time"] += backoff_delay
                 
                 logger.info(f"Waiting {backoff_delay:.1f}s before bulk checkout retry "
                            f"(attempt {attempt + 1}/{max_bulk_attempts}, "
-                           f"403_count={consecutive_403_count}/{max_403_consecutive})...")
+                           f"403_count={consecutive_403_count}/{max_403_consecutive}, "
+                           f"base={base_delay:.1f}s, jitter={jitter:.1f}s)...")
                 await asyncio.sleep(backoff_delay)
 
             csrf_token = (self.http.client.cookies.get("csrftoken") or 
@@ -1082,12 +1087,22 @@ class UdemyClient:
                 logger.warning(f"Bulk checkout hit 403 Forbidden (attempt {consecutive_403_count}/{max_403_consecutive}). "
                              f"Refreshing session... [Total attempts: {metrics['total_attempts']}]")
                 
+                # Implement improved exponential backoff before refresh
+                base_backoff = min(2 ** consecutive_403_count, 16)  # 2, 4, 8, 16 seconds
+                jitter = random.uniform(0.5, 2.0)
+                backoff_delay = base_backoff + jitter
+                metrics["total_delay_time"] += backoff_delay
+                logger.debug(f"Waiting {backoff_delay:.1f}s before session refresh (base: {base_backoff}s)...")
+                await asyncio.sleep(backoff_delay)
+                
                 refresh_success = await self._refresh_csrf_stealth()
                 if refresh_success:
                     metrics["successful_403_recoveries"] += 1
                     logger.info(f"✓ Successfully recovered from 403 (recovery #{metrics['successful_403_recoveries']})")
+                    # Extra wait after refresh to ensure session is ready
+                    await asyncio.sleep(2)
                 else:
-                    logger.error("Failed to refresh CSRF after 403")
+                    logger.error("Failed to refresh CSRF after 403 - session may be blocked")
                     metrics["failed_checkouts"] += 1
                 continue
 

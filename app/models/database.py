@@ -165,6 +165,10 @@ class UserSettings(Base):
     enable_headless = Column(Boolean, default=False)
     firecrawl_api_key = Column(String(255), nullable=True)
 
+    # Enrollment Mode Settings
+    enrollment_mode = Column(String(20), default="bulk")  # "single" or "bulk"
+    batch_size = Column(Integer, default=5)  # Batch size for bulk mode
+
     created_at = Column(DateTime, default=_utcnow_naive)
     updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
 
