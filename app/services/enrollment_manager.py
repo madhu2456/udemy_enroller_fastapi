@@ -263,10 +263,18 @@ class EnrollmentManager:
                     await self.udemy.get_course_id(course)
 
                     if not course.is_valid:
-                        self.udemy.excluded_c += 1
-                        course_status = "invalid"
-                        error_msg = course.error
-                        logger.info(f"  Status: Invalid - {error_msg}")
+                        error_msg = course.error or ""
+                        if "403" in error_msg:
+                            # Temporary Cloudflare/session block — not a permanent course defect.
+                            # Mark as "failed" so it's retried in the next run (unlike "invalid"
+                            # which is filtered out of future runs).
+                            self.udemy.expired_c += 1
+                            course_status = "failed"
+                            logger.info(f"  Status: Skipped (session blocked, will retry) - {error_msg}")
+                        else:
+                            self.udemy.excluded_c += 1
+                            course_status = "invalid"
+                            logger.info(f"  Status: Invalid - {error_msg}")
                     elif await self.udemy.is_already_enrolled(course, enrolled_slugs):
                         self.udemy.already_enrolled_c += 1
                         course_status = "already_enrolled"

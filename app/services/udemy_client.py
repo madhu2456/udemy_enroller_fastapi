@@ -215,6 +215,48 @@ class UdemyClient:
         logger.debug("Cloudflare challenge status unclear - no specific indicators found")
         return False
 
+    async def _extract_csrf_from_html(self, html: str) -> Optional[str]:
+        """Extract CSRF token from HTML using various methods. Returns token value or None."""
+        if not html:
+            return None
+
+        # Method 1: Look for csrftoken in meta tag
+        meta_match = re.search(r'<meta[^>]*name=["\']csrftoken["\'][^>]*content=["\']([^"\']+)["\']', html)
+        if meta_match:
+            token = meta_match.group(1)
+            logger.debug(f"Found CSRF token in meta tag: {token[:20]}...")
+            return token
+
+        # Method 2: Look for csrf_token in meta tag
+        meta_match = re.search(r'<meta[^>]*name=["\']csrf_token["\'][^>]*content=["\']([^"\']+)["\']', html)
+        if meta_match:
+            token = meta_match.group(1)
+            logger.debug(f"Found csrf_token in meta tag: {token[:20]}...")
+            return token
+
+        # Method 3: Look for CSRF token in script data (flexible pattern)
+        script_match = re.search(r'["\']?csrf["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']', html, re.IGNORECASE)
+        if script_match:
+            token = script_match.group(1)
+            logger.debug(f"Found CSRF token in script: {token[:20]}...")
+            return token
+
+        # Method 4: Look for X-CSRFToken or similar in script (flexible pattern)
+        script_match = re.search(r'["\']?X-CSRF-?Token["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']', html, re.IGNORECASE)
+        if script_match:
+            token = script_match.group(1)
+            logger.debug(f"Found X-CSRFToken in script: {token[:20]}...")
+            return token
+
+        # Method 5: Look for CSRF in any data attribute or hidden input
+        input_match = re.search(r'<input[^>]*name=["\']csrf(?:token)?["\'][^>]*value=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        if input_match:
+            token = input_match.group(1)
+            logger.debug(f"Found CSRF in hidden input: {token[:20]}...")
+            return token
+
+        return None
+
     async def _extract_csrf_with_retries(self, page, max_retries: int = 2) -> Optional[str]:
         """Extract CSRF token from page with retries. Handles dynamic loading."""
         for attempt in range(max_retries):
@@ -222,70 +264,29 @@ class UdemyClient:
                 # Wait for page to settle
                 await asyncio.sleep(1)
                 html_content = await page.content()
-                
+
                 # Try extract from HTML
                 csrf_token = await self._extract_csrf_from_html(html_content)
                 if csrf_token:
                     logger.info(f"Successfully extracted CSRF from HTML (attempt {attempt + 1})")
                     return csrf_token
-                
+
                 # Try to trigger any pending XHR requests by waiting
                 if attempt < max_retries - 1:
                     logger.debug(f"CSRF not found, waiting for page to fully load (attempt {attempt + 1}/{max_retries})...")
                     await asyncio.sleep(2)
-                    
+
                     # Try to wait for any pending requests
                     try:
                         await page.wait_for_load_state("networkidle", timeout=3000)
-                    except:
+                    except Exception:
                         pass  # Timeout is ok, just a wait hint
             except Exception as e:
                 logger.debug(f"CSRF extraction attempt {attempt + 1} failed: {e}")
                 if attempt == max_retries - 1:
                     logger.warning(f"CSRF extraction failed after {max_retries} attempts")
                     return None
-        
-        return None
-        """Extract CSRF token from HTML using various methods. Returns token value or None."""
-        if not html:
-            return None
-        
-        # Method 1: Look for csrftoken in meta tag
-        meta_match = re.search(r'<meta[^>]*name=["\']csrftoken["\'][^>]*content=["\']([^"\']+)["\']', html)
-        if meta_match:
-            token = meta_match.group(1)
-            logger.debug(f"Found CSRF token in meta tag: {token[:20]}...")
-            return token
-        
-        # Method 2: Look for csrf_token in meta tag
-        meta_match = re.search(r'<meta[^>]*name=["\']csrf_token["\'][^>]*content=["\']([^"\']+)["\']', html)
-        if meta_match:
-            token = meta_match.group(1)
-            logger.debug(f"Found csrf_token in meta tag: {token[:20]}...")
-            return token
-        
-        # Method 3: Look for CSRF token in script data (flexible pattern)
-        script_match = re.search(r'["\']?csrf["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']', html, re.IGNORECASE)
-        if script_match:
-            token = script_match.group(1)
-            logger.debug(f"Found CSRF token in script: {token[:20]}...")
-            return token
-        
-        # Method 4: Look for X-CSRFToken or similar in script (flexible pattern)
-        script_match = re.search(r'["\']?X-CSRF-?Token["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']', html, re.IGNORECASE)
-        if script_match:
-            token = script_match.group(1)
-            logger.debug(f"Found X-CSRFToken in script: {token[:20]}...")
-            return token
-        
-        # Method 5: Look for CSRF in any data attribute or hidden input
-        input_match = re.search(r'<input[^>]*name=["\']csrf(?:token)?["\'][^>]*value=["\']([^"\']+)["\']', html, re.IGNORECASE)
-        if input_match:
-            token = input_match.group(1)
-            logger.debug(f"Found CSRF in hidden input: {token[:20]}...")
-            return token
-        
-        logger.warning("No CSRF token found in HTML")
+
         return None
 
     async def _refresh_csrf_stealth(self) -> bool:
@@ -311,8 +312,22 @@ class UdemyClient:
             
             # FALLBACK STRATEGY: If login token missing or errored, fetch fresh CSRF token
             logger.debug("Login CSRF token not available or failed. Fetching fresh CSRF token as fallback...")
-            
+
             async with PlaywrightService(proxy=self.http.proxy) as pw:
+                # Load existing auth cookies into the Playwright context BEFORE any navigation.
+                # Without this step, Udemy sees an anonymous session and never sets csrftoken,
+                # even after a Cloudflare challenge resolves.
+                auth_cookies = []
+                for k, v in self.cookie_dict.items():
+                    if v and isinstance(v, str) and not k.startswith("_csrf_from"):
+                        auth_cookies.append({"name": k, "value": v, "url": "https://www.udemy.com"})
+                if auth_cookies:
+                    try:
+                        await pw._context.add_cookies(auth_cookies)
+                        logger.debug(f"Pre-loaded {len(auth_cookies)} auth cookies into Playwright context")
+                    except Exception as e:
+                        logger.debug(f"Could not pre-load cookies into Playwright context: {e}")
+
                 # Attempt with multiple strategies - increased to 3 for better resilience
                 for strategy_attempt in range(3):
                     if strategy_attempt == 1:
