@@ -53,7 +53,12 @@ class UdemyClient:
         self.amount_saved_c = Decimal(0)
 
         self.is_authenticated = False
-        
+
+        # Persistent Playwright browser context — shared across ALL requests so that
+        # Cloudflare clearance (cf_clearance) is solved once and stays valid for every
+        # subsequent page.goto() / context.request call in this session.
+        self._pw_context = None
+
         # Session recovery tracking for 403 errors
         self.session_recovery_state = {
             "consecutive_403_errors": 0,
@@ -61,6 +66,49 @@ class UdemyClient:
             "cloudflare_challenges_encountered": 0,
             "last_error_time": None,
         }
+
+    async def _get_persistent_pw_context(self):
+        """Return the long-lived Playwright BrowserContext for this client.
+
+        Creates the context on first call.  If the context has been closed or
+        crashed, transparently recreates it so callers never need to handle that.
+        """
+        from app.services.playwright_service import PlaywrightManager
+
+        if self._pw_context is not None:
+            # Health-check: cookies() raises if the context is closed/crashed.
+            try:
+                await self._pw_context.cookies()
+                return self._pw_context
+            except Exception:
+                logger.debug("Persistent Playwright context became invalid — recreating...")
+                self._pw_context = None
+
+        try:
+            browser = await PlaywrightManager.get_browser()
+            proxy_config = {"server": self.http.proxy} if self.http.proxy else None
+            self._pw_context = await browser.new_context(
+                user_agent=constants.DEFAULT_USER_AGENT,
+                proxy=proxy_config,
+                viewport={"width": 1280, "height": 800},
+                ignore_https_errors=True,
+            )
+            # Seed the fresh context with any existing auth cookies so Udemy
+            # recognises the session and Cloudflare inherits the clearance.
+            if self.cookie_dict:
+                seed_cookies = [
+                    {"name": k, "value": v, "url": "https://www.udemy.com"}
+                    for k, v in self.cookie_dict.items()
+                    if v and isinstance(v, str) and not k.startswith("_csrf_from")
+                ]
+                if seed_cookies:
+                    await self._pw_context.add_cookies(seed_cookies)
+            logger.debug("Created new persistent Playwright context for UdemyClient")
+        except Exception as e:
+            logger.error(f"Failed to create persistent Playwright context: {e}")
+            self._pw_context = None
+
+        return self._pw_context
 
     async def _firecrawl_scrape(self, url: str, schema: Optional[Dict] = None, use_cookies: bool = True) -> Optional[Dict]:
         """Perform a stealthy scrape using Firecrawl API."""
@@ -89,138 +137,143 @@ class UdemyClient:
             return None
 
     async def _playwright_request(self, url: str, method: str = "GET", data: Optional[Dict] = None, req_type: str = "xhr") -> Optional[httpx.Response]:
-        """Perform a stealthy request using Playwright's APIRequestContext.
+        """Perform a stealthy request using the persistent Playwright BrowserContext.
 
-        Uses context.request instead of page.evaluate(fetch()) so that:
-        - Requests share the Chromium TLS fingerprint → Cloudflare accepts cf_clearance
-        - Not affected by JS execution-context destruction from page navigation
+        GET  → real page.goto() so CF JS challenges resolve in the browser engine.
+        POST → warmup page navigation then context.request.post() (Chromium TLS
+               fingerprint, immune to JS execution-context destruction).
+
+        The persistent context means cf_clearance is earned once and reused for every
+        subsequent request in this UdemyClient lifetime.
         """
-        from app.services.playwright_service import PlaywrightService
         try:
-            async with PlaywrightService(proxy=self.http.proxy) as pw:
-                # Load all known cookies so Cloudflare and Udemy recognise the session
-                cookies = [
-                    {"name": k, "value": v, "url": "https://www.udemy.com"}
-                    for k, v in self.cookie_dict.items()
-                    if v and isinstance(v, str)
-                ]
-                if cookies:
-                    await pw._context.add_cookies(cookies)
+            ctx = await self._get_persistent_pw_context()
+            if ctx is None:
+                logger.error("No Playwright context available — skipping stealthy request")
+                return None
 
-                csrf_token = (self.cookie_dict.get('csrf_token') or
-                              self.cookie_dict.get('csrftoken', ''))
+            csrf_token = (self.cookie_dict.get("csrf_token") or
+                          self.cookie_dict.get("csrftoken", ""))
 
-                headers_dict = {
-                    "Accept": "application/json, text/plain, */*",
-                    "Content-Type": "application/json",
-                    "X-Requested-With": "XMLHttpRequest",
-                    "X-CSRF-Token": csrf_token,
-                    "Sec-Fetch-Site": "same-origin",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Dest": "empty",
-                }
-                if method == "POST":
-                    headers_dict.update({
-                        "Origin": constants.UDEMY_BASE_URL,
-                        "Referer": f"{constants.UDEMY_BASE_URL}/payment/checkout/",
-                    })
+            headers_dict = {
+                "Accept": "application/json, text/plain, */*",
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-Token": csrf_token,
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Dest": "empty",
+            }
+            if method == "POST":
+                headers_dict.update({
+                    "Origin": constants.UDEMY_BASE_URL,
+                    "Referer": f"{constants.UDEMY_BASE_URL}/payment/checkout/",
+                })
 
-                if method == "GET":
-                    # Real browser page navigation for GET requests.
-                    # page.goto() executes JavaScript, so Cloudflare JS challenges resolve
-                    # automatically — context.request.get() cannot do this.
-                    page = await pw._context.new_page()
-                    try:
-                        nav_response = await page.goto(
-                            url, wait_until="domcontentloaded", timeout=30000
-                        )
-                        await asyncio.sleep(0.5)
+            if method == "GET":
+                # Real browser page — executes JavaScript so CF challenges auto-resolve.
+                page = await ctx.new_page()
+                try:
+                    nav_response = await page.goto(
+                        url, wait_until="domcontentloaded", timeout=30000
+                    )
+                    await asyncio.sleep(0.5)
 
-                        # If Cloudflare challenge, wait up to 30 s for JS to solve it
-                        html_content = await page.content()
-                        if await self._check_cloudflare_challenge(html_content):
-                            logger.debug("CF challenge on page navigation, waiting for JS resolution...")
-                            for _ in range(15):
-                                await asyncio.sleep(2)
-                                html_content = await page.content()
-                                if not await self._check_cloudflare_challenge(html_content):
-                                    break
+                    # Wait up to 30 s for any Cloudflare JS challenge to resolve
+                    html_content = await page.content()
+                    if await self._check_cloudflare_challenge(html_content):
+                        logger.debug("CF challenge detected during page.goto — waiting for JS resolution...")
+                        self.session_recovery_state["cloudflare_challenges_encountered"] += 1
+                        for _ in range(15):
+                            await asyncio.sleep(2)
+                            html_content = await page.content()
+                            if not await self._check_cloudflare_challenge(html_content):
+                                logger.debug("CF challenge resolved")
+                                break
 
-                        # Harvest any updated cookies (cf_clearance, csrftoken, etc.)
-                        for c in await pw._context.cookies():
-                            if c.get("name") and c.get("value"):
-                                self.cookie_dict[c["name"]] = c["value"]
-                                self.http.client.cookies.set(c["name"], c["value"])
+                    # Harvest updated cookies back into cookie_dict / httpx client
+                    for c in await ctx.cookies():
+                        if c.get("name") and c.get("value"):
+                            self.cookie_dict[c["name"]] = c["value"]
+                            self.http.client.cookies.set(c["name"], c["value"])
 
-                        status = nav_response.status if nav_response else 200
-                        final_url = page.url
+                    status = nav_response.status if nav_response else 200
+                    final_url = page.url
+                    if status != 200:
+                        logger.debug(f"  Playwright GET {url} → {status}")
 
-                        if status != 200:
-                            logger.debug(f"  Playwright GET {url} returned status {status}")
+                    return httpx.Response(
+                        status_code=status,
+                        content=html_content.encode(),
+                        request=httpx.Request(method, final_url or url),
+                    )
+                except Exception as nav_err:
+                    logger.debug(f"Playwright page navigation failed for {url}: {nav_err}")
+                    return None
+                finally:
+                    await page.close()
 
-                        return httpx.Response(
-                            status_code=status,
-                            content=html_content.encode(),
-                            request=httpx.Request(method, final_url or url),
-                        )
-                    except Exception as nav_err:
-                        logger.debug(f"Playwright page navigation failed for {url}: {nav_err}")
-                        return None
-                    finally:
-                        await page.close()
+            else:  # POST
+                # Warmup: navigate to cart/ in a real page so CF establishes clearance
+                # for this context if it hasn't been used recently.
+                page = await ctx.new_page()
+                try:
+                    await page.goto(
+                        f"{constants.UDEMY_BASE_URL}/cart/",
+                        wait_until="commit",
+                        timeout=15000,
+                    )
+                    await asyncio.sleep(1)
+                    for c in await ctx.cookies():
+                        if c.get("name") and c.get("value"):
+                            self.cookie_dict[c["name"]] = c["value"]
+                            self.http.client.cookies.set(c["name"], c["value"])
+                except Exception as nav_err:
+                    logger.debug(f"Playwright warmup navigation failed (non-fatal): {nav_err}")
+                finally:
+                    await page.close()
 
-                else:
-                    # POST (checkout): navigate to a Udemy page first so Cloudflare
-                    # establishes clearance for this context, then use APIRequestContext
-                    # (Chromium TLS fingerprint, immune to JS execution destruction).
-                    page = await pw._context.new_page()
-                    try:
-                        await page.goto(
-                            f"{constants.UDEMY_BASE_URL}/cart/",
-                            wait_until="commit",
-                            timeout=15000,
-                        )
-                        await asyncio.sleep(1)
-                        # Harvest any fresh cookies from the warmup navigation
-                        for c in await pw._context.cookies():
-                            if c.get("name") and c.get("value"):
-                                self.cookie_dict[c["name"]] = c["value"]
-                                self.http.client.cookies.set(c["name"], c["value"])
-                    except Exception as nav_err:
-                        logger.debug(f"Playwright warmup navigation failed (non-fatal): {nav_err}")
-                    finally:
-                        await page.close()
+                # Refresh CSRF token after warmup (warmup may have updated cookies)
+                csrf_token = (self.cookie_dict.get("csrf_token") or
+                              self.cookie_dict.get("csrftoken", ""))
+                headers_dict["X-CSRF-Token"] = csrf_token
 
-                    # Refresh CSRF token in headers after warmup
-                    csrf_token = (self.cookie_dict.get('csrf_token') or
-                                  self.cookie_dict.get('csrftoken', ''))
-                    headers_dict["X-CSRF-Token"] = csrf_token
-
-                    try:
-                        body_bytes = json.dumps(data).encode() if data else None
-                        pw_resp = await pw._context.request.post(
-                            url, data=body_bytes, headers=headers_dict, timeout=30000
-                        )
-                        status = pw_resp.status
-                        body = await pw_resp.body()
-
-                        if status != 200:
-                            logger.debug(f"  Playwright POST {url} returned status {status}")
-
-                        return httpx.Response(
-                            status_code=status,
-                            content=body,
-                            request=httpx.Request(method, url),
-                        )
-                    except Exception as req_err:
-                        logger.debug(f"Playwright POST request failed for {url}: {req_err}")
-                        return None
+                try:
+                    body_bytes = json.dumps(data).encode() if data else None
+                    pw_resp = await ctx.request.post(
+                        url, data=body_bytes, headers=headers_dict, timeout=30000
+                    )
+                    status = pw_resp.status
+                    body = await pw_resp.body()
+                    if status != 200:
+                        logger.debug(f"  Playwright POST {url} → {status}")
+                    return httpx.Response(
+                        status_code=status,
+                        content=body,
+                        request=httpx.Request(method, url),
+                    )
+                except Exception as req_err:
+                    logger.debug(f"Playwright POST request failed for {url}: {req_err}")
+                    return None
 
         except Exception as e:
             logger.error(f"Playwright request failed for {url}: {e}")
+            # Invalidate context so it's recreated fresh on next call
+            try:
+                if self._pw_context:
+                    await self._pw_context.close()
+            except Exception:
+                pass
+            self._pw_context = None
             return None
 
     async def close(self):
+        if self._pw_context is not None:
+            try:
+                await self._pw_context.close()
+            except Exception:
+                pass
+            self._pw_context = None
         await self.http.close()
 
     def set_proxy(self, proxy: Optional[str]):
@@ -336,8 +389,7 @@ class UdemyClient:
         return None
 
     async def _refresh_csrf_stealth(self) -> bool:
-        """Refresh CSRF token and all session cookies using Playwright. Returns True if successful."""
-        from app.services.playwright_service import PlaywrightService
+        """Refresh CSRF token and all session cookies using the persistent Playwright context."""
         logger.info("Stealth: Refreshing CSRF token and cookies via Playwright...")
         csrf_found = False
         try:
@@ -358,189 +410,136 @@ class UdemyClient:
                 except Exception as e:
                     logger.warning(f"Login CSRF token fast path error: {e}. Falling back to full refresh...")
 
-            # FULL STRATEGY: No cf_clearance (or fast path failed) — do a real Playwright
-            # navigation so Cloudflare issues a fresh clearance for this session.
+            # FULL STRATEGY: Navigate to udemy.com using the persistent context so
+            # Cloudflare issues (or re-validates) cf_clearance, and we pick up a fresh
+            # csrftoken cookie in the same pass.
             if not cf_clearance:
-                logger.info("No cf_clearance found — forcing full Playwright session refresh...")
+                logger.info("No cf_clearance — full Playwright session refresh needed...")
             else:
-                logger.debug("Fetching fresh CSRF token via Playwright...")
+                logger.debug("Refreshing CSRF + session cookies via Playwright...")
 
-            async with PlaywrightService(proxy=self.http.proxy) as pw:
-                # Load existing auth cookies into the Playwright context BEFORE any navigation.
-                # Without this step, Udemy sees an anonymous session and never sets csrftoken,
-                # even after a Cloudflare challenge resolves.
-                auth_cookies = []
-                for k, v in self.cookie_dict.items():
-                    if v and isinstance(v, str) and not k.startswith("_csrf_from"):
-                        auth_cookies.append({"name": k, "value": v, "url": "https://www.udemy.com"})
-                if auth_cookies:
-                    try:
-                        await pw._context.add_cookies(auth_cookies)
-                        logger.debug(f"Pre-loaded {len(auth_cookies)} auth cookies into Playwright context")
-                    except Exception as e:
-                        logger.debug(f"Could not pre-load cookies into Playwright context: {e}")
+            ctx = await self._get_persistent_pw_context()
+            if ctx is None:
+                logger.error("Cannot refresh session — no Playwright context available")
+                self.session_recovery_state["csrf_refresh_failures"] += 1
+                return False
 
-                # Attempt with multiple strategies - increased to 3 for better resilience
-                for strategy_attempt in range(3):
-                    if strategy_attempt == 1:
-                        logger.info("Trying alternate Cloudflare resolution strategy (attempt 2/3)...")
-                    elif strategy_attempt == 2:
-                        logger.info("Trying fresh browser context strategy (attempt 3/3)...")
-                    
-                    # Create fresh page for each strategy attempt
-                    page = await pw._context.new_page()
-                    
+            cookies = []
+            for strategy_attempt in range(3):
+                if strategy_attempt == 1:
+                    logger.info("Trying alternate Cloudflare resolution strategy (attempt 2/3)...")
+                elif strategy_attempt == 2:
+                    logger.info("Trying fresh browser context strategy (attempt 3/3)...")
+                    # Last resort: recreate the persistent context entirely
                     try:
-                        # STRATEGY: Navigate to home page with extended wait
-                        await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="commit", timeout=30000)
-                        await asyncio.sleep(2) # Initial wait for page load
-                        
-                        # Check if we hit Cloudflare challenge
-                        html_content = await page.content()
-                        is_cf_challenge = await self._check_cloudflare_challenge(html_content)
-                        
-                        if is_cf_challenge:
-                            logger.warning(f"Cloudflare challenge detected (strategy {strategy_attempt + 1}/3). Waiting for resolution...")
-                            self.session_recovery_state["cloudflare_challenges_encountered"] += 1
-                            challenge_resolved = False
-                            
-                            # EXTENDED WAIT: Try to resolve challenge with longer delays
-                            for wait_attempt in range(15):  # 15 attempts × 2 seconds = 30 seconds max
-                                await asyncio.sleep(2)
-                                html_content = await page.content()
-                                
-                                if not await self._check_cloudflare_challenge(html_content):
-                                    logger.info(f"Cloudflare challenge resolved after {(wait_attempt + 1) * 2} seconds")
-                                    challenge_resolved = True
-                                    break
-                            
-                            if not challenge_resolved:
-                                logger.warning("Cloudflare challenge persisted after 30 seconds. Trying page reload...")
-                                # Try reloading the page to trigger challenge resolution
-                                try:
-                                    await page.reload(wait_until="commit", timeout=30000)
-                                    await asyncio.sleep(3)
-                                    html_content = await page.content()
-                                    if not await self._check_cloudflare_challenge(html_content):
-                                        logger.info("Challenge resolved after page reload")
-                                        challenge_resolved = True
-                                except Exception as e:
-                                    logger.debug(f"Page reload failed: {e}")
-                            
-                            if not challenge_resolved:
-                                logger.warning(f"Challenge still unresolved after strategy {strategy_attempt + 1}. Moving to next strategy...")
-                                await page.close()
-                                continue
-                        
-                        # PART 1: Extract cookies
-                        cookies = await pw._context.cookies()
-                        logger.debug(f"Received {len(cookies)} cookies from Playwright")
-                        
-                        cookie_names = [c['name'] for c in cookies]
-                        logger.debug(f"Cookie names: {', '.join(cookie_names[:20])}")
-                        
-                        cf_clearance_found = False
-                        for c in cookies:
-                            self.http.client.cookies.set(c['name'], c['value'])
-                            self.cookie_dict[c['name']] = c['value']
-                            if c['name'] in ('csrftoken', 'csrf_token'):
-                                logger.info(f"SUCCESS: Found {c['name']} in cookies!")
-                                csrf_found = True
-                            if c['name'] == 'cf_clearance':
-                                logger.debug(f"Found Cloudflare clearance cookie")
-                                cf_clearance_found = True
-                        
-                        # If we have CSRF token from cookies, we're done
-                        if csrf_found:
-                            logger.info("✓ CSRF token found in cookies - refresh successful")
-                            break
-                        
-                        # PART 2: Try with retries if Cloudflare was involved but CSRF still missing
-                        if cf_clearance_found and is_cf_challenge and not csrf_found:
-                            logger.warning("Cloudflare clearance found but CSRF token missing from cookies. Retrying with extended wait...")
-                            
-                            # Additional wait and retry logic
-                            for retry_attempt in range(2):
+                        await self._pw_context.close()
+                    except Exception:
+                        pass
+                    self._pw_context = None
+                    ctx = await self._get_persistent_pw_context()
+                    if ctx is None:
+                        break
+
+                page = await ctx.new_page()
+                try:
+                    await page.goto(
+                        f"{constants.UDEMY_BASE_URL}/",
+                        wait_until="commit",
+                        timeout=30000,
+                    )
+                    await asyncio.sleep(2)
+
+                    html_content = await page.content()
+                    is_cf_challenge = await self._check_cloudflare_challenge(html_content)
+
+                    if is_cf_challenge:
+                        logger.warning(f"Cloudflare challenge detected (strategy {strategy_attempt + 1}/3). Waiting...")
+                        self.session_recovery_state["cloudflare_challenges_encountered"] += 1
+                        challenge_resolved = False
+
+                        for wait_attempt in range(15):
+                            await asyncio.sleep(2)
+                            html_content = await page.content()
+                            if not await self._check_cloudflare_challenge(html_content):
+                                logger.info(f"CF challenge resolved after {(wait_attempt + 1) * 2}s")
+                                challenge_resolved = True
+                                break
+
+                        if not challenge_resolved:
+                            logger.warning("CF challenge persisted 30s. Trying page reload...")
+                            try:
+                                await page.reload(wait_until="commit", timeout=30000)
                                 await asyncio.sleep(3)
                                 html_content = await page.content()
-                                
-                                csrf_token = await self._extract_csrf_with_retries(page, max_retries=2)
-                                if csrf_token:
-                                    self.http.client.headers['X-CSRFToken'] = csrf_token
-                                    self.cookie_dict['_csrf_from_page_retry'] = csrf_token
-                                    logger.info(f"Success: Extracted CSRF from page after retry (attempt {retry_attempt + 1})")
-                                    csrf_found = True
-                                    break
-                        
-                        # If CSRF found via retries, we're done
-                        if csrf_found:
+                                if not await self._check_cloudflare_challenge(html_content):
+                                    logger.info("Challenge resolved after page reload")
+                                    challenge_resolved = True
+                            except Exception as reload_err:
+                                logger.debug(f"Page reload failed: {reload_err}")
+
+                        if not challenge_resolved:
+                            logger.warning(f"Challenge unresolved after strategy {strategy_attempt + 1}. Trying next...")
+                            continue
+
+                    # Harvest all cookies from the context
+                    cookies = await ctx.cookies()
+                    cf_clearance_found = False
+                    for c in cookies:
+                        self.http.client.cookies.set(c["name"], c["value"])
+                        self.cookie_dict[c["name"]] = c["value"]
+                        if c["name"] in ("csrftoken", "csrf_token"):
+                            logger.info(f"SUCCESS: Found {c['name']} in cookies!")
+                            csrf_found = True
+                        if c["name"] == "cf_clearance":
+                            cf_clearance_found = True
+                            logger.debug("Found Cloudflare clearance cookie")
+
+                    if csrf_found:
+                        logger.info("✓ CSRF token found in cookies - refresh successful")
+                        break
+
+                    # CSRF still missing: try extracting from page HTML
+                    if not csrf_found:
+                        csrf_token_val = await self._extract_csrf_with_retries(page, max_retries=2)
+                        if csrf_token_val:
+                            self.http.client.headers["X-CSRFToken"] = csrf_token_val
+                            self.cookie_dict["_csrf_from_html"] = csrf_token_val
+                            logger.info("Success: Extracted CSRF from HTML")
+                            csrf_found = True
                             break
-                        
-                        # PART 3: Extract from HTTP headers
-                        if not csrf_found:
-                            logger.debug("CSRF token not in cookies, attempting header extraction...")
-                            try:
-                                request = await page.evaluate("() => fetch(window.location.href, {method: 'HEAD'}).then(r => Object.fromEntries(r.headers))")
-                                if request and isinstance(request, dict):
-                                    for header_name in ['x-csrftoken', 'X-CSRFToken', 'X-CSRF-Token']:
-                                        if header_name in request:
-                                            csrf_token = request[header_name]
-                                            self.http.client.headers['X-CSRFToken'] = csrf_token
-                                            self.cookie_dict['_csrf_from_header'] = csrf_token
-                                            logger.info(f"Success: Extracted CSRF from response header ({header_name})")
-                                            csrf_found = True
-                                            break
-                            except Exception as e:
-                                logger.debug(f"Header extraction failed: {e}")
-                        
-                        # PART 4: Extract from HTML with new retry logic
-                        if not csrf_found:
-                            logger.debug("CSRF token not in cookies/headers, attempting HTML extraction with retries...")
-                            csrf_token = await self._extract_csrf_with_retries(page, max_retries=2)
-                            
-                            if csrf_token:
-                                self.http.client.headers['X-CSRFToken'] = csrf_token
-                                self.cookie_dict['_csrf_from_html'] = csrf_token
-                                logger.info(f"Success: Extracted CSRF from HTML")
-                                csrf_found = True
-                            else:
-                                logger.warning("Could not find CSRF token in HTML after retries")
-                        
-                        # If we found a token, we're done with strategies
-                        if csrf_found:
-                            logger.info("✓ CSRF token successfully obtained")
-                            break
-                        
-                        # No more strategies to try if we already retried multiple times
-                        if strategy_attempt >= 2:
-                            break
-                    
-                    finally:
-                        # Always close the page after each attempt
-                        try:
-                            await page.close()
-                        except Exception as e:
-                            logger.debug(f"Error closing page: {e}")
-                
-                # FINAL ATTEMPT: If still no token, check session validity
-                if not csrf_found:
-                    logger.error("No fresh CSRF token found after all strategies.")
-                    self.session_recovery_state["csrf_refresh_failures"] += 1
-                    # Check if we have any auth cookies at all
-                    auth_cookies = [c for c in cookies if any(name in c['name'].lower() for name in ['auth', 'access', 'sessionid', 'jwt'])]
-                    if not auth_cookies:
-                        logger.error("CRITICAL: No authentication cookies found. Session is not authenticated. This user needs to log in again.")
-                    else:
-                        logger.warning(f"Auth cookies exist ({len(auth_cookies)}) but fresh CSRF token extraction failed. Session may be temporarily blocked.")
-                        logger.info("Recommendation: Try again in 30-60 seconds, or use single-course checkout mode")
-                
-                if csrf_found:
-                    logger.info("CSRF token refresh successful")
-                    self.session_recovery_state["consecutive_403_errors"] = 0  # Reset 403 counter
+                        else:
+                            logger.warning("Could not find CSRF token in HTML after retries")
+
+                    if csrf_found:
+                        break
+
+                finally:
+                    try:
+                        await page.close()
+                    except Exception:
+                        pass
+
+            if not csrf_found:
+                logger.error("No fresh CSRF token found after all strategies.")
+                self.session_recovery_state["csrf_refresh_failures"] += 1
+                all_ctx_cookies = cookies or []
+                has_auth = any(
+                    any(n in c["name"].lower() for n in ("auth", "access", "sessionid", "jwt"))
+                    for c in all_ctx_cookies
+                )
+                if not has_auth:
+                    logger.error("CRITICAL: No auth cookies — user needs to log in again.")
                 else:
-                    logger.error("CSRF token refresh failed - no valid token obtained after all attempts")
-                    
-                return csrf_found
+                    logger.warning("Auth cookies present but CSRF refresh failed. Session may be temporarily blocked.")
+                    logger.info("Recommendation: Wait 30-60 s, then retry.")
+
+            if csrf_found:
+                logger.info("CSRF token refresh successful")
+                self.session_recovery_state["consecutive_403_errors"] = 0
+            else:
+                logger.error("CSRF token refresh failed after all attempts")
+
+            return csrf_found
         except Exception as e:
             logger.error(f"Failed to refresh CSRF via Playwright: {e}")
             self.session_recovery_state["csrf_refresh_failures"] += 1
