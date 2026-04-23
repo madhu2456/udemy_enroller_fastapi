@@ -974,6 +974,16 @@ class UdemyClient:
         if not courses:
             return outcomes
         
+        # Monitoring metrics
+        metrics = {
+            "total_attempts": 0,
+            "successful_403_recoveries": 0,
+            "failed_checkouts": 0,
+            "session_blocks": 0,
+            "total_delay_time": 0.0,
+            "start_time": asyncio.get_event_loop().time(),
+        }
+        
         remaining = list(courses)
         max_bulk_attempts = len(courses) + 2
         consecutive_403_count = 0
@@ -983,9 +993,22 @@ class UdemyClient:
             if not remaining:
                 break
             
+            metrics["total_attempts"] += 1
+            
             if attempt > 0:
-                backoff_delay = min(2 ** (attempt // 2), 10) + random.uniform(0.5, 2.0)
-                logger.info(f"Waiting {backoff_delay:.1f}s before bulk checkout retry (attempt {attempt + 1}/{max_bulk_attempts})...")
+                # Adaptive backoff: increase delay with consecutive 403s
+                base_delay = min(2 ** (attempt // 2), 10)
+                # Add extra delay if we've had 403s (adaptive)
+                if consecutive_403_count > 0:
+                    adaptive_multiplier = 1.0 + (consecutive_403_count * 0.5)  # 1.5x, 2.0x, 2.5x...
+                    base_delay *= adaptive_multiplier
+                
+                backoff_delay = min(base_delay + random.uniform(0.5, 2.0), 15)  # Cap at 15 seconds
+                metrics["total_delay_time"] += backoff_delay
+                
+                logger.info(f"Waiting {backoff_delay:.1f}s before bulk checkout retry "
+                           f"(attempt {attempt + 1}/{max_bulk_attempts}, "
+                           f"403_count={consecutive_403_count}/{max_403_consecutive})...")
                 await asyncio.sleep(backoff_delay)
 
             csrf_token = (self.http.client.cookies.get("csrftoken") or 
@@ -1000,6 +1023,7 @@ class UdemyClient:
                      consecutive_403_count += 1
                      if consecutive_403_count >= max_403_consecutive:
                          logger.error(f"Too many consecutive refresh failures ({consecutive_403_count}). Giving up bulk checkout.")
+                         metrics["session_blocks"] += 1
                          break
                      continue
                  csrf_token = (self.http.client.cookies.get("csrftoken") or 
@@ -1011,6 +1035,7 @@ class UdemyClient:
                      consecutive_403_count += 1
                      if consecutive_403_count >= max_403_consecutive:
                          logger.error(f"Too many consecutive CSRF failures. Giving up bulk checkout.")
+                         metrics["session_blocks"] += 1
                          break
                      continue
 
@@ -1051,11 +1076,19 @@ class UdemyClient:
                 consecutive_403_count += 1
                 if consecutive_403_count > max_403_consecutive:
                     logger.error(f"Too many 403 errors ({consecutive_403_count}) on bulk checkout. Session may be blocked. Giving up.")
+                    metrics["session_blocks"] += 1
                     break
-                logger.warning(f"Bulk checkout hit 403 Forbidden (attempt {consecutive_403_count}/{max_403_consecutive}). Refreshing session...")
+                
+                logger.warning(f"Bulk checkout hit 403 Forbidden (attempt {consecutive_403_count}/{max_403_consecutive}). "
+                             f"Refreshing session... [Total attempts: {metrics['total_attempts']}]")
+                
                 refresh_success = await self._refresh_csrf_stealth()
-                if not refresh_success:
+                if refresh_success:
+                    metrics["successful_403_recoveries"] += 1
+                    logger.info(f"✓ Successfully recovered from 403 (recovery #{metrics['successful_403_recoveries']})")
+                else:
                     logger.error("Failed to refresh CSRF after 403")
+                    metrics["failed_checkouts"] += 1
                 continue
 
             consecutive_403_count = 0
@@ -1068,7 +1101,11 @@ class UdemyClient:
                     if self.enrolled_courses is not None:
                         self.enrolled_courses[c.slug] = datetime.now(UTC).isoformat()
                     outcomes[c] = "enrolled"
-                logger.info(f"Bulk checkout succeeded for {len(remaining)} courses")
+                
+                elapsed = asyncio.get_event_loop().time() - metrics["start_time"]
+                logger.info(f"✓ Bulk checkout succeeded for {len(remaining)} courses "
+                           f"[Attempts: {metrics['total_attempts']}, Time: {elapsed:.1f}s, "
+                           f"403 Recoveries: {metrics['successful_403_recoveries']}]")
                 break
             
             msg = result.get("message", "") if result else ""
@@ -1108,5 +1145,17 @@ class UdemyClient:
             
             logger.warning(f"Bulk checkout failed (attempt {attempt + 1}). Response: {result}")
             break
+        
+        # Log final metrics
+        elapsed = asyncio.get_event_loop().time() - metrics["start_time"]
+        success_rate = (len([o for o in outcomes.values() if o == "enrolled"]) / len(courses) * 100) if courses else 0
+        
+        logger.info(f"📊 Bulk Checkout Metrics: "
+                   f"Attempts={metrics['total_attempts']}, "
+                   f"403_Recoveries={metrics['successful_403_recoveries']}, "
+                   f"Session_Blocks={metrics['session_blocks']}, "
+                   f"Total_Delay={metrics['total_delay_time']:.1f}s, "
+                   f"Success_Rate={success_rate:.1f}%, "
+                   f"Duration={elapsed:.1f}s")
         
         return outcomes

@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     ENROLLMENT_BATCH_SIZE: int = 5
     PROXIES: str = ""  # Comma-separated list of proxy URLs
     FIRECRAWL_API_KEY: str = ""
+    
+    # Enrollment strategy
+    SINGLE_COURSE_CHECKOUT: bool = False  # True = one at a time, False = bulk checkout (5 courses at once)
 
     # Logging
     LOG_LEVEL: str = "INFO"
