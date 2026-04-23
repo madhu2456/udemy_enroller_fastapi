@@ -11,9 +11,18 @@ from app.core.constants import DEFAULT_USER_AGENT
 class AsyncHTTPClient:
     """Wraps httpx.AsyncClient with retries, timeout management, and anti-ban features."""
 
+    # User-Agent rotation to avoid pattern detection
+    _USER_AGENTS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    ]
+    
     def __init__(self, proxy: Optional[str] = None, max_concurrency: int = 20):
         self.proxy = proxy
         self._request_semaphore = asyncio.Semaphore(max(1, max_concurrency))
+        self._last_request_time = 0.0
         self.client = httpx.AsyncClient(
             proxy=self.proxy,
             timeout=httpx.Timeout(15.0, connect=30.0),
@@ -23,9 +32,8 @@ class AsyncHTTPClient:
 
     def _get_headers(self, url: str, custom_headers: Optional[Dict] = None, req_type: str = "document") -> Dict[str, str]:
         """Generate randomized headers for each request, respecting existing ones."""
-        # Selection of a consistent UA to match Client Hints
-        # Using Chrome 120 as a stable, modern target
-        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        # Rotate User-Agent for each request to avoid pattern detection
+        ua = random.choice(self._USER_AGENTS)
         if custom_headers and "User-Agent" in custom_headers:
             ua = custom_headers["User-Agent"]
         elif self.client.headers.get("User-Agent"):
@@ -82,6 +90,22 @@ class AsyncHTTPClient:
             headers.update(custom_headers)
         return headers
 
+    async def _apply_human_like_delay(self):
+        """Apply a human-like delay between requests to avoid detection patterns."""
+        current_time = asyncio.get_event_loop().time()
+        time_since_last = current_time - self._last_request_time
+        
+        # Target delay: 1-4 seconds between requests (human-like browsing)
+        target_delay = random.uniform(1.0, 4.0)
+        
+        if time_since_last < target_delay:
+            delay = target_delay - time_since_last
+            # Add micro-jitter to avoid perfect timing patterns
+            delay += random.uniform(-0.1, 0.2)
+            await asyncio.sleep(max(0.1, delay))
+        
+        self._last_request_time = asyncio.get_event_loop().time()
+
     async def close(self):
         await self.client.aclose()
 
@@ -101,6 +125,9 @@ class AsyncHTTPClient:
         
         last_attempt = 0
         last_error: Optional[Exception] = None
+        
+        # Apply human-like delay between requests
+        await self._apply_human_like_delay()
         
         # Add a small random jitter before the request to avoid pattern detection
         if randomize:
@@ -170,6 +197,9 @@ class AsyncHTTPClient:
 
         last_attempt = 0
         last_error: Optional[Exception] = None
+        
+        # Apply human-like delay between requests
+        await self._apply_human_like_delay()
         
         if randomize:
             await asyncio.sleep(random.uniform(0.1, 0.5))
