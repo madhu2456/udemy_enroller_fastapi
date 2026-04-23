@@ -167,7 +167,15 @@ class EnrollmentManager:
 
             # Phase 2: Process and enroll
             batch: List[Course] = []
-            use_single_course = get_settings().SINGLE_COURSE_CHECKOUT
+            # Read enrollment mode from user settings first, then environment variable as fallback
+            enrollment_mode = self.settings.get("enrollment_mode", None)
+            if enrollment_mode == "single":
+                use_single_course = True
+            elif enrollment_mode == "bulk":
+                use_single_course = False
+            else:
+                # Fallback to environment variable if user hasn't set mode
+                use_single_course = get_settings().SINGLE_COURSE_CHECKOUT
             batch_size = self.settings.get("batch_size", 5) or 5  # Get from user settings with fallback to 5
             
             # Track batch failures for adaptive mode switching
