@@ -47,12 +47,23 @@ Quick guide to find the information you need.
 - Edge cases handled
 - Verification checklist
 
-### I Need Deployment Instructions
+### I need to Monitor Performance and 403 Errors
 
-👉 **Read:** `DEPLOYMENT_GUIDE.md` (5 min read)
-- Quick start for each environment
-- Configuration examples
-- Troubleshooting guide
+👉 **Read:** `MONITORING_METRICS.md` (10 min read)
+- Understand bulk checkout metrics
+- Batch processing metrics
+- Real-world production examples
+- Troubleshooting based on metrics
+- Dashboard setup for continuous monitoring
+
+### I want to Switch to Single-Course Checkout
+
+👉 **Read:** `SINGLE_COURSE_CHECKOUT.md` (10 min read)
+- When to use single-course vs bulk
+- Configuration (just set environment variable)
+- Performance comparison
+- Real-world examples
+- Decision tree for choosing mode
 
 ---
 
@@ -97,6 +108,13 @@ LOGOUT_FIX.md
 ├─ Frontend changes
 ├─ Edge cases handled
 └─ Verification checklist
+
+MONITORING_METRICS.md
+├─ Bulk checkout metrics explained
+├─ Batch processing metrics
+├─ Production examples
+├─ Troubleshooting guide
+└─ Dashboard setup
 ```
 
 ### Code Files (These Were Changed)
@@ -137,11 +155,13 @@ app/static/js/app.js (+15 lines)
 | DEPLOYMENT_GUIDE.md | 5 min | Getting started |
 | CLOUDFLARE_SOLUTION_SUMMARY.md | 5 min | Understanding solutions |
 | LOGOUT_FIX.md | 10 min | Understanding logout fix |
+| MONITORING_METRICS.md | 10 min | Monitoring and metrics |
+| SINGLE_COURSE_CHECKOUT.md | 10 min | Understanding checkout modes |
 | CLOUDFLARE_BYPASS_SOLUTIONS.md | 15 min | Full details |
 | TECHNICAL_DETAILS.md | 25 min | Deep dive |
 
-**Total:** 65 minutes to read everything  
-**Recommended:** 10-15 minutes (SUMMARY + DEPLOYMENT + LOGOUT_FIX)
+**Total:** 85 minutes to read everything  
+**Recommended:** 20-25 minutes (SUMMARY + DEPLOYMENT + LOGOUT_FIX + MONITORING + SINGLE-COURSE)
 
 ---
 
@@ -157,10 +177,11 @@ A: Read `DEPLOYMENT_GUIDE.md` Option 2 (just deploy)
 A: Read `DEPLOYMENT_GUIDE.md` Option 3 (add Firecrawl API key)
 
 **Q: How do I know if the solutions work?**  
-A: Read `LOGOUT_FIX.md` "Verification Checklist" and check logs for:
+A: Read `MONITORING_METRICS.md` and check logs for:
 - "Using existing CSRF token from login"
 - "Logout successful"
-- No 403 errors during checkout
+- "📊 Bulk Checkout Metrics" showing Success_Rate > 80%
+- "📦 Batch Complete" showing enrolled count matches batch size
 
 **Q: Are there any breaking changes?**  
 A: No. All 71 tests pass. Fully backward compatible.
@@ -195,8 +216,12 @@ Cloudflare Issues
 Logout Issues
 └─ LOGOUT_FIX.md (10 min) ← Read and test
 
+Monitoring Performance
+└─ MONITORING_METRICS.md (10 min) ← Track and troubleshoot
+
 Production Deployment
-└─ DEPLOYMENT_GUIDE.md (5 min) ← Follow steps
+├─ DEPLOYMENT_GUIDE.md (5 min) ← Follow steps
+└─ MONITORING_METRICS.md (10 min) ← Setup monitoring
 
 Technical Deep Dive
 └─ TECHNICAL_DETAILS.md (25 min) ← Everything
@@ -266,6 +291,7 @@ Want to understand the implementation? Read in this order:
 
 ---
 
-**Last Updated:** 2026-04-23 10:28 AM IST  
+**Last Updated:** 2026-04-23 10:35 AM IST  
 **Status:** ✅ Production Ready  
-**All Systems:** ✅ Operational
+**All Systems:** ✅ Operational  
+**Monitoring:** ✅ Metrics implemented

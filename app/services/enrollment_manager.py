@@ -167,15 +167,54 @@ class EnrollmentManager:
 
             # Phase 2: Process and enroll
             batch: List[Course] = []
+            use_single_course = get_settings().SINGLE_COURSE_CHECKOUT
+            
+            if use_single_course:
+                logger.info("🔄 Single-course checkout mode enabled (one at a time)")
+            else:
+                logger.info(f"🔄 Bulk checkout mode enabled ({get_settings().ENROLLMENT_BATCH_SIZE} at a time)")
 
             async def process_batch():
                 if not batch: return
                 # Add random delay before processing batch (respect server rate limits)
-                await asyncio.sleep(random.uniform(2.0, 5.0))
+                batch_delay = random.uniform(2.0, 5.0)
+                logger.debug(f"Processing batch of {len(batch)} courses (delay: {batch_delay:.1f}s)")
+                await asyncio.sleep(batch_delay)
+                
+                # Track batch metrics
+                batch_start = asyncio.get_event_loop().time()
                 outcomes = await self.udemy.bulk_checkout(batch)
+                batch_duration = asyncio.get_event_loop().time() - batch_start
+                
+                # Log batch summary
+                enrolled = sum(1 for status in outcomes.values() if status == "enrolled")
+                failed = sum(1 for status in outcomes.values() if status == "failed")
+                logger.info(f"📦 Batch Complete: {enrolled}/{len(batch)} enrolled, "
+                           f"{failed} failed, {batch_duration:.1f}s duration")
+                
                 for c, status in outcomes.items():
                     await self._save_course(db, run, c, status)
                 batch.clear()
+            
+            async def process_single_course(course: Course):
+                """Process single course checkout with metrics tracking."""
+                course_delay = random.uniform(1.0, 3.0)
+                await asyncio.sleep(course_delay)
+                
+                start_time = asyncio.get_event_loop().time()
+                success = await self.udemy.checkout_single(course)
+                duration = asyncio.get_event_loop().time() - start_time
+                
+                if success:
+                    self.udemy.successfully_enrolled_c += 1
+                    status = "enrolled"
+                    logger.info(f"✅ Single Checkout Success: {course.title} ({duration:.1f}s)")
+                else:
+                    status = "failed"
+                    logger.warning(f"❌ Single Checkout Failed: {course.title} ({duration:.1f}s)")
+                
+                await self._save_course(db, run, course, status)
+                return success
 
             for index, course in enumerate(scraped_courses):
                 self.processed = index + 1
@@ -237,13 +276,20 @@ class EnrollmentManager:
                                 course_status = "expired"
                                 logger.info(f"  Status: Expired - {course.error or 'Coupon no longer valid'}")
                             else:
-                                logger.info(f"  Status: Added to batch (Price: {course.price})")
-                                batch.append(course)
-                                if len(batch) >= get_settings().ENROLLMENT_BATCH_SIZE:
-                                    await process_batch()
-                                course_status = "batched"
+                                if use_single_course:
+                                    # Single-course mode: process immediately
+                                    logger.info(f"  Status: Processing single checkout (Price: {course.price})")
+                                    await process_single_course(course)
+                                    course_status = "pending"  # Already saved in process_single_course
+                                else:
+                                    # Bulk mode: add to batch
+                                    logger.info(f"  Status: Added to batch (Price: {course.price})")
+                                    batch.append(course)
+                                    if len(batch) >= get_settings().ENROLLMENT_BATCH_SIZE:
+                                        await process_batch()
+                                    course_status = "batched"
 
-                if course_status != "batched":
+                if course_status not in ("batched", "pending"):
                     await self._save_course(db, run, course, course_status, error_msg)
 
                 # Update stats and commit every 5 courses or on the last one
@@ -254,8 +300,9 @@ class EnrollmentManager:
                 # Vary the sleep to avoid detectable patterns (1-3 seconds)
                 await asyncio.sleep(random.uniform(1.0, 3.0))
 
-            # Process remaining batch
-            await process_batch()
+            # Process remaining batch (only in bulk mode)
+            if not use_single_course:
+                await process_batch()
             await self._update_run_stats(db, run)
 
             # Mark complete
