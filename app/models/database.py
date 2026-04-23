@@ -32,8 +32,10 @@ if "sqlite" in settings.DATABASE_URL:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.execute("PRAGMA busy_timeout=30000")  # 30 second timeout for locks
+        cursor.execute("PRAGMA busy_timeout=60000")  # 60 second timeout for locks (increased from 30)
         cursor.execute("PRAGMA wal_autocheckpoint=1000")  # Reduce checkpoint frequency
+        cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache for better performance
+        cursor.execute("PRAGMA temp_store=MEMORY")  # Use memory for temp tables
         cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
