@@ -187,6 +187,9 @@ class UdemyClient:
             'Checking your browser before accessing',
             'Ray ID',
             '__cf_bm',
+            'cf_clearance',
+            'cfrequests',
+            'Cloudflare',
         ]
         return any(indicator in html for indicator in cloudflare_indicators)
 
@@ -234,90 +237,134 @@ class UdemyClient:
         try:
             async with PlaywrightService(proxy=self.http.proxy) as pw:
                 page = await pw._context.new_page()
-                # Use commit + sleep instead of networkidle which often timeouts on Udemy
-                await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="commit", timeout=30000)
-                await asyncio.sleep(2) # Initial wait for page load
                 
-                # Check if we hit Cloudflare challenge
-                html_content = await page.content()
-                if await self._check_cloudflare_challenge(html_content):
-                    logger.warning("Cloudflare challenge detected. Waiting for challenge resolution...")
-                    # Wait significantly longer for Cloudflare to complete
-                    for wait_attempt in range(5):  # Try up to 5 times with 2-second intervals
-                        await asyncio.sleep(2)
-                        html_content = await page.content()
-                        if not await self._check_cloudflare_challenge(html_content):
-                            logger.info("Cloudflare challenge resolved")
-                            break
-                    else:
-                        logger.warning("Cloudflare challenge not resolved after 10 seconds")
-                
-                # PART 1: Extract cookies (standard method)
-                cookies = await pw._context.cookies()
-                logger.debug(f"Received {len(cookies)} cookies from Playwright")
-                
-                # Log all cookies for debugging (names only, not values)
-                cookie_names = [c['name'] for c in cookies]
-                logger.debug(f"Cookie names: {', '.join(cookie_names[:20])}")
-                
-                for c in cookies:
-                    self.http.client.cookies.set(c['name'], c['value'])
-                    self.cookie_dict[c['name']] = c['value']
-                    if c['name'] in ('csrftoken', 'csrf_token'):
-                        logger.debug(f"  Success: Found {c['name']} in cookies")
-                        csrf_found = True
-                
-                # PART 2: Extract from HTTP headers (Udemy uses X-CSRFToken header in responses)
-                if not csrf_found:
-                    logger.debug("CSRF token not in cookies, attempting header extraction...")
-                    try:
-                        # Get response headers from last navigation
-                        request = await page.evaluate("() => fetch(window.location.href, {method: 'HEAD'}).then(r => Object.fromEntries(r.headers))")
-                        if request and isinstance(request, dict):
-                            for header_name in ['x-csrftoken', 'X-CSRFToken', 'X-CSRF-Token']:
-                                if header_name in request:
-                                    csrf_token = request[header_name]
-                                    self.http.client.headers['X-CSRFToken'] = csrf_token
-                                    self.cookie_dict['_csrf_from_header'] = csrf_token
-                                    logger.info(f"Success: Extracted CSRF from response header ({header_name})")
-                                    csrf_found = True
-                                    break
-                    except Exception as e:
-                        logger.debug(f"Header extraction failed: {e}")
-                
-                # PART 3: Extract from HTML if not found in cookies or headers (fallback method)
-                if not csrf_found:
-                    logger.debug("CSRF token not in cookies/headers, attempting HTML extraction...")
-                    csrf_token = await self._extract_csrf_from_html(html_content)
+                # Attempt with multiple strategies
+                for strategy_attempt in range(2):
+                    if strategy_attempt == 1:
+                        logger.info("Trying alternate Cloudflare resolution strategy...")
                     
-                    if csrf_token:
-                        # Store token in a custom header for checkout requests
-                        self.http.client.headers['X-CSRFToken'] = csrf_token
-                        self.cookie_dict['_csrf_from_html'] = csrf_token
-                        logger.info(f"Success: Extracted CSRF from HTML, set X-CSRFToken header")
-                        csrf_found = True
-                    else:
-                        logger.warning("Could not find CSRF token in HTML")
+                    # STRATEGY: Navigate to home page with extended wait
+                    await page.goto(f"{constants.UDEMY_BASE_URL}/", wait_until="commit", timeout=30000)
+                    await asyncio.sleep(2) # Initial wait for page load
+                    
+                    # Check if we hit Cloudflare challenge
+                    html_content = await page.content()
+                    is_cf_challenge = await self._check_cloudflare_challenge(html_content)
+                    
+                    if is_cf_challenge:
+                        logger.warning("Cloudflare challenge detected. Waiting for challenge resolution...")
+                        challenge_resolved = False
+                        
+                        # EXTENDED WAIT: Try to resolve challenge with longer delays
+                        for wait_attempt in range(15):  # 15 attempts × 2 seconds = 30 seconds max
+                            await asyncio.sleep(2)
+                            html_content = await page.content()
+                            
+                            if not await self._check_cloudflare_challenge(html_content):
+                                logger.info(f"Cloudflare challenge resolved after {(wait_attempt + 1) * 2} seconds")
+                                challenge_resolved = True
+                                break
+                        
+                        if not challenge_resolved:
+                            logger.warning("Cloudflare challenge persisted after 30 seconds. Trying page reload...")
+                            # Try reloading the page to trigger challenge resolution
+                            try:
+                                await page.reload(wait_until="commit", timeout=30000)
+                                await asyncio.sleep(3)
+                                html_content = await page.content()
+                                if not await self._check_cloudflare_challenge(html_content):
+                                    logger.info("Challenge resolved after page reload")
+                                    challenge_resolved = True
+                            except Exception as e:
+                                logger.debug(f"Page reload failed: {e}")
+                        
+                        if not challenge_resolved and strategy_attempt < 1:
+                            logger.warning("Challenge still unresolved. Trying with fresh context...")
+                            await page.close()
+                            continue
+                    
+                    # PART 1: Extract cookies
+                    cookies = await pw._context.cookies()
+                    logger.debug(f"Received {len(cookies)} cookies from Playwright")
+                    
+                    cookie_names = [c['name'] for c in cookies]
+                    logger.debug(f"Cookie names: {', '.join(cookie_names[:20])}")
+                    
+                    cf_clearance_found = False
+                    for c in cookies:
+                        self.http.client.cookies.set(c['name'], c['value'])
+                        self.cookie_dict[c['name']] = c['value']
+                        if c['name'] in ('csrftoken', 'csrf_token'):
+                            logger.debug(f"Found {c['name']} in cookies")
+                            csrf_found = True
+                        if c['name'] == 'cf_clearance':
+                            logger.debug(f"Found Cloudflare clearance cookie")
+                            cf_clearance_found = True
+                    
+                    # PART 2: Extract from HTTP headers
+                    if not csrf_found:
+                        logger.debug("CSRF token not in cookies, attempting header extraction...")
+                        try:
+                            request = await page.evaluate("() => fetch(window.location.href, {method: 'HEAD'}).then(r => Object.fromEntries(r.headers))")
+                            if request and isinstance(request, dict):
+                                for header_name in ['x-csrftoken', 'X-CSRFToken', 'X-CSRF-Token']:
+                                    if header_name in request:
+                                        csrf_token = request[header_name]
+                                        self.http.client.headers['X-CSRFToken'] = csrf_token
+                                        self.cookie_dict['_csrf_from_header'] = csrf_token
+                                        logger.info(f"Success: Extracted CSRF from response header ({header_name})")
+                                        csrf_found = True
+                                        break
+                        except Exception as e:
+                            logger.debug(f"Header extraction failed: {e}")
+                    
+                    # PART 3: Extract from HTML
+                    if not csrf_found:
+                        logger.debug("CSRF token not in cookies/headers, attempting HTML extraction...")
+                        csrf_token = await self._extract_csrf_from_html(html_content)
+                        
+                        if csrf_token:
+                            self.http.client.headers['X-CSRFToken'] = csrf_token
+                            self.cookie_dict['_csrf_from_html'] = csrf_token
+                            logger.info(f"Success: Extracted CSRF from HTML")
+                            csrf_found = True
+                        else:
+                            logger.warning("Could not find CSRF token in HTML")
+                    
+                    # If we found a token, we're done with strategies
+                    if csrf_found:
+                        break
+                    
+                    # If Cloudflare challenge was blocking and we didn't get token, retry strategy
+                    if is_cf_challenge and not csrf_found and strategy_attempt < 1:
+                        logger.warning(f"Cloudflare likely still blocking. Retrying with fresh page...")
+                        await page.close()
+                        page = await pw._context.new_page()
+                        continue
+                    
+                    # No more strategies to try
+                    break
                 
-                # If still no CSRF token found, do NOT generate fallback - session is invalid
+                # FINAL ATTEMPT: If still no token, wait extra and try HTML extraction one more time
                 if not csrf_found:
-                    logger.error("No CSRF token found after all methods exhausted. Session may be invalid or Cloudflare challenge not resolved.")
-                    # Wait a bit longer and try once more
-                    await asyncio.sleep(3)
+                    logger.error("No CSRF token found after all strategies. Attempting final extraction...")
+                    await asyncio.sleep(5)
                     html_content = await page.content()
                     csrf_token = await self._extract_csrf_from_html(html_content)
                     if csrf_token:
                         self.http.client.headers['X-CSRFToken'] = csrf_token
                         self.cookie_dict['_csrf_from_html'] = csrf_token
-                        logger.info("Success: CSRF token found on second attempt")
+                        logger.info("Success: CSRF token found on final attempt")
                         csrf_found = True
+                    else:
+                        logger.error("No CSRF token found after final attempt")
                 
                 await page.close()
                 
                 if csrf_found:
                     logger.info("CSRF token refresh successful")
                 else:
-                    logger.error("CSRF token refresh failed - no valid token obtained")
+                    logger.error("CSRF token refresh failed - no valid token obtained after all attempts")
                     
                 return csrf_found
         except Exception as e:
@@ -810,10 +857,10 @@ class UdemyClient:
             },
         }
         
-        # Increase max attempts and implement exponential backoff
-        max_attempts = 5  # Increased from 3
+        # Increase max attempts significantly due to Cloudflare challenges
+        max_attempts = 7  # Increased from 5
         consecutive_403_count = 0
-        max_403_consecutive = 3  # Increased from 2
+        max_403_consecutive = 4  # Increased from 3 (Cloudflare can cause multiple 403s)
         
         for attempt in range(max_attempts):
             # Try to get CSRF token from multiple sources (prioritize real tokens)
@@ -858,7 +905,7 @@ class UdemyClient:
                 logger.warning(f"403 Forbidden on checkout for {course.title}. Refreshing session (attempt {consecutive_403_count}/{max_403_consecutive})...")
                 
                 # Implement exponential backoff before refresh
-                backoff_delay = min(2 ** consecutive_403_count, 10)  # 2, 4, 8, 10 seconds
+                backoff_delay = min(2 ** consecutive_403_count, 12)  # 2, 4, 8, 12 seconds (capped at 12)
                 logger.debug(f"Waiting {backoff_delay} seconds before session refresh...")
                 await asyncio.sleep(backoff_delay)
                 
@@ -869,7 +916,7 @@ class UdemyClient:
                         return False
                 else:
                     # Extra wait after successful refresh to ensure cookies are synced
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(3)
                 
                 continue
 
