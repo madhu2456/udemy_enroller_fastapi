@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import random
 from datetime import UTC, datetime
 from typing import Optional, Dict, List
 
@@ -169,6 +170,8 @@ class EnrollmentManager:
 
             async def process_batch():
                 if not batch: return
+                # Add random delay before processing batch (respect server rate limits)
+                await asyncio.sleep(random.uniform(2.0, 5.0))
                 outcomes = await self.udemy.bulk_checkout(batch)
                 for c, status in outcomes.items():
                     await self._save_course(db, run, c, status)
@@ -248,7 +251,8 @@ class EnrollmentManager:
                     await self._update_run_stats(db, run)
                 
                 # Small sleep to prevent tight loop blocking and respect rate limits
-                await asyncio.sleep(1.0)
+                # Vary the sleep to avoid detectable patterns (1-3 seconds)
+                await asyncio.sleep(random.uniform(1.0, 3.0))
 
             # Process remaining batch
             await process_batch()
