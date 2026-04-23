@@ -6,15 +6,33 @@ async function logout() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
         
-        await fetch('/api/auth/logout', { 
+        const response = await fetch('/api/auth/logout', { 
             method: 'POST',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
+        
+        // Log result
+        if (response.ok) {
+            console.log('Logout successful');
+        } else {
+            console.warn('Logout returned status:', response.status);
+        }
     } catch (e) {
         console.warn('Logout request failed or timed out:', e);
     }
-    // Always redirect to home/login page
+    
+    // Clear any client-side data
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear all cookies by setting them to expire
+    document.cookie.split(";").forEach(c => {
+        const [name] = c.split("=");
+        document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    });
+    
+    // Force page refresh to clear session completely
     window.location.href = '/';
 }
 
