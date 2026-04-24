@@ -13,10 +13,9 @@ class AsyncHTTPClient:
 
     # User-Agent rotation to avoid pattern detection
     _USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     ]
     
     def __init__(self, proxy: Optional[str] = None, max_concurrency: int = 20):
@@ -50,7 +49,7 @@ class AsyncHTTPClient:
 
         # Add Client Hints (Crucial for modern bot bypass)
         headers.update({
-            "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "sec-ch-ua": '"Not_A Brand";v="99", "Chromium";v="124", "Google Chrome";v="124"',
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": '"Windows"',
         })
@@ -138,6 +137,15 @@ class AsyncHTTPClient:
             try:
                 async with self._request_semaphore:
                     response = await self.client.get(url, headers=headers, **kwargs)
+                
+                if response.status_code == 403:
+                    cf_ray = response.headers.get("Cf-Ray")
+                    cf_cache = response.headers.get("Cf-Cache-Status")
+                    snippet = response.text[:400].replace("\n", " ")
+                    logger.warning(f"  [GET 403] URL: {url} | Cf-Ray: {cf_ray} | Cf-Cache: {cf_cache}")
+                    if "forbidden" in snippet.lower() and "udemy" in snippet.lower():
+                        logger.error(f"  [APP BLOCK] Udemy-branded Forbidden returned for {url}")
+
                 if raise_for_status:
                     response.raise_for_status()
                 return response
@@ -209,6 +217,15 @@ class AsyncHTTPClient:
             try:
                 async with self._request_semaphore:
                     response = await self.client.post(url, headers=headers, **kwargs)
+                
+                if response.status_code == 403:
+                    cf_ray = response.headers.get("Cf-Ray")
+                    cf_cache = response.headers.get("Cf-Cache-Status")
+                    snippet = response.text[:400].replace("\n", " ")
+                    logger.warning(f"  [POST 403] URL: {url} | Cf-Ray: {cf_ray} | Cf-Cache: {cf_cache}")
+                    if "forbidden" in snippet.lower() and "udemy" in snippet.lower():
+                        logger.error(f"  [APP BLOCK] Udemy-branded Forbidden returned for {url}")
+
                 if raise_for_status:
                     response.raise_for_status()
                 return response
