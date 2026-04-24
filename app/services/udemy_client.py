@@ -93,11 +93,23 @@ class UdemyClient:
         try:
             browser = await PlaywrightManager.get_browser()
             proxy_config = {"server": self.http.proxy} if self.http.proxy else None
+            
+            # Use a realistic set of headers for the entire context
+            # Note: We omit 'Accept' here because it varies by request type (doc vs xhr)
+            # but we include other modern browser defaults.
+            extra_headers = {
+                "Accept-Language": "en-US,en;q=0.9",
+                "sec-ch-ua": '"Not_A Brand";v="99", "Chromium";v="124", "Google Chrome";v="124"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+            }
+
             self._pw_context = await browser.new_context(
                 user_agent=constants.DEFAULT_USER_AGENT,
                 proxy=proxy_config,
                 viewport={"width": 1280, "height": 800},
                 ignore_https_errors=True,
+                extra_http_headers=extra_headers,
             )
             # Seed the fresh context with auth cookies so Udemy recognises the
             # session.  We intentionally EXCLUDE cf_clearance: the user's saved value
@@ -223,38 +235,48 @@ class UdemyClient:
                         except Exception:
                             pass
 
-            # Primary navigation on a fresh page — no history, no explicit
-            # referer → Chromium sends no Referer header.  Udemy's origin
-            # anti-abuse treats a `Referer: udemy.com/` on a clean course URL
-            # as a bot signal (homepage → deep-link jumps don't happen
-            # organically), so the absence is deliberately safer here.
+            # Primary navigation on a fresh page.
             page = await ctx.new_page()
+            
+            # Use a slightly more organic referer (e.g. searching for the course)
+            # or none if it's preferred.  We'll try a search-engine referer
+            # to mimic an external arrival if the direct one failed.
+            referer = f"{constants.UDEMY_BASE_URL}/" 
+            
+            # Small random jitter before navigation to break timing patterns
+            await asyncio.sleep(random.uniform(0.5, 1.5))
+            
             resp = await page.goto(
                 url,
                 wait_until="domcontentloaded",
                 timeout=30000,
+                referer=referer
             )
             # Short settle so CF's post-challenge redirect / JS can run.
             await asyncio.sleep(1.5)
 
             html = await page.content()
-            cf_challenge_was_seen = False
+            final_url = page.url
+            status = resp.status if resp else 0
+            
+            logger.debug(f"  Navigation finished: {url} -> {final_url} (Status: {status})")
 
+            cf_challenge_was_seen = False
             # If CF challenge is on the page, wait up to ~20s for it to clear.
             if await self._check_cloudflare_challenge(html):
                 cf_challenge_was_seen = True
-                logger.debug(f"  Playwright page.goto hit CF challenge on {url} — waiting...")
+                logger.info(f"  [QUARANTINE] Cloudflare challenge detected on {url}")
                 self.session_recovery_state["cloudflare_challenges_encountered"] += 1
                 challenge_cleared = False
-                for _ in range(10):
+                for i in range(10):
                     await asyncio.sleep(2)
                     html = await page.content()
                     if not await self._check_cloudflare_challenge(html):
-                        logger.debug("  CF challenge cleared inline")
+                        logger.info(f"  [SUCCESS] CF challenge cleared after {(i+1)*2}s")
                         challenge_cleared = True
                         break
                 if not challenge_cleared:
-                    logger.warning(f"  CF challenge did not clear within 20s for {url}")
+                    logger.warning(f"  [FAILURE] CF challenge did not clear within 20s for {url}")
                     # Invalidate clearance so next refresh re-challenges.
                     self._pw_cf_clearance_earned = False
                     return httpx.Response(
@@ -268,33 +290,38 @@ class UdemyClient:
             # content now, so report 200.  Otherwise use the actual goto status.
             if cf_challenge_was_seen:
                 status = 200
-            else:
-                status = resp.status if resp else 200
-            final_url = page.url
-
+            
             # Harvest any fresh cookies (cf_clearance, csrftoken rotations, etc.).
+            current_cookies = await ctx.cookies()
             try:
-                for c in await ctx.cookies():
+                for c in current_cookies:
                     if c.get("name") and c.get("value"):
+                        if self.cookie_dict.get(c["name"]) != c["value"]:
+                            logger.debug(f"  Cookie updated: {c['name']} (from context)")
                         self.cookie_dict[c["name"]] = c["value"]
                         self.http.client.cookies.set(c["name"], c["value"])
                         if c["name"] == "cf_clearance":
                             self._pw_cf_clearance_earned = True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"  Error harvesting cookies: {e}")
 
             if status != 200:
                 # Log a snippet of the hard-block body so we can distinguish
                 # CF 1020/Managed Challenge / rate-limit / origin 403.
-                snippet = html[:400].replace("\n", " ") if html else ""
+                snippet = html[:1000].replace("\n", " ") if html else ""
+                # Also log response headers if available
+                headers_log = str(resp.headers) if resp else "No headers"
                 logger.warning(
-                    f"  Playwright page.goto {url} → {status}. "
-                    f"CF challenge not detected. Body snippet: {snippet!r}"
+                    f"  [BLOCK] Playwright page.goto {url} -> {status}\n"
+                    f"  Headers: {headers_log}\n"
+                    f"  Body Snippet: {snippet!r}"
                 )
                 # A 403 without a detectable challenge is a hard WAF block — drop
                 # cf_clearance flag so the next refresh re-challenges from scratch.
                 if status == 403:
                     self._pw_cf_clearance_earned = False
+                    if "forbidden" in snippet.lower() and "udemy" in snippet.lower():
+                        logger.error("  Origin-level Forbidden detected (Udemy App Block, not Cloudflare)")
 
             return httpx.Response(
                 status_code=status,
@@ -635,6 +662,8 @@ class UdemyClient:
 
                 page = await ctx.new_page()
                 try:
+                    # Random jitter to avoid exact timing patterns
+                    await asyncio.sleep(random.uniform(0.5, 2.0))
                     await page.goto(
                         f"{constants.UDEMY_BASE_URL}/",
                         wait_until="commit",
@@ -887,6 +916,9 @@ class UdemyClient:
                 tasks.append(self.http.get(url, cookies=self.cookie_dict, headers=common_headers, req_type="api"))
             
             resps = await asyncio.gather(*tasks)
+            # Short sleep between batches to avoid aggressive API hits
+            await asyncio.sleep(random.uniform(1.0, 2.5))
+            
             any_stop = False
             for i, r in enumerate(resps):
                 page_data = await self.http.safe_json(r, f"enrolled courses page {start_page + i}")
@@ -966,6 +998,8 @@ class UdemyClient:
         # so strip query + fragment here.
         parts = urlsplit(url)
         fetch_url = urlunsplit(parts._replace(query="", fragment=""))
+        if not fetch_url.endswith("/"):
+            fetch_url += "/"
 
         if self.firecrawl_api_key:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Firecrawl...")

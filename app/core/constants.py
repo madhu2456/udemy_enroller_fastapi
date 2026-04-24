@@ -17,7 +17,7 @@ UDEMY_CHECKOUT_SUBMIT_URL = f"{UDEMY_BASE_URL}/payment/checkout-submit/"
 UDEMY_COURSE_SUBSCRIBE_URL = f"{UDEMY_BASE_URL}/course/subscribe/"
 
 # Common Headers
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 import asyncio
 shutdown_event = asyncio.Event()
