@@ -94,22 +94,15 @@ class UdemyClient:
             browser = await PlaywrightManager.get_browser()
             proxy_config = {"server": self.http.proxy} if self.http.proxy else None
             
-            # Use a realistic set of headers for the entire context
-            # Note: We omit 'Accept' here because it varies by request type (doc vs xhr)
-            # but we include other modern browser defaults.
-            extra_headers = {
-                "Accept-Language": "en-US,en;q=0.9",
-                "sec-ch-ua": '"Not_A Brand";v="99", "Chromium";v="124", "Google Chrome";v="124"',
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": '"Windows"',
-            }
-
+            # We remove extra_http_headers from the context level because they
+            # can conflict with Playwright's automatic header generation for
+            # different request types (document vs xhr).  Instead, we rely on
+            # the User-Agent and Playwright's default modern Chromium headers.
             self._pw_context = await browser.new_context(
                 user_agent=constants.DEFAULT_USER_AGENT,
                 proxy=proxy_config,
                 viewport={"width": 1280, "height": 800},
                 ignore_https_errors=True,
-                extra_http_headers=extra_headers,
             )
             # Seed the fresh context with auth cookies so Udemy recognises the
             # session.  We intentionally EXCLUDE cf_clearance: the user's saved value
@@ -185,81 +178,54 @@ class UdemyClient:
             return None
 
     async def _page_goto_fetch(self, ctx, url: str, method: str) -> Optional[httpx.Response]:
-        """Fetch a document URL via real ``page.goto()`` so JS-based CF challenges
-        are solved inline.
-
-        Cloudflare clearance is still earned by a prewarm navigation to the
-        homepage, but it runs on a **separate, throwaway page** so the course
-        fetch page has no navigation history — which means Chromium sends no
-        ``Referer`` header on it.  ``Referer: udemy.com/`` on a deep course
-        link is a canonical bot fingerprint (real users reach /course/<slug>/
-        via search, categories, carousels, or external affiliate sites, not
-        from the bare homepage), so we deliberately leave it off: empty
-        Referer matches typed-URL / affiliate-click behavior.
-
-        Returns an httpx.Response-shaped object (status_code + content) so callers
-        in get_course_id / check_course can keep using it the same way as the old
-        ctx.request.get() flow.  Harvests cookies back into both the Playwright
-        context (implicit) and self.http so the rest of the client keeps working.
+        """Fetch a document URL via real ``page.goto()``.
+        
+        To avoid Udemy App-level 403s (Origin Forbidden), we:
+        1. Use a single page for the sequence (mimic a user browsing).
+        2. Set realistic document-navigation headers.
+        3. Use a search-engine referer for the first landing.
         """
         page = None
         try:
-            # PREWARM on a throwaway page.  Earns cf_clearance on the context,
-            # then is closed so the real course fetch happens on a fresh page
-            # with no Referer leaking the prewarm.
-            prewarm_needed = not self._pw_cf_clearance_earned
-            if prewarm_needed:
-                warmup = None
-                try:
-                    warmup = await ctx.new_page()
-                    await warmup.goto(
-                        f"{constants.UDEMY_BASE_URL}/",
-                        wait_until="domcontentloaded",
-                        timeout=30000,
-                    )
-                    await asyncio.sleep(1.0)
-                    home_html = await warmup.content()
-                    if await self._check_cloudflare_challenge(home_html):
-                        logger.debug("  Prewarm hit CF challenge — waiting...")
-                        for _ in range(10):
-                            await asyncio.sleep(2)
-                            home_html = await warmup.content()
-                            if not await self._check_cloudflare_challenge(home_html):
-                                break
-                except Exception as prewarm_err:
-                    logger.debug(f"  Prewarm navigation failed (continuing): {prewarm_err}")
-                finally:
-                    if warmup is not None:
-                        try:
-                            await warmup.close()
-                        except Exception:
-                            pass
+            # We use a single page for the lifetime of this context to maintain
+            # any client-side state / window variables Udemy might check.
+            pages = ctx.pages
+            page = pages[0] if pages else await ctx.new_page()
 
-            # Primary navigation on a fresh page.
-            page = await ctx.new_page()
+            # Small random jitter before navigation
+            await asyncio.sleep(random.uniform(1.0, 2.5))
+
+            # Set realistic document headers for this specific navigation
+            # This helps bypass "Origin Forbidden" which triggers when
+            # headers look like a raw tool rather than a browser navigation.
+            doc_headers = {
+                "Upgrade-Insecure-Requests": "1",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Sec-Fetch-Site": "cross-site" if "google" in url else "none",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-User": "?1",
+                "Sec-Fetch-Dest": "document",
+            }
             
-            # Use a slightly more organic referer (e.g. searching for the course)
-            # or none if it's preferred.  We'll try a search-engine referer
-            # to mimic an external arrival if the direct one failed.
-            referer = f"{constants.UDEMY_BASE_URL}/" 
+            # Organic referer: Use Google if we have no history, otherwise udemy.com
+            referer = "https://www.google.com/" if not pages else f"{constants.UDEMY_BASE_URL}/"
             
-            # Small random jitter before navigation to break timing patterns
-            await asyncio.sleep(random.uniform(0.5, 1.5))
+            logger.debug(f"  Navigating to {url} (Referer: {referer})")
             
             resp = await page.goto(
                 url,
                 wait_until="domcontentloaded",
-                timeout=30000,
+                timeout=45000, # Increased timeout for slow blocks
                 referer=referer
             )
-            # Short settle so CF's post-challenge redirect / JS can run.
-            await asyncio.sleep(1.5)
+            # Short settle so JS can run.
+            await asyncio.sleep(2.0)
 
             html = await page.content()
             final_url = page.url
             status = resp.status if resp else 0
             
-            logger.debug(f"  Navigation finished: {url} -> {final_url} (Status: {status})")
+            logger.info(f"  Navigation finished: Status={status}")
 
             cf_challenge_was_seen = False
             # If CF challenge is on the page, wait up to ~20s for it to clear.
@@ -297,7 +263,7 @@ class UdemyClient:
                 for c in current_cookies:
                     if c.get("name") and c.get("value"):
                         if self.cookie_dict.get(c["name"]) != c["value"]:
-                            logger.debug(f"  Cookie updated: {c['name']} (from context)")
+                            logger.info(f"  Cookie updated: {c['name']} (from context)")
                         self.cookie_dict[c["name"]] = c["value"]
                         self.http.client.cookies.set(c["name"], c["value"])
                         if c["name"] == "cf_clearance":
@@ -398,12 +364,12 @@ class UdemyClient:
                     status = pw_resp.status
                     body = await pw_resp.body()
                     if status != 200:
-                        logger.debug(f"  Playwright GET [{req_type}] {url} → {status}")
+                        logger.info(f"  Playwright GET [{req_type}] {url} → {status}")
                         if status == 403:
                             # Log a snippet of the 403 body to distinguish CF hard-block
                             # from Udemy application 403.
                             snippet = body[:400].decode("utf-8", errors="replace").replace("\n", " ")
-                            logger.debug(f"  403 body snippet: {snippet}")
+                            logger.info(f"  403 body snippet: {snippet}")
                     return httpx.Response(
                         status_code=status,
                         content=body,
