@@ -186,14 +186,24 @@ class UdemyClient:
         3. Use a search-engine referer for the first landing.
         """
         page = None
+        new_page_created = False
         try:
             # We use a single page for the lifetime of this context to maintain
             # any client-side state / window variables Udemy might check.
             pages = ctx.pages
-            page = pages[0] if pages else await ctx.new_page()
+            if pages:
+                page = pages[0]
+            else:
+                page = await ctx.new_page()
+                new_page_created = True
 
             # Small random jitter before navigation
             await asyncio.sleep(random.uniform(1.0, 2.5))
+            
+            # Organic referer: Use Google if we have no history, otherwise udemy.com
+            # If the current page is already on udemy, it's an internal referer.
+            current_url = page.url
+            referer = f"{constants.UDEMY_BASE_URL}/" if "udemy.com" in current_url else "https://www.google.com/"
 
             # Set realistic document headers for this specific navigation
             # This helps bypass "Origin Forbidden" which triggers when
@@ -201,23 +211,26 @@ class UdemyClient:
             doc_headers = {
                 "Upgrade-Insecure-Requests": "1",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                "Sec-Fetch-Site": "cross-site" if "google" in url else "none",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Sec-Ch-Ua": '"Not_A Brand";v="99", "Chromium";v="124", "Google Chrome";v="124"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+                "Sec-Fetch-Site": "cross-site" if "google" in referer else "same-origin",
                 "Sec-Fetch-Mode": "navigate",
                 "Sec-Fetch-User": "?1",
                 "Sec-Fetch-Dest": "document",
             }
+            await page.set_extra_http_headers(doc_headers)
             
-            # Organic referer: Use Google if we have no history, otherwise udemy.com
-            referer = "https://www.google.com/" if not pages else f"{constants.UDEMY_BASE_URL}/"
-            
-            logger.debug(f"  Navigating to {url} (Referer: {referer})")
+            logger.info(f"  Navigating to {url} (Referer: {referer})")
             
             resp = await page.goto(
                 url,
                 wait_until="domcontentloaded",
-                timeout=45000, # Increased timeout for slow blocks
+                timeout=45000, 
                 referer=referer
             )
+            
             # Short settle so JS can run.
             await asyncio.sleep(2.0)
 
