@@ -176,6 +176,11 @@ class UdemyClient:
         """Fetch a document URL via real ``page.goto()`` so JS-based CF challenges
         are solved inline.
 
+        Navigates to the homepage first on the same page so the course URL fetch
+        carries a proper ``Referer`` and matches a normal click-through pattern.
+        CF hard-blocks direct deep-link navigations from headless browsers even
+        with valid cf_clearance, so the prewarm is what makes course pages fetchable.
+
         Returns an httpx.Response-shaped object (status_code + content) so callers
         in get_course_id / check_course can keep using it the same way as the old
         ctx.request.get() flow.  Harvests cookies back into both the Playwright
@@ -184,7 +189,40 @@ class UdemyClient:
         page = None
         try:
             page = await ctx.new_page()
-            resp = await page.goto(url, wait_until="commit", timeout=30000)
+
+            # PREWARM: land on the homepage first.  This establishes nav history so
+            # the following page.goto(course_url) sends `Referer: udemy.com/`, which
+            # Cloudflare expects for a normal user clickthrough.  Without this, CF
+            # WAF hard-403s deep-link navigations even when cf_clearance is valid.
+            prewarm_needed = not self._pw_cf_clearance_earned
+            if prewarm_needed:
+                try:
+                    await page.goto(
+                        f"{constants.UDEMY_BASE_URL}/",
+                        wait_until="domcontentloaded",
+                        timeout=30000,
+                    )
+                    await asyncio.sleep(1.0)
+                    home_html = await page.content()
+                    if await self._check_cloudflare_challenge(home_html):
+                        logger.debug("  Prewarm hit CF challenge — waiting...")
+                        for _ in range(10):
+                            await asyncio.sleep(2)
+                            home_html = await page.content()
+                            if not await self._check_cloudflare_challenge(home_html):
+                                break
+                except Exception as prewarm_err:
+                    logger.debug(f"  Prewarm navigation failed (continuing): {prewarm_err}")
+
+            # Primary navigation.  Pass an explicit referer — `page.goto` only
+            # auto-sets Referer from the previous page's URL when using the same
+            # page, but being explicit avoids surprises when prewarm was skipped.
+            resp = await page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=30000,
+                referer=f"{constants.UDEMY_BASE_URL}/",
+            )
             # Short settle so CF's post-challenge redirect / JS can run.
             await asyncio.sleep(1.5)
 
@@ -235,7 +273,17 @@ class UdemyClient:
                 pass
 
             if status != 200:
-                logger.debug(f"  Playwright page.goto {url} → {status}")
+                # Log a snippet of the hard-block body so we can distinguish
+                # CF 1020/Managed Challenge / rate-limit / origin 403.
+                snippet = html[:400].replace("\n", " ") if html else ""
+                logger.warning(
+                    f"  Playwright page.goto {url} → {status}. "
+                    f"CF challenge not detected. Body snippet: {snippet!r}"
+                )
+                # A 403 without a detectable challenge is a hard WAF block — drop
+                # cf_clearance flag so the next refresh re-challenges from scratch.
+                if status == 403:
+                    self._pw_cf_clearance_earned = False
 
             return httpx.Response(
                 status_code=status,
