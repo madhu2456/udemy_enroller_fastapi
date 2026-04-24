@@ -152,7 +152,7 @@ class AsyncHTTPClient:
             except (httpx.HTTPStatusError, httpx.RequestError) as e:
                 last_error = e
                 if log_failures:
-                    logger.debug(f"GET attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}")
+                    logger.info(f"GET attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}")
                 
                 should_retry = attempt < attempts - 1
                 
@@ -232,7 +232,7 @@ class AsyncHTTPClient:
             except (httpx.HTTPStatusError, httpx.RequestError) as e:
                 last_error = e
                 if log_failures:
-                    logger.debug(f"POST attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}")
+                    logger.info(f"POST attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}")
                 
                 should_retry = attempt < attempts - 1
                 if isinstance(e, httpx.HTTPStatusError):
