@@ -7,7 +7,7 @@ import asyncio
 import random
 from datetime import UTC, datetime
 from decimal import Decimal
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit, urlunsplit
 from typing import Optional, Dict, List
 
 import httpx
@@ -214,15 +214,21 @@ class UdemyClient:
                 except Exception as prewarm_err:
                     logger.debug(f"  Prewarm navigation failed (continuing): {prewarm_err}")
 
-            # Primary navigation.  Pass an explicit referer — `page.goto` only
-            # auto-sets Referer from the previous page's URL when using the same
-            # page, but being explicit avoids surprises when prewarm was skipped.
-            resp = await page.goto(
-                url,
-                wait_until="domcontentloaded",
-                timeout=30000,
-                referer=f"{constants.UDEMY_BASE_URL}/",
-            )
+            # Primary navigation.  Pass an explicit `Referer: udemy.com/` only
+            # when the URL has no query string — a same-origin referer on a
+            # coupon/affiliate URL (?couponCode=…) is actually suspicious to
+            # Udemy's origin anti-abuse layer (real affiliate traffic arrives
+            # from external referrers or no referrer at all).  When a query is
+            # present we omit the explicit referer and rely on whatever was
+            # set by the prewarm navigation on this same page.
+            has_query = bool(urlsplit(url).query)
+            goto_kwargs = {
+                "wait_until": "domcontentloaded",
+                "timeout": 30000,
+            }
+            if not has_query:
+                goto_kwargs["referer"] = f"{constants.UDEMY_BASE_URL}/"
+            resp = await page.goto(url, **goto_kwargs)
             # Short settle so CF's post-challenge redirect / JS can run.
             await asyncio.sleep(1.5)
 
@@ -945,11 +951,21 @@ class UdemyClient:
         if course.course_id:
             return
         url = re.sub(r"\W+$", "", unquote(course.url))
-        
+        # Udemy's origin anti-abuse layer (distinct from Cloudflare) returns a
+        # branded `<title>Error • Udemy</title> ... Forbidden` body for direct
+        # document fetches of coupon/affiliate deep links (?couponCode=…).
+        # The coupon is only required later in check_course(), which hits the
+        # JSON `/api-2.0/course-landing-components/…&couponCode=…` endpoint and
+        # is unaffected.  For the document fetch we need nothing beyond the
+        # bare `/course/<slug>/` URL to extract the course ID and metadata,
+        # so strip query + fragment here.
+        parts = urlsplit(url)
+        fetch_url = urlunsplit(parts._replace(query="", fragment=""))
+
         if self.firecrawl_api_key:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Firecrawl...")
             fc_schema = {"type": "object", "properties": {"course_id": {"type": "string"}, "title": {"type": "string"}}}
-            fc_data = await self._firecrawl_scrape(url, schema=fc_schema)
+            fc_data = await self._firecrawl_scrape(fetch_url, schema=fc_schema)
             if fc_data and "extract" in fc_data:
                 cid = fc_data["extract"].get("course_id")
                 if cid and str(cid) not in BLACKLIST_IDS:
@@ -973,7 +989,7 @@ class UdemyClient:
         if use_headless_fallback:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
             while consecutive_403 < max_403_retries:
-                resp = await self._playwright_request(url, req_type="document")
+                resp = await self._playwright_request(fetch_url, req_type="document")
                 if resp and resp.status_code == 200:
                     final_url = str(resp.url)
                     logger.debug(f"  Playwright resolved to: {final_url}")
@@ -1017,7 +1033,7 @@ class UdemyClient:
             logger.info(f"Standard: Fetching course ID for {course.title} via HTTP...")
             consecutive_403 = 0
             while consecutive_403 < max_403_retries:
-                resp = await self.http.get(url, req_type="document", raise_for_status=False)
+                resp = await self.http.get(fetch_url, req_type="document", raise_for_status=False)
                 if resp and resp.status_code == 200:
                     soup = bs(resp.content, "lxml")
                     body = soup.find("body")
