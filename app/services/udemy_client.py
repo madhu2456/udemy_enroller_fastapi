@@ -92,6 +92,15 @@ class UdemyClient:
         self._course_fetch_backoff_s = 0.0        # current adaptive backoff
         self._course_fetch_consecutive_403s = 0   # rolling counter, resets on 2xx
 
+        # Circuit breaker for account-level 403 blocks (Udemy app-layer anti-abuse).
+        # When consecutive 403s exceed this threshold, the entire account is flagged
+        # as blocked and courses are deferred for batch retry with long recovery delay.
+        self._global_403_circuit_threshold = 4      # trigger account-block detection
+        self._global_403_count = 0                  # total 403s in current session
+        self._account_block_active = False          # true when circuit breaker is tripped
+        self._account_block_cooldown_until = None   # timestamp when block expires
+        self._account_block_cooldown_seconds = 300  # 5 minutes recovery time
+
     async def _get_persistent_pw_context(self):
         """Return the long-lived Playwright BrowserContext for this client.
 
@@ -308,11 +317,70 @@ class UdemyClient:
         if 200 <= status < 300:
             self._course_fetch_consecutive_403s = 0
             self._course_fetch_backoff_s = 0.0
+            # Also clear account-level block if we're getting successful responses
+            if self._account_block_active:
+                time_remaining = self._account_block_cooldown_until - datetime.now(UTC) if self._account_block_cooldown_until else None
+                if time_remaining and time_remaining.total_seconds() < 0:
+                    logger.info("✓ Account block cooldown expired, attempting recovery...")
+                    self._account_block_active = False
+                    self._account_block_cooldown_until = None
         elif status == 403:
             self._course_fetch_consecutive_403s += 1
+            self._global_403_count += 1
             n = self._course_fetch_consecutive_403s
             # 1, 2, 4, 8, 16, 32, 60, 60, ...
             self._course_fetch_backoff_s = min(60.0, 2.0 ** max(0, n - 1))
+            
+            # Check if we should activate account-level circuit breaker
+            if self._global_403_count >= self._global_403_circuit_threshold and not self._account_block_active:
+                self._activate_account_block()
+
+    def _activate_account_block(self):
+        """Activate circuit breaker when account is being rate-limited."""
+        self._account_block_active = True
+        self._account_block_cooldown_until = datetime.now(UTC) + \
+            __import__('datetime').timedelta(seconds=self._account_block_cooldown_seconds)
+        logger.error(
+            f"⚠ ACCOUNT BLOCK DETECTED: {self._global_403_count} consecutive 403 errors. "
+            f"Session temporarily blocked until {self._account_block_cooldown_until.isoformat()}. "
+            f"Pausing course fetches for {self._account_block_cooldown_seconds}s to allow Udemy throttle to cool down."
+        )
+        self.session_recovery_state["consecutive_403_errors"] = self._global_403_count
+
+    def is_account_blocked(self) -> bool:
+        """Check if account-level circuit breaker is active and still in cooldown."""
+        if not self._account_block_active:
+            return False
+        if self._account_block_cooldown_until is None:
+            return False
+        if datetime.now(UTC) >= self._account_block_cooldown_until:
+            logger.info("✓ Account block cooldown expired, resuming course fetches...")
+            self._account_block_active = False
+            self._account_block_cooldown_until = None
+            return False
+        return True
+
+    def get_account_block_wait_seconds(self) -> float:
+        """Return seconds remaining in account block, or 0 if not blocked."""
+        if not self.is_account_blocked():
+            return 0.0
+        if self._account_block_cooldown_until is None:
+            return 0.0
+        remaining = (self._account_block_cooldown_until - datetime.now(UTC)).total_seconds()
+        return max(0.0, remaining)
+
+    def get_session_health_report(self) -> Dict:
+        """Return detailed metrics about session health for logging/diagnostics."""
+        return {
+            "account_blocked": self.is_account_blocked(),
+            "block_cooldown_remaining_seconds": self.get_account_block_wait_seconds(),
+            "total_403_errors": self._global_403_count,
+            "consecutive_403_errors": self._course_fetch_consecutive_403s,
+            "current_backoff_seconds": self._course_fetch_backoff_s,
+            "csrf_refresh_failures": self.session_recovery_state.get("csrf_refresh_failures", 0),
+            "cloudflare_challenges": self.session_recovery_state.get("cloudflare_challenges_encountered", 0),
+            "is_authenticated": self.is_authenticated,
+        }
 
     async def _firecrawl_scrape(self, url: str, schema: Optional[Dict] = None, use_cookies: bool = True) -> Optional[Dict]:
         """Perform a stealthy scrape using Firecrawl API."""
@@ -1152,6 +1220,16 @@ class UdemyClient:
         """
         if course.course_id:
             return
+        
+        # Check if account is in circuit breaker cooldown — if so, mark course as failed
+        # and skip expensive fetch attempts to preserve bandwidth and avoid hammering Udemy
+        if self.is_account_blocked():
+            wait_seconds = self.get_account_block_wait_seconds()
+            course.is_valid = False
+            course.error = f"Account temporarily blocked by Udemy (will retry in {wait_seconds:.0f}s)"
+            logger.info(f"  Status: Account blocked (cooldown) - skipping course fetch for {course.title}")
+            return
+        
         url = re.sub(r"\W+$", "", unquote(course.url))
         # Udemy's origin anti-abuse layer (distinct from Cloudflare) returns a
         # branded `<title>Error • Udemy</title> ... Forbidden` body for direct
@@ -1254,12 +1332,14 @@ class UdemyClient:
 
         # ---- Stage 4: Authenticated Playwright (last resort) ----
         # If the account is flagged this will 403.  Kept only for accounts still
-        # in good standing, and hard-capped so one bad account doesn't wedge the
-        # whole run in retry loops.
+        # in good standing, and capped with adaptive retries (2-5 attempts based on
+        # consecutive 403 count) so one bad account doesn't wedge the whole run.
         consecutive_403 = 0
-        max_403_retries = 2
+        # Adaptive max retries: if we've seen many 403s before, try harder before giving up
+        # This helps recovery when Udemy's throttle briefly loosens
+        max_403_retries = min(5, 2 + max(0, min(3, self._course_fetch_consecutive_403s // 2)))
         if use_headless_fallback:
-            logger.info(f"Stealth: Fetching course ID for {course.title} via authenticated Playwright...")
+            logger.info(f"Stealth: Fetching course ID for {course.title} via authenticated Playwright (max {max_403_retries} retries)...")
             while consecutive_403 < max_403_retries:
                 resp = await self._playwright_request(fetch_url, req_type="document")
                 if resp and resp.status_code == 200:
@@ -1288,11 +1368,16 @@ class UdemyClient:
                     consecutive_403 += 1
                     self._course_fetch_report(403)
                     if consecutive_403 < max_403_retries:
-                        logger.warning(f"403 Forbidden on authed course fetch for {course.title}. Forcing full session re-challenge (attempt {consecutive_403}/{max_403_retries})...")
+                        # Exponential backoff: 2s, 4s, 8s, 16s with jitter
+                        backoff = 2 ** consecutive_403 + random.uniform(0, 2)
+                        logger.warning(f"403 Forbidden (attempt {consecutive_403}/{max_403_retries}). "
+                                      f"Forcing full session re-challenge with {backoff:.1f}s backoff...")
+                        await asyncio.sleep(backoff)
                         if await self._refresh_csrf_stealth(force_full=True):
                             await asyncio.sleep(2)
                             continue
-                    logger.error(f"Too many 403 errors ({consecutive_403}) on authed Playwright course fetch. Giving up.")
+                    logger.error(f"Too many 403 errors ({consecutive_403}/{max_403_retries}) on authed Playwright course fetch. "
+                               f"Account may be rate-limited by Udemy. Giving up on this course.")
                     break
                 else:
                     logger.debug(f"Authed Playwright returned {resp.status_code if resp else 'None'}.")
@@ -1302,9 +1387,14 @@ class UdemyClient:
             course.is_valid = False
             if resp and resp.status_code == 200:
                 course.error = "Course ID not found"
+            elif resp and resp.status_code == 403:
+                if self._global_403_count >= self._global_403_circuit_threshold:
+                    course.error = f"Account rate-limited (403). Will retry after cooldown ({self.get_account_block_wait_seconds():.0f}s)"
+                else:
+                    course.error = "Failed to fetch course page (403 Forbidden - session blocked)"
             else:
                 course.error = f"Failed to fetch course page ({resp.status_code if resp else 'No response'})"
-            logger.warning(f"Failed to identify course: {course.title}")
+            logger.warning(f"Failed to identify course: {course.title} - {course.error}")
 
     async def check_course(self, course: Course):
         """Check coupon validity with Firecrawl-first, Playwright fallback chain."""

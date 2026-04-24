@@ -339,11 +339,22 @@ class EnrollmentManager:
                 await process_batch()
             await self._update_run_stats(db, run)
 
-            # Mark complete
+            # Mark complete and log session health metrics
             run.status = "completed"
             run.completed_at = _utcnow_naive()
             db.commit()
             self.status = "completed"
+            
+            # Log session health report for diagnostics
+            health = self.udemy.get_session_health_report()
+            logger.info(
+                f"Enrollment pipeline completed successfully. "
+                f"Session Health: {health['consecutive_403_errors']} consecutive 403s, "
+                f"total 403s: {health['total_403_errors']}, "
+                f"account_blocked: {health['account_blocked']}, "
+                f"csrf_failures: {health['csrf_refresh_failures']}, "
+                f"cf_challenges: {health['cloudflare_challenges']}"
+            )
             logger.info("Enrollment pipeline completed successfully")
 
         except asyncio.CancelledError:
