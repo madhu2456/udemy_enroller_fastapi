@@ -120,19 +120,19 @@ class TestGetCourseIDFlow:
 
     async def test_get_course_id_not_found(self, udemy_client):
         course = Course("Test", "https://udemy.com/course/test/")
-        
+    
         # Mock response content with nothing
         mock_html = "<html><body>No ID here</body></html>"
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.content = mock_html
         mock_resp.url = "https://udemy.com/course/test/"
-        
-        # Mock Playwright to return 403, then HTTP to return no ID
-        with patch.object(udemy_client, '_playwright_request', return_value=MagicMock(status_code=403)):
+    
+        # Mock both Playwright and HTTP to return success but with no ID
+        with patch.object(udemy_client, '_playwright_request', return_value=mock_resp):
             with patch.object(udemy_client.http, 'get', return_value=mock_resp):
                 await udemy_client.get_course_id(course)
-            
+    
         assert course.course_id is None
         assert course.is_valid is False
         assert course.error == "Course ID not found"
