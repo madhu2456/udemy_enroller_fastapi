@@ -172,6 +172,86 @@ class UdemyClient:
             logger.debug(f"Firecrawl request failed for {url}: {e}")
             return None
 
+    async def _page_goto_fetch(self, ctx, url: str, method: str) -> Optional[httpx.Response]:
+        """Fetch a document URL via real ``page.goto()`` so JS-based CF challenges
+        are solved inline.
+
+        Returns an httpx.Response-shaped object (status_code + content) so callers
+        in get_course_id / check_course can keep using it the same way as the old
+        ctx.request.get() flow.  Harvests cookies back into both the Playwright
+        context (implicit) and self.http so the rest of the client keeps working.
+        """
+        page = None
+        try:
+            page = await ctx.new_page()
+            resp = await page.goto(url, wait_until="commit", timeout=30000)
+            # Short settle so CF's post-challenge redirect / JS can run.
+            await asyncio.sleep(1.5)
+
+            html = await page.content()
+            cf_challenge_was_seen = False
+
+            # If CF challenge is on the page, wait up to ~20s for it to clear.
+            if await self._check_cloudflare_challenge(html):
+                cf_challenge_was_seen = True
+                logger.debug(f"  Playwright page.goto hit CF challenge on {url} — waiting...")
+                self.session_recovery_state["cloudflare_challenges_encountered"] += 1
+                challenge_cleared = False
+                for _ in range(10):
+                    await asyncio.sleep(2)
+                    html = await page.content()
+                    if not await self._check_cloudflare_challenge(html):
+                        logger.debug("  CF challenge cleared inline")
+                        challenge_cleared = True
+                        break
+                if not challenge_cleared:
+                    logger.warning(f"  CF challenge did not clear within 20s for {url}")
+                    # Invalidate clearance so next refresh re-challenges.
+                    self._pw_cf_clearance_earned = False
+                    return httpx.Response(
+                        status_code=403,
+                        content=html.encode("utf-8", errors="replace"),
+                        request=httpx.Request(method, url),
+                    )
+
+            # If a challenge was seen and then cleared, the initial goto response
+            # status reflects the challenge page — it's stale.  We have real
+            # content now, so report 200.  Otherwise use the actual goto status.
+            if cf_challenge_was_seen:
+                status = 200
+            else:
+                status = resp.status if resp else 200
+            final_url = page.url
+
+            # Harvest any fresh cookies (cf_clearance, csrftoken rotations, etc.).
+            try:
+                for c in await ctx.cookies():
+                    if c.get("name") and c.get("value"):
+                        self.cookie_dict[c["name"]] = c["value"]
+                        self.http.client.cookies.set(c["name"], c["value"])
+                        if c["name"] == "cf_clearance":
+                            self._pw_cf_clearance_earned = True
+            except Exception:
+                pass
+
+            if status != 200:
+                logger.debug(f"  Playwright page.goto {url} → {status}")
+
+            return httpx.Response(
+                status_code=status,
+                content=html.encode("utf-8", errors="replace"),
+                request=httpx.Request(method, final_url or url),
+            )
+        except Exception as e:
+            logger.debug(f"Playwright page.goto failed for {url}: {e}")
+            return None
+        finally:
+            if page is not None:
+                try:
+                    await page.close()
+                except Exception:
+                    pass
+
     async def _playwright_request(self, url: str, method: str = "GET", data: Optional[Dict] = None, req_type: str = "xhr") -> Optional[httpx.Response]:
         """Perform a stealthy request using the persistent Playwright BrowserContext.
 
@@ -214,27 +294,19 @@ class UdemyClient:
                 })
 
             if method == "GET":
-                # All GET requests (document and XHR/API) use context.request.get().
-                # This uses Chromium's TLS fingerprint (Cloudflare-friendly) but runs NO
-                # JavaScript, so navigator.webdriver / headless detection never fires.
-                # Cloudflare JS challenges are handled separately in _refresh_csrf_stealth
-                # (page.goto to homepage) which earns cf_clearance into this context;
-                # that clearance is automatically carried here via the shared cookie jar.
+                # Document GETs (course landing pages) need real browser navigation:
+                # ctx.request.get() sends cf_clearance but runs NO JavaScript, and
+                # Cloudflare's per-path WAF can still 403 such requests even with a
+                # valid clearance cookie.  page.goto() runs the full Chromium stack
+                # so any inline CF challenge can be solved the same way the homepage
+                # one was during _refresh_csrf_stealth.
+                #
+                # XHR/API GETs stay on ctx.request.get() — those are same-origin
+                # requests from an already-cleared context and don't need a page.
                 if req_type == "document":
-                    # Browser-style navigation headers — looks like Chrome typing a URL.
-                    req_headers = {
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                        "Accept-Language": "en-US,en;q=0.9",
-                        "Cache-Control": "max-age=0",
-                        "Sec-Fetch-Dest": "document",
-                        "Sec-Fetch-Mode": "navigate",
-                        "Sec-Fetch-Site": "none",
-                        "Sec-Fetch-User": "?1",
-                        "Upgrade-Insecure-Requests": "1",
-                    }
-                else:
-                    req_headers = headers_dict
+                    return await self._page_goto_fetch(ctx, url, method)
 
+                req_headers = headers_dict
                 try:
                     pw_resp = await ctx.request.get(url, headers=req_headers, timeout=30000)
                     status = pw_resp.status
@@ -433,18 +505,33 @@ class UdemyClient:
 
         return None
 
-    async def _refresh_csrf_stealth(self) -> bool:
-        """Refresh CSRF token and all session cookies using the persistent Playwright context."""
-        logger.info("Stealth: Refreshing CSRF token and cookies via Playwright...")
+    async def _refresh_csrf_stealth(self, force_full: bool = False) -> bool:
+        """Refresh CSRF token and all session cookies using the persistent Playwright context.
+
+        If ``force_full`` is True, the CSRF-header fast path is skipped and the
+        existing ``cf_clearance`` is treated as invalid — callers reacting to an
+        observed 403 should pass this so the context re-navigates through any
+        Cloudflare challenge instead of just rotating a header.
+        """
+        logger.info(
+            "Stealth: Refreshing CSRF token and cookies via Playwright..."
+            + (" (forced full refresh)" if force_full else "")
+        )
         csrf_found = False
         try:
+            if force_full:
+                # A prior 403 proved the current cf_clearance isn't good enough for
+                # the protected path we're trying to hit.  Drop the flag so the
+                # Playwright flow below re-runs the CF challenge.
+                self._pw_cf_clearance_earned = False
+
             # FAST PATH: Reuse the login CSRF token only when Playwright's OWN context
             # has already earned a cf_clearance via a real browser navigation.  The
             # user's saved cf_clearance is TLS-fingerprint-bound to their desktop
             # browser and will NOT work in Playwright.  self._pw_cf_clearance_earned
             # is only set to True after a successful full navigation below.
             login_csrf = self.cookie_dict.get("csrf_token_login")
-            if login_csrf and self._pw_cf_clearance_earned:
+            if not force_full and login_csrf and self._pw_cf_clearance_earned:
                 try:
                     logger.info("Fast path: reusing login CSRF token (Playwright cf_clearance already earned)...")
                     self.http.client.headers['X-CSRFToken'] = login_csrf
@@ -833,6 +920,7 @@ class UdemyClient:
         consecutive_403 = 0
         max_403_retries = 2
         resp = None
+        playwright_cf_blocked = False  # True if Playwright hit CF 403 — skip raw HTTP fallback
 
         if use_headless_fallback:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
@@ -860,10 +948,13 @@ class UdemyClient:
                     break
                 elif resp and resp.status_code == 403:
                     consecutive_403 += 1
+                    playwright_cf_blocked = True
                     if consecutive_403 < max_403_retries:
-                        logger.warning(f"403 Forbidden on course fetch for {course.title}. Refreshing session (attempt {consecutive_403}/{max_403_retries})...")
-                        if await self._refresh_csrf_stealth():
-                            await asyncio.sleep(1)
+                        logger.warning(f"403 Forbidden on course fetch for {course.title}. Forcing full session re-challenge (attempt {consecutive_403}/{max_403_retries})...")
+                        # force_full=True: invalidate cf_clearance and re-challenge.
+                        # Plain CSRF rotation can't fix a document-GET 403.
+                        if await self._refresh_csrf_stealth(force_full=True):
+                            await asyncio.sleep(2)
                             continue
                     logger.error(f"Too many 403 errors ({consecutive_403}) on Playwright course fetch. Giving up.")
                     break
@@ -871,7 +962,10 @@ class UdemyClient:
                     logger.debug(f"Playwright returned {resp.status_code if resp else 'None'}.")
                     break
 
-        if not course.course_id:
+        # Skip the raw-HTTP fallback when Playwright already hit a CF 403: vanilla
+        # httpx has a Python TLS fingerprint and cannot succeed where Chromium
+        # just failed.  Retrying here just wastes time and inflates error counts.
+        if not course.course_id and not playwright_cf_blocked:
             logger.info(f"Standard: Fetching course ID for {course.title} via HTTP...")
             consecutive_403 = 0
             while consecutive_403 < max_403_retries:
@@ -894,7 +988,7 @@ class UdemyClient:
                     consecutive_403 += 1
                     if consecutive_403 < max_403_retries:
                         logger.warning(f"403 Forbidden on standard course fetch for {course.title}. Refreshing session (attempt {consecutive_403}/{max_403_retries})...")
-                        if await self._refresh_csrf_stealth():
+                        if await self._refresh_csrf_stealth(force_full=True):
                             await asyncio.sleep(1)
                             continue
                     logger.error(f"Too many 403 errors ({consecutive_403}) on standard course fetch. Giving up.")
