@@ -65,6 +65,15 @@ class UdemyClient:
         # fingerprint and is invalid for Playwright's Chromium instance.
         self._pw_cf_clearance_earned = False
 
+        # Anonymous Playwright context — carries NO authenticated cookies.  Used
+        # exclusively for public slug → course-ID resolution (`get_course_id`) after
+        # the authenticated account has been flagged by Udemy's application-layer
+        # anti-abuse (e.g. accounts with thousands of enrollments get their
+        # access_token tied to course-page 403s).  check_course / free_checkout
+        # still use the main authenticated context.
+        self._pw_anon_context = None
+        self._pw_anon_cf_clearance_earned = False
+
         # Session recovery tracking for 403 errors
         self.session_recovery_state = {
             "consecutive_403_errors": 0,
@@ -72,6 +81,16 @@ class UdemyClient:
             "cloudflare_challenges_encountered": 0,
             "last_error_time": None,
         }
+
+        # Lightweight global throttle for course-page fetches.  Udemy's origin
+        # anti-abuse is sensitive to request cadence from a single session, so we
+        # (a) jitter every course-fetch by 3–8s and (b) apply exponential backoff
+        # against a shared timestamp whenever consecutive 403s pile up.  Callers
+        # route through `_course_fetch_throttle()` rather than sleeping ad-hoc so
+        # the enrollment pipeline's concurrency can't accidentally bypass it.
+        self._course_fetch_lock = asyncio.Lock()
+        self._course_fetch_backoff_s = 0.0        # current adaptive backoff
+        self._course_fetch_consecutive_403s = 0   # rolling counter, resets on 2xx
 
     async def _get_persistent_pw_context(self):
         """Return the long-lived Playwright BrowserContext for this client.
@@ -150,6 +169,150 @@ class UdemyClient:
             self._pw_context = None
 
         return self._pw_context
+
+    async def _get_anonymous_pw_context(self):
+        """Return a long-lived Playwright context that is **not** authenticated.
+
+        Udemy's application-layer anti-abuse blocks course-page document fetches
+        when a flagged ``access_token`` cookie is attached (accounts with
+        thousands of enrollments are virtually always flagged), even though the
+        same course page is publicly viewable to anyone.  A parallel context
+        with no auth cookies bypasses that path entirely.
+
+        The context is reused across calls so cf_clearance is earned once and
+        the Chromium TLS session is stable.  Same stealth init script as the
+        main context.  Proxy inherits from self.http.proxy.
+        """
+        from app.services.playwright_service import PlaywrightManager
+
+        if self._pw_anon_context is not None:
+            try:
+                await self._pw_anon_context.cookies()
+                return self._pw_anon_context
+            except Exception:
+                logger.debug("Anonymous Playwright context became invalid — recreating...")
+                self._pw_anon_context = None
+                self._pw_anon_cf_clearance_earned = False
+
+        try:
+            browser = await PlaywrightManager.get_browser()
+            proxy_config = {"server": self.http.proxy} if self.http.proxy else None
+            self._pw_anon_context = await browser.new_context(
+                user_agent=constants.DEFAULT_USER_AGENT,
+                proxy=proxy_config,
+                viewport={"width": 1280, "height": 800},
+                ignore_https_errors=True,
+            )
+            # Deliberately NO seed cookies — this context must stay anonymous.
+            await self._pw_anon_context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => {
+                        const p = [
+                            {name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
+                            {name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
+                            {name: 'Native Client', filename: 'internal-nacl-plugin'},
+                        ];
+                        p.__proto__ = PluginArray.prototype;
+                        return p;
+                    }
+                });
+                Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+            """)
+            logger.debug("Created anonymous Playwright context for slug resolution")
+        except Exception as e:
+            logger.error(f"Failed to create anonymous Playwright context: {e}")
+            self._pw_anon_context = None
+
+        return self._pw_anon_context
+
+    async def _fetch_course_id_by_slug_api(self, slug: str) -> Optional[Dict]:
+        """Resolve a slug to a course record via Udemy's public JSON API.
+
+        Hits ``/api-2.0/courses/<slug>/?fields[course]=id,title,url,headline``
+        anonymously — no session cookies, no browser stealth, no coupon in the
+        URL.  This is the endpoint the Udemy mobile app uses and it is not
+        subject to the application-layer bot block that 403s authenticated
+        ``/course/<slug>/`` document fetches on flagged accounts.
+
+        Returns the parsed JSON dict on success, or ``None`` on any failure.
+        Caller is responsible for mapping the payload onto the ``Course``
+        object (``id`` → ``course_id``, ``title``, ``url``).
+        """
+        if not slug:
+            return None
+        api_url = (
+            f"{constants.UDEMY_API_BASE}/courses/{slug}/"
+            f"?fields[course]=id,title,url,headline,image_240x135"
+        )
+        try:
+            # Bypass the authenticated AsyncHTTPClient entirely — we don't want
+            # any of its headers, cookies, or bearer tokens on this request.
+            # A plain httpx AsyncClient sends no cookies and a minimal header
+            # set, which is actually safer here: no flagged access_token, no
+            # session-derived fingerprints for the anti-abuse layer to match.
+            async with httpx.AsyncClient(
+                timeout=15.0,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": constants.DEFAULT_USER_AGENT,
+                    "Accept": "application/json, text/plain, */*",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            ) as anon_http:
+                resp = await anon_http.get(api_url)
+            if resp.status_code != 200:
+                logger.debug(f"  Slug API {slug} → {resp.status_code}")
+                return None
+            try:
+                return resp.json()
+            except Exception:
+                logger.debug(f"  Slug API {slug} returned non-JSON body")
+                return None
+        except Exception as e:
+            logger.debug(f"  Slug API request failed for {slug}: {e}")
+            return None
+
+    async def _course_fetch_throttle(self):
+        """Global jitter + adaptive backoff before any course-page fetch.
+
+        Call this immediately before ``get_course_id``-type work.  It serialises
+        course fetches under a shared lock so that:
+          - Every fetch gets a base 3–8s random delay (humans don't click 50
+            courses in 50 seconds).
+          - After consecutive 403s the sleep grows exponentially (capped at
+            60s) and is applied once, then decays as soon as a 2xx is seen.
+
+        The caller later reports back via ``_course_fetch_report(status)``.
+        """
+        async with self._course_fetch_lock:
+            base = random.uniform(3.0, 8.0)
+            extra = self._course_fetch_backoff_s
+            delay = base + extra
+            if extra >= 10.0:
+                logger.info(
+                    f"  Throttle: sleeping {delay:.1f}s "
+                    f"(base {base:.1f}s + backoff {extra:.1f}s)"
+                )
+            await asyncio.sleep(delay)
+
+    def _course_fetch_report(self, status: int):
+        """Update adaptive backoff after a course-page fetch.
+
+        - 2xx: reset consecutive-403 counter and decay backoff toward 0.
+        - 403: increment counter and grow backoff exponentially
+          (1, 2, 4, 8, 16, 32, 60, 60, ...).
+        - Anything else: leave state alone; other transient failures shouldn't
+          punish throughput.
+        """
+        if 200 <= status < 300:
+            self._course_fetch_consecutive_403s = 0
+            self._course_fetch_backoff_s = 0.0
+        elif status == 403:
+            self._course_fetch_consecutive_403s += 1
+            n = self._course_fetch_consecutive_403s
+            # 1, 2, 4, 8, 16, 32, 60, 60, ...
+            self._course_fetch_backoff_s = min(60.0, 2.0 ** max(0, n - 1))
 
     async def _firecrawl_scrape(self, url: str, schema: Optional[Dict] = None, use_cookies: bool = True) -> Optional[Dict]:
         """Perform a stealthy scrape using Firecrawl API."""
@@ -456,6 +619,13 @@ class UdemyClient:
                 pass
             self._pw_context = None
             self._pw_cf_clearance_earned = False
+        if self._pw_anon_context is not None:
+            try:
+                await self._pw_anon_context.close()
+            except Exception:
+                pass
+            self._pw_anon_context = None
+            self._pw_anon_cf_clearance_earned = False
         await self.http.close()
 
     def set_proxy(self, proxy: Optional[str]):
@@ -963,7 +1133,23 @@ class UdemyClient:
         return None
 
     async def get_course_id(self, course: Course, use_headless_fallback: bool = True):
-        """Fetch course ID and metadata with Firecrawl-first, Playwright fallback chain."""
+        """Resolve slug → course ID with a staged fallback chain.
+
+        Order:
+          1. Firecrawl (unchanged — paid third-party renderer with fresh IPs).
+          2. **Public slug API** (anonymous GET /api-2.0/courses/<slug>/).  No
+             cookies, no stealth, no HTML parsing.  Bypasses Udemy's app-layer
+             anti-abuse that 403s the authenticated ``/course/<slug>/`` document
+             route on flagged accounts.
+          3. **Anonymous Playwright** (HTML scrape in a context with NO auth
+             cookies).  Covers the rare cases where the JSON API doesn't return
+             what we need but the public HTML page does.
+          4. **Authenticated Playwright** (existing path).  Last-resort because
+             if the account is flagged this is exactly the call that 403s.
+
+        Throttles up-front via ``_course_fetch_throttle()`` and reports back via
+        ``_course_fetch_report()`` so the adaptive backoff can grow/decay.
+        """
         if course.course_id:
             return
         url = re.sub(r"\W+$", "", unquote(course.url))
@@ -980,6 +1166,11 @@ class UdemyClient:
         if not fetch_url.endswith("/"):
             fetch_url += "/"
 
+        # Adaptive jitter/backoff before ANY outbound course-page work.  Keeps
+        # cadence out of automation territory and widens the gap after 403s.
+        await self._course_fetch_throttle()
+
+        # ---- Stage 1: Firecrawl (third-party renderer) ----
         if self.firecrawl_api_key:
             logger.info(f"Stealth: Fetching course ID for {course.title} via Firecrawl...")
             fc_schema = {"type": "object", "properties": {"course_id": {"type": "string"}, "title": {"type": "string"}}}
@@ -992,25 +1183,59 @@ class UdemyClient:
                     if final_url and "udemy.com" in final_url:
                         logger.debug(f"  Firecrawl redirected to: {final_url}")
                         course.set_url(final_url)
-                    
+                    self._course_fetch_report(200)
                     if course.coupon_code:
                         logger.debug(f"  Success: Found ID {course.course_id} and coupon via Firecrawl")
                         return
                     else:
                         logger.debug(f"  Firecrawl found ID {course.course_id} but no coupon. Continuing to fallback...")
 
-        consecutive_403 = 0
-        max_403_retries = 2
-        resp = None
-        playwright_cf_blocked = False  # True if Playwright hit CF 403 — skip raw HTTP fallback
+        # ---- Stage 2: Public slug API (anonymous JSON) ----
+        if course.slug:
+            logger.info(f"API: Resolving {course.title} via anonymous slug API...")
+            api_payload = await self._fetch_course_id_by_slug_api(course.slug)
+            if api_payload and isinstance(api_payload, dict):
+                api_id = api_payload.get("id")
+                if api_id and str(api_id) not in BLACKLIST_IDS:
+                    course.course_id = str(api_id)
+                    canonical_url = api_payload.get("url")
+                    if canonical_url:
+                        # API returns a path like /course/<slug>/ — normalise to full URL
+                        full = canonical_url if canonical_url.startswith("http") else f"{constants.UDEMY_BASE_URL}{canonical_url}"
+                        course.set_url(full)
+                    # Title rarely overrides a user-supplied one, but it can fill in blanks.
+                    api_title = api_payload.get("title")
+                    if api_title and not course.title:
+                        course.title = api_title
+                    self._course_fetch_report(200)
+                    logger.debug(f"  Success: Found ID {course.course_id} via slug API")
+                    return
+            else:
+                logger.debug("  Slug API miss; falling through to Playwright paths")
 
+        resp = None
+
+        # ---- Stage 3: Anonymous Playwright HTML fetch ----
         if use_headless_fallback:
-            logger.info(f"Stealth: Fetching course ID for {course.title} via Playwright...")
-            while consecutive_403 < max_403_retries:
-                resp = await self._playwright_request(fetch_url, req_type="document")
+            anon_ctx = await self._get_anonymous_pw_context()
+            if anon_ctx is not None:
+                logger.info(f"Stealth: Fetching course ID for {course.title} via anonymous Playwright...")
+                # Temporarily pivot _pw_cf_clearance_earned tracking onto the
+                # anonymous context so _page_goto_fetch's prewarm logic uses the
+                # right flag.  We save/restore rather than refactor the helper
+                # (keeps the blast radius of this change tiny).
+                saved_earned = self._pw_cf_clearance_earned
+                self._pw_cf_clearance_earned = self._pw_anon_cf_clearance_earned
+                try:
+                    resp = await self._page_goto_fetch(anon_ctx, fetch_url, "GET")
+                finally:
+                    # Harvest the (possibly-updated) anonymous cf_clearance flag
+                    # and restore the authed one untouched by this detour.
+                    self._pw_anon_cf_clearance_earned = self._pw_cf_clearance_earned
+                    self._pw_cf_clearance_earned = saved_earned
                 if resp and resp.status_code == 200:
                     final_url = str(resp.url)
-                    logger.debug(f"  Playwright resolved to: {final_url}")
+                    logger.debug(f"  Anonymous Playwright resolved to: {final_url}")
                     course.set_url(final_url)
                     soup = bs(resp.content, "lxml")
                     body = soup.find("body")
@@ -1018,10 +1243,41 @@ class UdemyClient:
                         try:
                             dma = json.loads(body.get("data-module-args", "{}"))
                             course.set_metadata(dma)
-                        except Exception: pass
+                        except Exception:
+                            pass
                     if not course.course_id:
                         course.course_id = self._extract_course_id(soup)
                     if course.course_id:
+                        self._course_fetch_report(200)
+                        logger.debug(f"  Success: Found ID {course.course_id} via anonymous Playwright")
+                        return
+
+        # ---- Stage 4: Authenticated Playwright (last resort) ----
+        # If the account is flagged this will 403.  Kept only for accounts still
+        # in good standing, and hard-capped so one bad account doesn't wedge the
+        # whole run in retry loops.
+        consecutive_403 = 0
+        max_403_retries = 2
+        if use_headless_fallback:
+            logger.info(f"Stealth: Fetching course ID for {course.title} via authenticated Playwright...")
+            while consecutive_403 < max_403_retries:
+                resp = await self._playwright_request(fetch_url, req_type="document")
+                if resp and resp.status_code == 200:
+                    final_url = str(resp.url)
+                    logger.debug(f"  Authed Playwright resolved to: {final_url}")
+                    course.set_url(final_url)
+                    soup = bs(resp.content, "lxml")
+                    body = soup.find("body")
+                    if body:
+                        try:
+                            dma = json.loads(body.get("data-module-args", "{}"))
+                            course.set_metadata(dma)
+                        except Exception:
+                            pass
+                    if not course.course_id:
+                        course.course_id = self._extract_course_id(soup)
+                    if course.course_id:
+                        self._course_fetch_report(200)
                         if course.coupon_code:
                             logger.debug(f"  Success: Found ID {course.course_id} and coupon via Playwright")
                         else:
@@ -1030,52 +1286,16 @@ class UdemyClient:
                     break
                 elif resp and resp.status_code == 403:
                     consecutive_403 += 1
-                    playwright_cf_blocked = True
+                    self._course_fetch_report(403)
                     if consecutive_403 < max_403_retries:
-                        logger.warning(f"403 Forbidden on course fetch for {course.title}. Forcing full session re-challenge (attempt {consecutive_403}/{max_403_retries})...")
-                        # force_full=True: invalidate cf_clearance and re-challenge.
-                        # Plain CSRF rotation can't fix a document-GET 403.
+                        logger.warning(f"403 Forbidden on authed course fetch for {course.title}. Forcing full session re-challenge (attempt {consecutive_403}/{max_403_retries})...")
                         if await self._refresh_csrf_stealth(force_full=True):
                             await asyncio.sleep(2)
                             continue
-                    logger.error(f"Too many 403 errors ({consecutive_403}) on Playwright course fetch. Giving up.")
+                    logger.error(f"Too many 403 errors ({consecutive_403}) on authed Playwright course fetch. Giving up.")
                     break
                 else:
-                    logger.debug(f"Playwright returned {resp.status_code if resp else 'None'}.")
-                    break
-
-        # Skip the raw-HTTP fallback when Playwright already hit a CF 403: vanilla
-        # httpx has a Python TLS fingerprint and cannot succeed where Chromium
-        # just failed.  Retrying here just wastes time and inflates error counts.
-        if not course.course_id and not playwright_cf_blocked:
-            logger.info(f"Standard: Fetching course ID for {course.title} via HTTP...")
-            consecutive_403 = 0
-            while consecutive_403 < max_403_retries:
-                resp = await self.http.get(fetch_url, req_type="document", raise_for_status=False)
-                if resp and resp.status_code == 200:
-                    soup = bs(resp.content, "lxml")
-                    body = soup.find("body")
-                    if body:
-                        try:
-                            dma = json.loads(body.get("data-module-args", "{}"))
-                            course.set_metadata(dma)
-                        except Exception: pass
-                    if not course.course_id:
-                        course.course_id = self._extract_course_id(soup)
-                    if course.course_id:
-                        logger.debug(f"  Success: Found ID {course.course_id} via HTTP")
-                        return
-                    break
-                elif resp and resp.status_code == 403:
-                    consecutive_403 += 1
-                    if consecutive_403 < max_403_retries:
-                        logger.warning(f"403 Forbidden on standard course fetch for {course.title}. Refreshing session (attempt {consecutive_403}/{max_403_retries})...")
-                        if await self._refresh_csrf_stealth(force_full=True):
-                            await asyncio.sleep(1)
-                            continue
-                    logger.error(f"Too many 403 errors ({consecutive_403}) on standard course fetch. Giving up.")
-                    break
-                else:
+                    logger.debug(f"Authed Playwright returned {resp.status_code if resp else 'None'}.")
                     break
 
         if not course.course_id:
