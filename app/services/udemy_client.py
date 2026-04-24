@@ -176,10 +176,14 @@ class UdemyClient:
         """Fetch a document URL via real ``page.goto()`` so JS-based CF challenges
         are solved inline.
 
-        Navigates to the homepage first on the same page so the course URL fetch
-        carries a proper ``Referer`` and matches a normal click-through pattern.
-        CF hard-blocks direct deep-link navigations from headless browsers even
-        with valid cf_clearance, so the prewarm is what makes course pages fetchable.
+        Cloudflare clearance is still earned by a prewarm navigation to the
+        homepage, but it runs on a **separate, throwaway page** so the course
+        fetch page has no navigation history — which means Chromium sends no
+        ``Referer`` header on it.  ``Referer: udemy.com/`` on a deep course
+        link is a canonical bot fingerprint (real users reach /course/<slug>/
+        via search, categories, carousels, or external affiliate sites, not
+        from the bare homepage), so we deliberately leave it off: empty
+        Referer matches typed-URL / affiliate-click behavior.
 
         Returns an httpx.Response-shaped object (status_code + content) so callers
         in get_course_id / check_course can keep using it the same way as the old
@@ -188,47 +192,48 @@ class UdemyClient:
         """
         page = None
         try:
-            page = await ctx.new_page()
-
-            # PREWARM: land on the homepage first.  This establishes nav history so
-            # the following page.goto(course_url) sends `Referer: udemy.com/`, which
-            # Cloudflare expects for a normal user clickthrough.  Without this, CF
-            # WAF hard-403s deep-link navigations even when cf_clearance is valid.
+            # PREWARM on a throwaway page.  Earns cf_clearance on the context,
+            # then is closed so the real course fetch happens on a fresh page
+            # with no Referer leaking the prewarm.
             prewarm_needed = not self._pw_cf_clearance_earned
             if prewarm_needed:
+                warmup = None
                 try:
-                    await page.goto(
+                    warmup = await ctx.new_page()
+                    await warmup.goto(
                         f"{constants.UDEMY_BASE_URL}/",
                         wait_until="domcontentloaded",
                         timeout=30000,
                     )
                     await asyncio.sleep(1.0)
-                    home_html = await page.content()
+                    home_html = await warmup.content()
                     if await self._check_cloudflare_challenge(home_html):
                         logger.debug("  Prewarm hit CF challenge — waiting...")
                         for _ in range(10):
                             await asyncio.sleep(2)
-                            home_html = await page.content()
+                            home_html = await warmup.content()
                             if not await self._check_cloudflare_challenge(home_html):
                                 break
                 except Exception as prewarm_err:
                     logger.debug(f"  Prewarm navigation failed (continuing): {prewarm_err}")
+                finally:
+                    if warmup is not None:
+                        try:
+                            await warmup.close()
+                        except Exception:
+                            pass
 
-            # Primary navigation.  Pass an explicit `Referer: udemy.com/` only
-            # when the URL has no query string — a same-origin referer on a
-            # coupon/affiliate URL (?couponCode=…) is actually suspicious to
-            # Udemy's origin anti-abuse layer (real affiliate traffic arrives
-            # from external referrers or no referrer at all).  When a query is
-            # present we omit the explicit referer and rely on whatever was
-            # set by the prewarm navigation on this same page.
-            has_query = bool(urlsplit(url).query)
-            goto_kwargs = {
-                "wait_until": "domcontentloaded",
-                "timeout": 30000,
-            }
-            if not has_query:
-                goto_kwargs["referer"] = f"{constants.UDEMY_BASE_URL}/"
-            resp = await page.goto(url, **goto_kwargs)
+            # Primary navigation on a fresh page — no history, no explicit
+            # referer → Chromium sends no Referer header.  Udemy's origin
+            # anti-abuse treats a `Referer: udemy.com/` on a clean course URL
+            # as a bot signal (homepage → deep-link jumps don't happen
+            # organically), so the absence is deliberately safer here.
+            page = await ctx.new_page()
+            resp = await page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=30000,
+            )
             # Short settle so CF's post-challenge redirect / JS can run.
             await asyncio.sleep(1.5)
 
