@@ -4,7 +4,7 @@ import os
 import sys
 import asyncio
 
-# Windows-specific event loop policy for subprocess support (required for Playwright)
+# Windows-specific event loop policy for reliable subprocess support
 # MUST be set before any other imports that might initialize a loop
 if sys.platform == "win32":
     try:
@@ -22,17 +22,11 @@ from loguru import logger
 
 from config.settings import get_settings
 from app.logging_config import setup_logging
-from app.sentry_config import setup_sentry
 from app.models.database import create_tables
-from app.rate_limit_config import setup_rate_limiting, maybe_limit
 from app.routers import auth, settings, enrollment, dashboard, seo
-from app.services.playwright_service import PlaywrightManager
 
 # Configure logging with JSON support
 setup_logging()
-
-# Configure Sentry for error tracking
-setup_sentry()
 
 # Ensure the Windows console can handle non-ASCII characters
 if hasattr(sys.stdout, "reconfigure"):
@@ -50,15 +44,14 @@ async def lifespan(app: FastAPI):
     os.makedirs("data", exist_ok=True)
     
     if sys.platform == "win32":
-        loop = asyncio.get_running_loop()
-        logger.info(f"Active event loop: {type(loop).__name__}")
-        if "Selector" in type(loop).__name__:
-            logger.error("CRITICAL: SelectorEventLoop is active on Windows. Subprocesses (Playwright) will FAIL.")
+        try:
+            loop = asyncio.get_running_loop()
+            logger.info(f"Active event loop: {type(loop).__name__}")
+        except Exception as e:
+            logger.error(f"Error checking event loop: {e}")
     
     logger.info("Starting Udemy Course Enroller API v2 (Async)")
-    logger.info(f"Environment: {get_settings().SENTRY_ENVIRONMENT}")
     logger.info(f"Log format: {get_settings().LOG_FORMAT}")
-    logger.info(f"Rate limiting: {'enabled' if get_settings().RATE_LIMIT_ENABLED else 'disabled'}")
 
     if get_settings().AUTO_CREATE_TABLES:
         logger.warning("AUTO_CREATE_TABLES is enabled; using metadata.create_all().")
@@ -120,9 +113,6 @@ async def lifespan(app: FastAPI):
                     logger.error(f"Error closing client {token}: {e}")
             logger.info("All Udemy client sessions closed.")
 
-        # Final browser cleanup
-        await PlaywrightManager.close_browser()
-        
     except Exception as e:
         logger.error(f"Unexpected error during shutdown: {e}")
 
@@ -132,15 +122,14 @@ async def lifespan(app: FastAPI):
 
 app_settings = get_settings()
 
+# Trigger reload - Technatic logic active
+logger.error("DEBUG: LOADED NEW MAIN.PY - TECHNATIC V2.1 ACTIVE")
 app = FastAPI(
     title=app_settings.APP_NAME,
     version=app_settings.APP_VERSION,
     description="Automatically enroll in free/discounted Udemy courses (Async v2)",
     lifespan=lifespan,
 )
-
-# Rate Limiting
-setup_rate_limiting(app)
 
 # CORS middleware - Restricted to specific origins with enhanced security
 app.add_middleware(
@@ -173,12 +162,9 @@ app.include_router(enrollment.router)
 
 
 @app.get("/api/health")
-@maybe_limit("60/minute")
 async def health_check(request: Request):
     """Health check endpoint with dependency checks."""
     return {
         "status": "healthy",
         "version": app_settings.APP_VERSION,
-        "environment": app_settings.SENTRY_ENVIRONMENT,
-        "rate_limiting": app_settings.RATE_LIMIT_ENABLED,
     }

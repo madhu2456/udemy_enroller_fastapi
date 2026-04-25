@@ -11,45 +11,47 @@ settings = get_settings()
 
 def setup_logging():
     """Configure logging with compact output and context tracking."""
-    # Remove default loguru handler
+    # Force everything to WARNING to silence info/debug
+    settings_level = settings.LOG_LEVEL.upper()
+    numeric_level = getattr(logging, settings_level, logging.WARNING)
+
+    # 1. Silence standard logging (urllib3, httpx, etc.)
+    logging.root.setLevel(numeric_level)
+    for name in logging.root.manager.loggerDict:
+        logging.getLogger(name).setLevel(numeric_level)
+
+    # Specific aggressive silencing for noisy libraries
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+    # 2. Silence loguru
     logger.remove()
     concise_fmt = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{line} - {message}"
 
-    # Keep third-party logs readable and aligned with app log style.
+    # Standard logging bridge
     logging.basicConfig(
-        level=settings.LOG_LEVEL,
-        format="%(asctime)s | %(levelname)-8s | %(name)s - %(message)s"
+        level=numeric_level,
+        format="%(asctime)s | %(levelname)-8s | %(name)s - %(message)s",
+        force=True,
     )
 
-    if settings.LOG_FORMAT == "json":
-        # "json" mode keeps text output compact (no color) for readability.
-        logger.add(
-            sys.stdout,
-            format=concise_fmt,
-            level=settings.LOG_LEVEL,
-            colorize=False,
-        )
-        logger.add(
-            settings.LOG_FILE,
-            format=concise_fmt,
-            level=settings.LOG_LEVEL,
-            colorize=False,
-            rotation="10 MB",
-            retention="7 days",
-            encoding="utf-8"
-        )
-    else:
-        # Text logging setup with colors
-        fmt = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-        logger.add(sys.stdout, format=fmt, level=settings.LOG_LEVEL)
-        logger.add(
-            settings.LOG_FILE,
-            format=fmt,
-            level=settings.LOG_LEVEL,
-            rotation="10 MB",
-            retention="7 days",
-            encoding="utf-8"
-        )
+    # Add sinks with explicit level
+    logger.add(
+        sys.stdout,
+        format=concise_fmt,
+        level=settings_level,
+        colorize=False,
+    )
+    logger.add(
+        settings.LOG_FILE,
+        format=concise_fmt,
+        level=settings_level,
+        colorize=False,
+        rotation="10 MB",
+        retention="7 days",
+        encoding="utf-8",
+    )
 
     return logger
 
@@ -57,10 +59,7 @@ def setup_logging():
 # Utility function to log structured data
 def log_structured(event: str, level: str = "info", **kwargs):
     """Log structured data with context."""
-    log_data = {
-        "event": event,
-        **kwargs
-    }
+    log_data = {"event": event, **kwargs}
     if level == "info":
         logger.info(json.dumps(log_data))
     elif level == "warning":

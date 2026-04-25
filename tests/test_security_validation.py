@@ -8,12 +8,19 @@ from unittest.mock import patch, MagicMock, AsyncMock
 
 from main import app
 from app.models.database import Base, get_db, User, UserSettings, UserSession
-from app.security import hash_password, verify_password, validate_proxy_url, URLValidator
+from app.security import (
+    hash_password,
+    verify_password,
+    validate_proxy_url,
+    URLValidator,
+)
 
 
 # Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_udemy_enroller.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base.metadata.create_all(bind=engine)
@@ -49,7 +56,7 @@ class TestPasswordSecurity:
         """Test that password hashing creates valid bcrypt hash."""
         plain_password = "SecurePassword123!"
         hashed = hash_password(plain_password)
-        
+
         assert hashed != plain_password
         assert len(hashed) > 0
         assert "$2b$" in hashed  # bcrypt prefix
@@ -162,9 +169,9 @@ class TestAuthEndpoints:
 
         response = client.post(
             "/api/auth/login",
-            json={"email": "test@example.com", "password": "SecurePassword123!"}
+            json={"email": "test@example.com", "password": "SecurePassword123!"},
         )
-        
+
         assert response.status_code == 200
         assert response.json()["success"] is True
         assert response.json()["status"] == "success"
@@ -173,8 +180,7 @@ class TestAuthEndpoints:
     def test_login_weak_password(self, mock_client_class):
         """Test login with weak password."""
         response = client.post(
-            "/api/auth/login",
-            json={"email": "test@example.com", "password": "weak"}
+            "/api/auth/login", json={"email": "test@example.com", "password": "weak"}
         )
 
         assert response.status_code == 422
@@ -217,6 +223,7 @@ class TestEnrollmentSessionRestore:
         db.commit()
 
         import secrets
+
         token = secrets.token_hex(32)
         db.add(UserSession(token=token, user_id=user.id))
         db.commit()
@@ -232,9 +239,11 @@ class TestEnrollmentSessionRestore:
         client.cookies.clear()
         app.state.udemy_clients = {}
 
-    @patch("app.routers.enrollment.EnrollmentManager.start", new_callable=AsyncMock)
+    @patch("app.routers.enrollment.EnrollmentManager.start_run", new_callable=AsyncMock)
     @patch("app.deps.UdemyClient")
-    def test_start_enrollment_restores_client_after_restart(self, mock_udemy_client_class, mock_start):
+    def test_start_enrollment_restores_client_after_restart(
+        self, mock_udemy_client_class, mock_start
+    ):
         """Start should work after restart by restoring client from persisted session."""
         mock_start.return_value = 123
         mock_client = MagicMock()
@@ -246,7 +255,6 @@ class TestEnrollmentSessionRestore:
 
         assert response.status_code == 200
         assert response.json()["success"] is True
-        mock_client.cookie_login.assert_called_once_with("access-token", "client-id", "csrf-token")
         mock_client.get_session_info.assert_awaited_once()
         assert self.session_token in app.state.udemy_clients
 
@@ -294,25 +302,26 @@ class TestSettingsValidation:
             email="test@example.com",
             password_hash=hash_password("TestPassword123!"),
             udemy_display_name="Test User",
-            currency="USD"
+            currency="USD",
         )
         db = TestingSessionLocal()
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
         # Create user settings
         settings = UserSettings(user_id=user.id)
         db.add(settings)
         db.commit()
-        
+
         # Create session token
         import secrets
+
         token = secrets.token_hex(32)
         session = UserSession(token=token, user_id=user.id)
         db.add(session)
         db.commit()
-        
+
         self.user_id = user.id
         self.session_token = token
         self.db = db
@@ -327,51 +336,37 @@ class TestSettingsValidation:
     def test_update_settings_with_valid_proxy(self, mock_user_id):
         """Test updating settings with valid proxy URL."""
         mock_user_id.return_value = self.user_id
-        
+
         response = client.put(
-            "/api/settings/",
-            json={
-                "proxy_url": "socks5://proxy.example.com:1080"
-            }
+            "/api/settings/", json={"proxy_url": "socks5://proxy.example.com:1080"}
         )
-        
+
         assert response.status_code == 200
 
     @patch("app.deps.get_current_user_id")
     def test_update_settings_with_invalid_proxy(self, mock_user_id):
         """Test updating settings with invalid proxy URL."""
         mock_user_id.return_value = self.user_id
-        
-        response = client.put(
-            "/api/settings/",
-            json={
-                "proxy_url": "invalid://proxy"
-            }
-        )
-        
+
+        response = client.put("/api/settings/", json={"proxy_url": "invalid://proxy"})
+
         assert response.status_code == 422
 
     @patch("app.deps.get_current_user_id")
     def test_update_settings_min_rating_validation(self, mock_user_id):
         """Test min_rating validation (0-5)."""
         mock_user_id.return_value = self.user_id
-        
+
         # Test invalid rating (>5)
-        response = client.put(
-            "/api/settings/",
-            json={"min_rating": 6.0}
-        )
+        response = client.put("/api/settings/", json={"min_rating": 6.0})
         assert response.status_code == 422
 
     @patch("app.deps.get_current_user_id")
     def test_update_settings_valid_min_rating(self, mock_user_id):
         """Test valid min_rating values."""
         mock_user_id.return_value = self.user_id
-        
-        response = client.put(
-            "/api/settings/",
-            json={"min_rating": 3.5}
-        )
+
+        response = client.put("/api/settings/", json={"min_rating": 3.5})
         assert response.status_code == 200
 
 
@@ -381,8 +376,7 @@ class TestInputValidation:
     def test_empty_email_rejected(self):
         """Test that empty email is rejected."""
         response = client.post(
-            "/api/auth/login",
-            json={"email": "", "password": "ValidPassword123!"}
+            "/api/auth/login", json={"email": "", "password": "ValidPassword123!"}
         )
         assert response.status_code == 422
 
@@ -390,15 +384,14 @@ class TestInputValidation:
         """Test that invalid email format is handled."""
         response = client.post(
             "/api/auth/login",
-            json={"email": "not-an-email", "password": "ValidPassword123!"}
+            json={"email": "not-an-email", "password": "ValidPassword123!"},
         )
         assert response.status_code == 422
 
     def test_password_minimum_length(self):
         """Test that passwords below minimum length are rejected."""
         response = client.post(
-            "/api/auth/login",
-            json={"email": "test@example.com", "password": "short"}
+            "/api/auth/login", json={"email": "test@example.com", "password": "short"}
         )
         assert response.status_code == 422
 

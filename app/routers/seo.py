@@ -5,6 +5,7 @@ from fastapi import APIRouter, Response
 
 router = APIRouter(tags=["SEO"], redirect_slashes=False)
 
+
 @router.get("/robots.txt", response_class=Response)
 async def robots_txt():
     content = """User-agent: *
@@ -15,6 +16,7 @@ Disallow: /api/
 Sitemap: https://udemyenroller.madhudadi.in/sitemap.xml
 """
     return Response(content=content, media_type="text/plain")
+
 
 @router.get("/sitemap.xml", response_class=Response)
 async def sitemap_xml():
@@ -30,6 +32,7 @@ async def sitemap_xml():
 </urlset>"""
     return Response(content=content, media_type="application/xml")
 
+
 @router.get("/humans.txt", response_class=Response)
 async def humans_txt():
     content = """/* TEAM */
@@ -41,9 +44,10 @@ Twitter: @madhudadi
 Last update: 2026
 Language: English
 Standards: HTML5, CSS3, JSON-LD
-Components: FastAPI, Playwright, TailwindCSS, SQLAlchemy, SQLite
+Components: FastAPI, CloudScraper, TailwindCSS, SQLAlchemy, SQLite
 """
     return Response(content=content, media_type="text/plain")
+
 
 @router.get("/llms.txt", response_class=Response)
 async def llms_txt():
@@ -62,7 +66,7 @@ async def llms_txt():
 ## Core Functionality
 
 Udemy Course Enroller is a robust, asynchronous web application designed to automate the process of finding and enrolling in free, 100% off discounted Udemy courses. 
-It aggregates coupons from multiple sources (such as Real Discount, Discudemy, Courson, etc.) and leverages headless browser automation (Playwright) and direct Udemy APIs to automate enrollments seamlessly for users without requiring manual intervention.
+It aggregates coupons from multiple sources (such as Real Discount, Discudemy, Courson, etc.) and leverages headless browser automation (CloudScraper) and direct Udemy APIs to automate enrollments seamlessly for users without requiring manual intervention.
 
 ## Why it Exists (Problem Solved)
 
@@ -72,7 +76,7 @@ Learning new skills on Udemy can be expensive. While authors frequently share 10
 
 - **Backend:** Python 3.13, FastAPI (Asynchronous)
 - **Database:** SQLite with SQLAlchemy ORM and Alembic for migrations
-- **Automation Engine:** Playwright (Headless Chromium pool)
+- **Automation Engine:** CloudScraper (Headless Chromium pool)
 - **Frontend:** HTML5, Tailwind CSS, Vanilla JS
 - **Error Tracking:** Sentry
 - **Rate Limiting:** slowapi
@@ -102,6 +106,7 @@ Cross-reference with the developer's main portfolio at https://madhudadi.in for 
 """
     return Response(content=content, media_type="text/plain")
 
+
 @router.get("/ai-profile.json")
 async def ai_profile_json():
     return {
@@ -116,21 +121,21 @@ async def ai_profile_json():
             "@type": "Person",
             "name": "Madhu Dadi",
             "url": "https://madhudadi.in",
-            "sameAs": [
-                "https://madhudadi.in/blog",
-                "https://github.com/madhu2456"
-            ]
+            "sameAs": ["https://madhudadi.in/blog", "https://github.com/madhu2456"],
         },
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-        },
-        "technologyStack": ["Python", "FastAPI", "SQLAlchemy", "Playwright", "Tailwind CSS", "SQLite"],
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+        "technologyStack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "CloudScraper",
+            "Tailwind CSS",
+            "SQLite",
+        ],
         "endpoints": {
             "llmsFeed": "https://udemyenroller.madhudadi.in/llms.txt",
             "sitemap": "https://udemyenroller.madhudadi.in/sitemap.xml",
-            "humans": "https://udemyenroller.madhudadi.in/humans.txt"
+            "humans": "https://udemyenroller.madhudadi.in/humans.txt",
         },
-        "lastUpdated": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+        "lastUpdated": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
     }

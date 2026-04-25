@@ -1,7 +1,7 @@
 """Centralized caching for API responses."""
 
 import datetime
-from typing import Any, Dict, Callable, Optional
+from typing import Any, Dict, Callable
 from datetime import UTC
 
 
@@ -17,10 +17,10 @@ _stats_cache: Dict[int, Any] = {}
 
 
 def get_cached_or_compute(
-    cache_dict: Dict[Any, Any], 
-    key: Any, 
-    compute_func: Callable[[], Any], 
-    ttl_seconds: int = 10
+    cache_dict: Dict[Any, Any],
+    key: Any,
+    compute_func: Callable[[], Any],
+    ttl_seconds: int = 10,
 ) -> Any:
     """Helper to cache DB heavy responses for a short time."""
     now = _utcnow_naive()
@@ -40,9 +40,11 @@ def clear_user_caches(user_id: int):
     # Clear stats and analytics (keyed by user_id directly)
     _stats_cache.pop(user_id, None)
     _analytics_cache.pop(user_id, None)
-    
+
     # Clear history (keyed by f"{user_id}_{limit}")
     user_prefix = f"{user_id}_"
-    keys_to_remove = [k for k in _history_cache.keys() if str(k).startswith(user_prefix)]
+    keys_to_remove = [
+        k for k in _history_cache.keys() if str(k).startswith(user_prefix)
+    ]
     for k in keys_to_remove:
         _history_cache.pop(k, None)

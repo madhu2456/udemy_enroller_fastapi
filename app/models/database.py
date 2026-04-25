@@ -2,8 +2,16 @@
 
 from datetime import UTC, datetime, timedelta
 from sqlalchemy import (
-    Column, Integer, String, Float, Boolean, DateTime, Text, JSON,
-    create_engine, ForeignKey
+    Column,
+    Integer,
+    String,
+    Float,
+    Boolean,
+    DateTime,
+    Text,
+    JSON,
+    create_engine,
+    ForeignKey,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from config.settings import get_settings
@@ -12,10 +20,9 @@ settings = get_settings()
 
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={
-        "check_same_thread": False,
-        "timeout": 30
-    } if "sqlite" in settings.DATABASE_URL else {},
+    connect_args={"check_same_thread": False, "timeout": 30}
+    if "sqlite" in settings.DATABASE_URL
+    else {},
     pool_pre_ping=True,
     # Prevent connection pool issues
     pool_size=5,
@@ -27,16 +34,20 @@ engine = create_engine(
 # Enable WAL mode for SQLite
 if "sqlite" in settings.DATABASE_URL:
     from sqlalchemy import event
+
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.execute("PRAGMA busy_timeout=60000")  # 60 second timeout for locks (increased from 30)
+        cursor.execute(
+            "PRAGMA busy_timeout=60000"
+        )  # 60 second timeout for locks (increased from 30)
         cursor.execute("PRAGMA wal_autocheckpoint=1000")  # Reduce checkpoint frequency
         cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache for better performance
         cursor.execute("PRAGMA temp_store=MEMORY")  # Use memory for temp tables
         cursor.close()
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -80,11 +91,14 @@ class User(Base):
     # Relationships
     settings = relationship("UserSettings", back_populates="user", uselist=False)
     enrollment_runs = relationship("EnrollmentRun", back_populates="user")
-    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship(
+        "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSession(Base):
     """Persistent session — maps a secure token (stored in browser cookie) to a user."""
+
     __tablename__ = "user_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -106,39 +120,61 @@ class UserSettings(Base):
     def default_sites():
         return {
             "Real Discount": True,
+            "Couponami": True,
             "Courson": True,
             "IDownloadCoupons": True,
             "E-next": True,
-            "Discudemy": True,
             "Udemy Freebies": True,
             "Course Joiner": True,
             "Course Vania": True,
             "Course Coupon Club": True,
             "Coupon Scorpion": True,
-            "Reddit /r/udemyfreebies": True,
-            "TutorialBar": True,
             "FreeWebCart": True,
-            "Easy Learn": True,
+            "EasyLearn": True,
         }
 
     @staticmethod
     def default_languages():
         return {
-            "Arabic": True, "Chinese": True, "Dutch": True, "English": True,
-            "French": True, "German": True, "Hindi": True, "Indonesian": True,
-            "Italian": True, "Japanese": True, "Korean": True, "Nepali": True,
-            "Polish": True, "Portuguese": True, "Romanian": True, "Russian": True,
-            "Spanish": True, "Thai": True, "Turkish": True, "Urdu": True, "Vietnamese": True,
+            "Arabic": True,
+            "Chinese": True,
+            "Dutch": True,
+            "English": True,
+            "French": True,
+            "German": True,
+            "Hindi": True,
+            "Indonesian": True,
+            "Italian": True,
+            "Japanese": True,
+            "Korean": True,
+            "Nepali": True,
+            "Polish": True,
+            "Portuguese": True,
+            "Romanian": True,
+            "Russian": True,
+            "Spanish": True,
+            "Thai": True,
+            "Turkish": True,
+            "Urdu": True,
+            "Vietnamese": True,
         }
 
     @staticmethod
     def default_categories():
         return {
-            "Business": True, "Design": True, "Development": True,
-            "Finance & Accounting": True, "Health & Fitness": True,
-            "IT & Software": True, "Lifestyle": True, "Marketing": True,
-            "Music": True, "Office Productivity": True, "Personal Development": True,
-            "Photography & Video": True, "Teaching & Academics": True,
+            "Business": True,
+            "Design": True,
+            "Development": True,
+            "Finance & Accounting": True,
+            "Health & Fitness": True,
+            "IT & Software": True,
+            "Lifestyle": True,
+            "Marketing": True,
+            "Music": True,
+            "Office Productivity": True,
+            "Personal Development": True,
+            "Photography & Video": True,
+            "Teaching & Academics": True,
         }
 
     # Sites to scrape
@@ -162,12 +198,6 @@ class UserSettings(Base):
 
     # Advanced Features
     proxy_url = Column(String(500), nullable=True)
-    enable_headless = Column(Boolean, default=False)
-    firecrawl_api_key = Column(String(255), nullable=True)
-
-    # Enrollment Mode Settings
-    enrollment_mode = Column(String(20), default="bulk")  # "single" or "bulk"
-    batch_size = Column(Integer, default=5)  # Batch size for bulk mode
 
     created_at = Column(DateTime, default=_utcnow_naive)
     updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
@@ -182,7 +212,9 @@ class EnrollmentRun(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    status = Column(String(50), default="pending")  # pending, scraping, enrolling, completed, failed
+    status = Column(
+        String(50), default="pending"
+    )  # pending, scraping, enrolling, completed, failed
     total_courses_found = Column(Integer, default=0)
     total_processed = Column(Integer, default=0)
     successfully_enrolled = Column(Integer, default=0)
@@ -206,7 +238,9 @@ class EnrolledCourse(Base):
     __tablename__ = "enrolled_courses"
 
     id = Column(Integer, primary_key=True, index=True)
-    enrollment_run_id = Column(Integer, ForeignKey("enrollment_runs.id"), nullable=False)
+    enrollment_run_id = Column(
+        Integer, ForeignKey("enrollment_runs.id"), nullable=False
+    )
 
     title = Column(String(500), nullable=False)
     url = Column(String(1000), nullable=False)
@@ -218,7 +252,9 @@ class EnrolledCourse(Base):
     language = Column(String(50), nullable=True)
     rating = Column(Float, nullable=True)
     site_source = Column(String(100), nullable=True)
-    status = Column(String(50), default="enrolled")  # enrolled, failed, excluded, expired
+    status = Column(
+        String(50), default="enrolled"
+    )  # enrolled, failed, excluded, expired
     error_message = Column(Text, nullable=True)
     enrolled_at = Column(DateTime, default=_utcnow_naive)
 

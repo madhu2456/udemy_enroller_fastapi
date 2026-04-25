@@ -54,25 +54,6 @@
         </h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Enrollment Mode -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Enrollment Mode</label>
-                <select id="enrollment-mode" 
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
-                    <option value="bulk">Bulk (Faster)</option>
-                    <option value="single">Single Course (More Reliable)</option>
-                </select>
-                <p class="text-xs text-gray-500 mt-1">Bulk: 5 courses at once (25-40s). Single: 1 course at a time (5-10s).</p>
-            </div>
-
-            <!-- Batch Size (appears when bulk is selected) -->
-            <div id="batch-size-container">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Batch Size (for Bulk Mode)</label>
-                <input type="number" id="batch-size" min="1" max="20" value="5"
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
-                <p class="text-xs text-gray-500 mt-1">Number of courses per batch (1-20)</p>
-            </div>
-
             <!-- Min Rating -->
             <div>
                 <label class="block text-sm font-medium text-gray-300 mb-2">Minimum Rating</label>
@@ -118,15 +99,6 @@
                 <p class="text-xs text-gray-500 mt-1">Leave blank for direct connection</p>
             </div>
 
-            <!-- Firecrawl API Key -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Firecrawl API Key</label>
-                <input type="password" id="firecrawl-api-key" 
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                    placeholder="fc-xxxxxxxxxxxxxxxxxxxxxxxx">
-                <p class="text-xs text-gray-500 mt-1">Get your key from <a href="https://www.firecrawl.dev/app" target="_blank" class="text-blue-400 hover:underline">firecrawl.dev</a> for high-reliability scraping.</p>
-            </div>
-
         </div>
 
         <!-- Checkboxes -->
@@ -138,10 +110,6 @@
             <label class="flex items-center space-x-2 cursor-pointer">
                 <input type="checkbox" id="discounted-only" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
                 <span class="text-sm text-gray-300">Discounted courses only (skip free)</span>
-            </label>
-            <label class="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" id="enable-headless" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
-                <span class="text-sm text-gray-300">Enable Headless Browser (Slower but more robust)</span>
             </label>
         </div>
     </div>
@@ -180,12 +148,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     setupTagInput('instructor-input', 'instructor-tags');
     setupTagInput('title-input', 'title-tags');
-    
-    // Setup enrollment mode change listener
-    const enrollmentModeSelect = document.getElementById('enrollment-mode');
-    if (enrollmentModeSelect) {
-        enrollmentModeSelect.addEventListener('change', toggleBatchSizeInput);
-    }
 });
 
 async function checkAuth() {
@@ -216,14 +178,6 @@ function setupTagInput(inputId, containerId) {
     });
 }
 
-function toggleBatchSizeInput() {
-    const mode = document.getElementById('enrollment-mode').value;
-    const container = document.getElementById('batch-size-container');
-    if (container) {
-        container.style.display = mode === 'bulk' ? 'block' : 'none';
-    }
-}
-
 function addTag(container, text) {
     const existing = Array.from(container.querySelectorAll('.tag-text')).map(t => t.textContent);
     if (existing.includes(text)) return;
@@ -240,21 +194,15 @@ function addTag(container, text) {
 }
 
 async function loadSettings() {
-    console.log("Fetching settings...");
     try {
         const resp = await fetch('/api/settings/');
         if (!resp.ok) throw new Error("Load failed");
         
         currentSettings = await resp.json();
-        console.log("Settings data received:", currentSettings);
         
         renderCheckboxGrid('sites-grid', currentSettings.sites || {});
         renderCheckboxGrid('languages-grid', currentSettings.languages || {});
         renderCheckboxGrid('categories-grid', currentSettings.categories || {});
-        
-        document.getElementById('enrollment-mode').value = currentSettings.enrollment_mode || 'bulk';
-        document.getElementById('batch-size').value = currentSettings.batch_size || 5;
-        toggleBatchSizeInput();
         
         document.getElementById('min-rating').value = currentSettings.min_rating || 0;
         document.getElementById('update-threshold').value = currentSettings.course_update_threshold_months || 24;
@@ -271,8 +219,6 @@ async function loadSettings() {
         document.getElementById('save-txt').checked = !!currentSettings.save_txt;
         document.getElementById('discounted-only').checked = !!currentSettings.discounted_only;
         document.getElementById('proxy-url').value = currentSettings.proxy_url || '';
-        document.getElementById('enable-headless').checked = !!currentSettings.enable_headless;
-        document.getElementById('firecrawl-api-key').value = currentSettings.firecrawl_api_key || '';
         
     } catch(e) { 
         console.error('Failed to load settings:', e);
@@ -316,8 +262,6 @@ function gatherSettings() {
         sites: gather('sites-grid'),
         languages: gather('languages-grid'),
         categories: gather('categories-grid'),
-        enrollment_mode: document.getElementById('enrollment-mode').value || 'bulk',
-        batch_size: parseInt(document.getElementById('batch-size').value) || 5,
         min_rating: parseFloat(document.getElementById('min-rating').value) || 0,
         course_update_threshold_months: parseInt(document.getElementById('update-threshold').value) || 24,
         instructor_exclude: getTags('instructor-tags'),
@@ -325,8 +269,6 @@ function gatherSettings() {
         save_txt: document.getElementById('save-txt').checked,
         discounted_only: document.getElementById('discounted-only').checked,
         proxy_url: document.getElementById('proxy-url').value.trim() || null,
-        enable_headless: document.getElementById('enable-headless').checked,
-        firecrawl_api_key: document.getElementById('firecrawl-api-key').value.trim() || null,
     };
 }
 

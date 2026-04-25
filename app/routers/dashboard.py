@@ -18,6 +18,7 @@ from app.models.database import (
     _utcnow_naive,
 )
 from app.deps import get_current_user_id
+from app.core.cache import _analytics_cache, _stats_cache, get_cached_or_compute
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +64,6 @@ async def history_page(request: Request):
     return templates.TemplateResponse("pages/history.html", {"request": request})
 
 
-from app.core.cache import _analytics_cache, _stats_cache, get_cached_or_compute
-
 @router.get("/api/dashboard/stats")
 async def dashboard_stats(
     db: Session = Depends(get_db),
@@ -76,17 +75,26 @@ async def dashboard_stats(
     course, so they survive disconnects and incomplete runs).
     Total run count still comes from enrollment_runs.
     """
+
     def compute_stats():
         user = db.get(User, user_id)
         if not user:
-            return {"total_runs": 0, "total_enrolled": 0, "total_amount_saved": 0.0,
-                    "currency": "usd", "total_already_enrolled": 0,
-                    "total_expired": 0, "total_excluded": 0}
+            return {
+                "total_runs": 0,
+                "total_enrolled": 0,
+                "total_amount_saved": 0.0,
+                "currency": "usd",
+                "total_already_enrolled": 0,
+                "total_expired": 0,
+                "total_excluded": 0,
+            }
 
-        total_runs = db.query(func.count(EnrollmentRun.id)).filter(
-            EnrollmentRun.user_id == user_id,
-            EnrollmentRun.status != "deleted"
-        ).scalar() or 0
+        total_runs = (
+            db.query(func.count(EnrollmentRun.id))
+            .filter(EnrollmentRun.user_id == user_id, EnrollmentRun.status != "deleted")
+            .scalar()
+            or 0
+        )
 
         return {
             "total_runs": total_runs,
@@ -97,7 +105,7 @@ async def dashboard_stats(
             "total_expired": user.total_expired or 0,
             "total_excluded": user.total_excluded or 0,
         }
-        
+
     return get_cached_or_compute(_stats_cache, user_id, compute_stats, ttl_seconds=300)
 
 
@@ -107,18 +115,18 @@ async def dashboard_analytics(
     user_id: int = Depends(get_current_user_id),
 ):
     """Get historical analytics for the current user (savings per day for last 30 days)."""
+
     def compute_analytics():
         # Aggregate successful enrollments by date
         stats = (
             db.query(
                 func.date(EnrolledCourse.enrolled_at).label("date"),
                 func.count(EnrolledCourse.id).label("count"),
-                func.sum(EnrolledCourse.price).label("savings")
+                func.sum(EnrolledCourse.price).label("savings"),
             )
             .join(EnrollmentRun)
             .filter(
-                EnrollmentRun.user_id == user_id,
-                EnrolledCourse.status == "enrolled"
+                EnrollmentRun.user_id == user_id, EnrolledCourse.status == "enrolled"
             )
             .group_by(func.date(EnrolledCourse.enrolled_at))
             .order_by(func.date(EnrolledCourse.enrolled_at))
@@ -126,21 +134,19 @@ async def dashboard_analytics(
         )
 
         return [
-            {
-                "date": str(s.date),
-                "count": s.count,
-                "savings": float(s.savings or 0)
-            }
+            {"date": str(s.date), "count": s.count, "savings": float(s.savings or 0)}
             for s in stats
         ]
-        
-    return get_cached_or_compute(_analytics_cache, user_id, compute_analytics, ttl_seconds=300)
 
+    return get_cached_or_compute(
+        _analytics_cache, user_id, compute_analytics, ttl_seconds=300
+    )
 
 
 @router.get("/api/dashboard/logs/stream")
 async def stream_logs(request: Request):
     """Stream application logs via SSE."""
+
     async def log_generator():
         log_file = "logs/app.log"
         if not os.path.exists(log_file):
@@ -157,13 +163,14 @@ async def stream_logs(request: Request):
                 if f.tell() > 0:
                     # Discard the first partial line since seek might land in the middle
                     f.readline()
-                
+
             lines = f.readlines()
             for line in lines[-20:]:
                 yield f"data: {line.strip()}\n\n"
 
             # Live tail
             from app.core.constants import shutdown_event
+
             while not shutdown_event.is_set():
                 if await request.is_disconnected():
                     break

@@ -1,16 +1,12 @@
-"""Udemy API client for authentication and course enrollment - Asynchronous version."""
+"""Udemy API client for authentication and course enrollment - Technatic-style (No Playwright)."""
 
-import json
-import logging
 import re
 import asyncio
 import random
 from datetime import UTC, datetime
 from decimal import Decimal
-from urllib.parse import unquote, urlsplit, urlunsplit
-from typing import Optional, Dict, List
+from typing import Optional, Dict, Set
 
-import httpx
 from bs4 import BeautifulSoup as bs
 from loguru import logger
 
@@ -18,27 +14,22 @@ from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient
 from app.core import constants
 
-# Known false-positive IDs from Udemy (e.g. tracking/user IDs appearing on blocked pages)
+# Known false-positive IDs from Udemy
 BLACKLIST_IDS = {"562413829"}
 
 
 class LoginException(Exception):
     """Raised when Udemy login fails."""
+
     pass
 
 
 class UdemyClient:
-    """Handles asynchronous authentication and enrollment with the Udemy API."""
+    """Handles asynchronous authentication and enrollment using Technatic-style emulation."""
 
-    def __init__(self, proxy: Optional[str] = None, firecrawl_api_key: Optional[str] = None):
+    def __init__(self, proxy: Optional[str] = None):
+        logger.warning("UdemyClient v2.1 (Technatic logic active)")
         self.http = AsyncHTTPClient(proxy=proxy)
-        self.firecrawl_api_key = firecrawl_api_key
-        self.http.client.headers.update({
-            "User-Agent": constants.DEFAULT_USER_AGENT,
-            "Accept": "application/json, text/plain, */*",
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": f"{constants.UDEMY_BASE_URL}/",
-        })
 
         self.display_name: str = ""
         self.currency: str = "usd"
@@ -54,955 +45,147 @@ class UdemyClient:
 
         self.is_authenticated = False
 
-        # Persistent Playwright browser context — shared across ALL requests so that
-        # Cloudflare clearance (cf_clearance) is solved once and stays valid for every
-        # subsequent page.goto() / context.request call in this session.
-        self._pw_context = None
-
-        # True only after this Playwright context has itself navigated through a
-        # Cloudflare challenge and earned its OWN cf_clearance cookie.  The user's
-        # saved cf_clearance (from their desktop browser) has a different TLS
-        # fingerprint and is invalid for Playwright's Chromium instance.
-        self._pw_cf_clearance_earned = False
-
-        # Anonymous Playwright context — carries NO authenticated cookies.  Used
-        # exclusively for public slug → course-ID resolution (`get_course_id`) after
-        # the authenticated account has been flagged by Udemy's application-layer
-        # anti-abuse (e.g. accounts with thousands of enrollments get their
-        # access_token tied to course-page 403s).  check_course / free_checkout
-        # still use the main authenticated context.
-        self._pw_anon_context = None
-        self._pw_anon_cf_clearance_earned = False
-
-        # Session recovery tracking for 403 errors
+        # Session recovery tracking
         self.session_recovery_state = {
             "consecutive_403_errors": 0,
-            "csrf_refresh_failures": 0,
-            "cloudflare_challenges_encountered": 0,
             "last_error_time": None,
+            "block_count": 0,
         }
 
-        # Lightweight global throttle for course-page fetches.  Udemy's origin
-        # anti-abuse is sensitive to request cadence from a single session, so we
-        # (a) jitter every course-fetch by 3–8s and (b) apply exponential backoff
-        # against a shared timestamp whenever consecutive 403s pile up.  Callers
-        # route through `_course_fetch_throttle()` rather than sleeping ad-hoc so
-        # the enrollment pipeline's concurrency can't accidentally bypass it.
         self._course_fetch_lock = asyncio.Lock()
-        self._course_fetch_backoff_s = 0.0        # current adaptive backoff
-        self._course_fetch_consecutive_403s = 0   # rolling counter, resets on 2xx
+        self._course_fetch_backoff_s = 0.0
+        self._course_fetch_consecutive_403s = 0
 
-        # Circuit breaker for account-level 403 blocks (Udemy app-layer anti-abuse).
-        # When consecutive 403s exceed this threshold, the entire account is flagged
-        # as blocked and courses are deferred for batch retry with long recovery delay.
-        self._global_403_circuit_threshold = 4      # trigger account-block detection
-        self._global_403_count = 0                  # total 403s in current session
-        self._account_block_active = False          # true when circuit breaker is tripped
-        self._account_block_cooldown_until = None   # timestamp when block expires
-        self._account_block_cooldown_seconds = 300  # 5 minutes recovery time
-
-    async def _get_persistent_pw_context(self):
-        """Return the long-lived Playwright BrowserContext for this client.
-
-        Creates the context on first call.  If the context has been closed or
-        crashed, transparently recreates it so callers never need to handle that.
-        """
-        from app.services.playwright_service import PlaywrightManager
-
-        if self._pw_context is not None:
-            # Health-check: cookies() raises if the context is closed/crashed.
-            try:
-                await self._pw_context.cookies()
-                return self._pw_context
-            except Exception:
-                logger.debug("Persistent Playwright context became invalid — recreating...")
-                self._pw_context = None
-
-        try:
-            browser = await PlaywrightManager.get_browser()
-            proxy_config = {"server": self.http.proxy} if self.http.proxy else None
-            
-            # We remove extra_http_headers from the context level because they
-            # can conflict with Playwright's automatic header generation for
-            # different request types (document vs xhr).  Instead, we rely on
-            # the User-Agent and Playwright's default modern Chromium headers.
-            self._pw_context = await browser.new_context(
-                user_agent=constants.DEFAULT_USER_AGENT,
-                proxy=proxy_config,
-                viewport={"width": 1280, "height": 800},
-                ignore_https_errors=True,
-            )
-            # Seed the fresh context with auth cookies so Udemy recognises the
-            # session.  We intentionally EXCLUDE cf_clearance: the user's saved value
-            # was issued to their desktop browser's TLS fingerprint (JA3/JA4) and
-            # will be rejected by Cloudflare when presented from Playwright's Chromium.
-            # Playwright will earn its own cf_clearance on first navigation.
-            EXCLUDE_FROM_SEED = {"cf_clearance", "cf_bm", "__cf_bm"}
-            if self.cookie_dict:
-                seed_cookies = [
-                    {"name": k, "value": v, "url": "https://www.udemy.com"}
-                    for k, v in self.cookie_dict.items()
-                    if v and isinstance(v, str)
-                    and not k.startswith("_csrf_from")
-                    and k not in EXCLUDE_FROM_SEED
-                ]
-                if seed_cookies:
-                    await self._pw_context.add_cookies(seed_cookies)
-            # Stealth init script: runs before every page's JavaScript so headless
-            # detection heuristics (navigator.webdriver, plugins, languages) return
-            # values indistinguishable from a real Chrome desktop session.
-            await self._pw_context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                Object.defineProperty(navigator, 'plugins', {
-                    get: () => {
-                        const p = [
-                            {name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
-                            {name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
-                            {name: 'Native Client', filename: 'internal-nacl-plugin'},
-                        ];
-                        p.__proto__ = PluginArray.prototype;
-                        return p;
-                    }
-                });
-                Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
-                // Prevent iframe-based detection
-                const _getContext = HTMLCanvasElement.prototype.getContext;
-                HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-                    const ctx = _getContext.apply(this, [type, ...args]);
-                    return ctx;
-                };
-            """)
-            logger.debug("Created new persistent Playwright context for UdemyClient")
-        except Exception as e:
-            logger.error(f"Failed to create persistent Playwright context: {e}")
-            self._pw_context = None
-
-        return self._pw_context
-
-    async def _get_anonymous_pw_context(self):
-        """Return a long-lived Playwright context that is **not** authenticated.
-
-        Udemy's application-layer anti-abuse blocks course-page document fetches
-        when a flagged ``access_token`` cookie is attached (accounts with
-        thousands of enrollments are virtually always flagged), even though the
-        same course page is publicly viewable to anyone.  A parallel context
-        with no auth cookies bypasses that path entirely.
-
-        The context is reused across calls so cf_clearance is earned once and
-        the Chromium TLS session is stable.  Same stealth init script as the
-        main context.  Proxy inherits from self.http.proxy.
-        """
-        from app.services.playwright_service import PlaywrightManager
-
-        if self._pw_anon_context is not None:
-            try:
-                await self._pw_anon_context.cookies()
-                return self._pw_anon_context
-            except Exception:
-                logger.debug("Anonymous Playwright context became invalid — recreating...")
-                self._pw_anon_context = None
-                self._pw_anon_cf_clearance_earned = False
-
-        try:
-            browser = await PlaywrightManager.get_browser()
-            proxy_config = {"server": self.http.proxy} if self.http.proxy else None
-            self._pw_anon_context = await browser.new_context(
-                user_agent=constants.DEFAULT_USER_AGENT,
-                proxy=proxy_config,
-                viewport={"width": 1280, "height": 800},
-                ignore_https_errors=True,
-            )
-            # Deliberately NO seed cookies — this context must stay anonymous.
-            await self._pw_anon_context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                Object.defineProperty(navigator, 'plugins', {
-                    get: () => {
-                        const p = [
-                            {name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
-                            {name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
-                            {name: 'Native Client', filename: 'internal-nacl-plugin'},
-                        ];
-                        p.__proto__ = PluginArray.prototype;
-                        return p;
-                    }
-                });
-                Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
-            """)
-            logger.debug("Created anonymous Playwright context for slug resolution")
-        except Exception as e:
-            logger.error(f"Failed to create anonymous Playwright context: {e}")
-            self._pw_anon_context = None
-
-        return self._pw_anon_context
-
-    async def _fetch_course_id_by_slug_api(self, slug: str) -> Optional[Dict]:
-        """Resolve a slug to a course record via Udemy's public JSON API.
-
-        Hits ``/api-2.0/courses/<slug>/?fields[course]=id,title,url,headline``
-        anonymously — no session cookies, no browser stealth, no coupon in the
-        URL.  This is the endpoint the Udemy mobile app uses and it is not
-        subject to the application-layer bot block that 403s authenticated
-        ``/course/<slug>/`` document fetches on flagged accounts.
-
-        Returns the parsed JSON dict on success, or ``None`` on any failure.
-        Caller is responsible for mapping the payload onto the ``Course``
-        object (``id`` → ``course_id``, ``title``, ``url``).
-        """
-        if not slug:
-            return None
-        api_url = (
-            f"{constants.UDEMY_API_BASE}/courses/{slug}/"
-            f"?fields[course]=id,title,url,headline,image_240x135"
-        )
-        try:
-            # Bypass the authenticated AsyncHTTPClient entirely — we don't want
-            # any of its headers, cookies, or bearer tokens on this request.
-            # A plain httpx AsyncClient sends no cookies and a minimal header
-            # set, which is actually safer here: no flagged access_token, no
-            # session-derived fingerprints for the anti-abuse layer to match.
-            async with httpx.AsyncClient(
-                timeout=15.0,
-                follow_redirects=True,
-                headers={
-                    "User-Agent": constants.DEFAULT_USER_AGENT,
-                    "Accept": "application/json, text/plain, */*",
-                    "Accept-Language": "en-US,en;q=0.9",
-                },
-            ) as anon_http:
-                resp = await anon_http.get(api_url)
-            if resp.status_code != 200:
-                logger.debug(f"  Slug API {slug} → {resp.status_code}")
-                return None
-            try:
-                return resp.json()
-            except Exception:
-                logger.debug(f"  Slug API {slug} returned non-JSON body")
-                return None
-        except Exception as e:
-            logger.debug(f"  Slug API request failed for {slug}: {e}")
-            return None
+        # Circuit breaker
+        self._global_403_circuit_threshold = 4
+        self._global_403_count = 0
+        self._account_block_active = False
+        self._account_block_cooldown_until = None
+        self._account_block_cooldown_seconds = 300
 
     async def _course_fetch_throttle(self):
-        """Global jitter + adaptive backoff before any course-page fetch.
-
-        Call this immediately before ``get_course_id``-type work.  It serialises
-        course fetches under a shared lock so that:
-          - Every fetch gets a base 3–8s random delay (humans don't click 50
-            courses in 50 seconds).
-          - After consecutive 403s the sleep grows exponentially (capped at
-            60s) and is applied once, then decays as soon as a 2xx is seen.
-
-        The caller later reports back via ``_course_fetch_report(status)``.
-        """
+        """Global jitter + adaptive backoff."""
         async with self._course_fetch_lock:
             base = random.uniform(3.0, 8.0)
             extra = self._course_fetch_backoff_s
             delay = base + extra
             if extra >= 10.0:
-                logger.info(
-                    f"  Throttle: sleeping {delay:.1f}s "
-                    f"(base {base:.1f}s + backoff {extra:.1f}s)"
-                )
+                logger.info(f"  Throttle: sleeping {delay:.1f}s")
             await asyncio.sleep(delay)
 
     def _course_fetch_report(self, status: int):
-        """Update adaptive backoff after a course-page fetch.
-
-        - 2xx: reset consecutive-403 counter and decay backoff toward 0.
-        - 403: increment counter and grow backoff exponentially
-          (1, 2, 4, 8, 16, 32, 60, 60, ...).
-        - Anything else: leave state alone; other transient failures shouldn't
-          punish throughput.
-        """
+        """Update adaptive backoff."""
         if 200 <= status < 300:
             self._course_fetch_consecutive_403s = 0
             self._course_fetch_backoff_s = 0.0
-            # Also clear account-level block if we're getting successful responses
-            if self._account_block_active:
-                time_remaining = self._account_block_cooldown_until - datetime.now(UTC) if self._account_block_cooldown_until else None
-                if time_remaining and time_remaining.total_seconds() < 0:
-                    logger.info("✓ Account block cooldown expired, attempting recovery...")
-                    self._account_block_active = False
-                    self._account_block_cooldown_until = None
         elif status == 403:
             self._course_fetch_consecutive_403s += 1
             self._global_403_count += 1
             n = self._course_fetch_consecutive_403s
-            # 1, 2, 4, 8, 16, 32, 60, 60, ...
             self._course_fetch_backoff_s = min(60.0, 2.0 ** max(0, n - 1))
-            
-            # Check if we should activate account-level circuit breaker
-            if self._global_403_count >= self._global_403_circuit_threshold and not self._account_block_active:
+            if (
+                self._global_403_count >= self._global_403_circuit_threshold
+                and not self._account_block_active
+            ):
                 self._activate_account_block()
 
     def _activate_account_block(self):
-        """Activate circuit breaker when account is being rate-limited."""
+        """Activate circuit breaker with progressive cooldown."""
         self._account_block_active = True
-        self._account_block_cooldown_until = datetime.now(UTC) + \
-            __import__('datetime').timedelta(seconds=self._account_block_cooldown_seconds)
+        block_count = self.session_recovery_state.get("block_count", 0) + 1
+        self.session_recovery_state["block_count"] = block_count
+
+        multiplier = 1
+        if block_count == 2:
+            multiplier = 2
+        elif block_count == 3:
+            multiplier = 4
+        elif block_count >= 4:
+            multiplier = 6
+
+        cooldown_seconds = self._account_block_cooldown_seconds * multiplier
+        self._account_block_cooldown_until = datetime.now(UTC) + __import__(
+            "datetime"
+        ).timedelta(seconds=cooldown_seconds)
+
         logger.error(
-            f"⚠ ACCOUNT BLOCK DETECTED: {self._global_403_count} consecutive 403 errors. "
-            f"Session temporarily blocked until {self._account_block_cooldown_until.isoformat()}. "
-            f"Pausing course fetches for {self._account_block_cooldown_seconds}s to allow Udemy throttle to cool down."
+            f"⚠ ACCOUNT BLOCK DETECTED (#{block_count}). Pausing for {cooldown_seconds}s."
         )
-        self.session_recovery_state["consecutive_403_errors"] = self._global_403_count
 
     def is_account_blocked(self) -> bool:
-        """Check if account-level circuit breaker is active and still in cooldown."""
+        """Check if account-level circuit breaker is active."""
         if not self._account_block_active:
             return False
         if self._account_block_cooldown_until is None:
             return False
         if datetime.now(UTC) >= self._account_block_cooldown_until:
-            logger.info("✓ Account block cooldown expired, resuming course fetches...")
+            logger.info("✓ Account block cooldown expired.")
             self._account_block_active = False
             self._account_block_cooldown_until = None
+            self._global_403_count = 0
+            self._course_fetch_consecutive_403s = 0
             return False
         return True
 
     def get_account_block_wait_seconds(self) -> float:
-        """Return seconds remaining in account block, or 0 if not blocked."""
-        if not self.is_account_blocked():
+        if not self.is_account_blocked() or self._account_block_cooldown_until is None:
             return 0.0
-        if self._account_block_cooldown_until is None:
-            return 0.0
-        remaining = (self._account_block_cooldown_until - datetime.now(UTC)).total_seconds()
-        return max(0.0, remaining)
-
-    def get_session_health_report(self) -> Dict:
-        """Return detailed metrics about session health for logging/diagnostics."""
-        return {
-            "account_blocked": self.is_account_blocked(),
-            "block_cooldown_remaining_seconds": self.get_account_block_wait_seconds(),
-            "total_403_errors": self._global_403_count,
-            "consecutive_403_errors": self._course_fetch_consecutive_403s,
-            "current_backoff_seconds": self._course_fetch_backoff_s,
-            "csrf_refresh_failures": self.session_recovery_state.get("csrf_refresh_failures", 0),
-            "cloudflare_challenges": self.session_recovery_state.get("cloudflare_challenges_encountered", 0),
-            "is_authenticated": self.is_authenticated,
-        }
-
-    async def _firecrawl_scrape(self, url: str, schema: Optional[Dict] = None, use_cookies: bool = True) -> Optional[Dict]:
-        """Perform a stealthy scrape using Firecrawl API."""
-        if not self.firecrawl_api_key:
-            return None
-            
-        try:
-            headers = {"Authorization": f"Bearer {self.firecrawl_api_key}", "Content-Type": "application/json"}
-            payload = {"url": url}
-            
-            if schema:
-                payload["params"] = {"extract": {"schema": schema}}
-                
-            if use_cookies and self.cookie_dict:
-                cookie_str = "; ".join([f"{k}={v}" for k, v in self.cookie_dict.items()])
-                payload["pageOptions"] = {"headers": {"Cookie": cookie_str}}
-
-            resp = await self.http.post("https://api.firecrawl.dev/v0/scrape", json=payload, headers=headers, req_type="api", log_failures=False)
-            data = await self.http.safe_json(resp, "firecrawl request")
-            
-            if data and data.get("success") and "data" in data:
-                return data["data"]
-            return None
-        except Exception as e:
-            logger.debug(f"Firecrawl request failed for {url}: {e}")
-            return None
-
-    async def _page_goto_fetch(self, ctx, url: str, method: str) -> Optional[httpx.Response]:
-        """Fetch a document URL via real ``page.goto()``.
-        
-        To avoid Udemy App-level 403s (Origin Forbidden), we:
-        1. Use a single page for the sequence (mimic a user browsing).
-        2. Set realistic document-navigation headers.
-        3. Use a search-engine referer for the first landing.
-        """
-        page = None
-        new_page_created = False
-        try:
-            # We use a single page for the lifetime of this context to maintain
-            # any client-side state / window variables Udemy might check.
-            pages = ctx.pages
-            if pages:
-                page = pages[0]
-            else:
-                page = await ctx.new_page()
-                new_page_created = True
-
-            # Small random jitter before navigation
-            await asyncio.sleep(random.uniform(1.0, 2.5))
-            
-            # Organic referer: Use Google if we have no history, otherwise udemy.com
-            # If the current page is already on udemy, it's an internal referer.
-            current_url = page.url
-            referer = f"{constants.UDEMY_BASE_URL}/" if "udemy.com" in current_url else "https://www.google.com/"
-
-            # Set realistic document headers for this specific navigation
-            # This helps bypass "Origin Forbidden" which triggers when
-            # headers look like a raw tool rather than a browser navigation.
-            doc_headers = {
-                "Upgrade-Insecure-Requests": "1",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Sec-Ch-Ua": '"Not_A Brand";v="99", "Chromium";v="124", "Google Chrome";v="124"',
-                "Sec-Ch-Ua-Mobile": "?0",
-                "Sec-Ch-Ua-Platform": '"Windows"',
-                "Sec-Fetch-Site": "cross-site" if "google" in referer else "same-origin",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-User": "?1",
-                "Sec-Fetch-Dest": "document",
-            }
-            await page.set_extra_http_headers(doc_headers)
-            
-            logger.info(f"  Navigating to {url} (Referer: {referer})")
-            
-            resp = await page.goto(
-                url,
-                wait_until="domcontentloaded",
-                timeout=45000, 
-                referer=referer
-            )
-            
-            # Short settle so JS can run.
-            await asyncio.sleep(2.0)
-
-            html = await page.content()
-            final_url = page.url
-            status = resp.status if resp else 0
-            
-            logger.info(f"  Navigation finished: Status={status}")
-
-            cf_challenge_was_seen = False
-            # If CF challenge is on the page, wait up to ~20s for it to clear.
-            if await self._check_cloudflare_challenge(html):
-                cf_challenge_was_seen = True
-                logger.info(f"  [QUARANTINE] Cloudflare challenge detected on {url}")
-                self.session_recovery_state["cloudflare_challenges_encountered"] += 1
-                challenge_cleared = False
-                for i in range(10):
-                    await asyncio.sleep(2)
-                    html = await page.content()
-                    if not await self._check_cloudflare_challenge(html):
-                        logger.info(f"  [SUCCESS] CF challenge cleared after {(i+1)*2}s")
-                        challenge_cleared = True
-                        break
-                if not challenge_cleared:
-                    logger.warning(f"  [FAILURE] CF challenge did not clear within 20s for {url}")
-                    # Invalidate clearance so next refresh re-challenges.
-                    self._pw_cf_clearance_earned = False
-                    return httpx.Response(
-                        status_code=403,
-                        content=html.encode("utf-8", errors="replace"),
-                        request=httpx.Request(method, url),
-                    )
-
-            # If a challenge was seen and then cleared, the initial goto response
-            # status reflects the challenge page — it's stale.  We have real
-            # content now, so report 200.  Otherwise use the actual goto status.
-            if cf_challenge_was_seen:
-                status = 200
-            
-            # Harvest any fresh cookies (cf_clearance, csrftoken rotations, etc.).
-            current_cookies = await ctx.cookies()
-            try:
-                for c in current_cookies:
-                    if c.get("name") and c.get("value"):
-                        if self.cookie_dict.get(c["name"]) != c["value"]:
-                            logger.info(f"  Cookie updated: {c['name']} (from context)")
-                        self.cookie_dict[c["name"]] = c["value"]
-                        self.http.client.cookies.set(c["name"], c["value"])
-                        if c["name"] == "cf_clearance":
-                            self._pw_cf_clearance_earned = True
-            except Exception as e:
-                logger.debug(f"  Error harvesting cookies: {e}")
-
-            if status != 200:
-                # Log a snippet of the hard-block body so we can distinguish
-                # CF 1020/Managed Challenge / rate-limit / origin 403.
-                snippet = html[:1000].replace("\n", " ") if html else ""
-                # Also log response headers if available
-                headers_log = str(resp.headers) if resp else "No headers"
-                logger.warning(
-                    f"  [BLOCK] Playwright page.goto {url} -> {status}\n"
-                    f"  Headers: {headers_log}\n"
-                    f"  Body Snippet: {snippet!r}"
-                )
-                # A 403 without a detectable challenge is a hard WAF block — drop
-                # cf_clearance flag so the next refresh re-challenges from scratch.
-                if status == 403:
-                    self._pw_cf_clearance_earned = False
-                    if "forbidden" in snippet.lower() and "udemy" in snippet.lower():
-                        logger.error("  Origin-level Forbidden detected (Udemy App Block, not Cloudflare)")
-
-            return httpx.Response(
-                status_code=status,
-                content=html.encode("utf-8", errors="replace"),
-                request=httpx.Request(method, final_url or url),
-            )
-        except Exception as e:
-            logger.debug(f"Playwright page.goto failed for {url}: {e}")
-            return None
-        finally:
-            if page is not None:
-                try:
-                    await page.close()
-                except Exception:
-                    pass
-
-    async def _playwright_request(self, url: str, method: str = "GET", data: Optional[Dict] = None, req_type: str = "xhr") -> Optional[httpx.Response]:
-        """Perform a stealthy request using the persistent Playwright BrowserContext.
-
-        GET (any req_type) → context.request.get() using Chromium TLS fingerprint.
-            No JavaScript executes, so navigator.webdriver / headless detection
-            cannot fire.  Cloudflare JS challenges are resolved separately by
-            _refresh_csrf_stealth (page.goto to homepage) which earns cf_clearance
-            into this context; that cookie is automatically sent here.
-            Document requests use browser navigation headers; XHR/API requests use
-            XHR headers.  Both return raw bytes.
-        POST → warmup page navigation then context.request.post() (Chromium TLS
-               fingerprint, immune to JS execution-context destruction).
-
-        The persistent context means cf_clearance is earned once and reused for every
-        subsequent request in this UdemyClient lifetime.  HTTPX is never used here so
-        Python TLS fingerprints never reach Cloudflare-protected endpoints.
-        """
-        try:
-            ctx = await self._get_persistent_pw_context()
-            if ctx is None:
-                logger.error("No Playwright context available — skipping stealthy request")
-                return None
-
-            csrf_token = (self.cookie_dict.get("csrf_token") or
-                          self.cookie_dict.get("csrftoken", ""))
-
-            headers_dict = {
-                "Accept": "application/json, text/plain, */*",
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "X-CSRF-Token": csrf_token,
-                "Sec-Fetch-Site": "same-origin",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Dest": "empty",
-            }
-            if method == "POST":
-                headers_dict.update({
-                    "Origin": constants.UDEMY_BASE_URL,
-                    "Referer": f"{constants.UDEMY_BASE_URL}/payment/checkout/",
-                })
-
-            if method == "GET":
-                # Document GETs (course landing pages) need real browser navigation:
-                # ctx.request.get() sends cf_clearance but runs NO JavaScript, and
-                # Cloudflare's per-path WAF can still 403 such requests even with a
-                # valid clearance cookie.  page.goto() runs the full Chromium stack
-                # so any inline CF challenge can be solved the same way the homepage
-                # one was during _refresh_csrf_stealth.
-                #
-                # XHR/API GETs stay on ctx.request.get() — those are same-origin
-                # requests from an already-cleared context and don't need a page.
-                if req_type == "document":
-                    return await self._page_goto_fetch(ctx, url, method)
-
-                req_headers = headers_dict
-                try:
-                    pw_resp = await ctx.request.get(url, headers=req_headers, timeout=30000)
-                    status = pw_resp.status
-                    body = await pw_resp.body()
-                    if status != 200:
-                        logger.info(f"  Playwright GET [{req_type}] {url} → {status}")
-                        if status == 403:
-                            # Log a snippet of the 403 body to distinguish CF hard-block
-                            # from Udemy application 403.
-                            snippet = body[:400].decode("utf-8", errors="replace").replace("\n", " ")
-                            logger.info(f"  403 body snippet: {snippet}")
-                    return httpx.Response(
-                        status_code=status,
-                        content=body,
-                        request=httpx.Request(method, url),
-                    )
-                except Exception as req_err:
-                    logger.debug(f"Playwright GET [{req_type}] failed for {url}: {req_err}")
-                    return None
-
-            else:  # POST
-                # Warmup: navigate to cart/ in a real page so CF establishes clearance
-                # for this context if it hasn't been used recently.
-                page = await ctx.new_page()
-                try:
-                    await page.goto(
-                        f"{constants.UDEMY_BASE_URL}/cart/",
-                        wait_until="commit",
-                        timeout=15000,
-                    )
-                    await asyncio.sleep(1)
-                    for c in await ctx.cookies():
-                        if c.get("name") and c.get("value"):
-                            self.cookie_dict[c["name"]] = c["value"]
-                            self.http.client.cookies.set(c["name"], c["value"])
-                except Exception as nav_err:
-                    logger.debug(f"Playwright warmup navigation failed (non-fatal): {nav_err}")
-                finally:
-                    await page.close()
-
-                # Refresh CSRF token after warmup (warmup may have updated cookies)
-                csrf_token = (self.cookie_dict.get("csrf_token") or
-                              self.cookie_dict.get("csrftoken", ""))
-                headers_dict["X-CSRF-Token"] = csrf_token
-
-                try:
-                    body_bytes = json.dumps(data).encode() if data else None
-                    pw_resp = await ctx.request.post(
-                        url, data=body_bytes, headers=headers_dict, timeout=30000
-                    )
-                    status = pw_resp.status
-                    body = await pw_resp.body()
-                    if status != 200:
-                        logger.debug(f"  Playwright POST {url} → {status}")
-                    return httpx.Response(
-                        status_code=status,
-                        content=body,
-                        request=httpx.Request(method, url),
-                    )
-                except Exception as req_err:
-                    logger.debug(f"Playwright POST request failed for {url}: {req_err}")
-                    return None
-
-        except Exception as e:
-            logger.error(f"Playwright request failed for {url}: {e}")
-            # Invalidate context so it's recreated fresh on next call.
-            # Also reset cf_clearance flag — the new context must re-earn it.
-            try:
-                if self._pw_context:
-                    await self._pw_context.close()
-            except Exception:
-                pass
-            self._pw_context = None
-            self._pw_cf_clearance_earned = False
-            return None
-
-    async def close(self):
-        if self._pw_context is not None:
-            try:
-                await self._pw_context.close()
-            except Exception:
-                pass
-            self._pw_context = None
-            self._pw_cf_clearance_earned = False
-        if self._pw_anon_context is not None:
-            try:
-                await self._pw_anon_context.close()
-            except Exception:
-                pass
-            self._pw_anon_context = None
-            self._pw_anon_cf_clearance_earned = False
-        await self.http.close()
+        return max(
+            0.0,
+            (self._account_block_cooldown_until - datetime.now(UTC)).total_seconds(),
+        )
 
     def set_proxy(self, proxy: Optional[str]):
-        """Update the proxy configuration."""
-        if self.http.proxy != proxy:
-            old_headers = self.http.client.headers
-            old_cookies = self.http.client.cookies
-            asyncio.create_task(self.http.close())
-            self.http = AsyncHTTPClient(proxy=proxy)
-            self.http.client.headers.update(old_headers)
-            self.http.client.cookies.update(old_cookies)
-
-    async def _check_cloudflare_challenge(self, html: str) -> bool:
-        """Detect if page is Cloudflare challenge. Returns True if Cloudflare challenge detected."""
-        # More specific indicators (cf_clearance alone isn't enough - it's set but challenge may persist)
-        cloudflare_challenge_indicators = [
-            'Just a moment',
-            'challenge-platform',
-            'Checking your browser before accessing',
-            'cfrequests',
-            'Ray ID',
-        ]
-        has_challenge = any(indicator in html for indicator in cloudflare_challenge_indicators)
-        
-        # Additional context: presence of auth indicators
-        has_auth = any(indicator in html for indicator in ['_udemy_u', 'access_token', 'user-id'])
-        
-        # If challenge indicators present, it's definitely a challenge
-        if has_challenge:
-            logger.debug("Cloudflare challenge HTML indicators detected")
-            return True
-        
-        # If no challenge indicators AND has auth, likely resolved
-        if has_auth:
-            logger.debug("Cloudflare challenge resolved - auth content detected")
-            return False
-        
-        logger.debug("Cloudflare challenge status unclear - no specific indicators found")
-        return False
+        """Update proxy for the underlying HTTP client."""
+        self.http.set_proxy(proxy)
 
     async def _extract_csrf_from_html(self, html: str) -> Optional[str]:
-        """Extract CSRF token from HTML using various methods. Returns token value or None."""
         if not html:
             return None
-
-        # Method 1: Look for csrftoken in meta tag
-        meta_match = re.search(r'<meta[^>]*name=["\']csrftoken["\'][^>]*content=["\']([^"\']+)["\']', html)
-        if meta_match:
-            token = meta_match.group(1)
-            logger.debug(f"Found CSRF token in meta tag: {token[:20]}...")
-            return token
-
-        # Method 2: Look for csrf_token in meta tag
-        meta_match = re.search(r'<meta[^>]*name=["\']csrf_token["\'][^>]*content=["\']([^"\']+)["\']', html)
-        if meta_match:
-            token = meta_match.group(1)
-            logger.debug(f"Found csrf_token in meta tag: {token[:20]}...")
-            return token
-
-        # Method 3: Look for CSRF token in script data (flexible pattern)
-        script_match = re.search(r'["\']?csrf["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']', html, re.IGNORECASE)
-        if script_match:
-            token = script_match.group(1)
-            logger.debug(f"Found CSRF token in script: {token[:20]}...")
-            return token
-
-        # Method 4: Look for X-CSRFToken or similar in script (flexible pattern)
-        script_match = re.search(r'["\']?X-CSRF-?Token["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']', html, re.IGNORECASE)
-        if script_match:
-            token = script_match.group(1)
-            logger.debug(f"Found X-CSRFToken in script: {token[:20]}...")
-            return token
-
-        # Method 5: Look for CSRF in any data attribute or hidden input
-        input_match = re.search(r'<input[^>]*name=["\']csrf(?:token)?["\'][^>]*value=["\']([^"\']+)["\']', html, re.IGNORECASE)
-        if input_match:
-            token = input_match.group(1)
-            logger.debug(f"Found CSRF in hidden input: {token[:20]}...")
-            return token
-
+        patterns = [
+            r'<meta[^>]*name=["\']csrftoken["\'][^>]*content=["\']([^"\']+)["\']',
+            r'<meta[^>]*name=["\']csrf_token["\'][^>]*content=["\']([^"\']+)["\']',
+            r'["\']?csrf["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']',
+            r'["\']?X-CSRF-?Token["\']?\s*:\s*["\']([a-f0-9\-]{20,})["\']',
+            r'<input[^>]*name=["\']csrf(?:token)?["\'][^>]*value=["\']([^"\']+)["\']',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, html, re.IGNORECASE)
+            if match:
+                return match.group(1)
         return None
-
-    async def _extract_csrf_with_retries(self, page, max_retries: int = 2) -> Optional[str]:
-        """Extract CSRF token from page with retries. Handles dynamic loading."""
-        for attempt in range(max_retries):
-            try:
-                # Wait for page to settle
-                await asyncio.sleep(1)
-                html_content = await page.content()
-
-                # Try extract from HTML
-                csrf_token = await self._extract_csrf_from_html(html_content)
-                if csrf_token:
-                    logger.info(f"Successfully extracted CSRF from HTML (attempt {attempt + 1})")
-                    return csrf_token
-
-                # Try to trigger any pending XHR requests by waiting
-                if attempt < max_retries - 1:
-                    logger.debug(f"CSRF not found, waiting for page to fully load (attempt {attempt + 1}/{max_retries})...")
-                    await asyncio.sleep(2)
-
-                    # Try to wait for any pending requests
-                    try:
-                        await page.wait_for_load_state("networkidle", timeout=3000)
-                    except Exception:
-                        pass  # Timeout is ok, just a wait hint
-            except Exception as e:
-                logger.debug(f"CSRF extraction attempt {attempt + 1} failed: {e}")
-                if attempt == max_retries - 1:
-                    logger.warning(f"CSRF extraction failed after {max_retries} attempts")
-                    return None
-
-        return None
-
-    async def _refresh_csrf_stealth(self, force_full: bool = False) -> bool:
-        """Refresh CSRF token and all session cookies using the persistent Playwright context.
-
-        If ``force_full`` is True, the CSRF-header fast path is skipped and the
-        existing ``cf_clearance`` is treated as invalid — callers reacting to an
-        observed 403 should pass this so the context re-navigates through any
-        Cloudflare challenge instead of just rotating a header.
-        """
-        logger.info(
-            "Stealth: Refreshing CSRF token and cookies via Playwright..."
-            + (" (forced full refresh)" if force_full else "")
-        )
-        csrf_found = False
-        try:
-            if force_full:
-                # A prior 403 proved the current cf_clearance isn't good enough for
-                # the protected path we're trying to hit.  Drop the flag so the
-                # Playwright flow below re-runs the CF challenge.
-                self._pw_cf_clearance_earned = False
-
-            # FAST PATH: Reuse the login CSRF token only when Playwright's OWN context
-            # has already earned a cf_clearance via a real browser navigation.  The
-            # user's saved cf_clearance is TLS-fingerprint-bound to their desktop
-            # browser and will NOT work in Playwright.  self._pw_cf_clearance_earned
-            # is only set to True after a successful full navigation below.
-            login_csrf = self.cookie_dict.get("csrf_token_login")
-            if not force_full and login_csrf and self._pw_cf_clearance_earned:
-                try:
-                    logger.info("Fast path: reusing login CSRF token (Playwright cf_clearance already earned)...")
-                    self.http.client.headers['X-CSRFToken'] = login_csrf
-                    self.http.client.headers['X-CSRF-Token'] = login_csrf
-                    self.cookie_dict['csrf_token'] = login_csrf
-                    logger.info(f"Using login CSRF token as primary (length: {len(login_csrf)})")
-                    return True
-                except Exception as e:
-                    logger.warning(f"Login CSRF token fast path error: {e}. Falling back to full refresh...")
-
-            # FULL STRATEGY: Navigate to udemy.com using the persistent context so
-            # Cloudflare issues (or re-validates) cf_clearance, and we pick up a fresh
-            # csrftoken cookie in the same pass.
-            if not self._pw_cf_clearance_earned:
-                logger.info("Playwright context has no cf_clearance yet — full session refresh needed...")
-            else:
-                logger.debug("Refreshing CSRF + session cookies via Playwright...")
-
-            ctx = await self._get_persistent_pw_context()
-            if ctx is None:
-                logger.error("Cannot refresh session — no Playwright context available")
-                self.session_recovery_state["csrf_refresh_failures"] += 1
-                return False
-
-            cookies = []
-            for strategy_attempt in range(3):
-                if strategy_attempt == 1:
-                    logger.info("Trying alternate Cloudflare resolution strategy (attempt 2/3)...")
-                elif strategy_attempt == 2:
-                    logger.info("Trying fresh browser context strategy (attempt 3/3)...")
-                    # Last resort: recreate the persistent context entirely.
-                    # Reset cf_clearance flag — the new context must earn it fresh.
-                    try:
-                        await self._pw_context.close()
-                    except Exception:
-                        pass
-                    self._pw_context = None
-                    self._pw_cf_clearance_earned = False
-                    ctx = await self._get_persistent_pw_context()
-                    if ctx is None:
-                        break
-
-                page = await ctx.new_page()
-                try:
-                    # Random jitter to avoid exact timing patterns
-                    await asyncio.sleep(random.uniform(0.5, 2.0))
-                    await page.goto(
-                        f"{constants.UDEMY_BASE_URL}/",
-                        wait_until="commit",
-                        timeout=30000,
-                    )
-                    await asyncio.sleep(2)
-
-                    html_content = await page.content()
-                    is_cf_challenge = await self._check_cloudflare_challenge(html_content)
-
-                    if is_cf_challenge:
-                        logger.warning(f"Cloudflare challenge detected (strategy {strategy_attempt + 1}/3). Waiting...")
-                        self.session_recovery_state["cloudflare_challenges_encountered"] += 1
-                        challenge_resolved = False
-
-                        for wait_attempt in range(15):
-                            await asyncio.sleep(2)
-                            html_content = await page.content()
-                            if not await self._check_cloudflare_challenge(html_content):
-                                logger.info(f"CF challenge resolved after {(wait_attempt + 1) * 2}s")
-                                challenge_resolved = True
-                                break
-
-                        if not challenge_resolved:
-                            logger.warning("CF challenge persisted 30s. Trying page reload...")
-                            try:
-                                await page.reload(wait_until="commit", timeout=30000)
-                                await asyncio.sleep(3)
-                                html_content = await page.content()
-                                if not await self._check_cloudflare_challenge(html_content):
-                                    logger.info("Challenge resolved after page reload")
-                                    challenge_resolved = True
-                            except Exception as reload_err:
-                                logger.debug(f"Page reload failed: {reload_err}")
-
-                        if not challenge_resolved:
-                            logger.warning(f"Challenge unresolved after strategy {strategy_attempt + 1}. Trying next...")
-                            continue
-
-                    # Harvest all cookies from the context
-                    cookies = await ctx.cookies()
-                    cf_clearance_found = False
-                    for c in cookies:
-                        self.http.client.cookies.set(c["name"], c["value"])
-                        self.cookie_dict[c["name"]] = c["value"]
-                        if c["name"] in ("csrftoken", "csrf_token"):
-                            logger.info(f"SUCCESS: Found {c['name']} in cookies!")
-                            csrf_found = True
-                        if c["name"] == "cf_clearance":
-                            cf_clearance_found = True
-                            # Mark that THIS Playwright context has its own valid
-                            # cf_clearance — safe to use the CSRF fast path now.
-                            self._pw_cf_clearance_earned = True
-                            logger.info("✓ Playwright context earned its own cf_clearance")
-
-                    if csrf_found:
-                        logger.info("✓ CSRF token found in cookies - refresh successful")
-                        break
-
-                    # CSRF still missing: try extracting from page HTML
-                    if not csrf_found:
-                        csrf_token_val = await self._extract_csrf_with_retries(page, max_retries=2)
-                        if csrf_token_val:
-                            self.http.client.headers["X-CSRFToken"] = csrf_token_val
-                            self.cookie_dict["_csrf_from_html"] = csrf_token_val
-                            logger.info("Success: Extracted CSRF from HTML")
-                            csrf_found = True
-                            break
-                        else:
-                            logger.warning("Could not find CSRF token in HTML after retries")
-
-                    if csrf_found:
-                        break
-
-                finally:
-                    try:
-                        await page.close()
-                    except Exception:
-                        pass
-
-            if not csrf_found:
-                logger.error("No fresh CSRF token found after all strategies.")
-                self.session_recovery_state["csrf_refresh_failures"] += 1
-                all_ctx_cookies = cookies or []
-                has_auth = any(
-                    any(n in c["name"].lower() for n in ("auth", "access", "sessionid", "jwt"))
-                    for c in all_ctx_cookies
-                )
-                if not has_auth:
-                    logger.error("CRITICAL: No auth cookies — user needs to log in again.")
-                else:
-                    logger.warning("Auth cookies present but CSRF refresh failed. Session may be temporarily blocked.")
-                    logger.info("Recommendation: Wait 30-60 s, then retry.")
-
-            if csrf_found:
-                logger.info("CSRF token refresh successful")
-                self.session_recovery_state["consecutive_403_errors"] = 0
-            else:
-                logger.error("CSRF token refresh failed after all attempts")
-
-            return csrf_found
-        except Exception as e:
-            logger.error(f"Failed to refresh CSRF via Playwright: {e}")
-            self.session_recovery_state["csrf_refresh_failures"] += 1
-            return False
 
     async def manual_login(self, email: str, password: str):
-        """Asynchronously login using email and password."""
-        logger.info(f"Attempting manual login for {email}")
+        """Technatic-style login using CloudScraper and Mobile Emulation."""
+        logger.info(f"Attempting login for {email} (Technatic-Style)")
         try:
-            r = await self.http.get(
+            # 1. Fetch login page via CloudScraper
+            resp = await self.http.get(
                 constants.UDEMY_SIGNUP_POPUP_URL,
-                headers={"User-Agent": constants.DEFAULT_USER_AGENT},
-                randomize_headers=False,
-                req_type="document"
+                use_cloudscraper=True,
+                req_type="document",
+                log_failures=False,
             )
-            if not r:
+
+            if not resp or resp.status_code != 200:
+                # 2. Fallback to Standard HTTPX with Mobile headers
+                resp = await self.http.get(
+                    constants.UDEMY_SIGNUP_POPUP_URL,
+                    req_type="mobile",
+                    log_failures=True,
+                )
+
+            if not resp:
                 raise LoginException("Could not connect to Udemy.")
 
-            csrf_token = r.cookies.get("csrftoken")
+            # Extract CSRF and update cookies
+            csrf_token = resp.cookies.get(
+                "csrftoken"
+            ) or await self._extract_csrf_from_html(resp.text)
+            self.cookie_dict.update(dict(resp.cookies))
+
             if not csrf_token:
-                raise LoginException("Email/password login is currently restricted by Udemy security.")
+                raise LoginException("CSRF token missing. Login restricted.")
 
             data = {
                 "csrfmiddlewaretoken": csrf_token,
@@ -1011,859 +194,357 @@ class UdemyClient:
                 "password": password,
             }
 
-            self.http.client.cookies.update(r.cookies)
-            self.http.client.headers.update({
-                "Referer": constants.UDEMY_LOGIN_POPUP_URL,
-                "Origin": constants.UDEMY_BASE_URL,
-            })
-
+            # 3. Submit Login via CloudScraper (Technatic pattern)
+            logger.info("  Submitting login via CloudScraper...")
             resp = await self.http.post(
                 constants.UDEMY_LOGIN_POPUP_URL,
                 data=data,
-                req_type="api"
+                cookies=self.cookie_dict,
+                req_type="mobile",
+                use_cloudscraper=True,
+                log_failures=False,
             )
 
-            if resp and "returnUrl" in resp.text:
-                self.cookie_dict = {
-                    "client_id": resp.cookies.get("client_id"),
-                    "access_token": resp.cookies.get("access_token"),
-                    "csrf_token": csrf_token,
-                    "csrf_token_login": csrf_token,  # Save login token as fallback
-                }
+            # 4. Fallback POST
+            if not resp or resp.status_code == 403:
+                logger.warning("  CloudScraper blocked. Trying Mobile Emulation...")
+                resp = await self.http.post(
+                    constants.UDEMY_LOGIN_POPUP_URL,
+                    data=data,
+                    cookies=self.cookie_dict,
+                    req_type="mobile",
+                )
+
+            if resp and (
+                "returnUrl" in resp.text or "dj_session_id" in str(resp.cookies)
+            ):
+                self.cookie_dict.update(dict(resp.cookies))
+                self.cookie_dict["csrf_token"] = csrf_token
+                self.is_authenticated = True
+                logger.info("  Login successful!")
             else:
-                error_data = await self.http.safe_json(resp, "login error")
-                msg = error_data.get("error", {}).get("data", {}).get("formErrors", [["Unknown error"]])[0][0]
+                error_data = await self.http.safe_json(resp, "login")
+                msg = (
+                    error_data.get("error", {})
+                    .get("data", {})
+                    .get("formErrors", [["Unknown error"]])[0][0]
+                    if error_data
+                    else "Access Denied"
+                )
                 raise LoginException(msg)
 
         except Exception as e:
             if isinstance(e, LoginException):
                 raise
-            logger.exception("Manual login failed")
+            logger.exception("Login failed")
             raise LoginException(f"Login failed: {str(e)}")
 
     def cookie_login(self, access_token: str, client_id: str, csrf_token: str):
-        """Login using cookies (from browser)."""
-        self.cookie_dict = {
-            "client_id": client_id,
-            "access_token": access_token,
-            "csrf_token": csrf_token,
-            "csrf_token_login": csrf_token,  # Save login token as fallback
-        }
+        self.cookie_dict.update(
+            {
+                "client_id": client_id,
+                "access_token": access_token,
+                "csrf_token": csrf_token,
+                "csrftoken": csrf_token,  # Sync both names
+            }
+        )
         self.http.client.cookies.update(self.cookie_dict)
 
     async def get_session_info(self):
-        """Fetch session info asynchronously."""
+        """Verify session via CloudScraper and Mobile Emulation."""
         logger.info("Getting session info")
         try:
-            headers = {"req_type": "api"}
-            if self.cookie_dict.get("access_token"):
-                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+            headers = {"Referer": f"{constants.UDEMY_BASE_URL}/"}
+            # Use Bearer token if available, otherwise rely on cookies
+            token = self.cookie_dict.get("access_token")
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
 
+            # Try CloudScraper + Mobile headers
             resp = await self.http.get(
                 constants.UDEMY_CONTEXT_URL,
                 cookies=self.cookie_dict,
                 headers=headers,
-                randomize_headers=True,
-                req_type="api"
+                req_type="mobile",
+                use_cloudscraper=True,
+                log_failures=False,
             )
-            ctx = await self.http.safe_json(resp, "session info")
+
+            if not resp or resp.status_code == 403:
+                resp = await self.http.get(
+                    constants.UDEMY_CONTEXT_URL,
+                    cookies=self.cookie_dict,
+                    headers=headers,
+                    req_type="mobile",
+                    log_failures=False,
+                )
+
+            ctx = await self.http.safe_json(resp, "session")
             if not ctx or not ctx.get("header", {}).get("isLoggedIn"):
-                raise LoginException("Login failed - session invalid.")
+                # If we have a response but not logged in, log a snippet for diagnosis
+                if resp:
+                    logger.debug(
+                        f"Session check failed. Status: {resp.status_code}, Body snippet: {resp.text[:200]}"
+                    )
+                raise LoginException("Session invalid.")
 
             self.display_name = ctx["header"]["user"]["display_name"]
-
-            cart_resp = await self.http.get(
-                constants.UDEMY_CART_URL,
-                cookies=self.cookie_dict,
-                headers=headers,
-                randomize_headers=True,
-                req_type="api"
-            )
-            cart = await self.http.safe_json(cart_resp, "cart info")
-            if cart:
-                self.currency = cart.get("user", {}).get("credit", {}).get("currency_code", "usd")
-
             self.is_authenticated = True
-            logger.info(f"Authenticated as {self.display_name} ({self.currency.upper()})")
+            logger.info(f"Authenticated as {self.display_name}")
 
         except Exception as e:
-            logger.exception("Failed to get session info")
-            raise LoginException(f"Session verification failed: {str(e)}")
+            if not isinstance(e, LoginException):
+                logger.exception("Failed to get session info")
+            raise LoginException(f"Session failed: {str(e)}")
 
     async def get_enrolled_courses(self, known_slugs: set = None):
-        """Fetch all enrolled courses in parallel pages. Stops early if known courses are found."""
+        """Fetch enrolled courses using Mobile API headers."""
         logger.info("Fetching enrolled courses...")
         base_url = f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}?ordering=-enroll_time&fields[course]=enrollment_time,url&page_size=100"
-        
         self.enrolled_courses = {}
-        known_slugs = known_slugs or set()
-        
+
         common_headers = {}
         if self.cookie_dict.get("access_token"):
-            common_headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+            common_headers["Authorization"] = (
+                f"Bearer {self.cookie_dict['access_token']}"
+            )
 
-        resp = await self.http.get(base_url, cookies=self.cookie_dict, headers=common_headers, req_type="api")
-        data = await self.http.safe_json(resp, "enrolled courses page 1")
+        resp = await self.http.get(
+            base_url,
+            cookies=self.cookie_dict,
+            headers=common_headers,
+            req_type="mobile",
+        )
+        data = await self.http.safe_json(resp, "courses")
         if not data:
             return
 
-        def process_results(results):
-            stop = False
-            for c in results:
-                try:
-                    parts = c["url"].split("/")
-                    slug = parts[3] if len(parts) > 3 and parts[2] == "draft" else parts[2]
-                    self.enrolled_courses[slug] = c.get("enrollment_time", "")
-                    if slug in known_slugs:
-                        stop = True
-                except (IndexError, KeyError):
-                    continue
-            return stop
+        for c in data.get("results", []):
+            try:
+                # URL format: https://www.udemy.com/course/slug/
+                parts = c["url"].strip("/").split("/")
+                if "course" in parts:
+                    idx = parts.index("course")
+                    if len(parts) > idx + 1:
+                        slug = parts[idx + 1]
+                        self.enrolled_courses[slug] = c.get("enrollment_time", "")
+            except Exception:
+                continue
+        logger.info(
+            f"Enrolled courses check complete: {len(self.enrolled_courses)} tracked."
+        )
 
-        if process_results(data.get("results", [])):
-            logger.info(f"Fetched 1 page of enrolled courses (Reached known courses).")
-            return
-
-        batch_size = 5
-        for start_page in range(2, 51, batch_size):
-            tasks = []
-            for page in range(start_page, start_page + batch_size):
-                if page > 50: break
-                url = f"{base_url}&page={page}"
-                tasks.append(self.http.get(url, cookies=self.cookie_dict, headers=common_headers, req_type="api"))
-            
-            resps = await asyncio.gather(*tasks)
-            # Short sleep between batches to avoid aggressive API hits
-            await asyncio.sleep(random.uniform(1.0, 2.5))
-            
-            any_stop = False
-            for i, r in enumerate(resps):
-                page_data = await self.http.safe_json(r, f"enrolled courses page {start_page + i}")
-                if page_data and page_data.get("results"):
-                    if process_results(page_data["results"]):
-                        any_stop = True
-                else:
-                    any_stop = True
-            
-            if any_stop:
-                logger.info(f"Reached known courses or end of list at batch starting page {start_page}.")
-                break
-
-        for slug in known_slugs:
-            if slug not in self.enrolled_courses:
-                self.enrolled_courses[slug] = ""
-        logger.info(f"Enrolled courses check complete. Total tracked: {len(self.enrolled_courses)}.")
-
-    def _extract_course_id(self, soup: bs) -> Optional[str]:
-        """Extract course ID using multiple strategies."""
-        BLACKLIST_IDS = {"562413829"}
-
+    def _extract_course_id(self, html: str) -> Optional[str]:
+        soup = bs(html, "lxml")
         body = soup.find("body")
         if body:
             cid = body.get("data-clp-course-id") or body.get("data-course-id")
             if cid and str(cid) not in BLACKLIST_IDS:
-                logger.debug(f"Found course ID {cid} via body data-attribute")
                 return str(cid)
 
-        meta_tags = [
-            ("meta", {"property": "udemy_com:course"}),
-            ("meta", {"name": "course-id"}),
-            ("meta", {"property": "og:url"}),
-        ]
-        for tag, attrs in meta_tags:
-            el = soup.find(tag, attrs)
-            if el:
-                content = el.get("content")
-                if content and str(content) not in BLACKLIST_IDS:
-                    if attrs.get("property") == "udemy_com:course" or attrs.get("name") == "course-id":
-                        logger.debug(f"Found course ID {content} via meta tag {tag}")
-                        return str(content)
-
-        scripts = soup.find_all("script")
-        for script in scripts:
-            if not script.string:
-                continue
-            
-            patterns = [
-                (r'["\']?course["\']?\s*:\s*{\s*["\']?id["\']?\s*[:=]\s*(\d+)', "script course object id"),
-                (r'["\']?visiting_course["\']?\s*:\s*{\s*["\']?id["\']?\s*[:=]\s*(\d+)', "script visiting_course object id"),
-                (r'["\']?course_?id["\']?\s*[:=]\s*(\d+)', "script regex course_id"),
-                (r'["\']?courseId["\']?\s*[:=]\s*(\d+)', "script regex courseId")
-            ]
-            for pattern, name in patterns:
-                match = re.search(pattern, script.string, re.IGNORECASE)
-                if match:
-                    cid = match.group(1)
-                    if cid and 4 < len(cid) < 12 and cid not in BLACKLIST_IDS:
-                        logger.debug(f"Found course ID {cid} via {name}")
-                        return cid
-
+        # Meta/Script regex fallbacks
+        matches = re.findall(r'["\']?course_?id["\']?\s*[:=]\s*(\d+)', html, re.I)
+        for cid in matches:
+            if 4 < len(cid) < 12 and cid not in BLACKLIST_IDS:
+                return cid
         return None
 
-    async def get_course_id(self, course: Course, use_headless_fallback: bool = True):
-        """Resolve slug → course ID with a staged fallback chain.
-
-        Order:
-          1. Firecrawl (unchanged — paid third-party renderer with fresh IPs).
-          2. **Public slug API** (anonymous GET /api-2.0/courses/<slug>/).  No
-             cookies, no stealth, no HTML parsing.  Bypasses Udemy's app-layer
-             anti-abuse that 403s the authenticated ``/course/<slug>/`` document
-             route on flagged accounts.
-          3. **Anonymous Playwright** (HTML scrape in a context with NO auth
-             cookies).  Covers the rare cases where the JSON API doesn't return
-             what we need but the public HTML page does.
-          4. **Authenticated Playwright** (existing path).  Last-resort because
-             if the account is flagged this is exactly the call that 403s.
-
-        Throttles up-front via ``_course_fetch_throttle()`` and reports back via
-        ``_course_fetch_report()`` so the adaptive backoff can grow/decay.
-        """
+    async def get_course_id(self, course: Course):
+        """Slug resolution using Slug API and CloudScraper."""
         if course.course_id:
             return
-        
-        # Check if account is in circuit breaker cooldown — if so, mark course as failed
-        # and skip expensive fetch attempts to preserve bandwidth and avoid hammering Udemy
         if self.is_account_blocked():
-            wait_seconds = self.get_account_block_wait_seconds()
-            course.is_valid = False
-            course.error = f"Account temporarily blocked by Udemy (will retry in {wait_seconds:.0f}s)"
-            logger.info(f"  Status: Account blocked (cooldown) - skipping course fetch for {course.title}")
             return
-        
-        url = re.sub(r"\W+$", "", unquote(course.url))
-        # Udemy's origin anti-abuse layer (distinct from Cloudflare) returns a
-        # branded `<title>Error • Udemy</title> ... Forbidden` body for direct
-        # document fetches of coupon/affiliate deep links (?couponCode=…).
-        # The coupon is only required later in check_course(), which hits the
-        # JSON `/api-2.0/course-landing-components/…&couponCode=…` endpoint and
-        # is unaffected.  For the document fetch we need nothing beyond the
-        # bare `/course/<slug>/` URL to extract the course ID and metadata,
-        # so strip query + fragment here.
-        parts = urlsplit(url)
-        fetch_url = urlunsplit(parts._replace(query="", fragment=""))
-        if not fetch_url.endswith("/"):
-            fetch_url += "/"
 
-        # Adaptive jitter/backoff before ANY outbound course-page work.  Keeps
-        # cadence out of automation territory and widens the gap after 403s.
         await self._course_fetch_throttle()
 
-        # ---- Stage 1: Firecrawl (third-party renderer) ----
-        if self.firecrawl_api_key:
-            logger.info(f"Stealth: Fetching course ID for {course.title} via Firecrawl...")
-            fc_schema = {"type": "object", "properties": {"course_id": {"type": "string"}, "title": {"type": "string"}}}
-            fc_data = await self._firecrawl_scrape(fetch_url, schema=fc_schema)
-            if fc_data and "extract" in fc_data:
-                cid = fc_data["extract"].get("course_id")
-                if cid and str(cid) not in BLACKLIST_IDS:
-                    course.course_id = str(cid)
-                    final_url = fc_data.get("metadata", {}).get("pageUrl")
-                    if final_url and "udemy.com" in final_url:
-                        logger.debug(f"  Firecrawl redirected to: {final_url}")
-                        course.set_url(final_url)
-                    self._course_fetch_report(200)
-                    if course.coupon_code:
-                        logger.debug(f"  Success: Found ID {course.course_id} and coupon via Firecrawl")
-                        return
-                    else:
-                        logger.debug(f"  Firecrawl found ID {course.course_id} but no coupon. Continuing to fallback...")
-
-        # ---- Stage 2: Public slug API (anonymous JSON) ----
+        # 1. Anonymous Slug API (Most efficient)
         if course.slug:
-            logger.info(f"API: Resolving {course.title} via anonymous slug API...")
-            api_payload = await self._fetch_course_id_by_slug_api(course.slug)
-            if api_payload and isinstance(api_payload, dict):
-                api_id = api_payload.get("id")
-                if api_id and str(api_id) not in BLACKLIST_IDS:
-                    course.course_id = str(api_id)
-                    canonical_url = api_payload.get("url")
-                    if canonical_url:
-                        # API returns a path like /course/<slug>/ — normalise to full URL
-                        full = canonical_url if canonical_url.startswith("http") else f"{constants.UDEMY_BASE_URL}{canonical_url}"
-                        course.set_url(full)
-                    # Title rarely overrides a user-supplied one, but it can fill in blanks.
-                    api_title = api_payload.get("title")
-                    if api_title and not course.title:
-                        course.title = api_title
+            api_url = f"{constants.UDEMY_API_BASE}/courses/{course.slug}/?fields[course]=id,title,url"
+            try:
+                resp = await self.http.get(
+                    api_url, req_type="mobile", randomize_headers=True
+                )
+                data = await self.http.safe_json(resp)
+                if data and data.get("id"):
+                    course.course_id = str(data["id"])
                     self._course_fetch_report(200)
-                    logger.debug(f"  Success: Found ID {course.course_id} via slug API")
                     return
+            except Exception:
+                pass
+
+        # 2. CloudScraper HTML Fetch
+        logger.info(f"  Fetching {course.title} via CloudScraper...")
+        resp = await self.http.get(
+            course.url, use_cloudscraper=True, req_type="document"
+        )
+        if resp and resp.status_code == 200:
+            course.course_id = self._extract_course_id(resp.text)
+            if course.course_id:
+                self._course_fetch_report(200)
+                return
             else:
-                logger.debug("  Slug API miss; falling through to Playwright paths")
-
-        resp = None
-
-        # ---- Stage 3: Anonymous Playwright HTML fetch ----
-        if use_headless_fallback:
-            anon_ctx = await self._get_anonymous_pw_context()
-            if anon_ctx is not None:
-                logger.info(f"Stealth: Fetching course ID for {course.title} via anonymous Playwright...")
-                # Temporarily pivot _pw_cf_clearance_earned tracking onto the
-                # anonymous context so _page_goto_fetch's prewarm logic uses the
-                # right flag.  We save/restore rather than refactor the helper
-                # (keeps the blast radius of this change tiny).
-                saved_earned = self._pw_cf_clearance_earned
-                self._pw_cf_clearance_earned = self._pw_anon_cf_clearance_earned
-                try:
-                    resp = await self._page_goto_fetch(anon_ctx, fetch_url, "GET")
-                finally:
-                    # Harvest the (possibly-updated) anonymous cf_clearance flag
-                    # and restore the authed one untouched by this detour.
-                    self._pw_anon_cf_clearance_earned = self._pw_cf_clearance_earned
-                    self._pw_cf_clearance_earned = saved_earned
-                if resp and resp.status_code == 200:
-                    final_url = str(resp.url)
-                    logger.debug(f"  Anonymous Playwright resolved to: {final_url}")
-                    course.set_url(final_url)
-                    soup = bs(resp.content, "lxml")
-                    body = soup.find("body")
-                    if body:
-                        try:
-                            dma = json.loads(body.get("data-module-args", "{}"))
-                            course.set_metadata(dma)
-                        except Exception:
-                            pass
-                    if not course.course_id:
-                        course.course_id = self._extract_course_id(soup)
-                    if course.course_id:
-                        self._course_fetch_report(200)
-                        logger.debug(f"  Success: Found ID {course.course_id} via anonymous Playwright")
-                        return
-
-        # ---- Stage 4: Authenticated Playwright (last resort) ----
-        # If the account is flagged this will 403.  Kept only for accounts still
-        # in good standing, and capped with adaptive retries (2-5 attempts based on
-        # consecutive 403 count) so one bad account doesn't wedge the whole run.
-        consecutive_403 = 0
-        # Adaptive max retries: if we've seen many 403s before, try harder before giving up
-        # This helps recovery when Udemy's throttle briefly loosens
-        max_403_retries = min(5, 2 + max(0, min(3, self._course_fetch_consecutive_403s // 2)))
-        if use_headless_fallback:
-            logger.info(f"Stealth: Fetching course ID for {course.title} via authenticated Playwright (max {max_403_retries} retries)...")
-            while consecutive_403 < max_403_retries:
-                resp = await self._playwright_request(fetch_url, req_type="document")
-                if resp and resp.status_code == 200:
-                    final_url = str(resp.url)
-                    logger.debug(f"  Authed Playwright resolved to: {final_url}")
-                    course.set_url(final_url)
-                    soup = bs(resp.content, "lxml")
-                    body = soup.find("body")
-                    if body:
-                        try:
-                            dma = json.loads(body.get("data-module-args", "{}"))
-                            course.set_metadata(dma)
-                        except Exception:
-                            pass
-                    if not course.course_id:
-                        course.course_id = self._extract_course_id(soup)
-                    if course.course_id:
-                        self._course_fetch_report(200)
-                        if course.coupon_code:
-                            logger.debug(f"  Success: Found ID {course.course_id} and coupon via Playwright")
-                        else:
-                            logger.debug(f"  Success: Found ID {course.course_id} via Playwright (still no coupon)")
-                        return
-                    break
-                elif resp and resp.status_code == 403:
-                    consecutive_403 += 1
-                    self._course_fetch_report(403)
-                    if consecutive_403 < max_403_retries:
-                        # Exponential backoff: 2s, 4s, 8s, 16s with jitter
-                        backoff = 2 ** consecutive_403 + random.uniform(0, 2)
-                        logger.warning(f"403 Forbidden (attempt {consecutive_403}/{max_403_retries}). "
-                                      f"Forcing full session re-challenge with {backoff:.1f}s backoff...")
-                        await asyncio.sleep(backoff)
-                        if await self._refresh_csrf_stealth(force_full=True):
-                            await asyncio.sleep(2)
-                            continue
-                    logger.error(f"Too many 403 errors ({consecutive_403}/{max_403_retries}) on authed Playwright course fetch. "
-                               f"Account may be rate-limited by Udemy. Giving up on this course.")
-                    break
-                else:
-                    logger.debug(f"Authed Playwright returned {resp.status_code if resp else 'None'}.")
-                    break
-
-        if not course.course_id:
+                course.is_valid = False
+                course.error = "Course ID extraction failed from HTML"
+                logger.warning(f"  {course.error} for {course.title}")
+        elif resp:
             course.is_valid = False
-            if resp and resp.status_code == 200:
-                course.error = "Course ID not found"
-            elif resp and resp.status_code == 403:
-                if self._global_403_count >= self._global_403_circuit_threshold:
-                    course.error = f"Account rate-limited (403). Will retry after cooldown ({self.get_account_block_wait_seconds():.0f}s)"
-                else:
-                    course.error = "Failed to fetch course page (403 Forbidden - session blocked)"
-            else:
-                course.error = f"Failed to fetch course page ({resp.status_code if resp else 'No response'})"
-            logger.warning(f"Failed to identify course: {course.title} - {course.error}")
+            course.error = f"HTML fetch failed (Status: {resp.status_code})"
+            logger.warning(f"  {course.error} for {course.title}")
+            if resp.status_code == 403:
+                self._course_fetch_report(403)
+        else:
+            course.is_valid = False
+            course.error = "No response from Udemy"
+            logger.warning(f"  {course.error} for {course.title}")
 
     async def check_course(self, course: Course):
-        """Check coupon validity with Firecrawl-first, Playwright fallback chain."""
-        if course.price is not None:
-            return
-        
-        url = f"{constants.UDEMY_COURSE_LANDING_COMPONENTS_URL}{course.course_id}/me/?components=purchase"
-        if course.coupon_code:
-            url += f",redeem_coupon&couponCode={course.coupon_code}"
+        """Fetch price/coupon info via Mobile API."""
+        url = f"{constants.UDEMY_COURSE_LANDING_COMPONENTS_URL}{course.course_id}/me/?components=purchase,redeem_coupon,cacheable_purchase,cacheable_redeem_coupon&couponCode={course.coupon_code or ''}"
+        headers = {
+            "Referer": course.url or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/"
+        }
+        if self.cookie_dict.get("access_token"):
+            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
-        r = None
-        if self.firecrawl_api_key:
-            logger.info(f"Stealth: Checking coupon for {course.title} via Firecrawl...")
-            fc_data = await self._firecrawl_scrape(url)
-            if fc_data and "content" in fc_data:
-                try:
-                    r = json.loads(fc_data["content"])
-                except Exception: pass
-
+        resp = await self.http.get(
+            url,
+            cookies=self.cookie_dict,
+            headers=headers,
+            req_type="mobile",
+            use_cloudscraper=True,
+        )
+        r = await self.http.safe_json(resp, context="check_course")
         if not r:
-            logger.info(f"Stealth: Checking coupon for {course.title} via Playwright...")
-            resp = await self._playwright_request(url)
-            if resp and resp.status_code == 200:
-                r = await self.http.safe_json(resp, "playwright check course")
-
-        if not r:
+            status = resp.status_code if resp else "No Response"
             course.is_coupon_valid = False
-            course.error = "Failed to fetch course price info"
+            course.error = f"Check course failed (Status: {status})"
+            logger.warning(f"  {course.error} for {course.title}")
             return
 
         purchase_data = r.get("purchase", {}).get("data", {})
-        amount = purchase_data.get("list_price", {}).get("amount")
-        course.price = Decimal(str(amount)) if amount is not None else None
+        pricing_result = purchase_data.get("pricing_result", {})
 
-        if course.coupon_code:
-            if "redeem_coupon" in r:
-                discount_attempts = r["redeem_coupon"].get("discount_attempts", [])
-                if discount_attempts:
-                    status = discount_attempts[0].get("status")
-                    pricing = purchase_data.get("pricing_result", {})
-                    discount = pricing.get("discount_percent")
-                    
-                    if (status == "applied" or status == "unused") and discount == 100:
-                        course.is_coupon_valid = True
-                    else:
-                        course.is_coupon_valid = False
-                        if status not in ("applied", "unused"):
-                            course.error = f"Coupon status: {status}"
-                        elif discount != 100:
-                            course.error = f"Coupon only {discount}% off (not 100%)"
+        # Track list price for "amount saved" stats
+        lp = purchase_data.get("list_price", {}).get("amount") or 0
+        final_price = pricing_result.get("price", {}).get("amount") or 0
+        course.price = Decimal(str(final_price))
+
+        # If it becomes free, we save the list price
+        # But we only add to total if enrollment actually succeeds (handled in enrollment_manager)
+        course.list_price = Decimal(str(lp))
+
+        # A course is free if final_price is 0 or it's explicitly marked as free
+        is_free_result = pricing_result.get("is_free", False) or final_price == 0
+
+        if course.coupon_code and "redeem_coupon" in r:
+            attempts = r["redeem_coupon"].get("discount_attempts", [])
+            if attempts and attempts[0].get("status") == "applied":
+                if is_free_result:
+                    course.is_coupon_valid = True
+                    logger.info(f"  Coupon applied successfully (Free): {course.title}")
                 else:
                     course.is_coupon_valid = False
-                    course.error = "No discount attempts returned"
+                    course.error = f"Coupon applied but price is {final_price}"
+                    logger.warning(
+                        f"  Coupon applied but price mismatch: {course.title} (Price: {final_price})"
+                    )
             else:
                 course.is_coupon_valid = False
-                course.error = "Coupon not found in response"
+                msg = attempts[0].get("details") if attempts else "Invalid coupon"
+                course.error = msg
+                logger.warning(f"  Coupon invalid for {course.title}: {msg}")
+        elif is_free_result:
+            # Course is free without coupon
+            course.is_coupon_valid = True
+            logger.info(f"  Course is free (no coupon needed): {course.title}")
         else:
             course.is_coupon_valid = False
-            course.error = "No coupon code provided"
+            course.error = f"Course is not free (Price: {final_price})"
+            logger.warning(f"  {course.error} for {course.title}")
 
-    async def is_already_enrolled(self, course: Course, known_slugs: set = None) -> bool:
-        if self.enrolled_courses is None:
-            await self.get_enrolled_courses(known_slugs)
-        return course.slug in self.enrolled_courses
+    async def is_already_enrolled(
+        self, course: Course, known_slugs: Optional[Set[str]] = None
+    ) -> bool:
+        if known_slugs and course.slug in known_slugs:
+            return True
+        return (
+            self.enrolled_courses is not None and course.slug in self.enrolled_courses
+        )
 
     def is_course_excluded(self, course: Course, settings: dict):
-        return
+        min_rating = settings.get("min_rating", 0)
+        if course.rating and min_rating > 0 and course.rating < min_rating:
+            course.is_excluded = True
+            return
+
+        allowed_langs = [lang.lower() for lang in settings.get("languages", []) if lang]
+        if (
+            allowed_langs
+            and course.language
+            and course.language.lower() not in allowed_langs
+        ):
+            course.is_excluded = True
+            return
 
     async def free_checkout(self, course: Course):
-        """Enroll in a free course with Playwright-first stealth fallback."""
-        sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
-        status_url = f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private"
-        
-        csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
-        
-        logger.info(f"Stealth: Enrolling in free course {course.title} via Playwright...")
-        resp = await self._playwright_request(sub_url, method="POST")
-        if resp and resp.status_code == 200:
-            check_resp = await self._playwright_request(status_url)
-            if check_resp and check_resp.status_code == 200:
-                data = await self.http.safe_json(check_resp, "playwright free checkout check")
-                course.status = data.get("_class") == "course" if data else False
-                if course.status: 
-                    logger.debug(f"  Success: Enrolled in {course.title} via Playwright")
-                    return
+        """Enroll via Technatic-style two-step verification."""
+        # Step 1: Hit the subscribe URL
+        sub_url = f"https://www.udemy.com/course/subscribe/?courseId={course.course_id}"
+        headers = {
+            "User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
+            "Referer": course.url
+            or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+        # Technatic logic uses GET for subscribe
+        await self.http.get(
+            sub_url,
+            cookies=self.cookie_dict,
+            headers=headers,
+            req_type="mobile",
+            use_cloudscraper=True,
+        )
 
-        logger.info(f"Standard: Enrolling in free course {course.title}...")
-        headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
-        await self.http.post(sub_url, cookies=self.cookie_dict, headers=headers, req_type="api", log_failures=False)
-        
-        resp = await self.http.get(status_url, cookies=self.cookie_dict, req_type="api", log_failures=False)
-        if resp and resp.status_code == 200:
-            data = await self.http.safe_json(resp, "standard free checkout check")
-            course.status = data.get("_class") == "course" if data else False
-            if course.status:
+        # Step 2: Verify enrollment via API
+        verify_url = f"https://www.udemy.com/api-2.0/users/me/subscribed-courses/{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private"
+        resp2 = await self.http.get(
+            verify_url,
+            cookies=self.cookie_dict,
+            headers=headers,
+            req_type="mobile",
+            use_cloudscraper=True,
+        )
+
+        if resp2:
+            if resp2.status_code == 503:
+                # Technatic handles 503 as success for free checkout
+                course.status = True
                 return
 
-        logger.info(f"Fallback: Using checkout pipeline for free course {course.title}...")
-        course.status = await self.checkout_single(course)
+            data = await self.http.safe_json(resp2, context="free_checkout_verify")
+            if data and data.get("_class") == "course":
+                course.status = True
+                return
+
+        status = resp2.status_code if resp2 else "No Response"
+        logger.warning(
+            f"  Free checkout verification failed for {course.title}. Status: {status}"
+        )
 
     async def checkout_single(self, course: Course) -> bool:
-        """Asynchronously enroll in a single course with a coupon."""
-        max_retry_attempts = 2
-        attempt_count = 0
-        
-        for retry_attempt in range(max_retry_attempts):
-            attempt_count += 1
-            csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
-            if not csrf_token:
-                 refresh_success = await self._refresh_csrf_stealth()
-                 if not refresh_success:
-                     logger.error(f"Failed to obtain CSRF token for {course.title}")
-                     if retry_attempt >= max_retry_attempts - 1:
-                         return False
-                     await asyncio.sleep(2)
-                     continue
-                 csrf_token = self.http.client.cookies.get("csrftoken") or self.cookie_dict.get("csrf_token", "")
-                 if not csrf_token:
-                     logger.error(f"CSRF token still empty after refresh for {course.title}")
-                     if retry_attempt >= max_retry_attempts - 1:
-                         return False
-                     await asyncio.sleep(2)
-                     continue
+        """Enroll in a single course (Technatic-style)."""
+        await self.free_checkout(course)
+        return course.status
 
-            headers = {
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": constants.UDEMY_CHECKOUT_URL,
-                "X-CSRF-Token": csrf_token,
-            }
-            if self.cookie_dict.get("access_token"):
-                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
-
-            result = await self._checkout_one(course, headers)
-            if result:
-                logger.debug(f"✓ Single-course checkout succeeded for {course.title} (attempt {attempt_count})")
-                return True
-        
-        logger.warning(f"✗ Single-course checkout failed for {course.title} after {attempt_count} attempts")
-        return False
-
-    @staticmethod
-    def _title_overlap(a: str, b: str) -> float:
-        def tokenize(s):
-            s = re.sub(r'\b(20\d{2})\b', '', s)
-            s = re.sub(r'[^\w\s]', '', s.lower())
-            return set(s.split()) - {'the', 'a', 'an', 'and', 'or', 'in', 'of', 'to', 'for'}
-        ta, tb = tokenize(a), tokenize(b)
-        if not ta or not tb: return 0.0
-        return len(ta & tb) / len(ta | tb)
-
-    def _throttle_wait(self, result: dict) -> int:
-        detail = result.get("detail", "")
-        if "throttled" in str(detail).lower():
-            match = re.search(r"(\d+)\s+second", str(detail), re.IGNORECASE)
-            return int(match.group(1)) if match else 60
-        return 0
-
-    async def _checkout_one(self, course: Course, headers: dict) -> bool:
-        """Enroll with coupon via Playwright-first stealth chain (POST required)."""
-        payload = {
-            "checkout_environment": "Marketplace",
-            "checkout_event": "Submit",
-            "payment_info": {"method_id": "0", "payment_method": "free-method", "payment_vendor": "Free"},
-            "shopping_info": {
-                "items": [{
-                    "buyable": {"id": str(course.course_id), "type": "course"},
-                    "discountInfo": {"code": course.coupon_code},
-                    "price": {"amount": 0, "currency": self.currency.upper()},
-                }],
-                "is_cart": True,
-            },
+    def get_session_health_report(self) -> dict:
+        return {
+            "consecutive_403_errors": self._course_fetch_consecutive_403s,
+            "total_403_errors": self._global_403_count,
+            "account_blocked": self._account_block_active,
+            "csrf_refresh_failures": 0,  # Not applicable in pure emulation
+            "cloudflare_challenges": 0,  # Not applicable in pure emulation
         }
-        
-        # Increase max attempts significantly due to Cloudflare challenges
-        max_attempts = 7  # Increased from 5
-        consecutive_403_count = 0
-        max_403_consecutive = 4  # Increased from 3 (Cloudflare can cause multiple 403s)
-        
-        for attempt in range(max_attempts):
-            # Try to get CSRF token from multiple sources (prioritize real tokens)
-            csrf = (self.http.client.cookies.get("csrftoken") or 
-                   self.cookie_dict.get("csrf_token") or 
-                   self.cookie_dict.get("_csrf_from_header") or 
-                   self.http.client.headers.get("X-CSRFToken") or 
-                   self.cookie_dict.get("_csrf_from_html", ""))
-            
-            # Log token source for debugging (real vs fallback)
-            if csrf:
-                token_source = "cookie"
-                if "_csrf_from_header" in self.cookie_dict and self.cookie_dict.get("_csrf_from_header") == csrf:
-                    token_source = "response_header"
-                elif "_csrf_from_html" in self.cookie_dict and self.cookie_dict.get("_csrf_from_html") == csrf:
-                    token_source = "html"
-                elif "_csrf_fallback" in self.cookie_dict and self.cookie_dict.get("_csrf_fallback") == csrf:
-                    token_source = "fallback_uuid"
-                    logger.warning(f"Using fallback UUID token for {course.title} - session may be invalid")
-                logger.debug(f"Using CSRF token from {token_source}: {csrf[:20]}..." if len(csrf) > 20 else f"Using CSRF token from {token_source}")
-            else:
-                logger.warning("No CSRF token available for checkout")
-            
-            headers["X-CSRFToken"] = csrf
 
-            logger.info(f"Stealth: Executing checkout for {course.title} via Playwright (attempt {attempt + 1}/{max_attempts})...")
-            resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
-            
-            if not resp or resp.status_code != 200:
-                logger.info(f"Standard: Falling back to HTTPX checkout for {course.title}...")
-                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr", attempts=1, raise_for_status=False)
-            
-            if not resp:
-                continue
-            
-            if resp.status_code == 403:
-                consecutive_403_count += 1
-                if consecutive_403_count > max_403_consecutive:
-                    logger.error(f"Too many 403 errors ({consecutive_403_count}) for {course.title}. Giving up.")
-                    return False
-                
-                logger.warning(f"403 Forbidden on checkout for {course.title}. Refreshing session (attempt {consecutive_403_count}/{max_403_consecutive})...")
-                
-                # Implement improved exponential backoff with jitter
-                base_backoff = min(2 ** consecutive_403_count, 16)  # 2, 4, 8, 16 seconds (capped at 16)
-                jitter = random.uniform(0.5, 2.0)
-                backoff_delay = base_backoff + jitter
-                logger.debug(f"Waiting {backoff_delay:.1f}s before session refresh (base: {base_backoff}s, jitter: {jitter:.1f}s)...")
-                await asyncio.sleep(backoff_delay)
-                
-                # On repeated 403 errors, suggest using Firecrawl if available
-                if consecutive_403_count >= 2 and self.firecrawl_api_key:
-                    logger.info(f"Persistent 403 errors detected. Consider using Firecrawl API for course fetch/checkout operations.")
-                
-                refresh_success = await self._refresh_csrf_stealth()
-                if not refresh_success:
-                    logger.error(f"Failed to refresh CSRF token for {course.title}. Session may be invalid.")
-                    if consecutive_403_count >= max_403_consecutive:
-                        return False
-                else:
-                    # Extra wait after successful refresh to ensure cookies are synced
-                    await asyncio.sleep(3)
-                
-                continue
-
-            consecutive_403_count = 0
-            result = await self.http.safe_json(resp, "checkout one")
-            if result and result.get("status") == "succeeded":
-                self.amount_saved_c += Decimal(str(course.price or 0))
-                self.successfully_enrolled_c += 1
-                if self.enrolled_courses is not None:
-                    self.enrolled_courses[course.slug] = datetime.now(UTC).isoformat()
-                return True
-            
-            wait = self._throttle_wait(result or {})
-            if wait:
-                logger.info(f"Throttled. Waiting {wait} seconds before retry...")
-                await asyncio.sleep(wait)
-                continue
-            
-            logger.warning(f"Checkout failed with response status {resp.status_code}. Giving up.")
-            break
-        return False
-
-    async def bulk_checkout(self, courses: List[Course]) -> Dict[Course, str]:
-        """Asynchronously enroll in a batch of courses with stealth priority."""
-        outcomes: Dict[Course, str] = {c: "failed" for c in courses}
-        if not courses:
-            return outcomes
-        
-        # Monitoring metrics
-        metrics = {
-            "total_attempts": 0,
-            "successful_403_recoveries": 0,
-            "failed_checkouts": 0,
-            "session_blocks": 0,
-            "total_delay_time": 0.0,
-            "start_time": asyncio.get_event_loop().time(),
-        }
-        
-        remaining = list(courses)
-        max_bulk_attempts = len(courses) + 2
-        consecutive_403_count = 0
-        max_403_consecutive = 3
-        
-        for attempt in range(max_bulk_attempts):
-            if not remaining:
-                break
-            
-            metrics["total_attempts"] += 1
-            
-            if attempt > 0:
-                # Improved exponential backoff with jitter
-                # Start at 2s, double each time: 2s, 4s, 8s, 16s (capped)
-                base_delay = min(2 ** (attempt), 16)  # Capped at 16 seconds
-                # Add extra delay if we've had 403s (adaptive multiplier)
-                if consecutive_403_count > 0:
-                    adaptive_multiplier = 1.0 + (consecutive_403_count * 0.4)  # 1.4x, 1.8x, 2.2x...
-                    base_delay *= adaptive_multiplier
-                
-                jitter = random.uniform(0.5, 2.0)
-                backoff_delay = min(base_delay + jitter, 20)  # Cap final delay at 20 seconds
-                metrics["total_delay_time"] += backoff_delay
-                
-                logger.info(f"Waiting {backoff_delay:.1f}s before bulk checkout retry "
-                           f"(attempt {attempt + 1}/{max_bulk_attempts}, "
-                           f"403_count={consecutive_403_count}/{max_403_consecutive}, "
-                           f"base={base_delay:.1f}s, jitter={jitter:.1f}s)...")
-                await asyncio.sleep(backoff_delay)
-
-            csrf_token = (self.http.client.cookies.get("csrftoken") or 
-                         self.cookie_dict.get("csrf_token") or 
-                         self.http.client.headers.get("X-CSRFToken") or 
-                         self.cookie_dict.get("_csrf_from_html", ""))
-            if not csrf_token:
-                 logger.info(f"No CSRF token for bulk checkout. Refreshing...")
-                 refresh_success = await self._refresh_csrf_stealth()
-                 if not refresh_success:
-                     logger.error(f"Failed to refresh CSRF token for bulk checkout")
-                     consecutive_403_count += 1
-                     if consecutive_403_count >= max_403_consecutive:
-                         logger.error(f"Too many consecutive refresh failures ({consecutive_403_count}). Giving up bulk checkout.")
-                         metrics["session_blocks"] += 1
-                         break
-                     continue
-                 csrf_token = (self.http.client.cookies.get("csrftoken") or 
-                              self.cookie_dict.get("csrf_token") or 
-                              self.http.client.headers.get("X-CSRFToken") or 
-                              self.cookie_dict.get("_csrf_from_html", ""))
-                 if not csrf_token:
-                     logger.error("CSRF token still empty after refresh")
-                     consecutive_403_count += 1
-                     if consecutive_403_count >= max_403_consecutive:
-                         logger.error(f"Too many consecutive CSRF failures. Giving up bulk checkout.")
-                         metrics["session_blocks"] += 1
-                         break
-                     continue
-
-            headers = {
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": "https://www.udemy.com/payment/checkout/",
-                "X-CSRF-Token": csrf_token,
-            }
-            if self.cookie_dict.get("access_token"):
-                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
-
-            items = [{
-                "buyable": {"id": str(c.course_id), "type": "course"},
-                "discountInfo": {"code": c.coupon_code},
-                "price": {"amount": 0, "currency": self.currency.upper()},
-            } for c in remaining]
-            
-            payload = {
-                "checkout_environment": "Marketplace",
-                "checkout_event": "Submit",
-                "payment_info": {"method_id": "0", "payment_method": "free-method", "payment_vendor": "Free"},
-                "shopping_info": {"items": items, "is_cart": True},
-            }
-            
-            logger.info(f"Stealth: Executing bulk checkout for {len(remaining)} courses via Playwright (attempt {attempt + 1}/{max_bulk_attempts})...")
-            resp = await self._playwright_request(constants.UDEMY_CHECKOUT_SUBMIT_URL, method="POST", data=payload)
-            
-            if not resp or resp.status_code != 200:
-                logger.info("Standard: Falling back to HTTPX for bulk checkout...")
-                resp = await self.http.post(constants.UDEMY_CHECKOUT_SUBMIT_URL, json=payload, headers=headers, cookies=self.cookie_dict, randomize_headers=True, req_type="xhr", attempts=1, raise_for_status=False)
-            
-            if not resp:
-                logger.warning(f"No response from bulk checkout attempt {attempt + 1}")
-                continue
-                
-            if resp.status_code == 403:
-                consecutive_403_count += 1
-                self.session_recovery_state["consecutive_403_errors"] += 1
-                self.session_recovery_state["last_error_time"] = datetime.now(UTC)
-                
-                if consecutive_403_count > max_403_consecutive:
-                    logger.error(f"Too many 403 errors ({consecutive_403_count}) on bulk checkout. Session may be blocked. Giving up.")
-                    metrics["session_blocks"] += 1
-                    logger.error(f"Session recovery state: {self.session_recovery_state}")
-                    logger.info("Recommendation: Wait 30-60 seconds and retry, or switch to single-course mode")
-                    break
-                
-                logger.warning(f"Bulk checkout hit 403 Forbidden (attempt {consecutive_403_count}/{max_403_consecutive}). "
-                             f"Refreshing session... [Total attempts: {metrics['total_attempts']}]")
-                
-                # Implement improved exponential backoff before refresh
-                base_backoff = min(2 ** consecutive_403_count, 16)  # 2, 4, 8, 16 seconds
-                jitter = random.uniform(0.5, 2.0)
-                backoff_delay = base_backoff + jitter
-                metrics["total_delay_time"] += backoff_delay
-                logger.debug(f"Waiting {backoff_delay:.1f}s before session refresh (base: {base_backoff}s, jitter: {jitter:.1f}s)...")
-                await asyncio.sleep(backoff_delay)
-                
-                refresh_success = await self._refresh_csrf_stealth()
-                if refresh_success:
-                    metrics["successful_403_recoveries"] += 1
-                    logger.info(f"✓ Successfully recovered from 403 (recovery #{metrics['successful_403_recoveries']})")
-                    # Extra wait after refresh to ensure session is ready
-                    await asyncio.sleep(2)
-                else:
-                    logger.error("Failed to refresh CSRF after 403 - session may be blocked")
-                    logger.info("Current session recovery state: " + str(self.session_recovery_state))
-                    metrics["failed_checkouts"] += 1
-                continue
-
-            consecutive_403_count = 0
-            result = await self.http.safe_json(resp, "bulk checkout")
-            
-            if result and result.get("status") == "succeeded":
-                for c in remaining:
-                    self.amount_saved_c += Decimal(str(c.price or 0))
-                    self.successfully_enrolled_c += 1
-                    if self.enrolled_courses is not None:
-                        self.enrolled_courses[c.slug] = datetime.now(UTC).isoformat()
-                    outcomes[c] = "enrolled"
-                
-                elapsed = asyncio.get_event_loop().time() - metrics["start_time"]
-                logger.info(f"✓ Bulk checkout succeeded for {len(remaining)} courses "
-                           f"[Attempts: {metrics['total_attempts']}, Time: {elapsed:.1f}s, "
-                           f"403 Recoveries: {metrics['successful_403_recoveries']}]")
-                break
-            
-            msg = result.get("message", "") if result else ""
-            developer_message = (result or {}).get("developer_message", "")
-            if "item_already_subscribed" in str(developer_message):
-                quoted = re.search(r'"([^"]+)"', msg)
-                error_title = quoted.group(1) if quoted else ""
-                
-                offender = None
-                if error_title:
-                    best_score, best_course = 0.0, None
-                    for c in remaining:
-                        score = self._title_overlap(c.title, error_title)
-                        if score > best_score:
-                            best_score, best_course = score, c
-                    if best_score >= 0.4:
-                        offender = best_course
-                
-                if offender:
-                    logger.info(f"Course {offender.title} already enrolled. Removing from batch...")
-                    remaining.remove(offender)
-                    self.already_enrolled_c += 1
-                    outcomes[offender] = "already_enrolled"
-                    continue
-                
-                logger.info(f"Conflict detected but couldn't identify specific course. Falling back to single enrollments...")
-                for c in remaining:
-                    success = await self.checkout_single(c)
-                    outcomes[c] = "enrolled" if success else "failed"
-                break
-
-            wait = self._throttle_wait(result or {})
-            if wait:
-                logger.info(f"Throttled. Waiting {wait} seconds before retry...")
-                await asyncio.sleep(wait)
-                continue
-            
-            logger.warning(f"Bulk checkout failed (attempt {attempt + 1}). Response: {result}")
-            break
-        
-        # Log final metrics
-        elapsed = asyncio.get_event_loop().time() - metrics["start_time"]
-        success_rate = (len([o for o in outcomes.values() if o == "enrolled"]) / len(courses) * 100) if courses else 0
-        
-        logger.info(f"📊 Bulk Checkout Metrics: "
-                   f"Attempts={metrics['total_attempts']}, "
-                   f"403_Recoveries={metrics['successful_403_recoveries']}, "
-                   f"Session_Blocks={metrics['session_blocks']}, "
-                   f"Total_Delay={metrics['total_delay_time']:.1f}s, "
-                   f"Success_Rate={success_rate:.1f}%, "
-                   f"Duration={elapsed:.1f}s")
-        
-        return outcomes
+    async def close(self):
+        await self.http.close()

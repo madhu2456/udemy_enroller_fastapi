@@ -150,45 +150,8 @@
         }
         @keyframes slideUp { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
-
-        <!-- Google Tag Manager (load only after first user interaction) -->
-    <script>
-    (() => {
-        const GTM_ID = "GTM-PBB2W9VG";
-        let loaded = false;
-
-        function loadTagManager() {
-            if (loaded) return;
-            loaded = true;
-
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({
-                "gtm.start": new Date().getTime(),
-                event: "gtm.js",
-            });
-
-            const firstScript = document.getElementsByTagName("script")[0];
-            const script = document.createElement("script");
-            script.async = true;
-            script.src = `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`;
-            firstScript.parentNode.insertBefore(script, firstScript);
-        }
-
-        window.addEventListener("load", () => {
-            window.addEventListener("pointerdown", loadTagManager, { once: true });
-            window.addEventListener("keydown", loadTagManager, { once: true });
-            window.addEventListener("touchstart", loadTagManager, { once: true, passive: true });
-            window.addEventListener("scroll", loadTagManager, { once: true, passive: true });
-        });
-    })();
-    </script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen" style="background-color: #111827; color: #f3f4f6;">
-    <!-- Google Tag Manager (noscript) -->
-    <noscript>
-    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PBB2W9VG"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe>
-    </noscript>
     <!-- Navigation -->
     <nav class="bg-gray-800 border-b border-gray-700 px-6 py-3">
         <div class="max-w-7xl mx-auto flex items-center justify-between">

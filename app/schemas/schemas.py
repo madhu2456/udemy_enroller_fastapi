@@ -67,10 +67,6 @@ class SettingsUpdate(BaseModel):
     save_txt: Optional[bool] = None
     discounted_only: Optional[bool] = None
     proxy_url: Optional[str] = None
-    enable_headless: Optional[bool] = None
-    firecrawl_api_key: Optional[str] = None
-    enrollment_mode: Optional[str] = None
-    batch_size: Optional[int] = None
 
     @field_validator("proxy_url")
     @classmethod
@@ -79,6 +75,7 @@ class SettingsUpdate(BaseModel):
         if not v:
             return v
         from app.security import validate_proxy_url
+
         if not validate_proxy_url(v):
             raise ValueError("Invalid proxy URL format")
         return v
@@ -99,21 +96,7 @@ class SettingsUpdate(BaseModel):
             raise ValueError("course_update_threshold_months must be non-negative")
         return v
 
-    @field_validator("enrollment_mode")
-    @classmethod
-    def validate_enrollment_mode(cls, v: Optional[str]) -> Optional[str]:
-        """Validate enrollment mode is either 'single' or 'bulk'."""
-        if v is not None and v not in ("single", "bulk"):
-            raise ValueError("enrollment_mode must be 'single' or 'bulk'")
-        return v
 
-    @field_validator("batch_size")
-    @classmethod
-    def validate_batch_size(cls, v: Optional[int]) -> Optional[int]:
-        """Validate batch size is between 1 and 20."""
-        if v is not None and not (1 <= v <= 20):
-            raise ValueError("batch_size must be between 1 and 20")
-        return v
 class SettingsResponse(BaseModel):
     sites: dict
     languages: dict
@@ -125,10 +108,6 @@ class SettingsResponse(BaseModel):
     save_txt: bool
     discounted_only: bool
     proxy_url: Optional[str]
-    enable_headless: bool
-    firecrawl_api_key: Optional[str]
-    enrollment_mode: str
-    batch_size: int
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,6 +115,7 @@ class SettingsResponse(BaseModel):
 # ── Enrollment ────────────────────────────────────────
 class EnrollmentStartRequest(BaseModel):
     """Request to start an enrollment run."""
+
     pass  # Uses current user settings
 
 
