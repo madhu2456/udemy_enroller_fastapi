@@ -54,30 +54,11 @@ class Scraper(ABC):
         if not link:
             return None
 
-        # 1. Unquote multiple times in case of nested encoding
-        link = unquote(unquote(link))
-
-        # 2. Extract udemy link from query parameters (common in redirectors)
-        if "udemy.com" in link.lower() and any(
-            k in link for k in ["link=", "url=", "u=", "target=", "redirect=", "go="]
-        ):
-            parsed = urlparse(link)
-            qs = parse_qs(parsed.query)
-            for key in ["link", "url", "u", "target", "redirect", "go"]:
-                if key in qs and "udemy.com" in qs[key][0]:
-                    link = qs[key][0]
-                    break
-
-        # 3. Basic cleanup
-        if "udemy.com" in link:
-            # Strip affiliate tags if any, but keep couponCode
-            parsed = urlparse(link)
-            qs = parse_qs(parsed.query)
-            coupon = qs.get("couponCode", [None])[0]
-
-            clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-            if coupon:
-                clean_url += f"/?couponCode={coupon}"
+        # Delegate to Course.normalize_link which now handles tracking unwrapping
+        clean_url = Course.normalize_link(link)
+        
+        # Ensure it's a valid udemy course link
+        if "udemy.com/course/" in clean_url:
             return clean_url
 
         return None
@@ -931,6 +912,11 @@ class EasyLearnScraper(Scraper):
             content = await self.playwright_get(
                 url, wait_selector="a:has-text('Enroll Now')"
             )
+
+            if not content:
+                logger.info("  EasyLearn: Playwright failed, falling back to CloudScraper...")
+                resp = await self.http.get(url, use_cloudscraper=True)
+                content = resp.text if resp else ""
 
             if not content:
                 return

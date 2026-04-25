@@ -390,13 +390,13 @@ class UdemyClient:
         elif resp:
             course.is_valid = False
             course.error = f"HTML fetch failed (Status: {resp.status_code})"
-            logger.warning(f"  {course.error} for {course.title}")
+            logger.warning(f"  {course.error} for {course.title} (URL: {course.url})")
             if resp.status_code == 403:
                 self._course_fetch_report(403)
         else:
             course.is_valid = False
             course.error = "No response from Udemy"
-            logger.warning(f"  {course.error} for {course.title}")
+            logger.warning(f"  {course.error} for {course.title} (URL: {course.url})")
 
     async def check_course(self, course: Course):
         """Fetch price/coupon info via Mobile API."""

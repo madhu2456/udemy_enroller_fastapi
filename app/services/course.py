@@ -1,7 +1,8 @@
 """Course model for the enrollment system."""
 
-from urllib.parse import parse_qs, urlparse, urlsplit, urlunparse
+from urllib.parse import parse_qs, urlparse, urlsplit, urlunparse, unquote
 import logging
+import html
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +43,62 @@ class Course:
     def set_url(self, url: str):
         self.url = self.normalize_link(url)
         self.set_slug()
-        self.extract_coupon_code()
 
     @staticmethod
     def normalize_link(url: str) -> str:
+        if not url:
+            return ""
+
+        # 0. Handle HTML entities (common when scraping from WordPress sites)
+        url = html.unescape(url)
+
+        # 1. Unquote multiple times in case of nested encoding (common in tracking links)
+        url = unquote(unquote(url))
+
+        # 2. Extract udemy link from query parameters (common in redirectors like trk.udemy.com)
+        if "udemy.com" in url.lower() and any(
+            k in url for k in ["link=", "url=", "u=", "target=", "redirect=", "go="]
+        ):
+            parsed = urlparse(url)
+            qs = parse_qs(parsed.query)
+            for key in ["link", "url", "u", "target", "redirect", "go"]:
+                if key in qs and "udemy.com" in qs[key][0]:
+                    url = qs[key][0]
+                    break
+
         parsed_url = urlparse(url)
         # Upgrade http → https and bare "udemy.com" → "www.udemy.com"
         scheme = "https"
         netloc = parsed_url.netloc.lower()
         if netloc == "udemy.com":
             netloc = "www.udemy.com"
+        
+        # Ensure it's a udemy link before we start stripping things
+        if "udemy.com" in netloc:
+            path = parsed_url.path
+            if not path.endswith("/"):
+                path += "/"
+            
+            # Extract coupon code to keep it, but strip other affiliate params
+            qs = parse_qs(parsed_url.query)
+            coupon = qs.get("couponCode", [None])[0]
+            
+            new_query = ""
+            if coupon:
+                new_query = f"couponCode={coupon}"
+            
+            return urlunparse(
+                (
+                    scheme,
+                    netloc,
+                    path,
+                    "", # params
+                    new_query,
+                    "", # fragment
+                )
+            )
+
+        # For non-udemy links (shouldn't really happen here but for safety)
         path = (
             parsed_url.path if parsed_url.path.endswith("/") else parsed_url.path + "/"
         )
