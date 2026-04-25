@@ -1,0 +1,9 @@
+FreeSimpleGUI
+rookiepy
+cloudscraper
+bs4
+requests
+pyopenssl
+rich
+loguru
+lxml

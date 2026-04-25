@@ -23,6 +23,7 @@ class Course:
         self.is_excluded = False
 
         self.price = None
+        self.list_price = None
         self.instructors = []
         self.language = None
         self.category = None
@@ -51,11 +52,19 @@ class Course:
         netloc = parsed_url.netloc.lower()
         if netloc == "udemy.com":
             netloc = "www.udemy.com"
-        path = parsed_url.path if parsed_url.path.endswith("/") else parsed_url.path + "/"
-        return urlunparse((
-            scheme, netloc, path,
-            parsed_url.params, parsed_url.query, parsed_url.fragment,
-        ))
+        path = (
+            parsed_url.path if parsed_url.path.endswith("/") else parsed_url.path + "/"
+        )
+        return urlunparse(
+            (
+                scheme,
+                netloc,
+                path,
+                parsed_url.params,
+                parsed_url.query,
+                parsed_url.fragment,
+            )
+        )
 
     def set_slug(self):
         parsed_url = urlparse(self.url)
@@ -76,12 +85,18 @@ class Course:
 
     def set_metadata(self, dma):
         from app.services.udemy_client import BLACKLIST_IDS
+
         try:
             if dma.get("view_restriction"):
                 self.is_valid = False
-                self.error = dma.get("serverSideProps", {}).get("limitedAccess", {}).get("errorMessage", {}).get("title", "Access Restricted")
+                self.error = (
+                    dma.get("serverSideProps", {})
+                    .get("limitedAccess", {})
+                    .get("errorMessage", {})
+                    .get("title", "Access Restricted")
+                )
                 return
-            
+
             # Check for course ID in DMA if we don't have it
             if not self.course_id:
                 cid = dma.get("serverSideProps", {}).get("course", {}).get("id")
@@ -98,11 +113,15 @@ class Course:
                 if i.get("absolute_url")
             ]
             self.language = course_data.get("localeSimpleEnglishTitle")
-            
-            breadcrumbs = dma.get("serverSideProps", {}).get("topicMenu", {}).get("breadcrumbs", [])
+
+            breadcrumbs = (
+                dma.get("serverSideProps", {})
+                .get("topicMenu", {})
+                .get("breadcrumbs", [])
+            )
             if breadcrumbs:
                 self.category = breadcrumbs[0].get("title")
-                
+
             self.rating = course_data.get("rating")
             self.last_update = course_data.get("lastUpdateDate")
             self.is_free = not course_data.get("isPaid", True)

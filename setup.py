@@ -10,7 +10,7 @@ def run_command(cmd, description):
     print(f"\n{'='*60}")
     print(f"📦 {description}")
     print(f"{'='*60}")
-    result = subprocess.run(cmd, shell=True, cwd=r"F:\Codes\Claude\Udemy Enroller")
+    result = subprocess.run(cmd, shell=True)
     if result.returncode == 0:
         print(f"✅ {description} - SUCCESS")
     else:
@@ -21,8 +21,8 @@ def main():
     """Main setup flow."""
     print("""
 ╔════════════════════════════════════════════════════════════════╗
-║          Udemy Enroller - Setup & Improvements                 ║
-║            Production-Ready Security & Monitoring               ║
+║          Udemy Enroller - Technatic Edition                    ║
+║            Pure Emulation Logic (No Playwright)                 ║
 ╚════════════════════════════════════════════════════════════════╝
     """)
     
@@ -65,16 +65,10 @@ def main():
         "Verify logging imports"
     )
     
-    print("    Checking Sentry configuration...")
+    print("    Checking Udemy client...")
     run_command(
-        f"{sys.executable} -c \"from app.sentry_config import setup_sentry; print('✅ Sentry module OK')\"",
-        "Verify Sentry imports"
-    )
-    
-    print("    Checking rate limiting...")
-    run_command(
-        f"{sys.executable} -c \"from app.rate_limit_config import setup_rate_limiting; print('✅ Rate limiting module OK')\"",
-        "Verify rate limiting imports"
+        f"{sys.executable} -c \"from app.services.udemy_client import UdemyClient; print('✅ UdemyClient module OK')\"",
+        "Verify Udemy client imports"
     )
     
     # Step 5: Summary
@@ -83,44 +77,34 @@ def main():
 ║                   ✅ SETUP COMPLETE                            ║
 ╚════════════════════════════════════════════════════════════════╝
 
-🎉 All 8 Improvements Implemented:
-  ✅ Password hashing (bcrypt)
-  ✅ CORS security fixes
-  ✅ Alembic migrations
-  ✅ URL input validation
-  ✅ Pytest tests
-  ✅ JSON structured logging
-  ✅ Sentry error tracking
-  ✅ Rate limiting (slowapi)
+🎉 Playwright-Free Implementation Active:
+  ✅ Mobile Emulation Logic
+  ✅ CloudScraper Integration
+  ✅ Async FastAPI Pipeline
+  ✅ Alembic Database Migrations
+  ✅ JSON Structured Logging
 
 📊 Next Steps:
   1. Configure your .env file:
      cp .env.example .env
      
-  2. Set up Sentry (optional):
-     - Create account at https://sentry.io
-     - Add SENTRY_DSN to .env
-     
-  3. Apply database migrations:
+  2. Apply database migrations:
      alembic upgrade head
      
-  4. Run the application:
-     python main.py
+  3. Run the application:
+     python run.py
      
-  5. Access health check:
+  4. Access health check:
      curl http://localhost:8000/api/health
 
 🔒 Security Features Active:
   - Passwords hashed with bcrypt
   - CORS restricted to configured origins
-  - Rate limiting enabled (100/min auth, 500/min API)
   - JSON structured logging with audit trail
-  - Sentry error tracking (when configured)
   - Input validation on all URLs
   - Secure cookie settings (httpOnly, secure, sameSite)
 
 📚 Documentation:
-  - See IMPLEMENTATION_GUIDE.md for detailed docs
   - Run: pytest tests/ -v for test suite
   - View: logs/app.log for application logs
     """)

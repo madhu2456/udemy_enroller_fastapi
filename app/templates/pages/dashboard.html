@@ -98,7 +98,7 @@
             </div>
 
             <!-- Live Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4 mb-6">
                 <div class="text-center">
                     <p class="text-green-400 text-2xl font-bold" id="live-enrolled">0</p>
                     <p class="text-xs text-gray-400">Enrolled</p>
@@ -118,6 +118,50 @@
                 <div class="text-center">
                     <p class="text-emerald-400 text-2xl font-bold" id="live-saved">$0</p>
                     <p class="text-xs text-gray-400">Saved</p>
+                </div>
+            </div>
+
+            <!-- New Courses Table Component -->
+            <div id="run-courses-panel" class="border-t border-gray-700 pt-6 mt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">
+                        <i class="fas fa-list-ul mr-2 text-blue-400"></i>Courses Found & Status
+                    </h3>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-gray-500 uppercase tracking-wider font-semibold mr-1">Filter:</span>
+                        <select id="status-filter" onchange="filterCourses()" class="bg-gray-700 border-gray-600 text-gray-200 text-xs rounded-lg px-2 py-1 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="all">All Statuses</option>
+                            <option value="enrolled">Success (Enrolled)</option>
+                            <option value="already_enrolled">Already Owned</option>
+                            <option value="expired">Expired/Invalid</option>
+                            <option value="excluded">Filtered (Excluded)</option>
+                            <option value="failed">Failed (Error)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto rounded-lg border border-gray-700 scrollbar-thin scrollbar-thumb-gray-600">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-900/50 text-gray-400 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-4 py-3 font-medium">Course Title</th>
+                                <th class="px-4 py-3 font-medium w-32">Status</th>
+                                <th class="px-4 py-3 font-medium w-24 text-right">Source</th>
+                            </tr>
+                        </thead>
+                        <tbody id="courses-body" class="divide-y divide-gray-700/50">
+                            <tr id="no-courses-row">
+                                <td colspan="3" class="px-4 py-8 text-center text-gray-500 italic">No courses processed in this run yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination Controls -->
+                <div id="pagination-controls" class="flex justify-between items-center mt-4 hidden">
+                    <button id="prev-page" onclick="changePage(-1)" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-md text-sm disabled:opacity-50 transition-colors" disabled>Previous</button>
+                    <span id="page-info" class="text-sm text-gray-400">Page 1 of 1</span>
+                    <button id="next-page" onclick="changePage(1)" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-md text-sm disabled:opacity-50 transition-colors" disabled>Next</button>
                 </div>
             </div>
         </div>
@@ -177,7 +221,7 @@
                 <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-400 font-medium hover:text-blue-300 underline decoration-blue-500/30 underline-offset-2">Madhu Dadi</a>.
             </p>
             <p>
-                As a software engineer specializing in AI and full-stack development, Madhu built this application using <strong>FastAPI, Playwright, and SQLAlchemy</strong> to automate premium learning access.
+                As a software engineer specializing in AI and full-stack development, Madhu built this application using <strong>FastAPI, CloudScraper, and SQLAlchemy</strong> to automate premium learning access.
             </p>
             
             <div class="pt-4 border-t border-gray-700 flex flex-col space-y-2">
@@ -208,6 +252,9 @@
 let progressInterval = null;
 let savingsChart = null;
 let chartJsPromise = null;
+let currentRunCourses = [];
+let currentPage = 1;
+const itemsPerPage = 10;
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeDashboard();
@@ -413,11 +460,110 @@ function startProgressPolling() {
                 return;
             }
             updateProgress(data);
+            
+            // Only load details if we are in enrolling phase or just finished
+            if (data.status === 'enrolling' || data.status === 'completed') {
+                loadRunDetails(data.run_id);
+            }
         } catch (e) {}
     }, 5000);
 }
 
+async function loadRunDetails(runId) {
+    try {
+        const resp = await fetch(`/api/enrollment/run/${runId}`);
+        const data = await resp.json();
+        currentRunCourses = data.courses || [];
+        renderRunCourses();
+    } catch (e) {
+        console.error('Failed to load run details:', e);
+    }
+}
+
+function renderRunCourses(resetPage = false) {
+    if (resetPage) currentPage = 1;
+    
+    const filter = document.getElementById('status-filter').value;
+    const body = document.getElementById('courses-body');
+    const paginationControls = document.getElementById('pagination-controls');
+    
+    let filtered = currentRunCourses;
+    if (filter !== 'all') {
+        filtered = currentRunCourses.filter(c => c.status === filter);
+    }
+    
+    // Reverse array to show the most recent courses first
+    filtered = [...filtered].reverse();
+    
+    if (filtered.length === 0) {
+        body.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-gray-500 italic">No courses found matching the filter.</td></tr>`;
+        paginationControls.classList.add('hidden');
+        return;
+    }
+    
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedCourses = filtered.slice(startIndex, endIndex);
+    
+    body.innerHTML = paginatedCourses.map(course => {
+        let statusColor = 'text-gray-400';
+        let statusIcon = 'fa-info-circle';
+        
+        switch(course.status) {
+            case 'enrolled': statusColor = 'text-green-400'; statusIcon = 'fa-check-circle'; break;
+            case 'already_enrolled': statusColor = 'text-cyan-400'; statusIcon = 'fa-user-check'; break;
+            case 'expired': statusColor = 'text-red-400'; statusIcon = 'fa-clock'; break;
+            case 'invalid': statusColor = 'text-red-400'; statusIcon = 'fa-exclamation-circle'; break;
+            case 'excluded': statusColor = 'text-yellow-400'; statusIcon = 'fa-filter'; break;
+            case 'failed': statusColor = 'text-orange-400'; statusIcon = 'fa-times-circle'; break;
+        }
+        
+        return `
+            <tr class="hover:bg-gray-800/50 transition-colors">
+                <td class="px-4 py-3">
+                    <div class="flex flex-col">
+                        <span class="text-gray-200 font-medium line-clamp-1">${course.title}</span>
+                        <a href="${course.url}" target="_blank" class="text-xs text-blue-500 hover:underline truncate max-w-md">${course.url}</a>
+                    </div>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="flex items-center ${statusColor} text-xs font-semibold uppercase tracking-wider">
+                        <i class="fas ${statusIcon} mr-1.5"></i>${course.status.replace('_', ' ')}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <span class="px-2 py-0.5 rounded bg-gray-900 text-gray-500 text-[10px] border border-gray-700 font-mono italic">
+                        ${course.site_source || 'Unknown'}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    if (totalPages > 1) {
+        paginationControls.classList.remove('hidden');
+        document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById('prev-page').disabled = currentPage === 1;
+        document.getElementById('next-page').disabled = currentPage === totalPages;
+    } else {
+        paginationControls.classList.add('hidden');
+    }
+}
+
+function changePage(delta) {
+    currentPage += delta;
+    renderRunCourses();
+}
+
+function filterCourses() {
+    renderRunCourses(true);
+}
+
 function updateProgress(data) {
+    console.log("Live Progress Data:", data); // Debugging
     // Status
     const statusEl = document.getElementById('run-status');
     if (data.status === 'pending') {
@@ -441,7 +587,7 @@ function updateProgress(data) {
     document.getElementById('live-already').textContent = data.already_enrolled;
     document.getElementById('live-expired').textContent = data.expired;
     document.getElementById('live-excluded').textContent = data.excluded;
-    document.getElementById('live-saved').textContent = `$${data.amount_saved.toFixed(2)}`;
+    document.getElementById('live-saved').textContent = `${data.currency === 'inr' ? '₹' : '$'}${data.amount_saved.toFixed(2)}`;
 
     // Current course
     if (data.current_course_title) {
@@ -452,21 +598,33 @@ function updateProgress(data) {
     }
 
     // Scraping sites
-    if (data.scraping_progress && data.scraping_progress.length > 0) {
-        const container = document.getElementById('scraping-sites');
-        container.innerHTML = data.scraping_progress.map(s => `
-            <div class="bg-gray-700 rounded-lg p-3">
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs text-gray-300 truncate">${s.site}</span>
-                    ${s.done ? '<i class="fas fa-check text-green-400 text-xs"></i>' :
-                      s.error ? '<i class="fas fa-times text-red-400 text-xs"></i>' :
-                      '<i class="fas fa-spinner fa-spin text-blue-400 text-xs"></i>'}
+    const scrapingContainer = document.getElementById('scraping-sites');
+    if (data.status === 'scraping') {
+        if (data.scraping_progress && data.scraping_progress.length > 0) {
+            scrapingContainer.innerHTML = data.scraping_progress.map(s => `
+                <div class="bg-gray-700 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs text-gray-300 truncate">${s.site}</span>
+                        ${s.done ? '<i class="fas fa-check text-green-400 text-xs"></i>' :
+                        s.error ? '<i class="fas fa-times text-red-400 text-xs"></i>' :
+                        '<i class="fas fa-spinner fa-spin text-blue-400 text-xs"></i>'}
+                    </div>
+                    <div class="w-full bg-gray-600 rounded-full h-1.5">
+                        <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: ${s.total > 0 ? (s.progress / s.total * 100) : 0}%"></div>
+                    </div>
                 </div>
-                <div class="w-full bg-gray-600 rounded-full h-1.5">
-                    <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${s.total > 0 ? (s.progress / s.total * 100) : 0}%"></div>
-                </div>
-            </div>
-        `).join('');
+            `).join('');
+        } else {
+            scrapingContainer.innerHTML = '<div class="col-span-full py-4 text-center text-gray-500 text-xs italic"><i class="fas fa-spinner fa-spin mr-2"></i>Initializing scrapers...</div>';
+        }
+    } else if (data.status === 'enrolling') {
+        // Clear scraping sites when enrollment starts to save space, or keep them? 
+        // Let's hide them once they are all done.
+        if (data.scraping_progress && data.scraping_progress.length > 0) {
+            // Keep them but maybe more compact
+        } else {
+            scrapingContainer.innerHTML = '';
+        }
     }
 }
 

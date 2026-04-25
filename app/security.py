@@ -19,7 +19,9 @@ def hash_password(password: str) -> str:
     return hashed_bytes.decode("utf-8")
 
 
-def verify_password(plain_password: Optional[str], hashed_password: Optional[str]) -> bool:
+def verify_password(
+    plain_password: Optional[str], hashed_password: Optional[str]
+) -> bool:
     """Verify a plaintext password against its hash."""
     if not plain_password or not hashed_password:
         return False
@@ -43,10 +45,10 @@ class URLValidator(BaseModel):
         """Validate URL format and scheme with enhanced security."""
         if not v:
             raise ValueError("URL cannot be empty")
-        
+
         if not isinstance(v, str):
             raise ValueError("URL must be a string")
-        
+
         if len(v) > 2048:
             raise ValueError("URL exceeds maximum length of 2048 characters")
 
@@ -56,16 +58,18 @@ class URLValidator(BaseModel):
 
         try:
             result = urlparse(v)
-            
+
             # Validate scheme
             valid_schemes = ("http", "https", "socks5", "socks4", "socks4a")
             if result.scheme not in valid_schemes:
-                raise ValueError(f"Invalid URL scheme '{result.scheme}'. Valid schemes: {', '.join(valid_schemes)}")
+                raise ValueError(
+                    f"Invalid URL scheme '{result.scheme}'. Valid schemes: {', '.join(valid_schemes)}"
+                )
 
             # Ensure netloc exists
             if not result.netloc:
                 raise ValueError("Invalid URL: no network location specified")
-            
+
             return v
         except ValueError:
             raise

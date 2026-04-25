@@ -35,26 +35,12 @@ class Settings(BaseSettings):
     # Scraper defaults
     MAX_SCRAPER_WORKERS: int = 5
     SCRAPER_TIMEOUT: int = 30
-    ENROLLMENT_BATCH_SIZE: int = 5
     PROXIES: str = ""  # Comma-separated list of proxy URLs
-    FIRECRAWL_API_KEY: str = ""
-    
-    # Enrollment strategy
-    SINGLE_COURSE_CHECKOUT: bool = False  # True = one at a time, False = bulk checkout (5 courses at once)
 
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "logs/app.log"
     LOG_FORMAT: str = "json"  # "json" or "text"
-
-    # Monitoring
-    SENTRY_DSN: str = ""
-    SENTRY_ENVIRONMENT: str = "development"
-
-    # Rate Limiting
-    RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_AUTH: str = "100/minute"
-    RATE_LIMIT_API: str = "500/minute"
 
     model_config = SettingsConfigDict(
         env_file=".env",

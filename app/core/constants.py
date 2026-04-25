@@ -1,10 +1,14 @@
 """Application constants and URLs."""
 
+import asyncio
+
 UDEMY_BASE_URL = "https://www.udemy.com"
 UDEMY_API_BASE = f"{UDEMY_BASE_URL}/api-2.0"
 
 # Auth URLs
-UDEMY_LOGIN_POPUP_URL = f"{UDEMY_BASE_URL}/join/login-popup/?passwordredirect=True&response_type=json"
+UDEMY_LOGIN_POPUP_URL = (
+    f"{UDEMY_BASE_URL}/join/login-popup/?passwordredirect=True&response_type=json"
+)
 UDEMY_SIGNUP_POPUP_URL = f"{UDEMY_BASE_URL}/join/signup-popup/?locale=en_US&response_type=html&next=https%3A%2F%2Fwww.udemy.com%2Flogout%2F"
 
 # API Endpoints
@@ -17,7 +21,6 @@ UDEMY_CHECKOUT_SUBMIT_URL = f"{UDEMY_BASE_URL}/payment/checkout-submit/"
 UDEMY_COURSE_SUBSCRIBE_URL = f"{UDEMY_BASE_URL}/course/subscribe/"
 
 # Common Headers
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
 
-import asyncio
 shutdown_event = asyncio.Event()

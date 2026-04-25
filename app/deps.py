@@ -36,38 +36,58 @@ def get_current_user_id(session: UserSession = Depends(get_session)) -> int:
     return session.user_id
 
 
-async def get_udemy_client(request: Request, session: UserSession = Depends(get_session)) -> UdemyClient:
+async def get_udemy_client(
+    request: Request, session: UserSession = Depends(get_session)
+) -> UdemyClient:
     """Return the authenticated UdemyClient for this session."""
     token = session.token
     clients = getattr(request.app.state, "udemy_clients", {})
     client = clients.get(token)
-    
-    if client and client.is_authenticated:
+
+    # Check if client exists and is valid + has current methods (defensive against hot-reloads)
+    if client and client.is_authenticated and hasattr(client, "set_proxy"):
         return client
 
     user = session.user
     cookies = user.udemy_cookies if user else None
     if not user or not isinstance(cookies, dict):
-        raise HTTPException(status_code=401, detail="Udemy session missing. Please log in again.")
+        raise HTTPException(
+            status_code=401, detail="Udemy session missing. Please log in again."
+        )
 
+    # We need at least some form of authentication (Token or Session ID)
     access_token = cookies.get("access_token")
     client_id = cookies.get("client_id")
-    csrf_token = cookies.get("csrf_token") or cookies.get("csrftoken") or ""
-    
-    if not access_token or not client_id:
-        raise HTTPException(status_code=401, detail="Udemy credentials invalid. Please log in again.")
+    dj_session_id = cookies.get("dj_session_id")
+
+    if not (access_token and client_id) and not dj_session_id:
+        logger.warning(
+            f"Session restoration failed for user {user.id}: Missing credentials in cookies"
+        )
+        raise HTTPException(
+            status_code=401, detail="Udemy credentials invalid. Please log in again."
+        )
 
     restored_client = UdemyClient(
-        proxy=user.settings.proxy_url if user.settings else None,
-        firecrawl_api_key=user.settings.firecrawl_api_key if user.settings else None
+        proxy=user.settings.proxy_url if user.settings else None
     )
-    restored_client.cookie_login(access_token, client_id, csrf_token)
-    
+
+    # Restore ALL cookies found in the database
+    restored_client.cookie_dict = cookies.copy()
+    restored_client.http.client.cookies.update(restored_client.cookie_dict)
+
+    # If we have a stored display name, set it tentatively
+    restored_client.display_name = user.udemy_display_name or "User"
+
     try:
         await restored_client.get_session_info()
     except Exception as exc:
-        logger.warning(f"Failed to restore Udemy session for user {session.user_id}: {exc}")
-        raise HTTPException(status_code=401, detail="Udemy session expired. Please log in again.")
+        logger.warning(
+            f"Failed to restore Udemy session for user {session.user_id}: {exc}"
+        )
+        raise HTTPException(
+            status_code=401, detail="Udemy session expired. Please log in again."
+        )
 
     if not hasattr(request.app.state, "udemy_clients"):
         request.app.state.udemy_clients = {}

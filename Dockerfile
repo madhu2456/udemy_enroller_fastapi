@@ -25,16 +25,6 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy application code
 COPY . .
 
-# Install system dependencies for Playwright and Chromium
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    && pip install --no-cache-dir playwright \
-    && playwright install --with-deps chromium \
-    && apt-get purge -y curl \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
-
 # Create necessary directories and set permissions for entrypoint
 RUN mkdir -p logs Courses data && \
     chmod +x docker-entrypoint.sh
