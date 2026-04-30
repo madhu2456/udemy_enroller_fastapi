@@ -932,10 +932,62 @@ class EasyLearnScraper(Scraper):
                 url, wait_selector="a:has-text('Enroll Now')"
             )
 
-            if not content:
-                logger.info("  EasyLearn: Playwright failed, falling back to CloudScraper...")
-                resp = await self.http.get(url, use_cloudscraper=True)
-                content = resp.text if resp else ""
+            if not content or "__next_error__" in content or "404: This page could not be found" in content:
+                logger.info("  EasyLearn: Homepage blocked or 404, trying sitemap fallback...")
+                sitemap_url = "https://www.easylearn.ing/sitemap.xml"
+                sitemap_resp = await self.http.get(sitemap_url, use_cloudscraper=True)
+                sitemap_content = sitemap_resp.text if sitemap_resp else ""
+                
+                if sitemap_content:
+                    # Extract course URLs from sitemap
+                    course_urls = re.findall(r"<loc>(https://www\.easylearn\.ing/course/.*?)</loc>", sitemap_content)
+                    if course_urls:
+                        logger.info(f"  EasyLearn: Found {len(course_urls)} courses in sitemap. Sampling first 50...")
+                        # Sample 50 courses to avoid overwhelming and keep it reasonably "recent" enough for a scrape
+                        sampled_urls = course_urls[:50]
+                        self.length = len(sampled_urls)
+                        
+                        async def _fetch_course_details(course_url):
+                            try:
+                                resp = await self.http.get(course_url, use_cloudscraper=True)
+                                if not resp:
+                                    return None, None
+                                
+                                c_soup = self.parse_html(resp.text)
+                                # Look for udemy link - matches existing pattern in scrape()
+                                udemy_link = None
+                                link_tag = c_soup.find("a", href=re.compile(r"trk\.udemy\.com"))
+                                if link_tag:
+                                    udemy_link = link_tag["href"]
+                                
+                                if not udemy_link:
+                                    # Try broader match
+                                    link_tag = c_soup.find("a", href=re.compile(r"udemy\.com/course/"))
+                                    if link_tag:
+                                        udemy_link = link_tag["href"]
+                                
+                                if udemy_link:
+                                    # Extract title from h1 or slug
+                                    title_tag = c_soup.find("h1")
+                                    title = title_tag.get_text(strip=True) if title_tag else course_url.split("/")[-1].replace("-", " ").title()
+                                    return title, udemy_link
+                            except Exception:
+                                pass
+                            return None, None
+
+                        detail_tasks = [
+                            self._run_detail_task(detail_semaphore, _fetch_course_details, curl)
+                            for curl in sampled_urls
+                        ]
+                        
+                        for i, task in enumerate(asyncio.as_completed(detail_tasks)):
+                            title, link = await task
+                            if title and link:
+                                cleaned = self.cleanup_link(link)
+                                if cleaned:
+                                    self.append_to_list(title, cleaned)
+                            self.progress = i + 1
+                        return
 
             if not content:
                 return
