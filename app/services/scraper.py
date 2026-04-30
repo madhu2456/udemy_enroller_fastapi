@@ -266,7 +266,7 @@ class UdemyFreebiesScraper(Scraper):
 
             detail_tasks = [
                 self._run_detail_task(detail_semaphore, _fetch_details, item)
-                for item in all_items[:40]
+                for item in all_items[:100]
             ]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
@@ -410,7 +410,7 @@ class CourseVaniaScraper(Scraper):
 
             detail_tasks = [
                 self._run_detail_task(detail_semaphore, _fetch_details, item)
-                for item in list(unique_items.values())[:40]
+                for item in list(unique_items.values())[:100]
             ]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
@@ -662,7 +662,7 @@ class CouponamiScraper(Scraper):
             ca_semaphore = asyncio.Semaphore(3)
             detail_tasks = [
                 self._run_detail_task(ca_semaphore, _fetch_details, item)
-                for item in all_items[:40]
+                for item in all_items[:100]
             ]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
@@ -721,36 +721,55 @@ class CourseCouponClubScraper(Scraper):
 
             self.length = len(unique_items)
 
-            async def _fetch_details(a_tag):
+            async def _fetch_details(item):
                 try:
-                    title = a_tag.get_text(strip=True)
-                    page_url = a_tag["href"]
+                    page_url = item["href"]
                     page = await self.http.get(page_url, use_cloudscraper=True)
                     page_content = (
                         page.content if page else await self.playwright_get(page_url)
                     )
                     if not page_content:
-                        return None, None
+                        return []
+                    
                     detail_soup = self.parse_html(page_content)
-                    link_tag = (
-                        detail_soup.select_one("a[href*='udemy.com']")
-                        or detail_soup.select_one(".btn_offer_block")
-                        or detail_soup.select_one(".re_-f-btn")
-                    )
-                    if link_tag and "href" in link_tag.attrs:
-                        return title, link_tag["href"]
-                    return None, None
+                    found_courses = []
+                    
+                    # 1. Look for direct Udemy links
+                    udemy_links = detail_soup.select("a[href*='udemy.com']")
+                    for link in udemy_links:
+                        href = link.get("href", "")
+                        # Try to get a meaningful title nearby
+                        title = link.get_text(strip=True)
+                        if len(title) < 10:
+                            # Fallback to parent text or heading
+                            parent = link.find_parent(["h1", "h2", "h3", "h4", "p", "div"])
+                            title = parent.get_text(strip=True) if parent else item.get_text(strip=True)
+                        
+                        if "udemy.com" in href:
+                            found_courses.append((title[:200], href))
+
+                    # 2. Look for common button classes if no direct links found
+                    if not found_courses:
+                        buttons = detail_soup.select(".btn_offer_block, .re_-f-btn, .wp-block-button__link")
+                        for btn in buttons:
+                            href = btn.get("href", "")
+                            if href and ("udemy.com" in href or "/go/" in href or "trk.udemy.com" in href):
+                                title = btn.get_text(strip=True) or item.get_text(strip=True)
+                                found_courses.append((title[:200], href))
+                                
+                    return found_courses
                 except Exception:
-                    return None, None
+                    return []
 
             detail_tasks = [
                 self._run_detail_task(detail_semaphore, _fetch_details, item)
-                for item in list(unique_items.values())[:40]
+                for item in list(unique_items.values())[:100]
             ]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
-                title, link = await task
-                if title and link:
-                    self.append_to_list(title, link)
+                results = await task
+                if results:
+                    for title, link in results:
+                        self.append_to_list(title, link)
                 self.progress = i + 1
         except Exception:
             self.error = traceback.format_exc()
@@ -811,7 +830,7 @@ class CouponScorpionScraper(Scraper):
 
             detail_tasks = [
                 self._run_detail_task(detail_semaphore, _fetch_details, item)
-                for item in list(unique_items.values())[:40]
+                for item in list(unique_items.values())[:100]
             ]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task
@@ -885,7 +904,7 @@ class FreeWebCartScraper(Scraper):
 
             detail_tasks = [
                 self._run_detail_task(detail_semaphore, _fetch_details, item)
-                for item in list(unique_items.values())[:40]
+                for item in list(unique_items.values())[:100]
             ]
             for i, task in enumerate(asyncio.as_completed(detail_tasks)):
                 title, link = await task

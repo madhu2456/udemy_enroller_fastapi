@@ -11,6 +11,20 @@ def setup_event_loop():
             from asyncio import WindowsProactorEventLoopPolicy
             asyncio.set_event_loop_policy(WindowsProactorEventLoopPolicy())
             print("[INFO] Windows ProactorEventLoopPolicy set.")
+            
+            # Monkeypatch to silence ConnectionResetError [WinError 10054]
+            # This is a known issue on Windows with ProactorEventLoop
+            from asyncio import proactor_events
+            _original_call_connection_lost = proactor_events._ProactorBasePipeTransport._call_connection_lost
+
+            def _patched_call_connection_lost(self, exc=None):
+                try:
+                    _original_call_connection_lost(self, exc)
+                except (ConnectionResetError, ConnectionAbortedError):
+                    pass
+
+            proactor_events._ProactorBasePipeTransport._call_connection_lost = _patched_call_connection_lost
+            print("[INFO] Applied ConnectionResetError patch for Windows.")
         except ImportError:
             print("[WARN] Could not set WindowsProactorEventLoopPolicy.")
 

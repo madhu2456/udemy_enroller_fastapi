@@ -236,7 +236,7 @@ class AsyncHTTPClient:
                     status_code=resp_sync.status_code,
                     content=resp_sync.content,
                     headers=h,
-                    request=httpx.Request("GET", url),
+                    request=httpx.Request("GET", resp_sync.url),
                 )
             except Exception as e:
                 logger.warning(f"  CloudScraper GET failed: {e}")
@@ -358,7 +358,7 @@ class AsyncHTTPClient:
                     status_code=resp_sync.status_code,
                     content=resp_sync.content,
                     headers=httpx.Headers(resp_sync.headers),
-                    request=httpx.Request("POST", url),
+                    request=httpx.Request("POST", resp_sync.url),
                 )
             except Exception as e:
                 logger.warning(f"  CloudScraper POST failed: {e}")
