@@ -379,6 +379,13 @@ class UdemyClient:
             course.url, use_cloudscraper=True, req_type="document"
         )
         if resp and resp.status_code == 200:
+            # Update URL if redirected (important for tracking links like trk.udemy.com)
+            final_url = str(resp.url)
+            if final_url != course.url:
+                logger.info(f"    Redirected: {course.url} -> {final_url}")
+                course.url = final_url
+                course.extract_coupon_code()
+
             course.course_id = self._extract_course_id(resp.text)
             if course.course_id:
                 self._course_fetch_report(200)
@@ -422,7 +429,8 @@ class UdemyClient:
             logger.warning(f"  {course.error} for {course.title}")
             return
 
-        purchase_data = r.get("purchase", {}).get("data", {})
+        purchase = r.get("purchase") or r.get("cacheable_purchase")
+        purchase_data = purchase.get("data", {}) if purchase else {}
         pricing_result = purchase_data.get("pricing_result", {})
 
         # Track list price for "amount saved" stats
@@ -437,8 +445,9 @@ class UdemyClient:
         # A course is free if final_price is 0 or it's explicitly marked as free
         is_free_result = pricing_result.get("is_free", False) or final_price == 0
 
-        if course.coupon_code and "redeem_coupon" in r:
-            attempts = r["redeem_coupon"].get("discount_attempts", [])
+        redeem_data = r.get("redeem_coupon") or r.get("cacheable_redeem_coupon")
+        if course.coupon_code and redeem_data:
+            attempts = redeem_data.get("discount_attempts", [])
             if attempts and attempts[0].get("status") == "applied":
                 if is_free_result:
                     course.is_coupon_valid = True
@@ -451,7 +460,13 @@ class UdemyClient:
                     )
             else:
                 course.is_coupon_valid = False
-                msg = attempts[0].get("details") if attempts else "Invalid coupon"
+                if attempts:
+                    status = attempts[0].get("status", "failed")
+                    details = attempts[0].get("details")
+                    msg = f"{status}: {details}" if details else status
+                else:
+                    msg = "Coupon not found in response"
+                
                 course.error = msg
                 logger.warning(f"  Coupon invalid for {course.title}: {msg}")
         elif is_free_result:

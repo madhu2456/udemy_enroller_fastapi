@@ -295,10 +295,15 @@ class EnrollmentManager:
                                 # Course is valid and free/couponed - Enrolling
                                 await self.udemy.check_course(course)
                                 if not course.is_coupon_valid:
-                                    self.udemy.expired_c += 1
-                                    course_status = "expired"
+                                    if "403" in (course.error or ""):
+                                        course_status = "failed"
+                                        error_msg = course.error
+                                    else:
+                                        self.udemy.expired_c += 1
+                                        course_status = "expired"
+                                    
                                     logger.warning(
-                                        f"  Status: Expired/Invalid ({course.error}) for {course.title}"
+                                        f"  Status: {course_status.capitalize()} ({course.error}) for {course.title}"
                                     )
                                 else:
                                     # Enrolling in single course mode

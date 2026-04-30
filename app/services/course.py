@@ -49,9 +49,8 @@ class Course:
         if not url:
             return ""
 
-        # 0. Handle HTML entities (common when scraping from WordPress sites)
-        url = html.unescape(url)
-
+        # 0. Handle HTML entities and strip whitespace
+        url = html.unescape(url).strip()
         # 1. Unquote multiple times in case of nested encoding (common in tracking links)
         url = unquote(unquote(url))
 
