@@ -18,18 +18,19 @@ from config.settings import get_settings
 
 settings = get_settings()
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False, "timeout": 30}
-    if "sqlite" in settings.DATABASE_URL
-    else {},
-    pool_pre_ping=True,
-    # Prevent connection pool issues
-    pool_size=5,
-    max_overflow=10,
-    pool_recycle=3600,
-    echo=False,
-)
+_is_sqlite = "sqlite" in settings.DATABASE_URL
+_engine_kwargs = {
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+    "echo": False,
+}
+if _is_sqlite:
+    _engine_kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30}
+else:
+    # Connection pooling only relevant for non-SQLite databases
+    _engine_kwargs.update(pool_size=5, max_overflow=10)
+
+engine = create_engine(settings.DATABASE_URL, **_engine_kwargs)
 
 # Enable WAL mode for SQLite
 if "sqlite" in settings.DATABASE_URL:
@@ -120,17 +121,17 @@ class UserSettings(Base):
     def default_sites():
         return {
             "Real Discount": True,
-            "Couponami": True,
-            "Courson": True,
-            "IDownloadCoupons": True,
             "E-next": True,
-            "Udemy Freebies": True,
-            "Course Joiner": True,
-            "Course Vania": True,
             "Course Coupon Club": True,
-            "Coupon Scorpion": True,
-            "FreeWebCart": True,
-            "EasyLearn": True,
+            "Interview Gig": True,
+            "UdemyXpert": True,
+            "Coursesity": True,
+            "Course Folder": True,
+            "Couponami": True,
+            "Korshub": True,
+            "UdemyFreebies": True,
+            "iDownloadCoupon": True,
+            "Course Joiner": True,
         }
 
     @staticmethod

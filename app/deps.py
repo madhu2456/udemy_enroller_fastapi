@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db, UserSession, _utcnow_naive
+from app.security import decrypt_cookies
 from app.services.udemy_client import UdemyClient
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,10 @@ def get_session(request: Request, db: Session = Depends(get_db)) -> UserSession:
         # Cleanup expired session
         db.delete(session)
         db.commit()
-        if hasattr(request.app.state, "udemy_clients"):
+        cache = getattr(request.app.state, "session_cache", None)
+        if cache:
+            cache.pop(token)
+        elif hasattr(request.app.state, "udemy_clients"):
             request.app.state.udemy_clients.pop(token, None)
         raise HTTPException(status_code=401, detail="Session expired")
 
@@ -49,7 +53,7 @@ async def get_udemy_client(
         return client
 
     user = session.user
-    cookies = user.udemy_cookies if user else None
+    cookies = decrypt_cookies(user.udemy_cookies) if user and user.udemy_cookies else None
     if not user or not isinstance(cookies, dict):
         raise HTTPException(
             status_code=401, detail="Udemy session missing. Please log in again."
@@ -92,5 +96,10 @@ async def get_udemy_client(
     if not hasattr(request.app.state, "udemy_clients"):
         request.app.state.udemy_clients = {}
     request.app.state.udemy_clients[token] = restored_client
+    
+    # Also store in session cache if available
+    cache = getattr(request.app.state, "session_cache", None)
+    if cache:
+        cache.set(token, restored_client)
 
     return restored_client

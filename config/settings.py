@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production-use-a-strong-secret-key"
     COOKIE_SECURE: bool = False
     ALLOWED_HOSTS: str = "*"
+    # Cookie encryption key — must be 32 bytes base64-encoded for Fernet.
+    # Falls back to SECRET_KEY if not set (not recommended for production).
+    COOKIE_ENCRYPTION_KEY: str = ""
     # CORS origins - in production, set specific domains
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 

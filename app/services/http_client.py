@@ -145,7 +145,10 @@ class AsyncHTTPClient:
                 headers["X-Requested-With"] = "XMLHttpRequest"
 
             # Ensure Origin matches Referer if available
-            referer = custom_headers.get("Referer") if custom_headers else None
+            referer = None
+            if custom_headers:
+                referer = custom_headers.get("Referer") or custom_headers.get("referer")
+            
             if referer:
                 try:
                     ref_origin = (
@@ -192,80 +195,97 @@ class AsyncHTTPClient:
 
         custom_cookies = kwargs.pop("cookies", {})
 
-        if randomize:
-            headers = self._get_headers(
-                url, kwargs.pop("headers", None), req_type=req_type
-            )
-        else:
-            headers = kwargs.pop("headers", None)
-
-        is_mobile_request = (
-            "UdemyAndroid" in str(headers.get("User-Agent", "")) or req_type == "mobile"
-        )
-
-        # CLOUDSCRAPER FALLBACK (Technatic style)
-        if use_cloudscraper:
-            try:
-                # Use minimal headers for CloudScraper
-                scraper_headers = {}
-                if headers and "Referer" in headers:
-                    scraper_headers["Referer"] = headers["Referer"]
-                if headers and "Authorization" in headers:
-                    scraper_headers["Authorization"] = headers["Authorization"]
-                scraper_headers["Accept-Encoding"] = "identity"
-
-                def _do_scrape():
-                    scraper = self._get_scraper(is_mobile=is_mobile_request)
-                    if custom_cookies:
-                        scraper.cookies.update(custom_cookies)
-
-                    resp = scraper.get(
-                        url,
-                        headers=scraper_headers,
-                        timeout=25,
-                        allow_redirects=kwargs.get("allow_redirects", True),
-                    )
-                    # Sync cookies BACK to custom_cookies dictionary
-                    if custom_cookies is not None:
-                        custom_cookies.update(resp.cookies.get_dict())
-                    return resp
-
-                resp_sync = await asyncio.to_thread(_do_scrape)
-                h = httpx.Headers(resp_sync.headers)
-                return httpx.Response(
-                    status_code=resp_sync.status_code,
-                    content=resp_sync.content,
-                    headers=h,
-                    request=httpx.Request("GET", resp_sync.url),
-                )
-            except Exception as e:
-                logger.warning(f"  CloudScraper GET failed: {e}")
-
         await self._apply_human_like_delay()
 
         for attempt in range(attempts):
-            attempt + 1
+            if randomize:
+                headers = self._get_headers(
+                    url, kwargs.get("headers"), req_type=req_type
+                )
+            else:
+                headers = kwargs.get("headers")
+
+
+
+
+            is_mobile_request = (
+                "UdemyAndroid" in str(headers.get("User-Agent", "")) or req_type == "mobile"
+            )
+
             try:
-                if custom_cookies:
-                    for k, v in custom_cookies.items():
-                        self.client.cookies.set(k, v)
+                if use_cloudscraper:
+                    # CLOUDSCRAPER BRANCH
+                    # Use minimal headers for CloudScraper
+                    scraper_headers = {}
+                    if headers and "Referer" in headers:
+                        scraper_headers["Referer"] = headers["Referer"]
+                    if headers and "Authorization" in headers:
+                        scraper_headers["Authorization"] = headers["Authorization"]
+                    if headers and "User-Agent" in headers:
+                        scraper_headers["User-Agent"] = headers["User-Agent"]
+                    
+                    scraper_headers["Accept-Encoding"] = "identity"
 
-                async with self._request_semaphore:
-                    response = await self.client.get(url, headers=headers, **kwargs)
+                    def _do_scrape():
+                        scraper = self._get_scraper(is_mobile=is_mobile_request)
+                        if custom_cookies:
+                            scraper.cookies.update(custom_cookies)
 
-                if custom_cookies is not None:
-                    custom_cookies.update(dict(response.cookies))
+                        resp = scraper.get(
+                            url,
+                            headers=scraper_headers,
+                            timeout=25,
+                            allow_redirects=kwargs.get("allow_redirects", True),
+                        )
+                        # Sync cookies BACK to custom_cookies dictionary
+                        if custom_cookies is not None:
+                            custom_cookies.update(resp.cookies.get_dict())
+                        return resp
+
+                    resp_sync = await asyncio.to_thread(_do_scrape)
+                    response = httpx.Response(
+                        status_code=resp_sync.status_code,
+                        content=resp_sync.content,
+                        headers=httpx.Headers(resp_sync.headers),
+                        request=httpx.Request("GET", resp_sync.url),
+                    )
+                else:
+                    # STANDARD HTTPX BRANCH
+                    if custom_cookies:
+                        for k, v in custom_cookies.items():
+                            self.client.cookies.set(k, v)
+
+                    # Remove headers from kwargs if present to avoid double passing
+                    call_kwargs = kwargs.copy()
+                    call_kwargs.pop("headers", None)
+
+                    async with self._request_semaphore:
+                        response = await self.client.get(url, headers=headers, **call_kwargs)
+
+                    if custom_cookies is not None:
+                        custom_cookies.update(dict(response.cookies))
 
                 if response.status_code == 403:
-                    logger.warning(f"  [GET 403] URL: {url}")
+                    logger.warning(f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {url}")
 
                 if raise_for_status:
                     response.raise_for_status()
                 return response
-            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+
+            except Exception as e:
+                error_name = type(e).__name__
+                error_msg = str(e)
+                
+                # Check for DNS/Connection errors specifically
+                is_dns_error = any(x in error_msg for x in ["NameResolutionError", "getaddrinfo failed", "gaierror", "WSAHOST_NOT_FOUND"])
+                if is_dns_error:
+                    error_name = "DNSResolutionError"
+                    if log_failures:
+                        logger.warning(f"  DNS Resolution failed for {url} (Attempt {attempt+1}/{attempts})")
+
                 if log_failures:
                     logger.info(
-                        f"GET attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}"
+                        f"{'CloudScraper' if use_cloudscraper else 'GET'} attempt {attempt + 1}/{attempts} failed for {url}: {error_name}"
                     )
 
                 should_retry = attempt < attempts - 1
@@ -275,19 +295,16 @@ class AsyncHTTPClient:
                         should_retry = retry_403 and should_retry
                     elif status != 429 and status < 500:
                         should_retry = False
-
+                
                 if should_retry:
                     delay = (2**attempt) + random.uniform(1, 3)
-                    if (
-                        isinstance(e, httpx.HTTPStatusError)
-                        and e.response.status_code == 429
-                    ):
+                    if is_dns_error:
+                        delay += 5 # Extra wait for DNS
+                    
+                    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
                         retry_after = e.response.headers.get("Retry-After")
-                        delay = (
-                            int(retry_after)
-                            if retry_after and retry_after.isdigit()
-                            else 30
-                        )
+                        delay = int(retry_after) if retry_after and retry_after.isdigit() else 30
+                    
                     await asyncio.sleep(delay)
                 else:
                     break
@@ -305,89 +322,101 @@ class AsyncHTTPClient:
 
         custom_cookies = kwargs.pop("cookies", {})
 
-        if randomize:
-            headers = self._get_headers(
-                url, kwargs.pop("headers", None), req_type=req_type
-            )
-        else:
-            headers = kwargs.pop("headers", None)
-
-        is_mobile_request = (
-            "UdemyAndroid" in str(headers.get("User-Agent", "")) or req_type == "mobile"
-        )
-
-        # CLOUDSCRAPER FALLBACK (Technatic style)
-        if use_cloudscraper:
-            try:
-                # Use minimal headers for CloudScraper
-                scraper_headers = {}
-                if headers and "Referer" in headers:
-                    scraper_headers["Referer"] = headers["Referer"]
-                if headers and "Authorization" in headers:
-                    scraper_headers["Authorization"] = headers["Authorization"]
-                scraper_headers["Accept-Encoding"] = "identity"
-
-                def _do_scrape():
-                    scraper = self._get_scraper(is_mobile=is_mobile_request)
-                    if custom_cookies:
-                        scraper.cookies.update(custom_cookies)
-
-                    if "json" in kwargs:
-                        resp = scraper.post(
-                            url,
-                            json=kwargs["json"],
-                            headers=scraper_headers,
-                            timeout=25,
-                            allow_redirects=kwargs.get("allow_redirects", True),
-                        )
-                    else:
-                        resp = scraper.post(
-                            url,
-                            data=kwargs.get("data"),
-                            headers=scraper_headers,
-                            timeout=25,
-                            allow_redirects=kwargs.get("allow_redirects", True),
-                        )
-
-                    if custom_cookies is not None:
-                        custom_cookies.update(resp.cookies.get_dict())
-                    return resp
-
-                resp_sync = await asyncio.to_thread(_do_scrape)
-                return httpx.Response(
-                    status_code=resp_sync.status_code,
-                    content=resp_sync.content,
-                    headers=httpx.Headers(resp_sync.headers),
-                    request=httpx.Request("POST", resp_sync.url),
-                )
-            except Exception as e:
-                logger.warning(f"  CloudScraper POST failed: {e}")
-
         await self._apply_human_like_delay()
 
         for attempt in range(attempts):
-            attempt + 1
+            if randomize:
+                headers = self._get_headers(
+                    url, kwargs.get("headers"), req_type=req_type
+                )
+            else:
+                headers = kwargs.get("headers")
+
+
+
+
+            is_mobile_request = (
+                "UdemyAndroid" in str(headers.get("User-Agent", "")) or req_type == "mobile"
+            )
+
             try:
-                if custom_cookies:
-                    for k, v in custom_cookies.items():
-                        self.client.cookies.set(k, v)
+                if use_cloudscraper:
+                    # CLOUDSCRAPER BRANCH
+                    scraper_headers = {}
+                    if headers and "Referer" in headers:
+                        scraper_headers["Referer"] = headers["Referer"]
+                    if headers and "Authorization" in headers:
+                        scraper_headers["Authorization"] = headers["Authorization"]
+                    if headers and "User-Agent" in headers:
+                        scraper_headers["User-Agent"] = headers["User-Agent"]
+                    
+                    scraper_headers["Accept-Encoding"] = "identity"
 
-                async with self._request_semaphore:
-                    response = await self.client.post(url, headers=headers, **kwargs)
+                    def _do_scrape():
+                        scraper = self._get_scraper(is_mobile=is_mobile_request)
+                        if custom_cookies:
+                            scraper.cookies.update(custom_cookies)
 
-                if custom_cookies is not None:
-                    custom_cookies.update(dict(response.cookies))
+                        if "json" in kwargs:
+                            resp = scraper.post(
+                                url,
+                                json=kwargs["json"],
+                                headers=scraper_headers,
+                                timeout=25,
+                                allow_redirects=kwargs.get("allow_redirects", True),
+                            )
+                        else:
+                            resp = scraper.post(
+                                url,
+                                data=kwargs.get("data"),
+                                headers=scraper_headers,
+                                timeout=25,
+                                allow_redirects=kwargs.get("allow_redirects", True),
+                            )
+
+                        if custom_cookies is not None:
+                            custom_cookies.update(resp.cookies.get_dict())
+                        return resp
+
+                    resp_sync = await asyncio.to_thread(_do_scrape)
+                    response = httpx.Response(
+                        status_code=resp_sync.status_code,
+                        content=resp_sync.content,
+                        headers=httpx.Headers(resp_sync.headers),
+                        request=httpx.Request("POST", resp_sync.url),
+                    )
+                else:
+                    # STANDARD HTTPX BRANCH
+                    if custom_cookies:
+                        for k, v in custom_cookies.items():
+                            self.client.cookies.set(k, v)
+
+                    async with self._request_semaphore:
+                        response = await self.client.post(url, headers=headers, **kwargs)
+
+                    if custom_cookies is not None:
+                        custom_cookies.update(dict(response.cookies))
 
                 if response.status_code == 403:
-                    logger.warning(f"  [POST 403] URL: {url}")
+                    logger.warning(f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {url}")
 
                 if raise_for_status:
                     response.raise_for_status()
                 return response
-            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+
+            except Exception as e:
+                error_name = type(e).__name__
+                error_msg = str(e)
+                
+                is_dns_error = any(x in error_msg for x in ["NameResolutionError", "getaddrinfo failed", "gaierror", "WSAHOST_NOT_FOUND"])
+                if is_dns_error:
+                    error_name = "DNSResolutionError"
+                    if log_failures:
+                        logger.warning(f"  DNS Resolution failed for {url} (Attempt {attempt+1}/{attempts})")
+
                 if log_failures:
                     logger.info(
-                        f"POST attempt {attempt + 1}/{attempts} failed for {url}: {type(e).__name__}"
+                        f"{'CloudScraper' if use_cloudscraper else 'POST'} attempt {attempt + 1}/{attempts} failed for {url}: {error_name}"
                     )
 
                 should_retry = attempt < attempts - 1
@@ -400,16 +429,13 @@ class AsyncHTTPClient:
 
                 if should_retry:
                     delay = (2**attempt) + random.uniform(1, 3)
-                    if (
-                        isinstance(e, httpx.HTTPStatusError)
-                        and e.response.status_code == 429
-                    ):
+                    if is_dns_error:
+                        delay += 5
+                    
+                    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
                         retry_after = e.response.headers.get("Retry-After")
-                        delay = (
-                            int(retry_after)
-                            if retry_after and retry_after.isdigit()
-                            else 30
-                        )
+                        delay = int(retry_after) if retry_after and retry_after.isdigit() else 30
+                    
                     await asyncio.sleep(delay)
                 else:
                     break

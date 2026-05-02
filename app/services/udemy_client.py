@@ -354,6 +354,8 @@ class UdemyClient:
         if course.course_id:
             return
         if self.is_account_blocked():
+            course.is_valid = False
+            course.error = "Account temporarily blocked"
             return
 
         await self._course_fetch_throttle()
@@ -444,6 +446,7 @@ class UdemyClient:
 
         # A course is free if final_price is 0 or it's explicitly marked as free
         is_free_result = pricing_result.get("is_free", False) or final_price == 0
+        currency = pricing_result.get("price", {}).get("currency_symbol") or pricing_result.get("price", {}).get("currency") or ""
 
         redeem_data = r.get("redeem_coupon") or r.get("cacheable_redeem_coupon")
         if course.coupon_code and redeem_data:
@@ -454,9 +457,9 @@ class UdemyClient:
                     logger.info(f"  Coupon applied successfully (Free): {course.title}")
                 else:
                     course.is_coupon_valid = False
-                    course.error = f"Coupon applied but price is {final_price}"
+                    course.error = f"Coupon applied but price is {currency}{final_price}"
                     logger.warning(
-                        f"  Coupon applied but price mismatch: {course.title} (Price: {final_price})"
+                        f"  Coupon applied but price mismatch: {course.title} (Price: {currency}{final_price})"
                     )
             else:
                 course.is_coupon_valid = False
@@ -475,7 +478,7 @@ class UdemyClient:
             logger.info(f"  Course is free (no coupon needed): {course.title}")
         else:
             course.is_coupon_valid = False
-            course.error = f"Course is not free (Price: {final_price})"
+            course.error = f"Course is not free (Price: {currency}{final_price})"
             logger.warning(f"  {course.error} for {course.title}")
 
     async def is_already_enrolled(
@@ -486,6 +489,56 @@ class UdemyClient:
         return (
             self.enrolled_courses is not None and course.slug in self.enrolled_courses
         )
+
+    async def check_already_enrolled_live(self, course: Course) -> bool:
+        """Live API check: is the user already enrolled in this specific course?
+        Returns True if already enrolled, False if not or unable to determine.
+        """
+        if not course.course_id:
+            return False
+
+        url = (
+            f"{constants.UDEMY_API_BASE}/users/me/subscribed-courses/"
+            f"{course.course_id}/?fields%5Bcourse%5D=%40default%2C"
+            f"buyable_object_type%2Cprimary_subcategory%2Cis_private"
+        )
+        headers = {}
+        if self.cookie_dict.get("access_token"):
+            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+
+        try:
+            resp = await self.http.get(
+                url,
+                cookies=self.cookie_dict,
+                headers=headers,
+                req_type="mobile",
+                use_cloudscraper=True,
+                raise_for_status=False,
+            )
+            if resp:
+                self._course_fetch_report(resp.status_code)
+
+            if resp and resp.status_code == 200:
+                logger.debug(
+                    f"  Live check: Already enrolled in {course.title}"
+                )
+                return True
+            elif resp and resp.status_code == 404:
+                logger.debug(
+                    f"  Live check: Not enrolled in {course.title}"
+                )
+                return False
+            else:
+                status = resp.status_code if resp else "No Response"
+                logger.debug(
+                    f"  Live check: Unclear result for {course.title} (status {status})"
+                )
+                return False
+        except Exception as e:
+            logger.debug(
+                f"  Live check: Error checking enrollment for {course.title}: {e}"
+            )
+            return False
 
     def is_course_excluded(self, course: Course, settings: dict):
         min_rating = settings.get("min_rating", 0)

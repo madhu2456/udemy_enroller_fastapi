@@ -5,7 +5,6 @@ import io
 import json
 import logging
 import asyncio
-from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -13,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.models.database import get_db, UserSettings, EnrollmentRun, EnrolledCourse
 from app.deps import get_current_user_id, get_udemy_client
 from app.schemas.schemas import EnrollmentStatus, CourseInfo, RunDetail
+from app.security import verify_csrf_token
 from app.services.enrollment_manager import EnrollmentManager
 from config.settings import get_settings as get_app_settings
 from app.core.cache import clear_user_caches, _history_cache, get_cached_or_compute
@@ -30,6 +30,7 @@ async def start_enrollment(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
     client=Depends(get_udemy_client),
+    _csrf: None = Depends(verify_csrf_token),
 ):
     """Start a new enrollment run."""
     active = (
@@ -98,7 +99,9 @@ async def start_enrollment(
 
 @router.post("/stop")
 async def stop_enrollment(
-    db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    _csrf: None = Depends(verify_csrf_token),
 ):
     """Stop the active enrollment run."""
     active = EnrollmentManager.get_active_run(db, user_id)
@@ -113,7 +116,7 @@ async def stop_enrollment(
         # Fallback if task is not in memory
         active.status = "cancelled"
         active.error_message = "Cancelled by user"
-        active.completed_at = datetime.utcnow()
+        active.completed_at = _utcnow_naive()
         db.commit()
 
         # Invalidate cache
@@ -255,6 +258,7 @@ async def delete_run(
     run_id: int,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
+    _csrf: None = Depends(verify_csrf_token),
 ):
     """Soft delete a specific enrollment run while keeping its course records for the cache."""
     run = (

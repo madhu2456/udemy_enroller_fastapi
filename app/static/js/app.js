@@ -1,18 +1,36 @@
 // Global app utilities
 
+window.csrfToken = null;
+
+function getCsrfToken() {
+    if (window.csrfToken) return window.csrfToken;
+    const match = document.cookie.match(new RegExp('(^| )csrf_token=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+}
+
+async function apiFetch(url, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+        options.headers = options.headers || {};
+        const token = getCsrfToken();
+        if (token) {
+            options.headers['X-CSRF-Token'] = token;
+        }
+    }
+    return fetch(url, options);
+}
+
 async function logout() {
     try {
-        // Use a timeout for the logout request so it doesn't hang the UI if the server is busy
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
         
-        const response = await fetch('/api/auth/logout', { 
+        const response = await apiFetch('/api/auth/logout', { 
             method: 'POST',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
         
-        // Log result
         if (response.ok) {
             console.log('Logout successful');
         } else {
@@ -22,17 +40,15 @@ async function logout() {
         console.warn('Logout request failed or timed out:', e);
     }
     
-    // Clear any client-side data
+    window.csrfToken = null;
     localStorage.clear();
     sessionStorage.clear();
     
-    // Clear all cookies by setting them to expire
     document.cookie.split(";").forEach(c => {
         const [name] = c.split("=");
         document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
     });
     
-    // Force page refresh to clear session completely
     window.location.href = '/';
 }
 

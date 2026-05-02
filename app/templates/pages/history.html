@@ -290,7 +290,7 @@ async function handleCardToggle(id) {
 async function requestDelete(id) {
     if (!confirm('Permanently purge this enrollment session from the logs? Metrics will be preserved.')) return;
     try {
-        const r = await fetch(`/api/enrollment/run/${id}`, { method: 'DELETE' });
+        const r = await apiFetch(`/api/enrollment/run/${id}`, { method: 'DELETE' });
         if (r.ok) {
             const el = document.getElementById(`card-${id}`);
             el.style.opacity = '0';

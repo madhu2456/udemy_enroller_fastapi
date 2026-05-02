@@ -54,6 +54,11 @@ class Course:
         # 1. Unquote multiple times in case of nested encoding (common in tracking links)
         url = unquote(unquote(url))
 
+        # 1a. Capture coupon code from the original URL before redirect unwrapping
+        original_parsed = urlparse(url)
+        original_qs = parse_qs(original_parsed.query)
+        original_coupon = original_qs.get("couponCode", [None])[0]
+
         # 2. Extract udemy link from query parameters (common in redirectors like trk.udemy.com)
         if "udemy.com" in url.lower() and any(
             k in url for k in ["link=", "url=", "u=", "target=", "redirect=", "go="]
@@ -80,7 +85,7 @@ class Course:
             
             # Extract coupon code to keep it, but strip other affiliate params
             qs = parse_qs(parsed_url.query)
-            coupon = qs.get("couponCode", [None])[0]
+            coupon = qs.get("couponCode", [None])[0] or original_coupon
             
             new_query = ""
             if coupon:

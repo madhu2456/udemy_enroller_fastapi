@@ -13,6 +13,7 @@ from app.models.database import (
 )
 from app.deps import get_current_user_id
 from app.schemas.schemas import SettingsUpdate, SettingsResponse
+from app.security import verify_csrf_token
 from app.security import validate_proxy_url
 from config.settings import get_settings as get_app_settings
 from app.core.cache import clear_user_caches
@@ -78,17 +79,16 @@ async def get_settings(
 
 
 @router.put("/", include_in_schema=True)
-@router.put("", include_in_schema=False)
 async def update_settings(
-    request: Request,
-    settings_update: SettingsUpdate,
+    update: SettingsUpdate,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
+    _csrf: None = Depends(verify_csrf_token),
 ):
     """Update user settings."""
     settings = get_or_create_settings(db, user_id)
 
-    update_data = settings_update.model_dump(exclude_unset=True)
+    update_data = update.model_dump(exclude_unset=True)
 
     # Validate proxy URL if provided
     if "proxy_url" in update_data and update_data["proxy_url"]:
@@ -116,6 +116,7 @@ async def reset_settings(
     request: Request,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
+    _csrf: None = Depends(verify_csrf_token),
 ):
     """Reset settings to defaults."""
     settings = get_or_create_settings(db, user_id)
@@ -146,6 +147,7 @@ async def clear_data(
     request: Request,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
+    _csrf: None = Depends(verify_csrf_token),
 ):
     """Delete all enrollment runs and course data for the user, and reset lifetime stats."""
     # Check for active run
@@ -166,17 +168,10 @@ async def clear_data(
 
     try:
         # 1. Delete all enrolled courses associated with the user's runs
-        # Use a join to find courses belonging to the user
-        course_ids_to_delete = (
-            db.query(EnrolledCourse.id)
-            .join(EnrollmentRun)
-            .filter(EnrollmentRun.user_id == user_id)
-            .all()
-        )
-        course_ids = [c[0] for c in course_ids_to_delete]
-
-        if course_ids:
-            db.execute(delete(EnrolledCourse).where(EnrolledCourse.id.in_(course_ids)))
+        # Correlated delete avoids race condition between SELECT and DELETE
+        from sqlalchemy import select
+        subq = select(EnrollmentRun.id).where(EnrollmentRun.user_id == user_id).scalar_subquery()
+        db.execute(delete(EnrolledCourse).where(EnrolledCourse.enrollment_run_id.in_(subq)))
 
         # 2. Delete all enrollment runs
         db.execute(delete(EnrollmentRun).where(EnrollmentRun.user_id == user_id))
