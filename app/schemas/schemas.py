@@ -45,17 +45,6 @@ class LoginResponse(BaseModel):
 
 
 # ── Settings ──────────────────────────────────────────
-class SitesConfig(BaseModel):
-    real_discount: bool = True
-    courson: bool = True
-    idownloadcoupons: bool = True
-    e_next: bool = True
-    discudemy: bool = True
-    udemy_freebies: bool = True
-    course_joiner: bool = True
-    course_vania: bool = True
-
-
 class SettingsUpdate(BaseModel):
     sites: Optional[dict] = None
     languages: Optional[dict] = None

@@ -35,7 +35,7 @@ from loguru import logger
 
 from config.settings import get_settings
 from app.logging_config import setup_logging
-from app.models.database import create_tables
+from app.models.database import create_tables, engine
 from app.routers import auth, settings, enrollment, dashboard, seo
 
 # Configure logging with JSON support
@@ -88,7 +88,12 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to clean up stale runs: {e}")
 
     # Initialize app state
-    app.state.udemy_clients = {}
+    from app.core.cache import SessionCache
+    app.state.session_cache = SessionCache(max_size=100, default_ttl_seconds=3600)
+    app.state.session_cache.start_cleanup_task()
+    
+    # Legacy alias for backward compatibility with auth.py
+    app.state.udemy_clients = app.state.session_cache
 
     yield
 
@@ -116,15 +121,18 @@ async def lifespan(app: FastAPI):
                 logger.error(f"Error during enrollment task cancellation: {e}")
 
         # Close all udemy clients
-        clients = getattr(app.state, "udemy_clients", {})
-        if clients:
-            logger.info(f"Closing {len(clients)} Udemy client sessions...")
-            for token, client in clients.items():
-                try:
-                    await client.close()
-                except Exception as e:
-                    logger.error(f"Error closing client {token}: {e}")
-            logger.info("All Udemy client sessions closed.")
+        session_cache = getattr(app.state, "session_cache", None)
+        if session_cache:
+            clients = list(session_cache.items())
+            if clients:
+                logger.info(f"Closing {len(clients)} Udemy client sessions...")
+                for token, client in clients:
+                    try:
+                        await client.close()
+                    except Exception as e:
+                        logger.error(f"Error closing client {token}: {e}")
+                logger.info("All Udemy client sessions closed.")
+            await session_cache.stop_cleanup_task()
 
     except Exception as e:
         logger.error(f"Unexpected error during shutdown: {e}")
@@ -135,8 +143,6 @@ async def lifespan(app: FastAPI):
 
 app_settings = get_settings()
 
-# Trigger reload - Technatic logic active
-logger.error("DEBUG: LOADED NEW MAIN.PY - TECHNATIC V2.1 ACTIVE")
 app = FastAPI(
     title=app_settings.APP_NAME,
     version=app_settings.APP_VERSION,
@@ -177,7 +183,16 @@ app.include_router(enrollment.router)
 @app.get("/api/health")
 async def health_check(request: Request):
     """Health check endpoint with dependency checks."""
+    db_status = "healthy"
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"unhealthy: {e}"
+
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "healthy" else "degraded",
+        "database": db_status,
         "version": app_settings.APP_VERSION,
     }

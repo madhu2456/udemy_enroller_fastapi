@@ -26,10 +26,8 @@ playwright-stealth==1.0.6
 setuptools==70.0.0
 
 # Security
-pyopenssl==24.3.0
 bcrypt==4.1.2
-passlib==1.7.4
-python-jose==3.3.0
+cryptography==44.0.0
 
 # Logging
 loguru==0.7.3

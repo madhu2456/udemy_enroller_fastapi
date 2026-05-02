@@ -13,6 +13,7 @@ from app.security import (
     verify_password,
     validate_proxy_url,
     URLValidator,
+    generate_csrf_token,
 )
 
 
@@ -192,10 +193,9 @@ class TestAuthEndpoints:
         assert response.json()["authenticated"] is False
 
     def test_logout_without_session(self):
-        """Test logout without active session."""
+        """Test logout without active session returns 403 (CSRF token missing)."""
         response = client.post("/api/auth/logout")
-        assert response.status_code == 200
-        assert response.json()["success"] is True
+        assert response.status_code == 403
 
 
 class TestEnrollmentSessionRestore:
@@ -230,7 +230,9 @@ class TestEnrollmentSessionRestore:
 
         self.db = db
         self.session_token = token
+        self.csrf_token = generate_csrf_token(self.session_token)
         client.cookies.set("session_id", self.session_token)
+        client.cookies.set("csrf_token", self.csrf_token)
         app.state.udemy_clients = {}
 
     def teardown_method(self):
@@ -251,7 +253,10 @@ class TestEnrollmentSessionRestore:
         mock_client.get_session_info = AsyncMock(return_value=None)
         mock_udemy_client_class.return_value = mock_client
 
-        response = client.post("/api/enrollment/start")
+        response = client.post(
+            "/api/enrollment/start",
+            headers={"X-CSRF-Token": self.csrf_token},
+        )
 
         assert response.status_code == 200
         assert response.json()["success"] is True
@@ -324,8 +329,10 @@ class TestSettingsValidation:
 
         self.user_id = user.id
         self.session_token = token
+        self.csrf_token = generate_csrf_token(self.session_token)
         self.db = db
         client.cookies.set("session_id", self.session_token)
+        client.cookies.set("csrf_token", self.csrf_token)
 
     def teardown_method(self):
         """Cleanup after each test."""
@@ -338,7 +345,9 @@ class TestSettingsValidation:
         mock_user_id.return_value = self.user_id
 
         response = client.put(
-            "/api/settings/", json={"proxy_url": "socks5://proxy.example.com:1080"}
+            "/api/settings/",
+            json={"proxy_url": "socks5://proxy.example.com:1080"},
+            headers={"X-CSRF-Token": self.csrf_token},
         )
 
         assert response.status_code == 200
@@ -348,7 +357,11 @@ class TestSettingsValidation:
         """Test updating settings with invalid proxy URL."""
         mock_user_id.return_value = self.user_id
 
-        response = client.put("/api/settings/", json={"proxy_url": "invalid://proxy"})
+        response = client.put(
+            "/api/settings/",
+            json={"proxy_url": "invalid://proxy"},
+            headers={"X-CSRF-Token": self.csrf_token},
+        )
 
         assert response.status_code == 422
 
@@ -357,8 +370,11 @@ class TestSettingsValidation:
         """Test min_rating validation (0-5)."""
         mock_user_id.return_value = self.user_id
 
-        # Test invalid rating (>5)
-        response = client.put("/api/settings/", json={"min_rating": 6.0})
+        response = client.put(
+            "/api/settings/",
+            json={"min_rating": 6.0},
+            headers={"X-CSRF-Token": self.csrf_token},
+        )
         assert response.status_code == 422
 
     @patch("app.deps.get_current_user_id")
@@ -366,7 +382,11 @@ class TestSettingsValidation:
         """Test valid min_rating values."""
         mock_user_id.return_value = self.user_id
 
-        response = client.put("/api/settings/", json={"min_rating": 3.5})
+        response = client.put(
+            "/api/settings/",
+            json={"min_rating": 3.5},
+            headers={"X-CSRF-Token": self.csrf_token},
+        )
         assert response.status_code == 200
 
 

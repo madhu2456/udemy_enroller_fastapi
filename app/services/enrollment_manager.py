@@ -8,12 +8,13 @@ from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from loguru import logger
 
-from app.core.cache import clear_user_caches
+from app.core.cache import clear_user_caches, _stats_cache
 from app.models.database import (
     EnrollmentRun,
     EnrolledCourse,
     SessionLocal,
     _utcnow_naive,
+    User,
 )
 from app.services.course import Course
 from app.services.scraper import ScraperService
@@ -153,22 +154,56 @@ class EnrollmentManager:
             # Pre-filter for uniqueness and already enrolled (by slug)
             scraped_courses: List[Course] = []
             seen_slugs = set()
-            enrolled_slugs = set()
 
-            # Load user's already enrolled courses if client is authenticated
-            if self.udemy.enrolled_courses is None:
-                try:
-                    await self.udemy.get_enrolled_courses()
-                except Exception:
-                    logger.warning(
-                        "Could not fetch enrolled courses list, proceeding with individual checks."
+            # Build a set of courses we KNOW are already enrolled from previous runs.
+            # This avoids hitting Udemy's API for courses we already discovered.
+            # For users with massive libraries (20k+), this is far safer than bulk-fetching.
+            enrolled_slugs: set[str] = set()
+            try:
+                from sqlalchemy import select
+                stmt = (
+                    select(EnrolledCourse.slug)
+                    .join(EnrollmentRun)
+                    .where(
+                        EnrollmentRun.user_id == self.user_id,
+                        EnrollmentRun.id != self.run_id,
+                        EnrolledCourse.status == "already_enrolled",
+                        EnrolledCourse.slug.isnot(None),
                     )
-
-            if self.udemy.enrolled_courses:
-                enrolled_slugs = set(self.udemy.enrolled_courses.keys())
-                logger.warning(
-                    f"User has {len(enrolled_slugs)} courses already enrolled."
+                    .distinct()
                 )
+                for row in db.execute(stmt):
+                    enrolled_slugs.add(row[0])
+                logger.warning(
+                    f"Loaded {len(enrolled_slugs)} already-enrolled courses from DB history."
+                )
+            except Exception as e:
+                logger.warning(f"Could not load enrolled history from DB: {e}")
+
+            # Also load previously attempted course+coupon combos (any status)
+            # to avoid re-trying identical URLs with the same coupon.
+            previously_attempted: set[tuple[str, str]] = set()
+            try:
+                from sqlalchemy import select
+                stmt = (
+                    select(EnrolledCourse.slug, EnrolledCourse.coupon_code)
+                    .join(EnrollmentRun)
+                    .where(
+                        EnrollmentRun.user_id == self.user_id,
+                        EnrollmentRun.id != self.run_id,
+                        EnrolledCourse.slug.isnot(None),
+                    )
+                )
+                for row in db.execute(stmt):
+                    previously_attempted.add((row[0], row[1] or ""))
+                logger.warning(
+                    f"Loaded {len(previously_attempted)} previously attempted course+coupon combos."
+                )
+            except Exception as e:
+                logger.warning(f"Could not load previous attempts: {e}")
+
+            skipped_already_enrolled = 0
+            skipped_already_tried = 0
 
             for course in raw_courses:
                 if not course.url:
@@ -184,14 +219,24 @@ class EnrollmentManager:
                     if match:
                         course.slug = match.group(1)
 
+                # Skip if we already know this course is already enrolled from a prior run
                 if course.slug and course.slug in enrolled_slugs:
+                    skipped_already_enrolled += 1
+                    continue
+
+                # Skip if we already tried this exact course + coupon in a previous run
+                coupon = course.coupon_code or ""
+                if course.slug and (course.slug, coupon) in previously_attempted:
+                    skipped_already_tried += 1
                     continue
 
                 scraped_courses.append(course)
 
             self.total_courses = len(scraped_courses)
             logger.warning(
-                f"Final course list to process: {self.total_courses} courses."
+                f"Final course list to process: {self.total_courses} courses "
+                f"({skipped_already_enrolled} skipped as already enrolled from DB, "
+                f"{skipped_already_tried} skipped as already tried with same coupon)."
             )
 
             run.total_courses_found = self.total_courses
@@ -263,7 +308,7 @@ class EnrollmentManager:
                         self.udemy.already_enrolled_c += 1
                         course_status = "already_enrolled"
                         logger.debug(
-                            f"  Status: Already enrolled (Slug: {course.slug})"
+                            f"  Status: Already enrolled (DB cache: {course.slug})"
                         )
                     else:
                         await self.udemy.get_course_id(course)
@@ -279,11 +324,13 @@ class EnrollmentManager:
                                 self.udemy.excluded_c += 1
                                 course_status = "invalid"
                                 logger.info(f"  Status: Invalid - {error_msg}")
-                        elif await self.udemy.is_already_enrolled(
-                            course, enrolled_slugs
-                        ):
+                        elif await self.udemy.check_already_enrolled_live(course):
+                            # Live API check with course_id confirms already enrolled
                             self.udemy.already_enrolled_c += 1
                             course_status = "already_enrolled"
+                            logger.info(
+                                f"  Status: Already enrolled (Live API: {course.slug})"
+                            )
                         else:
                             # Apply user filters
                             self.udemy.is_course_excluded(course, self.settings)
@@ -363,6 +410,11 @@ class EnrollmentManager:
             clear_user_caches(self.user_id)
             EnrollmentManager.active_tasks.pop(self.run_id, None)
             db.close()
+            if self.scraper_service:
+                try:
+                    await self.scraper_service.http.close()
+                except Exception as e:
+                    logger.warning(f"Error closing scraper HTTP client: {e}")
             if self.close_client:
                 await self.udemy.close()
 
@@ -396,6 +448,10 @@ class EnrollmentManager:
     ):
         """Save an individual course result to the database."""
         try:
+            # We record the original price (savings) in the price column for analytics 
+            # only if status is enrolled. Otherwise it's just 0.0.
+            price_val = float(course.list_price or course.price or 0.0)
+
             ec = EnrolledCourse(
                 enrollment_run_id=run.id,
                 title=course.title,
@@ -403,7 +459,7 @@ class EnrollmentManager:
                 slug=course.slug,
                 course_id=course.course_id,
                 coupon_code=course.coupon_code,
-                price=float(course.price) if course.price else 0.0,
+                price=price_val if status == "enrolled" else 0.0,
                 category=course.category,
                 language=course.language,
                 rating=course.rating,
@@ -412,7 +468,25 @@ class EnrollmentManager:
                 error_message=error_msg or course.error,
             )
             db.add(ec)
+
+            # Update User lifetime aggregate stats
+            user = db.get(User, self.user_id)
+            if user:
+                if status == "enrolled":
+                    user.total_enrolled += 1
+                    user.total_amount_saved += price_val
+                elif status == "already_enrolled":
+                    user.total_already_enrolled += 1
+                elif status == "expired":
+                    user.total_expired += 1
+                elif status in ["excluded", "invalid"]:
+                    user.total_excluded += 1
+
             db.commit()
+
+            # Invalidate dashboard stats cache so the scorecards reflect
+            # the latest lifetime totals immediately.
+            _stats_cache.pop(self.user_id, None)
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to save course {course.title}: {e}")

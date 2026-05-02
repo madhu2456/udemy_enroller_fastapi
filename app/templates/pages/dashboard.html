@@ -359,7 +359,7 @@ async function deleteRun(runId) {
     }
     
     try {
-        const resp = await fetch(`/api/enrollment/run/${runId}`, { method: 'DELETE' });
+        const resp = await apiFetch(`/api/enrollment/run/${runId}`, { method: 'DELETE' });
         const data = await resp.json();
         
         if (resp.ok && data.success) {
@@ -381,7 +381,7 @@ async function startEnrollment() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Starting...';
 
     try {
-        const resp = await fetch('/api/enrollment/start', { method: 'POST' });
+        const resp = await apiFetch('/api/enrollment/start', { method: 'POST' });
         const data = await resp.json();
         if (data.success) {
             showProgressPanel();
@@ -404,7 +404,7 @@ async function stopEnrollment() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin md:mr-2"></i><span class="hidden md:inline">Stopping...</span>';
 
     try {
-        const resp = await fetch('/api/enrollment/stop', { method: 'POST' });
+        const resp = await apiFetch('/api/enrollment/stop', { method: 'POST' });
         const data = await resp.json();
         if (data.success) {
             showToast(data.message, 'success');
@@ -601,7 +601,10 @@ function updateProgress(data) {
     const scrapingContainer = document.getElementById('scraping-sites');
     if (data.status === 'scraping') {
         if (data.scraping_progress && data.scraping_progress.length > 0) {
-            scrapingContainer.innerHTML = data.scraping_progress.map(s => `
+            scrapingContainer.innerHTML = data.scraping_progress.map(s => {
+                const pct = s.total > 0 ? (s.progress / s.total * 100) : 0;
+                const isWorking = !s.done && !s.error && s.total === 0;
+                return `
                 <div class="bg-gray-700 rounded-lg p-3">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs text-gray-300 truncate">${s.site}</span>
@@ -610,10 +613,13 @@ function updateProgress(data) {
                         '<i class="fas fa-spinner fa-spin text-blue-400 text-xs"></i>'}
                     </div>
                     <div class="w-full bg-gray-600 rounded-full h-1.5">
-                        <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: ${s.total > 0 ? (s.progress / s.total * 100) : 0}%"></div>
+                        <div class="${isWorking ? 'bg-blue-500 animate-pulse' : 'bg-blue-500'} h-1.5 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                    </div>
+                    <div class="text-right mt-0.5">
+                        <span class="text-[10px] text-gray-500">${s.progress}${s.total > 0 ? '/' + s.total : ''}</span>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         } else {
             scrapingContainer.innerHTML = '<div class="col-span-full py-4 text-center text-gray-500 text-xs italic"><i class="fas fa-spinner fa-spin mr-2"></i>Initializing scrapers...</div>';
         }

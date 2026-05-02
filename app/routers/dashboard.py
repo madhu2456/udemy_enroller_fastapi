@@ -106,7 +106,7 @@ async def dashboard_stats(
             "total_excluded": user.total_excluded or 0,
         }
 
-    return get_cached_or_compute(_stats_cache, user_id, compute_stats, ttl_seconds=300)
+    return get_cached_or_compute(_stats_cache, user_id, compute_stats, ttl_seconds=10)
 
 
 @router.get("/api/dashboard/analytics")
@@ -144,7 +144,10 @@ async def dashboard_analytics(
 
 
 @router.get("/api/dashboard/logs/stream")
-async def stream_logs(request: Request):
+async def stream_logs(
+    request: Request,
+    user_id: int = Depends(get_current_user_id),
+):
     """Stream application logs via SSE."""
 
     async def log_generator():

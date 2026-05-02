@@ -280,7 +280,7 @@ async function saveSettings() {
 
     const settings = gatherSettings();
     try {
-        const resp = await fetch('/api/settings/', {
+        const resp = await apiFetch('/api/settings/', {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(settings)
@@ -299,7 +299,7 @@ async function saveSettings() {
 async function resetSettings() {
     if (!confirm('Discard all changes and reset to factory defaults?')) return;
     try {
-        const r = await fetch('/api/settings/reset', { method: 'POST' });
+        const r = await apiFetch('/api/settings/reset', { method: 'POST' });
         if (r.ok) {
             await loadSettings();
             showMsg('Settings reset to defaults', 'blue');
@@ -312,7 +312,7 @@ async function clearAllData() {
     if (!confirm('REALLY? This will wipe your history and reset all counters to zero.')) return;
     
     try {
-        const r = await fetch('/api/settings/clear-data', { method: 'POST' });
+        const r = await apiFetch('/api/settings/clear-data', { method: 'POST' });
         const data = await r.json();
         if (r.ok) {
             alert('All data has been cleared successfully.');
