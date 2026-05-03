@@ -30,6 +30,8 @@ class UdemyClient:
     def __init__(self, proxy: Optional[str] = None):
         logger.warning("UdemyClient v2.1 (Technatic logic active)")
         self.http = AsyncHTTPClient(proxy=proxy)
+        # Persistent CloudScraper session for enrollment (matches DUCE)
+        self._init_cloudscraper()
 
         self.display_name: str = ""
         self.currency: str = "usd"
@@ -62,6 +64,46 @@ class UdemyClient:
         self._account_block_active = False
         self._account_block_cooldown_until = None
         self._account_block_cooldown_seconds = 300
+
+    def _init_cloudscraper(self):
+        """Create a persistent CloudScraper session for enrollment (DUCE-style)."""
+        try:
+            import cloudscraper
+            self.cs = cloudscraper.create_scraper()
+            logger.debug("CloudScraper session initialized")
+        except ImportError:
+            self.cs = None
+            logger.warning("cloudscraper not installed; enrollment may fail on Cloudflare")
+
+    def _sync_cs_cookies(self):
+        """Sync cookie_dict into the CloudScraper session."""
+        if self.cs is None:
+            return
+        self.cs.cookies.clear()
+        for k, v in self.cookie_dict.items():
+            self.cs.cookies.set(k, v, domain="www.udemy.com")
+
+    async def _cs_get(self, url: str, **kwargs) -> Optional[object]:
+        """Async wrapper for CloudScraper GET."""
+        if self.cs is None:
+            return None
+        self._sync_cs_cookies()
+        try:
+            return await asyncio.to_thread(self.cs.get, url, **kwargs)
+        except Exception as e:
+            logger.warning(f"  CloudScraper GET failed: {type(e).__name__}: {e}")
+            return None
+
+    async def _cs_post(self, url: str, **kwargs) -> Optional[object]:
+        """Async wrapper for CloudScraper POST."""
+        if self.cs is None:
+            return None
+        self._sync_cs_cookies()
+        try:
+            return await asyncio.to_thread(self.cs.post, url, **kwargs)
+        except Exception as e:
+            logger.warning(f"  CloudScraper POST failed: {type(e).__name__}: {e}")
+            return None
 
     async def _course_fetch_throttle(self):
         """Global jitter + adaptive backoff."""
@@ -446,35 +488,48 @@ class UdemyClient:
 
         # A course is free if final_price is 0 or it's explicitly marked as free
         is_free_result = pricing_result.get("is_free", False) or final_price == 0
-        currency = pricing_result.get("price", {}).get("currency_symbol") or pricing_result.get("price", {}).get("currency") or ""
+        # Prefer ISO currency code over symbol; Udemy checkout requires valid ISO codes.
+        currency = pricing_result.get("price", {}).get("currency") or pricing_result.get("price", {}).get("currency_symbol") or ""
+        course.currency = currency
+
+        logger.info(
+            f"[CHECK_COURSE PRICE] {course.title} | list_price={lp} | final_price={final_price} | "
+            f"is_free={is_free_result} | currency={currency} | coupon={course.coupon_code or 'NONE'}"
+        )
 
         redeem_data = r.get("redeem_coupon") or r.get("cacheable_redeem_coupon")
         if course.coupon_code and redeem_data:
             attempts = redeem_data.get("discount_attempts", [])
-            if attempts and attempts[0].get("status") == "applied":
-                if is_free_result:
+            logger.info(
+                f"[CHECK_COURSE COUPON] {course.title} | attempts={attempts}"
+            )
+            if attempts:
+                attempt_status = attempts[0].get("status", "failed")
+                # Prefer discount_percent == 100 (matches old working code)
+                discount = pricing_result.get("discount_percent") or 0
+                is_100_percent = discount == 100
+                if attempt_status in ("applied", "unused") and (is_100_percent or is_free_result):
                     course.is_coupon_valid = True
-                    logger.info(f"  Coupon applied successfully (Free): {course.title}")
+                    logger.info(f"  Coupon applied successfully (Free): {course.title} | discount={discount}%")
                 else:
                     course.is_coupon_valid = False
-                    course.error = f"Coupon applied but price is {currency}{final_price}"
-                    logger.warning(
-                        f"  Coupon applied but price mismatch: {course.title} (Price: {currency}{final_price})"
-                    )
+                    details = attempts[0].get("details")
+                    if attempt_status not in ("applied", "unused"):
+                        msg = f"{attempt_status}: {details}" if details else attempt_status
+                    elif not is_100_percent:
+                        msg = f"Coupon only {discount}% off (not 100%)"
+                    else:
+                        msg = "Coupon not fully free"
+                    course.error = msg
+                    logger.warning(f"  Coupon invalid for {course.title}: {msg}")
             else:
                 course.is_coupon_valid = False
-                if attempts:
-                    status = attempts[0].get("status", "failed")
-                    details = attempts[0].get("details")
-                    msg = f"{status}: {details}" if details else status
-                else:
-                    msg = "Coupon not found in response"
-                
-                course.error = msg
-                logger.warning(f"  Coupon invalid for {course.title}: {msg}")
+                course.error = "No discount attempts returned"
+                logger.warning(f"  Coupon invalid for {course.title}: {course.error}")
         elif is_free_result:
             # Course is free without coupon
             course.is_coupon_valid = True
+            course.is_free = True
             logger.info(f"  Course is free (no coupon needed): {course.title}")
         else:
             course.is_coupon_valid = False
@@ -555,54 +610,211 @@ class UdemyClient:
             course.is_excluded = True
             return
 
-    async def free_checkout(self, course: Course):
-        """Enroll via Technatic-style two-step verification."""
-        # Step 1: Hit the subscribe URL
-        sub_url = f"https://www.udemy.com/course/subscribe/?courseId={course.course_id}"
-        headers = {
-            "User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
-            "Referer": course.url
-            or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/",
-            "X-Requested-With": "XMLHttpRequest",
+    async def _du_checkout(self, course: Course):
+        """DUCE-style single course checkout using persistent CloudScraper session."""
+        if self.cs is None:
+            logger.error(f"[DU_CHECKOUT] No CloudScraper session for {course.title}")
+            course.status = False
+            return
+
+        # Log course state at checkout time
+        logger.info(
+            f"[DU_CHECKOUT STATE] {course.title} | ID={course.course_id} | "
+            f"coupon={course.coupon_code or 'NONE'} | price={course.price} | "
+            f"list_price={course.list_price} | is_free={course.is_free} | "
+            f"is_coupon_valid={course.is_coupon_valid}"
+        )
+
+        # Step 1: Preflight GET to checkout page to warm up the session
+        checkout_page_url = "https://www.udemy.com/payment/checkout/"
+        await self._cs_get(checkout_page_url, timeout=25)
+
+        # Step 2: GET the course landing page to set checkout context cookies
+        course_page_url = f"https://www.udemy.com/course/{course.slug}/"
+        await self._cs_get(course_page_url, timeout=25)
+
+        # Step 3: Build payload.
+        # Primary: use list_price + course.currency (matches pricing API).
+        # Fallback: amount=0 if Udemy returns price_mismatch_error.
+        checkout_currency = (course.currency or self.currency or "USD").upper()
+        base_payload = {
+            "checkout_environment": "Marketplace",
+            "checkout_event": "Submit",
+            "payment_info": {
+                "method_id": "0",
+                "payment_method": "free-method",
+                "payment_vendor": "Free",
+            },
+            "shopping_info": {
+                "items": [
+                    {
+                        "buyable": {"id": str(course.course_id), "type": "course"},
+                        "discountInfo": {"code": course.coupon_code or ""},
+                        "price": {
+                            "amount": float(course.list_price) if course.list_price is not None else 0.0,
+                            "currency": checkout_currency,
+                        },
+                    }
+                ],
+                "is_cart": True,
+            },
         }
-        # Technatic logic uses GET for subscribe
-        await self.http.get(
-            sub_url,
-            cookies=self.cookie_dict,
-            headers=headers,
-            req_type="mobile",
-            use_cloudscraper=True,
-        )
 
-        # Step 2: Verify enrollment via API
-        verify_url = f"https://www.udemy.com/api-2.0/users/me/subscribed-courses/{course.course_id}/?fields%5Bcourse%5D=%40default%2Cbuyable_object_type%2Cprimary_subcategory%2Cis_private"
-        resp2 = await self.http.get(
-            verify_url,
-            cookies=self.cookie_dict,
-            headers=headers,
-            req_type="mobile",
-            use_cloudscraper=True,
-        )
+        # Simplified headers matching the old working Playwright/HTTPX fallback style.
+        # Avoid mobile-app emulation headers that can confuse Udemy with CloudScraper.
+        csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
+        headers = {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": "https://www.udemy.com/payment/checkout/",
+            "X-CSRF-Token": csrf_token,
+        }
+        if self.cookie_dict.get("access_token"):
+            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
-        if resp2:
-            if resp2.status_code == 503:
-                # Technatic handles 503 as success for free checkout
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
+
+            # On retry, refresh checkout page and apply backoff
+            if attempt > 0:
+                await self._cs_get(checkout_page_url, timeout=25)
+                await asyncio.sleep(min(2 + attempt, 8))
+
+            # Fallback: if previous attempt got price_mismatch_error, try amount=0
+            payload = dict(base_payload)
+            if attempt >= 3:
+                payload["shopping_info"]["items"][0]["price"]["amount"] = 0.0
+                logger.info(f"[DU_CHECKOUT] Fallback to amount=0 for {course.title}")
+
+            logger.info(f"[DU_CHECKOUT PAYLOAD] {payload}")
+
+            r = await self._cs_post(
+                "https://www.udemy.com/payment/checkout-submit/",
+                json=payload,
+                headers=headers,
+                timeout=25,
+            )
+
+            if r is None:
+                logger.warning(f"[DU_CHECKOUT] No response (attempt {attempt + 1}) for {course.title}")
+                continue
+
+            logger.info(f"[DU_CHECKOUT] status={r.status_code} (attempt {attempt + 1}) for {course.title}")
+
+            if r.headers.get("retry-after"):
+                logger.error(f"[DU_CHECKOUT] retry-after header detected for {course.title}")
+                course.status = False
+                return
+
+            if r.status_code == 504:
+                logger.info(f"[DU_CHECKOUT] 504 treated as success for {course.title}")
                 course.status = True
                 return
 
-            data = await self.http.safe_json(resp2, context="free_checkout_verify")
-            if data and data.get("_class") == "course":
+            try:
+                result = r.json()
+            except Exception as e:
+                logger.warning(f"[DU_CHECKOUT] JSON parse error: {e} | text={r.text[:200]}")
+                continue
+
+            if result.get("status") == "succeeded":
+                logger.info(f"[DU_CHECKOUT] SUCCESS for {course.title}")
                 course.status = True
                 return
 
-        status = resp2.status_code if resp2 else "No Response"
-        logger.warning(
-            f"  Free checkout verification failed for {course.title}. Status: {status}"
+            # Handle already subscribed
+            msg = str(result.get("message", ""))
+            dev_msg = str(result.get("developer_message", ""))
+            if "already subscribed" in msg.lower() or "already_enrolled" in dev_msg.lower():
+                logger.info(f"[DU_CHECKOUT] Already enrolled: {course.title}")
+                course.status = True
+                return
+
+            # Detect price mismatch so we can fall back to amount=0 on next loop iteration
+            if "price_mismatch" in dev_msg.lower():
+                logger.warning(f"[DU_CHECKOUT] Price mismatch on attempt {attempt + 1}, will fallback to 0 for {course.title}")
+                # Force next iteration to use amount=0 even before attempt 3
+                if attempt < 2:
+                    attempt = 2  # Jump to fallback quickly
+                continue
+
+            logger.warning(f"[DU_CHECKOUT] Failed: {result} for {course.title}")
+
+        course.status = False
+
+    async def free_checkout(self, course: Course):
+        """Free course checkout: POST subscribe then verify enrollment."""
+        if self.cs is None:
+            logger.error(f"[FREE_CHECKOUT] No CloudScraper session for {course.title}")
+            course.status = False
+            return
+
+        logger.info(f"[FREE_CHECKOUT] {course.title} | ID={course.course_id}")
+
+        # Step 1: POST to subscribe URL (old working code used POST; GET may fail)
+        sub_url = f"https://www.udemy.com/course/subscribe/?courseId={course.course_id}"
+        csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
+        sub_headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
+        r1 = await self._cs_post(sub_url, headers=sub_headers, timeout=25)
+        if r1 is None:
+            logger.warning(f"[FREE_CHECKOUT] Subscribe POST failed for {course.title}")
+
+        # Step 2: Verify enrollment via API (DUCE-style GET)
+        verify_url = (
+            f"https://www.udemy.com/api-2.0/users/me/subscribed-courses/"
+            f"{course.course_id}/?fields%5Bcourse%5D=%40default%2C"
+            f"buyable_object_type%2Cprimary_subcategory%2Cis_private"
         )
+        r2 = await self._cs_get(verify_url, timeout=25)
+
+        if r2 is None:
+            logger.warning(f"[FREE_CHECKOUT] Verify GET failed for {course.title}")
+            course.status = False
+            return
+
+        if r2.headers.get("retry-after"):
+            logger.error(f"[FREE_CHECKOUT] retry-after header for {course.title}")
+            course.status = False
+            return
+
+        if r2.status_code == 503:
+            logger.info(f"[FREE_CHECKOUT] 503 treated as success for {course.title}")
+            course.status = True
+            return
+
+        try:
+            data = r2.json()
+        except Exception as e:
+            logger.warning(f"[FREE_CHECKOUT] JSON error: {e} | text={r2.text[:200]}")
+            course.status = False
+            return
+
+        course.status = data.get("_class") == "course"
+        if course.status:
+            logger.info(f"[FREE_CHECKOUT] SUCCESS for {course.title}")
+        else:
+            logger.warning(f"[FREE_CHECKOUT] FAILED for {course.title} | _class={data.get('_class')}")
 
     async def checkout_single(self, course: Course) -> bool:
-        """Enroll in a single course (Technatic-style)."""
-        await self.free_checkout(course)
+        """DUCE-style single course enrollment."""
+        logger.info(f"[CHECKOUT_SINGLE] {course.title} | free={course.is_free} | coupon={course.coupon_code or 'NONE'}")
+
+        if course.is_free and not course.coupon_code:
+            # Try subscribe endpoint first (fast path for truly free courses)
+            await self.free_checkout(course)
+            # Fallback: use regular checkout pipeline with amount=0
+            # (matches old working code behavior)
+            if not course.status:
+                logger.info(f"[CHECKOUT_SINGLE] Free-checkout failed, falling back to du-checkout for {course.title}")
+                await self._du_checkout(course)
+        else:
+            await self._du_checkout(course)
+
+        if course.status:
+            logger.info(f"[CHECKOUT_SINGLE] SUCCESS for {course.title}")
+        else:
+            logger.warning(f"[CHECKOUT_SINGLE] FAILED for {course.title}")
         return course.status
 
     def get_session_health_report(self) -> dict:

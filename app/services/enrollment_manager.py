@@ -251,9 +251,11 @@ class EnrollmentManager:
                 """Process single course checkout with metrics tracking."""
                 # Add jitter delay between enrollments (Technatic style)
                 course_delay = random.uniform(2.0, 5.0)
+                logger.info(f"[PROCESS] Delaying {course_delay:.1f}s before enrolling {course.title}")
                 await asyncio.sleep(course_delay)
 
                 start_time = asyncio.get_event_loop().time()
+                logger.info(f"[PROCESS] Calling checkout_single for {course.title}")
                 success = await self.udemy.checkout_single(course)
                 duration = asyncio.get_event_loop().time() - start_time
 
@@ -267,10 +269,19 @@ class EnrollmentManager:
                         f"✅ Enrollment Success: {course.title} ({duration:.1f}s)"
                     )
                 else:
-                    status = "failed"
-                    logger.warning(
-                        f"❌ Enrollment Failed: {course.title} ({duration:.1f}s)"
-                    )
+                    # Distinguish between expired coupon vs actual failure
+                    err = (course.error or "").lower()
+                    if "price mismatch" in err or "expired" in err:
+                        status = "expired"
+                        self.udemy.expired_c += 1
+                        logger.warning(
+                            f"⏰ Coupon Expired (checkout): {course.title} — {course.error}"
+                        )
+                    else:
+                        status = "failed"
+                        logger.warning(
+                            f"❌ Enrollment Failed: {course.title} ({duration:.1f}s)"
+                        )
 
                 await self._save_course(db, run, course, status)
                 return success
@@ -311,7 +322,12 @@ class EnrollmentManager:
                             f"  Status: Already enrolled (DB cache: {course.slug})"
                         )
                     else:
+                        logger.info(f"[PIPELINE] Fetching course_id for {course.title}")
                         await self.udemy.get_course_id(course)
+                        logger.info(
+                            f"[PIPELINE] course_id={course.course_id} | valid={course.is_valid} | "
+                            f"error={course.error or 'none'} for {course.title}"
+                        )
 
                         if not course.is_valid:
                             error_msg = course.error or ""
@@ -340,7 +356,12 @@ class EnrollmentManager:
                                 logger.info("  Status: Excluded (Filter match)")
                             else:
                                 # Course is valid and free/couponed - Enrolling
+                                logger.info(f"[PIPELINE] Checking coupon for {course.title}")
                                 await self.udemy.check_course(course)
+                                logger.info(
+                                    f"[PIPELINE] coupon_valid={course.is_coupon_valid} | "
+                                    f"price={course.price} | error={course.error or 'none'} for {course.title}"
+                                )
                                 if not course.is_coupon_valid:
                                     if "403" in (course.error or ""):
                                         course_status = "failed"
@@ -354,10 +375,11 @@ class EnrollmentManager:
                                     )
                                 else:
                                     # Enrolling in single course mode
+                                    logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
                                     await process_single_course(course)
                                     saved_already = True
                 except Exception as e:
-                    logger.exception(f"Unexpected error processing {course.title}")
+                    logger.exception(f"[PIPELINE ERROR] Unexpected error processing {course.title}: {e}")
                     course_status = "failed"
                     error_msg = str(e)
 

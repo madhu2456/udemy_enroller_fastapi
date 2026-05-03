@@ -25,6 +25,7 @@ class Course:
 
         self.price = None
         self.list_price = None
+        self.currency = None
         self.instructors = []
         self.language = None
         self.category = None
@@ -187,6 +188,7 @@ class Course:
             "course_id": self.course_id,
             "coupon_code": self.coupon_code,
             "price": float(self.price) if self.price else None,
+            "currency": self.currency,
             "category": self.category,
             "language": self.language,
             "rating": self.rating,

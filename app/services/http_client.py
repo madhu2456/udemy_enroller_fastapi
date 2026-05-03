@@ -321,19 +321,18 @@ class AsyncHTTPClient:
         use_cloudscraper = kwargs.pop("use_cloudscraper", False)
 
         custom_cookies = kwargs.pop("cookies", {})
+        custom_headers = kwargs.pop("headers", None)
+        json_payload = kwargs.pop("json", None)
 
         await self._apply_human_like_delay()
 
         for attempt in range(attempts):
             if randomize:
                 headers = self._get_headers(
-                    url, kwargs.get("headers"), req_type=req_type
+                    url, custom_headers, req_type=req_type
                 )
             else:
-                headers = kwargs.get("headers")
-
-
-
+                headers = custom_headers
 
             is_mobile_request = (
                 "UdemyAndroid" in str(headers.get("User-Agent", "")) or req_type == "mobile"
@@ -342,14 +341,8 @@ class AsyncHTTPClient:
             try:
                 if use_cloudscraper:
                     # CLOUDSCRAPER BRANCH
-                    scraper_headers = {}
-                    if headers and "Referer" in headers:
-                        scraper_headers["Referer"] = headers["Referer"]
-                    if headers and "Authorization" in headers:
-                        scraper_headers["Authorization"] = headers["Authorization"]
-                    if headers and "User-Agent" in headers:
-                        scraper_headers["User-Agent"] = headers["User-Agent"]
-                    
+                    # Pass all custom headers to CloudScraper, but force identity encoding
+                    scraper_headers = dict(headers) if headers else {}
                     scraper_headers["Accept-Encoding"] = "identity"
 
                     def _do_scrape():
@@ -357,10 +350,10 @@ class AsyncHTTPClient:
                         if custom_cookies:
                             scraper.cookies.update(custom_cookies)
 
-                        if "json" in kwargs:
+                        if json_payload is not None:
                             resp = scraper.post(
                                 url,
-                                json=kwargs["json"],
+                                json=json_payload,
                                 headers=scraper_headers,
                                 timeout=25,
                                 allow_redirects=kwargs.get("allow_redirects", True),
@@ -392,7 +385,10 @@ class AsyncHTTPClient:
                             self.client.cookies.set(k, v)
 
                     async with self._request_semaphore:
-                        response = await self.client.post(url, headers=headers, **kwargs)
+                        if json_payload is not None:
+                            response = await self.client.post(url, headers=headers, json=json_payload, **kwargs)
+                        else:
+                            response = await self.client.post(url, headers=headers, **kwargs)
 
                     if custom_cookies is not None:
                         custom_cookies.update(dict(response.cookies))

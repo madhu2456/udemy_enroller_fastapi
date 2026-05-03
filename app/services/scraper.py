@@ -48,6 +48,28 @@ class Scraper(ABC):
         """Helper to parse HTML with BeautifulSoup."""
         return BeautifulSoup(content, "lxml")
 
+    async def _resolve_trk_redirect(self, trk_url: str) -> str | None:
+        """Follow a short trk.udemy.com redirect to the real course URL.
+        Returns the resolved URL or None if resolution fails.
+        """
+        if "trk.udemy.com" not in trk_url:
+            return trk_url
+        try:
+            resp = await self.http.head(trk_url, follow_redirects=True, timeout=15)
+            if resp and resp.status_code in (200, 301, 302, 307, 308):
+                resolved = str(resp.url)
+                if "udemy.com/course/" in resolved:
+                    return resolved
+            # Fallback: try GET if HEAD didn't work
+            resp = await self.http.get(trk_url, follow_redirects=True, timeout=15)
+            if resp:
+                resolved = str(resp.url)
+                if "udemy.com/course/" in resolved:
+                    return resolved
+        except Exception as e:
+            logger.debug(f"Failed to resolve trk redirect {trk_url}: {e}")
+        return None
+
     def cleanup_link(self, link: str) -> Optional[str]:
         """Extract clean Udemy link with coupon from various redirectors."""
         if not link:
@@ -357,6 +379,12 @@ class CourseCouponClubScraper(Scraper):
                         if not resolved:
                             continue
 
+                        # Short trk links (e.g. /o4Mz6e) need a redirect resolution
+                        if "trk.udemy.com" in resolved and "/u=" not in resolved:
+                            resolved = await self._resolve_trk_redirect(resolved)
+                            if not resolved:
+                                continue
+
                         # Deduplicate by normalized URL (ignore coupon differences)
                         normalized = Course.normalize_link(resolved)
                         if normalized in seen_urls:
@@ -466,7 +494,16 @@ class CourseCouponClubScraper(Scraper):
                             title = btn.get_text(strip=True) or item.get_text(strip=True)
                             found_courses.append((title[:200], href))
 
-                return found_courses
+                # Resolve short trk.udemy.com redirects
+                resolved_courses = []
+                for title, href in found_courses:
+                    if "trk.udemy.com" in href and "/u=" not in href:
+                        resolved = await self._resolve_trk_redirect(href)
+                        if resolved:
+                            resolved_courses.append((title, resolved))
+                    else:
+                        resolved_courses.append((title, href))
+                return resolved_courses
             except Exception:
                 return []
 
@@ -566,6 +603,12 @@ class InterviewGigScraper(Scraper):
                             resolved = self._extract_udemy_url_from_trk(href)
                             if not resolved:
                                 continue
+
+                            # Short trk links (e.g. /o4Mz6e) need a redirect resolution
+                            if "trk.udemy.com" in resolved and "/u=" not in resolved:
+                                resolved = await self._resolve_trk_redirect(resolved)
+                                if not resolved:
+                                    continue
 
                             # Deduplicate by normalized URL
                             normalized = Course.normalize_link(resolved)
