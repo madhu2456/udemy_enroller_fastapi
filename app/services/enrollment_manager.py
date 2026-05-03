@@ -136,7 +136,8 @@ class EnrollmentManager:
             while not scrape_task.done():
                 # Update scraping progress in DB every 2 seconds
                 progress = self.scraper_service.get_progress()
-                pd = run.progress_data or {}
+                # Must create a new dict copy so SQLAlchemy detects the mutation
+                pd = dict(run.progress_data or {})
                 pd["scraping_progress"] = progress
                 run.progress_data = pd
                 db.commit()
@@ -146,7 +147,7 @@ class EnrollmentManager:
             logger.warning(f"Scraper returned {len(raw_courses)} courses total.")
 
             # Final scraping progress update
-            pd = run.progress_data or {}
+            pd = dict(run.progress_data or {})
             pd["scraping_progress"] = self.scraper_service.get_progress()
             run.progress_data = pd
             db.commit()
@@ -450,7 +451,7 @@ class EnrollmentManager:
             run.excluded = self.udemy.excluded_c
             run.amount_saved = float(self.udemy.amount_saved_c)
 
-            pd = run.progress_data or {}
+            pd = dict(run.progress_data or {})
             pd["current_course_title"] = self.current_course_title
             pd["current_course_url"] = self.current_course_url
             # Keep scraping_progress if it was already there (from scraping phase)

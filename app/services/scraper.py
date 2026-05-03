@@ -341,7 +341,7 @@ class CourseCouponClubScraper(Scraper):
         page_tasks = []
         for page in range(1, max_api_pages + 1):
             url = f"{base_api}?per_page=100&page={page}"
-            page_tasks.append(self.http.get(url, use_cloudscraper=True, timeout=20))
+            page_tasks.append(self.http.get(url, use_cloudscraper=True, timeout=20, retry_403=True))
 
         logger.info(
             f"  Course Coupon Club: Fetching up to {max_api_pages} REST API pages..."
@@ -1219,10 +1219,12 @@ class KorshubScraper(Scraper):
                 url = f"https://www.korshub.com/courses?page={page_num}"
                 try:
                     resp = await self.http.get(
-                        url, use_cloudscraper=True, timeout=15
+                        url, use_cloudscraper=True, timeout=15, retry_403=True
                     )
                     if not resp or resp.status_code != 200:
-                        break
+                        if page_num <= 1:
+                            break
+                        continue
 
                     soup = BeautifulSoup(resp.text, "lxml")
                     page_urls: set[str] = set()
