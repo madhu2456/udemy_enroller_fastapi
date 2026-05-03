@@ -634,31 +634,36 @@ class UdemyClient:
         await self._cs_get(course_page_url, timeout=25)
 
         # Step 3: Build payload.
-        # Primary: use list_price + course.currency (matches pricing API).
-        # Fallback: amount=0 if Udemy returns price_mismatch_error.
+        # For coupon courses: use list_price so Udemy can verify the discount.
+        # For free courses (no coupon): use amount=0 — list_price without a coupon
+        # causes an immediate price_mismatch_error.
         checkout_currency = (course.currency or self.currency or "USD").upper()
-        base_payload = {
-            "checkout_environment": "Marketplace",
-            "checkout_event": "Submit",
-            "payment_info": {
-                "method_id": "0",
-                "payment_method": "free-method",
-                "payment_vendor": "Free",
-            },
-            "shopping_info": {
-                "items": [
-                    {
-                        "buyable": {"id": str(course.course_id), "type": "course"},
-                        "discountInfo": {"code": course.coupon_code or ""},
-                        "price": {
-                            "amount": float(course.list_price) if course.list_price is not None else 0.0,
-                            "currency": checkout_currency,
-                        },
-                    }
-                ],
-                "is_cart": True,
-            },
-        }
+        has_coupon = bool(course.coupon_code)
+        base_amount = float(course.list_price) if has_coupon and course.list_price is not None else 0.0
+
+        def _build_payload(amount: float):
+            return {
+                "checkout_environment": "Marketplace",
+                "checkout_event": "Submit",
+                "payment_info": {
+                    "method_id": "0",
+                    "payment_method": "free-method",
+                    "payment_vendor": "Free",
+                },
+                "shopping_info": {
+                    "items": [
+                        {
+                            "buyable": {"id": str(course.course_id), "type": "course"},
+                            "discountInfo": {"code": course.coupon_code or ""},
+                            "price": {
+                                "amount": amount,
+                                "currency": checkout_currency,
+                            },
+                        }
+                    ],
+                    "is_cart": True,
+                },
+            }
 
         # Simplified headers matching the old working Playwright/HTTPX fallback style.
         # Avoid mobile-app emulation headers that can confuse Udemy with CloudScraper.
@@ -673,6 +678,7 @@ class UdemyClient:
             headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
         max_attempts = 5
+        use_zero_next = False
         for attempt in range(max_attempts):
             logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
 
@@ -681,12 +687,14 @@ class UdemyClient:
                 await self._cs_get(checkout_page_url, timeout=25)
                 await asyncio.sleep(min(2 + attempt, 8))
 
-            # Fallback: if previous attempt got price_mismatch_error, try amount=0
-            payload = dict(base_payload)
-            if attempt >= 3:
-                payload["shopping_info"]["items"][0]["price"]["amount"] = 0.0
-                logger.info(f"[DU_CHECKOUT] Fallback to amount=0 for {course.title}")
+            # Determine amount: free courses start at 0; coupon courses start at list_price
+            # and fall back to 0 if Udemy reports price_mismatch.
+            if use_zero_next or (not has_coupon and attempt == 0):
+                amount = 0.0
+            else:
+                amount = base_amount
 
+            payload = _build_payload(amount)
             logger.info(f"[DU_CHECKOUT PAYLOAD] {payload}")
 
             r = await self._cs_post(
@@ -731,12 +739,10 @@ class UdemyClient:
                 course.status = True
                 return
 
-            # Detect price mismatch so we can fall back to amount=0 on next loop iteration
-            if "price_mismatch" in dev_msg.lower():
+            # Detect price mismatch so we can fall back to amount=0 on next iteration
+            if "price_mismatch" in dev_msg.lower() and amount != 0.0:
                 logger.warning(f"[DU_CHECKOUT] Price mismatch on attempt {attempt + 1}, will fallback to 0 for {course.title}")
-                # Force next iteration to use amount=0 even before attempt 3
-                if attempt < 2:
-                    attempt = 2  # Jump to fallback quickly
+                use_zero_next = True
                 continue
 
             logger.warning(f"[DU_CHECKOUT] Failed: {result} for {course.title}")

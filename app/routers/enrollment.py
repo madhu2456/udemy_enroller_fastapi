@@ -70,6 +70,17 @@ async def start_enrollment(
     }
 
     from app.services.scraper import SCRAPER_REGISTRY
+    from app.models.database import UserSettings
+
+    # Merge user sites with current registry defaults so newly-added scrapers appear
+    merged_sites = dict(UserSettings.default_sites())
+    user_sites = settings_dict.get("sites") or {}
+    if isinstance(user_sites, dict):
+        for k, v in user_sites.items():
+            if k in merged_sites:
+                merged_sites[k] = bool(v)
+    settings_dict["sites"] = merged_sites
+
     enabled_sites = [k for k, v in settings_dict["sites"].items() if v and k in SCRAPER_REGISTRY]
     # Deduplicate in case of aliases/old data
     enabled_sites = list(dict.fromkeys(enabled_sites))

@@ -22,7 +22,8 @@ class AsyncHTTPClient:
         self.proxy = proxy
         self._request_semaphore = asyncio.Semaphore(max(1, max_concurrency))
         self._last_request_time = 0.0
-        self._scraper = None
+        self._scraper = None  # Desktop scraper
+        self._mobile_scraper = None  # Mobile scraper
         self._init_client()
 
     def _init_client(self):
@@ -35,22 +36,27 @@ class AsyncHTTPClient:
                 max_connections=40, max_keepalive_connections=20, keepalive_expiry=20.0
             ),
         )
-        self._scraper = None  # Reset persistent scraper
+        self._scraper = None  # Reset persistent scrapers
+        self._mobile_scraper = None
 
     def _get_scraper(self, is_mobile: bool = False):
         """Get or create a persistent CloudScraper instance."""
         import cloudscraper
 
-        if not self._scraper:
-            if is_mobile:
-                self._scraper = cloudscraper.create_scraper(
+        if is_mobile:
+            if not self._mobile_scraper:
+                self._mobile_scraper = cloudscraper.create_scraper(
                     browser={
                         "browser": "chrome",
                         "platform": "android",
                         "mobile": True,
                     }
                 )
-            else:
+                if self.proxy:
+                    self._mobile_scraper.proxies = {"http": self.proxy, "https": self.proxy}
+            return self._mobile_scraper
+        else:
+            if not self._scraper:
                 self._scraper = cloudscraper.create_scraper(
                     browser={
                         "browser": "chrome",
@@ -58,9 +64,9 @@ class AsyncHTTPClient:
                         "desktop": True,
                     }
                 )
-            if self.proxy:
-                self._scraper.proxies = {"http": self.proxy, "https": self.proxy}
-        return self._scraper
+                if self.proxy:
+                    self._scraper.proxies = {"http": self.proxy, "https": self.proxy}
+            return self._scraper
 
     def set_proxy(self, proxy: Optional[str]):
         """Update proxy and re-initialize client."""
@@ -221,8 +227,16 @@ class AsyncHTTPClient:
                         scraper_headers["Referer"] = headers["Referer"]
                     if headers and "Authorization" in headers:
                         scraper_headers["Authorization"] = headers["Authorization"]
-                    if headers and "User-Agent" in headers:
-                        scraper_headers["User-Agent"] = headers["User-Agent"]
+                    
+                    # If the user explicitly provided a User-Agent, use it.
+                    # Otherwise, let cloudscraper manage its own UA for desktop requests to avoid TLS mismatch 403s.
+                    # We still pass User-Agent for mobile requests to ensure okhttp/Udemy emulation.
+                    explicit_ua = (kwargs.get("headers") or {}).get("User-Agent")
+                    if explicit_ua:
+                        scraper_headers["User-Agent"] = explicit_ua
+                    elif is_mobile_request:
+                        if headers and "User-Agent" in headers:
+                            scraper_headers["User-Agent"] = headers["User-Agent"]
                     
                     scraper_headers["Accept-Encoding"] = "identity"
 
@@ -342,7 +356,20 @@ class AsyncHTTPClient:
                 if use_cloudscraper:
                     # CLOUDSCRAPER BRANCH
                     # Pass all custom headers to CloudScraper, but force identity encoding
-                    scraper_headers = dict(headers) if headers else {}
+                    scraper_headers = {}
+                    if headers and "Referer" in headers:
+                        scraper_headers["Referer"] = headers["Referer"]
+                    if headers and "Authorization" in headers:
+                        scraper_headers["Authorization"] = headers["Authorization"]
+                    
+                    # Selective User-Agent logic
+                    explicit_ua = (kwargs.get("headers") or {}).get("User-Agent")
+                    if explicit_ua:
+                        scraper_headers["User-Agent"] = explicit_ua
+                    elif is_mobile_request:
+                        if headers and "User-Agent" in headers:
+                            scraper_headers["User-Agent"] = headers["User-Agent"]
+                    
                     scraper_headers["Accept-Encoding"] = "identity"
 
                     def _do_scrape():
