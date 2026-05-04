@@ -1,0 +1,211 @@
+{% extends "components/base.html" %}
+{% block title %}FAQ — Udemy Course Enroller | Free Automated Enrollment Tool{% endblock %}
+{% block meta_description %}Find answers about the Udemy Course Enroller. Learn how it automatically finds and enrolls you in 100% free Udemy courses, how to stay safe, and how to get started.{% endblock %}
+{% block meta_keywords %}Udemy Course Enroller FAQ, free Udemy courses, automatic enrollment, Udemy coupons, how to use Udemy enroller, Madhu Dadi{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="Breadcrumb" class="text-sm text-gray-400 mb-6">
+    <ol class="flex items-center space-x-2" itemscope itemtype="https://schema.org/BreadcrumbList">
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <a href="/" itemprop="item" class="hover:text-blue-400"><span itemprop="name">Home</span></a>
+            <meta itemprop="position" content="1" />
+        </li>
+        <li class="text-gray-600">/</li>
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <span itemprop="name" class="text-gray-300">FAQ</span>
+            <meta itemprop="position" content="2" />
+        </li>
+    </ol>
+</nav>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the Udemy Course Enroller?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Udemy Course Enroller is a free, open-source web application built by Madhu Dadi that automatically finds and enrolls users in 100% discounted Udemy courses. It monitors coupon aggregator websites like Real Discount and Discudemy, then uses the Udemy API to claim courses directly to your account."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the Udemy Course Enroller free to use?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The Udemy Course Enroller is completely free and open-source. It is hosted at https://udemyenroller.madhudadi.in and the source code is available on GitHub."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the Udemy Course Enroller safe and secure?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The tool uses direct Udemy API integration and stores only encrypted authentication cookies. No plaintext passwords are ever stored. All database interactions use SQLAlchemy ORM with parameterized queries to prevent injection attacks."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I log in to the Udemy Course Enroller?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Users can log in using their Udemy session cookies (access_token, client_id, csrftoken) extracted from their browser after logging into udemy.com. This is the recommended method for hosted deployments."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who built the Udemy Course Enroller?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Udemy Course Enroller was designed and developed by Madhu Dadi, a software engineer and AI specialist from India. You can learn more about Madhu at https://madhudadi.in and read technical articles at https://madhudadi.in/blog."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What technologies power the Udemy Course Enroller?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The application is built with Python 3.13, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper for headless browser automation, and Tailwind CSS for the frontend."
+      }
+    }
+  ]
+}
+</script>
+
+<div class="max-w-4xl mx-auto">
+    <div class="text-center mb-12">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Frequently Asked Questions</h1>
+        <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+            Everything you need to know about the Udemy Course Enroller — how it works, security, and getting started.
+        </p>
+    </div>
+
+    <div class="space-y-6" itemscope itemtype="https://schema.org/FAQPage">
+        <!-- FAQ Item -->
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">What is the Udemy Course Enroller?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    The Udemy Course Enroller is a <strong>free, open-source</strong> web application built by 
+                    <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-400 hover:underline">Madhu Dadi</a>
+                    that automatically finds and enrolls you in <strong>100% free discounted Udemy courses</strong>. 
+                    It continuously monitors coupon aggregator websites like Real Discount, Discudemy, and Courson, 
+                    then uses Udemy's official API to claim courses directly to your account — all without manual intervention.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">Is the Udemy Course Enroller free to use?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    Yes, absolutely. The Udemy Course Enroller is completely free to use and will remain so. 
+                    It is hosted at <a href="/" class="text-blue-400 hover:underline">udemyenroller.madhudadi.in</a> 
+                    and the source code is available on GitHub for anyone who wants to self-host or contribute.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">Is the Udemy Course Enroller safe and secure?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    Security is a top priority. The tool uses <strong>direct Udemy API integration</strong> and stores only 
+                    encrypted session cookies — never plaintext passwords. The backend is built with FastAPI and SQLAlchemy ORM, 
+                    which uses parameterized queries to prevent SQL injection. All sensitive operations are rate-limited to protect your account.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">How do I log in to the Udemy Course Enroller?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    The recommended method is <strong>Cookie Login</strong>. After logging into udemy.com in your browser, 
+                    open the Developer Tools (F12) → Application → Cookies, then copy your <code>access_token</code>, 
+                    <code>client_id</code>, and <code>csrftoken</code> into the login form. This avoids CAPTCHA issues 
+                    that can occur with email/password login on hosted servers.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">Who built the Udemy Course Enroller?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    The Udemy Course Enroller was designed and developed by 
+                    <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-400 hover:underline">Madhu Dadi</a>, 
+                    a software engineer and AI specialist. Madhu builds automation tools, AI-driven applications, and shares 
+                    technical deep-dives on the <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="text-blue-400 hover:underline">blog</a>.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">What technologies power the Udemy Course Enroller?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    The stack is modern and fully asynchronous: <strong>Python 3.13</strong> with <strong>FastAPI</strong> for the backend, 
+                    <strong>SQLAlchemy</strong> with <strong>SQLite</strong> for data persistence, <strong>CloudScraper</strong> for headless browser automation, 
+                    <strong>Tailwind CSS</strong> for styling, and <strong>Alembic</strong> for database migrations. 
+                    Want a technical deep-dive? Read the architecture breakdown on 
+                    <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="text-blue-400 hover:underline">madhudadi.in/blog</a>.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">Can I self-host the Udemy Course Enroller?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    Yes! The project is fully open-source and includes a <strong>Dockerfile</strong>, <strong>docker-compose.yml</strong>, 
+                    and Alembic migration scripts. You can deploy it on your own server, VPS, or local machine in minutes. 
+                    Check the repository for detailed setup instructions.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">How does the Udemy Course Enroller save money?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    The tool tracks the original retail price of every course it successfully enrolls you in. 
+                    Your <strong>lifetime savings</strong> are displayed in real-time on the analytics dashboard, 
+                    so you can see exactly how much value you've claimed.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <h2 class="text-xl font-bold text-white mb-3" itemprop="name">What coupon sources does it support?</h2>
+            <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-gray-300 leading-relaxed" itemprop="text">
+                    It supports multiple popular coupon aggregators including <strong>Real Discount</strong>, <strong>Discudemy</strong>, 
+                    and <strong>Courson</strong>. The scraper engine is modular, so new sources can be added easily. 
+                    Visit the <a href="/guides" class="text-blue-400 hover:underline">Guides</a> page for more details.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cross-promotion to blog -->
+    <div class="mt-12 bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl p-8 border border-blue-500/20">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <h3 class="text-xl font-bold text-white mb-2">Want deeper technical insights?</h3>
+                <p class="text-gray-300 text-sm">
+                    Madhu Dadi writes about FastAPI automation, web scraping strategies, and building AI-powered tools on the blog.
+                </p>
+            </div>
+            <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" 
+               class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition-colors flex items-center">
+                <i class="fas fa-book-open mr-2"></i>Read the Blog
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

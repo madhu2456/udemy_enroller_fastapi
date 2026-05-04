@@ -1,0 +1,163 @@
+{% extends "components/base.html" %}
+{% block title %}About — Udemy Course Enroller by Madhu Dadi{% endblock %}
+{% block meta_description %}Learn how the Udemy Course Enroller works, its architecture, and the story behind this free automation tool built by Madhu Dadi to democratize online education.{% endblock %}
+{% block meta_keywords %}Udemy Course Enroller, about Udemy enroller, Madhu Dadi projects, free Udemy automation, open source education tool{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="Breadcrumb" class="text-sm text-gray-400 mb-6">
+    <ol class="flex items-center space-x-2" itemscope itemtype="https://schema.org/BreadcrumbList">
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <a href="/" itemprop="item" class="hover:text-blue-400"><span itemprop="name">Home</span></a>
+            <meta itemprop="position" content="1" />
+        </li>
+        <li class="text-gray-600">/</li>
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <span itemprop="name" class="text-gray-300">About</span>
+            <meta itemprop="position" content="2" />
+        </li>
+    </ol>
+</nav>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": "About Udemy Course Enroller",
+  "url": "https://udemyenroller.madhudadi.in/about",
+  "mainEntity": {
+    "@type": "SoftwareApplication",
+    "name": "Udemy Course Enroller",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Web",
+    "url": "https://udemyenroller.madhudadi.in",
+    "author": {
+      "@type": "Person",
+      "name": "Madhu Dadi",
+      "url": "https://madhudadi.in",
+      "sameAs": ["https://madhudadi.in/blog", "https://github.com/madhu2456"]
+    }
+  }
+}
+</script>
+
+<div class="max-w-4xl mx-auto">
+    <div class="text-center mb-12">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-4">About the Project</h1>
+        <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+            The story, architecture, and mission behind the Udemy Course Enroller — a free tool built to make premium education accessible.
+        </p>
+    </div>
+
+    <!-- Mission -->
+    <div class="bg-gray-800 rounded-xl p-8 border border-gray-700 mb-8">
+        <h2 class="text-2xl font-bold text-white mb-4">The Mission</h2>
+        <p class="text-gray-300 leading-relaxed mb-4">
+            Online education should be a right, not a privilege. While platforms like Udemy offer incredible courses taught by industry experts, 
+            the cost can be prohibitive for students and self-learners worldwide. The reality is that instructors <em>want</em> to give their courses away for free 
+            — they share 100% off coupons on aggregator sites to build reviews and reach. But these coupons expire within hours, sometimes minutes.
+        </p>
+        <p class="text-gray-300 leading-relaxed">
+            The Udemy Course Enroller was built to solve this exact problem: <strong>automatically monitor, discover, and claim these free coupons before they vanish</strong>, 
+            giving users a perpetual library of premium knowledge at zero cost.
+        </p>
+    </div>
+
+    <!-- How It Works -->
+    <div class="bg-gray-800 rounded-xl p-8 border border-gray-700 mb-8">
+        <h2 class="text-2xl font-bold text-white mb-6">How It Works</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-2xl">🔍</span>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2">1. Scrape</h3>
+                <p class="text-gray-400 text-sm">Headless browser pools continuously scan coupon aggregators like Real Discount and Discudemy for new 100% off deals.</p>
+            </div>
+            <div class="text-center">
+                <div class="w-16 h-16 bg-purple-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-2xl">⚡</span>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2">2. Filter</h3>
+                <p class="text-gray-400 text-sm">Smart exclusion rules filter by category, language, rating, and instructor before any enrollment attempt.</p>
+            </div>
+            <div class="text-center">
+                <div class="w-16 h-16 bg-emerald-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-2xl">🎓</span>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2">3. Enroll</h3>
+                <p class="text-gray-400 text-sm">The Udemy API is used to batch-enroll courses directly into your account, tracking lifetime savings automatically.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Architecture -->
+    <div class="bg-gray-800 rounded-xl p-8 border border-gray-700 mb-8">
+        <h2 class="text-2xl font-bold text-white mb-4">Technical Architecture</h2>
+        <p class="text-gray-300 leading-relaxed mb-4">
+            The application is built on a modern, fully asynchronous Python stack. <strong>FastAPI</strong> handles concurrent API requests, 
+            while <strong>CloudScraper</strong> manages a pool of headless Chromium instances to bypass anti-bot measures on coupon sites. 
+            Data is persisted in <strong>SQLite</strong> via <strong>SQLAlchemy ORM</strong>, with <strong>Alembic</strong> managing schema migrations.
+        </p>
+        <p class="text-gray-300 leading-relaxed mb-4">
+            The frontend is intentionally lightweight — pure HTML5, <strong>Tailwind CSS</strong>, and vanilla JavaScript — ensuring sub-second load times 
+            and minimal client-side overhead. Server-Sent Events (SSE) power the live log stream and enrollment progress updates.
+        </p>
+        <p class="text-gray-300 leading-relaxed">
+            For a deep technical breakdown of the scraping architecture and rate-limiting strategies, read the case study on 
+            <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="text-blue-400 hover:underline">madhudadi.in/blog</a>.
+        </p>
+    </div>
+
+    <!-- Author Card -->
+    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 border border-gray-700 shadow-lg relative overflow-hidden mb-8">
+        <div class="absolute -right-10 -top-10 opacity-10">
+            <i class="fas fa-code text-9xl text-blue-500"></i>
+        </div>
+        
+        <h2 class="text-2xl font-bold text-white mb-6 relative z-10">About the Developer</h2>
+        
+        <div class="relative z-10 flex flex-col md:flex-row items-start gap-6">
+            <div class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-3xl font-bold text-white shrink-0">
+                MD
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-white mb-1">Madhu Dadi</h3>
+                <p class="text-blue-400 text-sm mb-3">Software Engineer & AI Specialist</p>
+                <p class="text-gray-300 leading-relaxed mb-4">
+                    Madhu is a full-stack developer and automation enthusiast based in India. He specializes in building 
+                    AI-driven applications, async web services, and developer tools that solve real-world problems. 
+                    The Udemy Course Enroller is one of several open-source projects aimed at democratizing access to technology and education.
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center">
+                        <i class="fas fa-globe mr-2"></i>Portfolio
+                    </a>
+                    <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center">
+                        <i class="fas fa-pen-nib mr-2"></i>Blog
+                    </a>
+                    <a href="https://github.com/madhu2456" target="_blank" rel="noopener" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center">
+                        <i class="fab fa-github mr-2"></i>GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Open Source CTA -->
+    <div class="bg-gradient-to-r from-emerald-900/40 to-blue-900/40 rounded-xl p-8 border border-emerald-500/20">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <h3 class="text-xl font-bold text-white mb-2">Open Source & Self-Hostable</h3>
+                <p class="text-gray-300 text-sm">
+                    This project is fully open-source. Deploy it on your own infrastructure, customize the scrapers, or contribute improvements.
+                </p>
+            </div>
+            <a href="https://github.com/madhu2456" target="_blank" rel="noopener" 
+               class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-3 rounded-lg transition-colors flex items-center">
+                <i class="fab fa-github mr-2"></i>View on GitHub
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

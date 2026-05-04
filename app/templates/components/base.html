@@ -10,11 +10,17 @@
     <meta name="description" content="{% block meta_description %}Automate your learning journey. Find and enroll in 100% free Udemy courses automatically with Madhu Dadi's Udemy Course Enroller.{% endblock %}">
     <meta name="keywords" content="{% block meta_keywords %}Udemy, Free Courses, Course Enroller, Automation, Madhu Dadi, Learning, Coupons{% endblock %}">
     <meta name="author" content="Madhu Dadi">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="theme-color" content="#111827">
     <link rel="canonical" href="https://udemyenroller.madhudadi.in{{ request.url.path }}">
 
     <!-- AEO and GEO specific link tags -->
     <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs profile">
     <link rel="alternate" type="application/json" href="/ai-profile.json" title="AI profile JSON">
+
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://madhudadi.in" crossorigin>
+    <link rel="dns-prefetch" href="https://madhudadi.in">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -36,47 +42,84 @@
 
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
-    [
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "Udemy Course Enroller",
-        "operatingSystem": "Web",
-        "applicationCategory": "EducationalApplication",
-        "description": "An automated system to find and enroll in 100% free discounted Udemy courses, developed by Madhu Dadi.",
-        "url": "https://udemyenroller.madhudadi.in",
-        "author": {
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://udemyenroller.madhudadi.in/#website",
+          "url": "https://udemyenroller.madhudadi.in",
+          "name": "Udemy Course Enroller",
+          "description": "Automatically find and enroll in 100% free Udemy courses.",
+          "publisher": {
+            "@type": "Person",
+            "@id": "https://madhudadi.in/#person",
+            "name": "Madhu Dadi",
+            "url": "https://madhudadi.in"
+          },
+          "isPartOf": {
+            "@type": "WebSite",
+            "@id": "https://madhudadi.in/#website",
+            "url": "https://madhudadi.in",
+            "name": "Madhu Dadi — Portfolio"
+          },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Udemy Course Enroller",
+          "operatingSystem": "Web",
+          "applicationCategory": "EducationalApplication",
+          "description": "An automated system to find and enroll in 100% free discounted Udemy courses, developed by Madhu Dadi.",
+          "url": "https://udemyenroller.madhudadi.in",
+          "author": {
+            "@type": "Person",
+            "@id": "https://madhudadi.in/#person",
+            "name": "Madhu Dadi",
+            "url": "https://madhudadi.in",
+            "jobTitle": "AI Developer & Marketing Analytics Leader",
+            "sameAs": [
+              "https://madhudadi.in/blog",
+              "https://github.com/madhu2456",
+              "https://www.linkedin.com/in/madhu-dadi-54684531",
+              "https://x.com/madhu245"
+            ]
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
+          }
+        },
+        {
           "@type": "Person",
+          "@id": "https://madhudadi.in/#person",
           "name": "Madhu Dadi",
           "url": "https://madhudadi.in",
+          "jobTitle": "AI Developer & Marketing Analytics Leader",
+          "description": "AI consultant and ML engineer with 9+ years of experience delivering generative AI consulting, LLM applications, and RAG systems that drive measurable business outcomes.",
           "sameAs": [
             "https://madhudadi.in/blog",
             "https://github.com/madhu2456",
-            "https://twitter.com/madhudadi",
-            "https://linkedin.com/in/madhudadi"
+            "https://www.linkedin.com/in/madhu-dadi-54684531",
+            "https://x.com/madhu245"
+          ],
+          "knowsAbout": [
+            "Python",
+            "FastAPI",
+            "SQL",
+            "Machine Learning",
+            "REST API Design",
+            "CloudScraper",
+            "Tailwind CSS"
           ]
-        },
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
         }
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "Person",
-        "@id": "https://madhudadi.in/#person",
-        "name": "Madhu Dadi",
-        "url": "https://madhudadi.in",
-        "jobTitle": "Software Engineer & AI Specialist",
-        "description": "Developer of automated educational tools and AI-driven applications.",
-        "sameAs": [
-          "https://madhudadi.in/blog",
-          "https://github.com/madhu2456",
-          "https://twitter.com/madhudadi"
-        ]
-      }
-    ]
+      ]
+    }
     </script>
 
     {% if request.url.path == '/' %}
@@ -164,8 +207,8 @@
                     {% endif %}
                     Udemy Enroller
                 </a>
-                {% if request.url.path != '/' %}
-                <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar" id="nav-links">
+                <div class="hidden md:flex items-center space-x-1 overflow-x-auto no-scrollbar" id="nav-links">
+                    {% if request.url.path != '/' %}
                     <a href="/dashboard" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
                         <i class="fas fa-chart-bar mr-1"></i>Dashboard
                     </a>
@@ -175,8 +218,17 @@
                     <a href="/history" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
                         <i class="fas fa-history mr-1"></i>History
                     </a>
+                    {% endif %}
+                    <a href="/faq" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap{% if request.url.path == '/faq' %} active{% endif %}">
+                        FAQ
+                    </a>
+                    <a href="/about" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap{% if request.url.path == '/about' %} active{% endif %}">
+                        About
+                    </a>
+                    <a href="/guides" class="nav-link px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium hover:bg-gray-700 whitespace-nowrap{% if request.url.path == '/guides' %} active{% endif %}">
+                        Guides
+                    </a>
                 </div>
-                {% endif %}
             </div>
             <div class="flex items-center space-x-4">
                 <span id="user-info" class="text-sm text-gray-400"></span>
@@ -194,25 +246,37 @@
 
     <!-- Footer -->
     <footer class="bg-gray-900 border-t border-gray-800 px-6 py-8 mt-auto">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-sm text-gray-400">
-            <div class="flex items-center space-x-2 mb-4 md:mb-0">
-                {% if request.url.path == '/' %}
-                <span class="text-gray-400 text-lg" aria-hidden="true">🎓</span>
-                {% else %}
-                <i class="fas fa-graduation-cap text-gray-600 text-lg"></i>
-                {% endif %}
-                <span class="font-medium text-gray-400">Udemy Course Enroller</span>
-                <span class="hidden md:inline px-2">&bull;</span>
-                <span class="text-gray-400">Automated Learning Infrastructure</span>
+        <div class="max-w-7xl mx-auto">
+            <!-- Footer Links -->
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6 text-sm text-gray-400 mb-6">
+                <a href="/faq" class="hover:text-white transition-colors">FAQ</a>
+                <a href="/about" class="hover:text-white transition-colors">About</a>
+                <a href="/guides" class="hover:text-white transition-colors">Guides</a>
+                <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="hover:text-blue-400 transition-colors">Portfolio</a>
+                <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="hover:text-purple-400 transition-colors">Blog</a>
+                <a href="https://madhudadi.in/case-studies/udemy-enroller-fastapi/" target="_blank" rel="noopener" class="hover:text-emerald-400 transition-colors">Case Study</a>
+                <a href="https://github.com/madhu2456" target="_blank" rel="noopener" class="hover:text-white transition-colors">GitHub</a>
             </div>
-            <div class="flex items-center space-x-1">
-                <span>Built with</span>
-                <span class="text-red-400 px-1" aria-hidden="true">❤</span>
-                <span>by</span>
-                <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors ml-1 relative group">
-                    Madhu Dadi
-                    <span class="absolute -bottom-0.5 left-0 w-0 h-[1px] bg-blue-400 transition-all group-hover:w-full"></span>
-                </a>
+            <div class="flex flex-col md:flex-row items-center justify-between text-sm text-gray-400">
+                <div class="flex items-center space-x-2 mb-4 md:mb-0">
+                    {% if request.url.path == '/' %}
+                    <span class="text-gray-400 text-lg" aria-hidden="true">🎓</span>
+                    {% else %}
+                    <i class="fas fa-graduation-cap text-gray-600 text-lg"></i>
+                    {% endif %}
+                    <span class="font-medium text-gray-400">Udemy Course Enroller</span>
+                    <span class="hidden md:inline px-2">&bull;</span>
+                    <span class="text-gray-400">Automated Learning Infrastructure</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <span>Built with</span>
+                    <span class="text-red-400 px-1" aria-hidden="true">❤</span>
+                    <span>by</span>
+                    <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors ml-1 relative group">
+                        Madhu Dadi
+                        <span class="absolute -bottom-0.5 left-0 w-0 h-[1px] bg-blue-400 transition-all group-hover:w-full"></span>
+                    </a>
+                </div>
             </div>
         </div>
     </footer>
