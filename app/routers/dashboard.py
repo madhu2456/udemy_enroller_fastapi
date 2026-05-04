@@ -29,7 +29,7 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Main dashboard page."""
-    return templates.TemplateResponse("pages/dashboard.html", {"request": request})
+    return templates.TemplateResponse(request, "pages/dashboard.html")
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -49,19 +49,19 @@ async def login_page(request: Request, db: Session = Depends(get_db)):
             else:
                 return RedirectResponse(url="/dashboard", status_code=303)
 
-    return templates.TemplateResponse("pages/login.html", {"request": request})
+    return templates.TemplateResponse(request, "pages/login.html")
 
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     """Settings page."""
-    return templates.TemplateResponse("pages/settings.html", {"request": request})
+    return templates.TemplateResponse(request, "pages/settings.html")
 
 
 @router.get("/history", response_class=HTMLResponse)
 async def history_page(request: Request):
     """Enrollment history page."""
-    return templates.TemplateResponse("pages/history.html", {"request": request})
+    return templates.TemplateResponse(request, "pages/history.html")
 
 
 @router.get("/api/dashboard/stats")
