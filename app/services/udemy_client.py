@@ -750,34 +750,52 @@ class UdemyClient:
         course.status = False
 
     async def free_checkout(self, course: Course):
-        """Free course checkout: POST subscribe then verify enrollment."""
-        if self.cs is None:
-            logger.error(f"[FREE_CHECKOUT] No CloudScraper session for {course.title}")
-            course.status = False
-            return
-
+        """Free course checkout: GET subscribe URL then verify enrollment via API."""
         logger.info(f"[FREE_CHECKOUT] {course.title} | ID={course.course_id}")
 
-        # Step 1: POST to subscribe URL (old working code used POST; GET may fail)
-        sub_url = f"https://www.udemy.com/course/subscribe/?courseId={course.course_id}"
-        csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
-        sub_headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
-        r1 = await self._cs_post(sub_url, headers=sub_headers, timeout=25)
+        # Step 1: GET the subscribe URL (old working Technatic logic)
+        sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
+        headers = {
+            "User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
+            "Referer": course.url or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+        r1 = await self.http.get(
+            sub_url,
+            cookies=self.cookie_dict,
+            headers=headers,
+            req_type="mobile",
+            use_cloudscraper=True,
+            log_failures=False,
+        )
         if r1 is None:
-            logger.warning(f"[FREE_CHECKOUT] Subscribe POST failed for {course.title}")
+            logger.warning(f"[FREE_CHECKOUT] Subscribe request returned no response for {course.title}")
+        else:
+            logger.info(f"[FREE_CHECKOUT] Subscribe status={r1.status_code} for {course.title}")
+            if r1.status_code not in (200, 302):
+                logger.warning(f"[FREE_CHECKOUT] Subscribe body snippet: {r1.text[:300]}")
 
-        # Step 2: Verify enrollment via API (DUCE-style GET)
+        # Step 2: Verify enrollment via API
         verify_url = (
-            f"https://www.udemy.com/api-2.0/users/me/subscribed-courses/"
+            f"{constants.UDEMY_API_BASE}/users/me/subscribed-courses/"
             f"{course.course_id}/?fields%5Bcourse%5D=%40default%2C"
             f"buyable_object_type%2Cprimary_subcategory%2Cis_private"
         )
-        r2 = await self._cs_get(verify_url, timeout=25)
+        r2 = await self.http.get(
+            verify_url,
+            cookies=self.cookie_dict,
+            headers=headers,
+            req_type="mobile",
+            use_cloudscraper=True,
+            log_failures=False,
+        )
 
         if r2 is None:
-            logger.warning(f"[FREE_CHECKOUT] Verify GET failed for {course.title}")
+            logger.warning(f"[FREE_CHECKOUT] Verify request returned no response for {course.title}")
             course.status = False
             return
+
+        logger.info(f"[FREE_CHECKOUT] Verify status={r2.status_code} for {course.title}")
 
         if r2.headers.get("retry-after"):
             logger.error(f"[FREE_CHECKOUT] retry-after header for {course.title}")
@@ -789,18 +807,23 @@ class UdemyClient:
             course.status = True
             return
 
-        try:
-            data = r2.json()
-        except Exception as e:
-            logger.warning(f"[FREE_CHECKOUT] JSON error: {e} | text={r2.text[:200]}")
+        data = await self.http.safe_json(r2, context="free_checkout_verify")
+        if data is None:
+            logger.warning(f"[FREE_CHECKOUT] Could not parse verify JSON for {course.title}")
             course.status = False
             return
+
+        # Log the full verify response so we can diagnose why _class is missing
+        logger.info(f"[FREE_CHECKOUT] Verify JSON for {course.title}: {data}")
 
         course.status = data.get("_class") == "course"
         if course.status:
             logger.info(f"[FREE_CHECKOUT] SUCCESS for {course.title}")
         else:
-            logger.warning(f"[FREE_CHECKOUT] FAILED for {course.title} | _class={data.get('_class')}")
+            logger.warning(
+                f"[FREE_CHECKOUT] FAILED for {course.title} | _class={data.get('_class')} | "
+                f"status={r2.status_code}"
+            )
 
     async def checkout_single(self, course: Course) -> bool:
         """DUCE-style single course enrollment."""
@@ -812,7 +835,7 @@ class UdemyClient:
             # Fallback: use regular checkout pipeline with amount=0
             # (matches old working code behavior)
             if not course.status:
-                logger.info(f"[CHECKOUT_SINGLE] Free-checkout failed, falling back to du-checkout for {course.title}")
+                logger.warning(f"[CHECKOUT_SINGLE] Free-checkout failed, falling back to du-checkout for {course.title}")
                 await self._du_checkout(course)
         else:
             await self._du_checkout(course)
