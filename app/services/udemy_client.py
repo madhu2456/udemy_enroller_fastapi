@@ -302,7 +302,7 @@ class UdemyClient:
             if token:
                 headers["Authorization"] = f"Bearer {token}"
 
-            # Try CloudScraper + Mobile headers
+            # Try CloudScraper + Mobile headers with 403 retry + header rotation
             resp = await self.http.get(
                 constants.UDEMY_CONTEXT_URL,
                 cookies=self.cookie_dict,
@@ -310,6 +310,8 @@ class UdemyClient:
                 req_type="mobile",
                 use_cloudscraper=True,
                 log_failures=False,
+                retry_403=True,
+                attempts=3,
             )
 
             if not resp or resp.status_code == 403:
@@ -319,6 +321,8 @@ class UdemyClient:
                     headers=headers,
                     req_type="mobile",
                     log_failures=False,
+                    retry_403=True,
+                    attempts=3,
                 )
 
             ctx = await self.http.safe_json(resp, "session")
