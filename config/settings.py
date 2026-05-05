@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     SCRAPER_TIMEOUT: int = 30
     PROXIES: str = ""  # Comma-separated list of proxy URLs
 
+    # Deployment environment: "local" or "server"
+    # "server" applies stricter rate limits and adaptive backoff to avoid Udemy blocks
+    DEPLOYMENT_ENV: str = "local"
+
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "logs/app.log"
