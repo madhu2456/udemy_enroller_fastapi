@@ -48,6 +48,11 @@ class EnrollmentManager:
         self.current_course_url = ""
         self.scraper_service: Optional[ScraperService] = None
 
+        # Deployment-aware rate limiting
+        from config.settings import get_settings
+
+        self._is_server = get_settings().DEPLOYMENT_ENV == "server"
+
     @classmethod
     def get_active_run(cls, db: Session, user_id: int) -> Optional[EnrollmentRun]:
         """Find the active run for a user."""
@@ -391,8 +396,29 @@ class EnrollmentManager:
                 if (index + 1) % 5 == 0 or (index + 1) == self.total_courses:
                     await self._update_run_stats(db, run)
 
-                # Small safety sleep
-                await asyncio.sleep(random.uniform(0.5, 1.5))
+                # Server-specific batch pauses to avoid Udemy rate limits
+                if self._is_server:
+                    # Detect account block signal and trigger longer cooldown
+                    if error_msg and "temporarily blocked" in error_msg.lower():
+                        cooldown = random.uniform(120, 180)
+                        logger.warning(
+                            f"  [SERVER] Account block signal detected. Cooling down for {cooldown:.0f}s..."
+                        )
+                        await asyncio.sleep(cooldown)
+
+                    # After every 25 courses, take a longer breather
+                    if (index + 1) % 25 == 0:
+                        breather = random.uniform(20, 40)
+                        logger.info(
+                            f"  [SERVER] Batch pause after {index + 1} courses. Sleeping {breather:.0f}s..."
+                        )
+                        await asyncio.sleep(breather)
+
+                    # Standard server safety sleep (longer than local)
+                    await asyncio.sleep(random.uniform(1.5, 3.5))
+                else:
+                    # Local: small safety sleep (fast, residential IP)
+                    await asyncio.sleep(random.uniform(0.5, 1.5))
 
             # Mark complete and log session health metrics
             run.status = "completed"

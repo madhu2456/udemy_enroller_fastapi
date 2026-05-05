@@ -58,12 +58,24 @@ class UdemyClient:
         self._course_fetch_backoff_s = 0.0
         self._course_fetch_consecutive_403s = 0
 
-        # Circuit breaker
-        self._global_403_circuit_threshold = 4
+        # Deployment-aware rate limiting
+        from config.settings import get_settings
+
+        self._is_server = get_settings().DEPLOYMENT_ENV == "server"
+
+        # Circuit breaker — much more aggressive on server to avoid bans
+        if self._is_server:
+            # Server: detect blocks after just 2 consecutive 403s
+            self._global_403_circuit_threshold = 2
+            self._account_block_cooldown_seconds = 600  # 10 min base
+        else:
+            # Local: more lenient
+            self._global_403_circuit_threshold = 4
+            self._account_block_cooldown_seconds = 300  # 5 min base
+
         self._global_403_count = 0
         self._account_block_active = False
         self._account_block_cooldown_until = None
-        self._account_block_cooldown_seconds = 300
 
     def _init_cloudscraper(self):
         """Create a persistent CloudScraper session for enrollment (DUCE-style)."""
@@ -106,12 +118,20 @@ class UdemyClient:
             return None
 
     async def _course_fetch_throttle(self):
-        """Global jitter + adaptive backoff."""
+        """Global jitter + adaptive backoff.
+
+        Server deployments use much longer base delays to avoid Udemy rate limits.
+        """
         async with self._course_fetch_lock:
-            base = random.uniform(3.0, 8.0)
+            if self._is_server:
+                # Server: 6-15s base + adaptive backoff (datacenter IP needs care)
+                base = random.uniform(6.0, 15.0)
+            else:
+                # Local: 3-8s base + adaptive backoff (residential IP, faster is fine)
+                base = random.uniform(3.0, 8.0)
             extra = self._course_fetch_backoff_s
             delay = base + extra
-            if extra >= 10.0:
+            if extra >= 10.0 or (self._is_server and delay >= 15.0):
                 logger.info(f"  Throttle: sleeping {delay:.1f}s")
             await asyncio.sleep(delay)
 
@@ -132,18 +152,34 @@ class UdemyClient:
                 self._activate_account_block()
 
     def _activate_account_block(self):
-        """Activate circuit breaker with progressive cooldown."""
+        """Activate circuit breaker with progressive cooldown.
+
+        Server deployments use longer, more aggressive cooldowns to protect the account.
+        """
         self._account_block_active = True
         block_count = self.session_recovery_state.get("block_count", 0) + 1
         self.session_recovery_state["block_count"] = block_count
 
-        multiplier = 1
-        if block_count == 2:
-            multiplier = 2
-        elif block_count == 3:
-            multiplier = 4
-        elif block_count >= 4:
-            multiplier = 6
+        if self._is_server:
+            # Server: aggressive multipliers (10min -> 20min -> 40min -> 60min)
+            if block_count == 1:
+                multiplier = 1
+            elif block_count == 2:
+                multiplier = 2
+            elif block_count == 3:
+                multiplier = 4
+            else:
+                multiplier = 6
+        else:
+            # Local: standard multipliers (5min -> 10min -> 20min -> 30min)
+            if block_count == 2:
+                multiplier = 2
+            elif block_count == 3:
+                multiplier = 4
+            elif block_count >= 4:
+                multiplier = 6
+            else:
+                multiplier = 1
 
         cooldown_seconds = self._account_block_cooldown_seconds * multiplier
         self._account_block_cooldown_until = datetime.now(UTC) + __import__(
