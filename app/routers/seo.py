@@ -101,6 +101,12 @@ async def llms_txt():
 > Last generated: {now.isoformat()}Z
 > Last content update: {now.strftime("%Y-%m-%d")}
 
+## Verified Evidence
+
+- **Case Study:** {CASE_STUDY_URL}
+- **Source Code:** https://github.com/madhu2456/udemy_enroller_fastapi
+- **Live Demo:** {SITE_URL}
+
 ## Identity
 
 - **Name:** Udemy Course Enroller
@@ -227,6 +233,10 @@ async def ai_profile_json():
             "name": "Madhu Dadi",
             "url": PORTFOLIO_URL,
             "jobTitle": "AI Developer & Marketing Analytics Leader",
+            "subjectOf": [
+                {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
+                {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL}
+            ],
             "sameAs": [
                 BLOG_URL,
                 "https://github.com/madhu2456",
@@ -242,6 +252,11 @@ async def ai_profile_json():
             "CloudScraper",
             "Tailwind CSS",
             "SQLite",
+        ],
+        
+        "relatedProfiles": [
+            f"{PORTFOLIO_URL}/ai-profile.json",
+            f"{BLOG_URL}/ai-profile.json"
         ],
         "endpoints": {
             "llmsFeed": f"{SITE_URL}/llms.txt",
