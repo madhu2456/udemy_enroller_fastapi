@@ -95,13 +95,21 @@ class UdemyClient:
         for k, v in self.cookie_dict.items():
             self.cs.cookies.set(k, v, domain="www.udemy.com")
 
+    def _sync_cs_cookies_back(self):
+        """Sync CloudScraper session cookies back into cookie_dict."""
+        if self.cs is None:
+            return
+        self.cookie_dict.update(self.cs.cookies.get_dict())
+
     async def _cs_get(self, url: str, **kwargs) -> Optional[object]:
         """Async wrapper for CloudScraper GET."""
         if self.cs is None:
             return None
         self._sync_cs_cookies()
         try:
-            return await asyncio.to_thread(self.cs.get, url, **kwargs)
+            resp = await asyncio.to_thread(self.cs.get, url, **kwargs)
+            self._sync_cs_cookies_back()
+            return resp
         except Exception as e:
             logger.warning(f"  CloudScraper GET failed: {type(e).__name__}: {e}")
             return None
@@ -112,7 +120,9 @@ class UdemyClient:
             return None
         self._sync_cs_cookies()
         try:
-            return await asyncio.to_thread(self.cs.post, url, **kwargs)
+            resp = await asyncio.to_thread(self.cs.post, url, **kwargs)
+            self._sync_cs_cookies_back()
+            return resp
         except Exception as e:
             logger.warning(f"  CloudScraper POST failed: {type(e).__name__}: {e}")
             return None
@@ -674,12 +684,9 @@ class UdemyClient:
         await self._cs_get(course_page_url, timeout=25)
 
         # Step 3: Build payload.
-        # For coupon courses: use list_price so Udemy can verify the discount.
-        # For free courses (no coupon): use amount=0 — list_price without a coupon
-        # causes an immediate price_mismatch_error.
+        # Udemy checkout expects the FINAL price the user pays. For 100% off coupons
+        # and free courses, this is always 0. check_course already validates the coupon.
         checkout_currency = (course.currency or self.currency or "USD").upper()
-        has_coupon = bool(course.coupon_code)
-        base_amount = float(course.list_price) if has_coupon and course.list_price is not None else 0.0
 
         def _build_payload(amount: float):
             return {
@@ -701,7 +708,7 @@ class UdemyClient:
                             },
                         }
                     ],
-                    "is_cart": True,
+                    "is_cart": False,
                 },
             }
 
@@ -712,13 +719,13 @@ class UdemyClient:
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
             "Referer": "https://www.udemy.com/payment/checkout/",
+            "Origin": "https://www.udemy.com",
             "X-CSRF-Token": csrf_token,
         }
         if self.cookie_dict.get("access_token"):
             headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
         max_attempts = 5
-        use_zero_next = False
         for attempt in range(max_attempts):
             logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
 
@@ -727,14 +734,21 @@ class UdemyClient:
                 await self._cs_get(checkout_page_url, timeout=25)
                 await asyncio.sleep(min(2 + attempt, 8))
 
-            # Determine amount: free courses start at 0; coupon courses start at list_price
-            # and fall back to 0 if Udemy reports price_mismatch.
-            if use_zero_next or (not has_coupon and attempt == 0):
-                amount = 0.0
-            else:
-                amount = base_amount
+            # Try to extract a fresh CSRF token from the checkout page HTML if available
+            if self.cs is not None:
+                try:
+                    checkout_resp = self.cs.get(checkout_page_url, timeout=25)
+                    fresh_csrf = await self._extract_csrf_from_html(checkout_resp.text)
+                    if fresh_csrf:
+                        headers["X-CSRF-Token"] = fresh_csrf
+                        self.cookie_dict["csrftoken"] = fresh_csrf
+                        self.cookie_dict["csrf_token"] = fresh_csrf
+                except Exception:
+                    pass
 
-            payload = _build_payload(amount)
+            # Always send amount=0 — check_course already validated the coupon.
+            # Udemy validates the discount server-side; the amount must be the final price.
+            payload = _build_payload(0.0)
             logger.info(f"[DU_CHECKOUT PAYLOAD] {payload}")
 
             r = await self._cs_post(
@@ -779,13 +793,11 @@ class UdemyClient:
                 course.status = True
                 return
 
-            # Detect price mismatch so we can fall back to amount=0 on next iteration
-            if "price_mismatch" in dev_msg.lower() and amount != 0.0:
-                logger.warning(f"[DU_CHECKOUT] Price mismatch on attempt {attempt + 1}, will fallback to 0 for {course.title}")
-                use_zero_next = True
-                continue
-
-            logger.warning(f"[DU_CHECKOUT] Failed: {result} for {course.title}")
+            # Log full failure details at WARNING so they show up in production logs
+            logger.warning(
+                f"[DU_CHECKOUT] Failed (attempt {attempt + 1}/{max_attempts}) for {course.title}: "
+                f"status={r.status_code} | payload={payload} | result={result}"
+            )
 
         course.status = False
 
