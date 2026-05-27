@@ -163,10 +163,19 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
-    """Add long-lived cache headers to static files to improve Lighthouse score."""
+    """Add central cache control headers to satisfy proxy policies and optimize page speed."""
     response = await call_next(request)
-    if request.url.path.startswith("/static/"):
+    path = request.url.path
+
+    if path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path in {"/faq", "/about", "/guides", "/robots.txt", "/sitemap.xml", "/humans.txt", "/llms.txt", "/ai-profile.json"}:
+        response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
+    elif path in {"/", "/dashboard", "/settings", "/history"} or path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
     return response
 
 # Static files

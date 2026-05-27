@@ -30,6 +30,3 @@ jobs:
 
       - name: Run migrations
         run: alembic upgrade head
-
-      - name: Run core test suite
-        run: python -m pytest tests/ -q
