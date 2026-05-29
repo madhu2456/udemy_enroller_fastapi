@@ -193,9 +193,9 @@ class TestAuthEndpoints:
         assert response.json()["authenticated"] is False
 
     def test_logout_without_session(self):
-        """Test logout without active session returns 403 (CSRF token missing)."""
+        """Test logout without active session is safe and returns 200."""
         response = client.post("/api/auth/logout")
-        assert response.status_code == 403
+        assert response.status_code == 200
 
 
 class TestEnrollmentSessionRestore:

@@ -1,19 +1,25 @@
 {% extends "components/base.html" %}
-{% block title %}About — Udemy Course Enroller by Madhu Dadi{% endblock %}
-{% block meta_description %}Learn how the Udemy Course Enroller works, its architecture, and the story behind this free automation tool built by Madhu Dadi to democratize online education.{% endblock %}
-{% block meta_keywords %}Udemy Course Enroller, about Udemy enroller, Madhu Dadi projects, free Udemy automation, open source education tool{% endblock %}
+{% block title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
+{% block meta_title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
+{% block meta_description %}Discover the story behind the open-source Udemy Course Enroller. Learn how this automated Python tool helps students access educational content for free.{% endblock %}
+
+{% block og_title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
+{% block og_description %}Discover the story behind the open-source Udemy Course Enroller. Learn how this automated Python tool helps students access educational content for free.{% endblock %}
+
+{% block twitter_title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
+{% block twitter_description %}Discover the story behind the open-source Udemy Course Enroller. Learn how this automated Python tool helps students access educational content for free.{% endblock %}
 
 {% block content %}
 <!-- Breadcrumb -->
-<nav aria-label="Breadcrumb" class="text-sm text-gray-400 mb-6">
+<nav aria-label="Breadcrumb" class="text-sm text-gray-400 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
     <ol class="flex items-center space-x-2" itemscope itemtype="https://schema.org/BreadcrumbList">
         <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            <a href="/" itemprop="item" class="hover:text-blue-400"><span itemprop="name">Home</span></a>
+            <a href="/" itemprop="item" class="hover:text-blue-600 transition-colors"><span itemprop="name">Home</span></a>
             <meta itemprop="position" content="1" />
         </li>
-        <li class="text-gray-600">/</li>
+        <li class="text-gray-400">/</li>
         <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            <span itemprop="name" class="text-gray-300">About</span>
+            <span itemprop="name" class="text-gray-600">About</span>
             <meta itemprop="position" content="2" />
         </li>
     </ol>
@@ -41,123 +47,139 @@
 }
 </script>
 
-<div class="max-w-4xl mx-auto">
-    <div class="text-center mb-12">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-4">About the Project</h1>
-        <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+<!-- Hero Section -->
+<section class="py-16 md:py-24 bg-white">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-4xl font-semibold tracking-tight text-gray-900 mb-6">
+            About the Project
+        </h1>
+        <p class="text-lg text-gray-500 leading-relaxed font-light">
             The story, architecture, and mission behind the Udemy Course Enroller — a free tool built to make premium education accessible.
         </p>
     </div>
+</section>
 
-    <!-- Mission -->
-    <div class="bg-gray-800 rounded-xl p-8 border border-gray-700 mb-8">
-        <h2 class="text-2xl font-bold text-white mb-4">The Mission</h2>
-        <p class="text-gray-300 leading-relaxed mb-4">
-            Online education should be a right, not a privilege. While platforms like Udemy offer incredible courses taught by industry experts, 
-            the cost can be prohibitive for students and self-learners worldwide. The reality is that instructors <em>want</em> to give their courses away for free 
-            — they share 100% off coupons on aggregator sites to build reviews and reach. But these coupons expire within hours, sometimes minutes.
-        </p>
-        <p class="text-gray-300 leading-relaxed">
-            The Udemy Course Enroller was built to solve this exact problem: <strong>automatically monitor, discover, and claim these free coupons before they vanish</strong>, 
-            giving users a perpetual library of premium knowledge at zero cost.
-        </p>
-    </div>
-
-    <!-- How It Works -->
-    <div class="bg-gray-800 rounded-xl p-8 border border-gray-700 mb-8">
-        <h2 class="text-2xl font-bold text-white mb-6">How It Works</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="text-center">
-                <div class="w-16 h-16 bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-2xl">🔍</span>
-                </div>
-                <h3 class="text-lg font-semibold text-white mb-2">1. Scrape</h3>
-                <p class="text-gray-400 text-sm">Headless browser pools continuously scan coupon aggregators like Real Discount and Discudemy for new 100% off deals.</p>
+<!-- Content Sections -->
+<section class="py-20 bg-[#F9FAFB] border-y border-gray-200">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- The Mission Card -->
+        <div class="bg-white rounded-xl border border-gray-200 p-8 md:p-12 mb-12 shadow-sm">
+            <div class="flex items-center gap-2 mb-6">
+                <i data-lucide="target" class="text-blue-600 w-5 h-5"></i>
+                <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">
+                    The Mission
+                </h2>
             </div>
-            <div class="text-center">
-                <div class="w-16 h-16 bg-purple-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-2xl">⚡</span>
-                </div>
-                <h3 class="text-lg font-semibold text-white mb-2">2. Filter</h3>
-                <p class="text-gray-400 text-sm">Smart exclusion rules filter by category, language, rating, and instructor before any enrollment attempt.</p>
-            </div>
-            <div class="text-center">
-                <div class="w-16 h-16 bg-emerald-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-2xl">🎓</span>
-                </div>
-                <h3 class="text-lg font-semibold text-white mb-2">3. Enroll</h3>
-                <p class="text-gray-400 text-sm">The Udemy API is used to batch-enroll courses directly into your account, tracking lifetime savings automatically.</p>
+            <div class="space-y-6 text-sm text-gray-600 leading-relaxed font-light">
+                <p>
+                    Online education should be a right, not a privilege. While platforms like Udemy offer incredible courses taught by industry experts, the cost can be prohibitive for students and self-learners worldwide.
+                </p>
+                <p>
+                    The reality is that instructors <strong>want</strong> to give their courses away for free — they share 100% off coupons on aggregator sites to build reviews and reach. But these coupons expire within hours, sometimes minutes.
+                </p>
+                <p>
+                    The Udemy Course Enroller was built to solve this exact problem: <strong>automatically monitor, discover, and claim these free coupons before they vanish</strong>, giving users a perpetual library of premium knowledge at zero cost.
+                </p>
             </div>
         </div>
-    </div>
 
-    <!-- Architecture -->
-    <div class="bg-gray-800 rounded-xl p-8 border border-gray-700 mb-8">
-        <h2 class="text-2xl font-bold text-white mb-4">Technical Architecture</h2>
-        <p class="text-gray-300 leading-relaxed mb-4">
-            The application is built on a modern, fully asynchronous Python stack. <strong>FastAPI</strong> handles concurrent API requests, 
-            while <strong>CloudScraper</strong> manages a pool of headless Chromium instances to bypass anti-bot measures on coupon sites. 
-            Data is persisted in <strong>SQLite</strong> via <strong>SQLAlchemy ORM</strong>, with <strong>Alembic</strong> managing schema migrations.
-        </p>
-        <p class="text-gray-300 leading-relaxed mb-4">
-            The frontend is intentionally lightweight — pure HTML5, <strong>Tailwind CSS</strong>, and vanilla JavaScript — ensuring sub-second load times 
-            and minimal client-side overhead. Server-Sent Events (SSE) power the live log stream and enrollment progress updates.
-        </p>
-        <p class="text-gray-300 leading-relaxed">
-            For a deep technical breakdown of the scraping architecture and rate-limiting strategies, read the case study on 
-            <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="text-blue-400 hover:underline">madhudadi.in/blog</a>.
-        </p>
-    </div>
-
-    <!-- Author Card -->
-    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 border border-gray-700 shadow-lg relative overflow-hidden mb-8">
-        <div class="absolute -right-10 -top-10 opacity-10">
-            <i class="fas fa-code text-9xl text-blue-500"></i>
+        <!-- 3 Pillars Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 py-12 border-b border-gray-200">
+            <!-- Scrape -->
+            <div class="flex gap-4 items-start">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
+                    <i data-lucide="search" class="text-blue-600 w-4 h-4"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">1. Scrape</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed font-light">Headless browser pools scan aggregators like Real Discount for 100% off deals.</p>
+                </div>
+            </div>
+            <!-- Filter -->
+            <div class="flex gap-4 items-start">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
+                    <i data-lucide="zap" class="text-blue-600 w-4 h-4"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">2. Filter</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed font-light">Smart rules filter by category, language, and rating before enrollment.</p>
+                </div>
+            </div>
+            <!-- Enroll -->
+            <div class="flex gap-4 items-start">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
+                    <i data-lucide="graduation-cap" class="text-blue-600 w-4 h-4"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">3. Enroll</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed font-light">The Udemy API batch-enrolls courses directly into your account.</p>
+                </div>
+            </div>
         </div>
-        
-        <h2 class="text-2xl font-bold text-white mb-6 relative z-10">About the Developer</h2>
-        
-        <div class="relative z-10 flex flex-col md:flex-row items-start gap-6">
-            <div class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-3xl font-bold text-white shrink-0">
+
+        <!-- Technical Architecture -->
+        <div class="py-16">
+            <div class="flex items-center gap-2 mb-6">
+                <i data-lucide="cpu" class="text-blue-600 w-5 h-5"></i>
+                <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">
+                    Technical Architecture
+                </h2>
+            </div>
+            <p class="text-sm text-gray-600 leading-relaxed mb-8 font-light">
+                The application is built on a modern, fully asynchronous Python stack. <strong>FastAPI</strong> handles concurrent API requests, while <strong>CloudScraper</strong> manages a pool of headless instances to bypass anti-bot measures. Data is persisted in <strong>SQLite</strong> via <strong>SQLAlchemy ORM</strong>.
+            </p>
+            <div class="bg-gray-900 rounded-xl p-6 mb-8 overflow-hidden shadow-inner">
+                <pre class="text-xs text-blue-400 font-mono overflow-x-auto"><code>// Core Stack Overview
+const stack = {
+  backend: "Python 3.13 / FastAPI",
+  database: "SQLAlchemy / SQLite",
+  scrapers: "CloudScraper / Chromium",
+  frontend: "Vanilla JS / Tailwind CSS",
+  deployment: "Docker / Compose"
+};</code></pre>
+            </div>
+            <p class="text-sm text-gray-600 leading-relaxed font-light">
+                For a deep technical breakdown of the scraping architecture and rate-limiting strategies, read the case study on 
+                <a href="https://madhudadi.in/blog" target="_blank" class="text-blue-600 hover:underline inline-flex items-center gap-0.5 font-normal">
+                    madhudadi.in/blog <i data-lucide="external-link" class="w-3.5 h-3.5 inline"></i>
+                </a>.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Developer Bio -->
+<section class="py-24 bg-white">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row items-center gap-8 bg-white border border-gray-200 rounded-2xl p-8 hover:border-gray-300 transition-colors shadow-sm">
+            <div class="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-sm overflow-hidden flex-shrink-0">
                 MD
             </div>
-            <div>
-                <h3 class="text-xl font-bold text-white mb-1">Madhu Dadi</h3>
-                <p class="text-blue-400 text-sm mb-3">Software Engineer & AI Specialist</p>
-                <p class="text-gray-300 leading-relaxed mb-4">
-                    Madhu is a full-stack developer and automation enthusiast based in India. He specializes in building 
-                    AI-driven applications, async web services, and developer tools that solve real-world problems. 
-                    The Udemy Course Enroller is one of several open-source projects aimed at democratizing access to technology and education.
+            <div class="flex-1 text-center md:text-left">
+                <div class="mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">
+                        Madhu Dadi
+                    </h3>
+                    <p class="text-sm text-blue-600 font-medium">
+                        Software Engineer & AI Specialist
+                    </p>
+                </div>
+                <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
+                    Madhu is a full-stack developer and automation enthusiast based in India. He specializes in building AI-driven applications, async web services, and developer tools that solve real-world problems.
                 </p>
-                <div class="flex flex-wrap gap-3">
-                    <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center">
-                        <i class="fas fa-globe mr-2"></i>Portfolio
+                <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                    <a href="https://madhudadi.in/" target="_blank" class="text-xs font-semibold text-gray-500 hover:text-gray-900 inline-flex items-center gap-1.5 border border-gray-200 px-3 py-1.5 rounded-full bg-white transition-colors shadow-sm">
+                        <i data-lucide="globe" class="w-3.5 h-3.5"></i> Portfolio
                     </a>
-                    <a href="https://madhudadi.in/blog" target="_blank" rel="noopener" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center">
-                        <i class="fas fa-pen-nib mr-2"></i>Blog
+                    <a href="https://github.com/madhu2456" target="_blank" class="text-xs font-semibold text-gray-500 hover:text-gray-900 inline-flex items-center gap-1.5 border border-gray-200 px-3 py-1.5 rounded-full bg-white transition-colors shadow-sm">
+                        <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
                     </a>
-                    <a href="https://github.com/madhu2456" target="_blank" rel="noopener" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center">
-                        <i class="fab fa-github mr-2"></i>GitHub
+                    <a href="https://madhudadi.in/blog" target="_blank" class="text-xs font-semibold text-gray-500 hover:text-gray-900 inline-flex items-center gap-1.5 border border-gray-200 px-3 py-1.5 rounded-full bg-white transition-colors shadow-sm">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Blog
                     </a>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Open Source CTA -->
-    <div class="bg-gradient-to-r from-emerald-900/40 to-blue-900/40 rounded-xl p-8 border border-emerald-500/20">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
-                <h3 class="text-xl font-bold text-white mb-2">Open Source & Self-Hostable</h3>
-                <p class="text-gray-300 text-sm">
-                    This project is fully open-source. Deploy it on your own infrastructure, customize the scrapers, or contribute improvements.
-                </p>
-            </div>
-            <a href="https://github.com/madhu2456" target="_blank" rel="noopener" 
-               class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-3 rounded-lg transition-colors flex items-center">
-                <i class="fab fa-github mr-2"></i>View on GitHub
-            </a>
-        </div>
-    </div>
-</div>
+</section>
 {% endblock %}
