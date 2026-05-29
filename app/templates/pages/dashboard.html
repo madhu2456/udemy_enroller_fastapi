@@ -644,6 +644,9 @@ function startProgressPolling() {
                 loadRecentRuns();
                 updateAnalytics();
                 
+                // Reset page title when run finishes
+                document.title = 'Udemy Course Automation Dashboard: Track Your Progress';
+                
                 if (lastProgressData && lastProgressData.processed !== undefined) {
                     showStatsModal(lastProgressData);
                     lastProgressData = null;
@@ -802,8 +805,21 @@ function updateProgress(data) {
     // Banner & progress details
     const currencySym = data.currency === 'inr' ? '₹' : '$';
     document.getElementById('banner-enrolled').textContent = data.successfully_enrolled;
-    document.getElementById('banner-checked').textContent = data.processed;
+    document.getElementById('banner-checked').textContent = data.total_courses > 0 
+        ? `${data.processed} / ${data.total_courses}` 
+        : data.processed;
     document.getElementById('banner-saved').textContent = `${currencySym}${data.amount_saved.toFixed(2)}`;
+
+    // Dynamic page title update
+    if (data.status === 'scraping') {
+        document.title = '[Scraping...] Udemy Enroller';
+    } else if (data.status === 'enrolling') {
+        document.title = `[Enrolled: ${data.successfully_enrolled} | Checked: ${data.processed}/${data.total_courses} | Saved: ${currencySym}${data.amount_saved.toFixed(0)}] Enrolling - Udemy Enroller`;
+    } else if (data.status === 'pending') {
+        document.title = '[Starting...] Udemy Enroller';
+    } else {
+        document.title = 'Udemy Course Automation Dashboard: Track Your Progress';
+    }
 
     // Live stats
     document.getElementById('live-enrolled').textContent = data.successfully_enrolled;
