@@ -256,7 +256,6 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
 async def logout(
     request: Request,
     db: Session = Depends(get_db),
-    _csrf: None = Depends(verify_csrf_token),
 ):
     """Logout — delete DB session and clear all cookies."""
     token = request.cookies.get("session_id")

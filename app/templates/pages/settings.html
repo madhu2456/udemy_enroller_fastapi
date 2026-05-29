@@ -1,144 +1,189 @@
 {% extends "components/base.html" %}
-{% block title %}Settings - Udemy Enroller{% endblock %}
+{% block title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block meta_title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block meta_description %}Customize your automated course enrollment preferences. Set rating thresholds, filter languages, and refine your learning feed instantly.{% endblock %}
+
+{% block og_title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block og_description %}Customize your automated course enrollment preferences. Set rating thresholds, filter languages, and refine your learning feed instantly.{% endblock %}
+
+{% block twitter_title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block twitter_description %}Customize your automated course enrollment preferences. Set rating thresholds, filter languages, and refine your learning feed instantly.{% endblock %}
+
+{% block robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-white">
-            <i class="fas fa-cog mr-2 text-blue-400"></i>Enrollment Settings
-        </h1>
-        <div class="flex space-x-3">
-            <button onclick="resetSettings()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm transition-colors">
-                <i class="fas fa-undo mr-1"></i>Reset
-            </button>
-            <button onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
-                <i class="fas fa-save mr-1"></i>Save Settings
-            </button>
-        </div>
-    </div>
-
-    <!-- Sites -->
-    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-        <h2 class="text-lg font-semibold text-white mb-4">
-            <i class="fas fa-globe mr-2 text-cyan-400"></i>Coupon Websites
-        </h2>
-        <div id="sites-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-             <div class="col-span-full py-4 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading sites...</div>
-        </div>
-    </div>
-
-    <!-- Languages -->
-    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-        <h2 class="text-lg font-semibold text-white mb-4">
-            <i class="fas fa-language mr-2 text-cyan-400"></i>Languages
-        </h2>
-        <div id="languages-grid" class="grid grid-cols-3 md:grid-cols-7 gap-3">
-            <div class="col-span-full py-4 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading languages...</div>
-        </div>
-    </div>
-
-    <!-- Categories -->
-    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-        <h2 class="text-lg font-semibold text-white mb-4">
-            <i class="fas fa-tags mr-2 text-cyan-400"></i>Categories
-        </h2>
-        <div id="categories-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="col-span-full py-4 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading categories...</div>
-        </div>
-    </div>
-
-    <!-- Advanced Settings -->
-    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-        <h2 class="text-lg font-semibold text-white mb-4">
-            <i class="fas fa-sliders-h mr-2 text-cyan-400"></i>Advanced Settings
-        </h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Min Rating -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Minimum Rating</label>
-                <input type="number" id="min-rating" min="0" max="5" step="0.5" value="0"
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
-                <p class="text-xs text-gray-500 mt-1">0.0 to 5.0</p>
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 pb-16">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+            <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-200">
+                <i data-lucide="settings" class="text-blue-600 w-5 h-5"></i>
             </div>
+            <h1 class="text-xl font-semibold text-gray-900 tracking-tight">
+                Enrollment Settings
+            </h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="resetSettings()" class="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset
+            </button>
+            <button onclick="saveSettings()" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Settings
+            </button>
+        </div>
+    </div>
 
-            <!-- Course Update Threshold -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Course Updated Within (months)</label>
-                <input type="number" id="update-threshold" min="1" max="48" value="24"
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
-                <p class="text-xs text-gray-500 mt-1">Exclude courses not updated within this period</p>
+    <!-- Section: Coupon Websites -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2.5">
+            <i data-lucide="globe" class="text-blue-600 w-4 h-4"></i>
+            <h2 class="text-sm font-semibold text-gray-900">Coupon Websites</h2>
+        </div>
+        <div class="p-6">
+            <div id="sites-grid" class="flex flex-wrap gap-2">
+                <div class="w-full py-4 text-center text-gray-400 text-xs italic"><i class="fas fa-spinner fa-spin mr-2"></i>Loading sites...</div>
             </div>
+        </div>
+    </div>
 
-            <!-- Instructor Exclude -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Exclude Instructors</label>
-                <div id="instructor-tags" class="flex flex-wrap gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg min-h-[100px]">
-                    <input type="text" id="instructor-input" placeholder="Type and press Enter..."
-                        class="bg-transparent border-none focus:ring-0 text-white text-sm flex-grow min-w-[120px]">
+    <!-- Section: Languages -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2.5">
+            <i data-lucide="tag" class="text-blue-600 w-4 h-4"></i>
+            <h2 class="text-sm font-semibold text-gray-900">Languages</h2>
+        </div>
+        <div class="p-6">
+            <div id="languages-grid" class="flex flex-wrap gap-2">
+                <div class="w-full py-4 text-center text-gray-400 text-xs italic"><i class="fas fa-spinner fa-spin mr-2"></i>Loading languages...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section: Categories -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2.5">
+            <i data-lucide="layers" class="text-blue-600 w-4 h-4"></i>
+            <h2 class="text-sm font-semibold text-gray-900">Categories</h2>
+        </div>
+        <div class="p-6">
+            <div id="categories-grid" class="flex flex-wrap gap-2">
+                <div class="w-full py-4 text-center text-gray-400 text-xs italic"><i class="fas fa-spinner fa-spin mr-2"></i>Loading categories...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section: Advanced Settings -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2.5">
+            <i data-lucide="sliders-horizontal" class="text-blue-600 w-4 h-4"></i>
+            <h2 class="text-sm font-semibold text-gray-900">Advanced Settings</h2>
+        </div>
+        <div class="p-6 space-y-6">
+            <!-- Ratings and Thresholds -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Minimum Rating</label>
+                    <input type="number" id="min-rating" min="0" max="5" step="0.5" value="0"
+                        class="w-full bg-gray-55 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <p class="text-[10px] text-gray-400">Range: 0.0 to 5.0</p>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Press Enter to add instructor username</p>
-            </div>
 
-            <!-- Title Exclude -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Exclude Title Keywords</label>
-                <div id="title-tags" class="flex flex-wrap gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg min-h-[100px]">
-                    <input type="text" id="title-input" placeholder="Type and press Enter..."
-                        class="bg-transparent border-none focus:ring-0 text-white text-sm flex-grow min-w-[120px]">
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Course Updated Within (months)</label>
+                    <input type="number" id="update-threshold" min="1" max="48" value="24"
+                        class="w-full bg-gray-55 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <p class="text-[10px] text-gray-400">Exclude courses not updated within this period</p>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Press Enter to add keyword</p>
             </div>
 
-            <!-- Proxy URL -->
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Proxy URL</label>
-                <input type="text" id="proxy-url" 
-                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                    placeholder="http://user:pass@host:port">
-                <p class="text-xs text-gray-500 mt-1">Leave blank for direct connection</p>
+            <div class="border-t border-gray-100"></div>
+
+            <!-- Instructor and Title exclusion tags -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Exclude Instructors</label>
+                    <div id="instructor-tags" class="min-h-[72px] bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-wrap gap-2 items-start focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
+                        <input type="text" id="instructor-input" placeholder="Type name, press Enter..."
+                            class="flex-grow min-w-[120px] bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none">
+                    </div>
+                    <p class="text-[10px] text-gray-400">Press Enter after each instructor username</p>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Exclude Title Keywords</label>
+                    <div id="title-tags" class="min-h-[72px] bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-wrap gap-2 items-start focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
+                        <input type="text" id="title-input" placeholder="Type keyword, press Enter..."
+                            class="flex-grow min-w-[120px] bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none">
+                    </div>
+                    <p class="text-[10px] text-gray-400">Press Enter after each keyword e.g. Exam, Quiz</p>
+                </div>
             </div>
 
-        </div>
+            <div class="border-t border-gray-100"></div>
 
-        <!-- Checkboxes -->
-        <div class="flex flex-wrap gap-6 mt-6">
-            <label class="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" id="save-txt" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
-                <span class="text-sm text-gray-300">Save enrolled courses to text file</span>
-            </label>
-            <label class="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" id="discounted-only" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
-                <span class="text-sm text-gray-300">Discounted courses only (skip free)</span>
-            </label>
+            <!-- Proxy URL configuration -->
+            <div class="space-y-1.5">
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Proxy URL</label>
+                <input type="text" id="proxy-url" placeholder="http://user:pass@host:port"
+                    class="w-full bg-gray-55 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                <p class="text-[10px] text-gray-400">Leave blank for direct connection</p>
+            </div>
+
+            <div class="border-t border-gray-100"></div>
+
+            <!-- Toggle switches for save/discount flags -->
+            <div class="divide-y divide-gray-100">
+                <div class="flex items-center justify-between py-3">
+                    <div>
+                        <p class="text-sm font-medium text-gray-800">Save enrolled courses to text file</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Generates a local .txt log of every enrolled course title</p>
+                    </div>
+                    <button type="button" onclick="toggleSwitch(this)" class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200">
+                        <input type="checkbox" id="save-txt" class="hidden">
+                        <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-0"></span>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between py-3">
+                    <div>
+                        <p class="text-sm font-medium text-gray-800">Discounted courses only (skip free)</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Only enroll paid courses with 100% off coupons, skip already-free courses</p>
+                    </div>
+                    <button type="button" onclick="toggleSwitch(this)" class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200">
+                        <input type="checkbox" id="discounted-only" class="hidden">
+                        <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-0"></span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Danger Zone -->
-    <div class="bg-red-900/20 rounded-xl p-6 border border-red-900/50 mb-6">
-        <h2 class="text-lg font-semibold text-red-400 mb-2">
-            <i class="fas fa-exclamation-triangle mr-2"></i>Danger Zone
-        </h2>
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-                <p class="text-sm text-gray-300 font-medium">Clear All Enrollment Data</p>
-                <p class="text-xs text-gray-500">This will permanently delete all enrollment history, runs, and reset your lifetime statistics. This action cannot be undone.</p>
+    <!-- Danger Zone section -->
+    <div class="bg-white rounded-xl border border-red-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-red-100 bg-red-50 flex items-center gap-2.5">
+            <i data-lucide="alert-triangle" class="text-red-500 w-4 h-4"></i>
+            <h2 class="text-sm font-semibold text-red-700">Danger Zone</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-xl p-5">
+                <div>
+                    <p class="text-sm font-semibold text-red-800">Clear All Enrollment Data</p>
+                    <p class="text-xs text-red-600 mt-0.5 max-w-lg leading-relaxed font-light">
+                        Permanently deletes all enrollment history, run logs, and resets lifetime statistics. This cannot be undone.
+                    </p>
+                </div>
+                <button onclick="clearAllData()" class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-sm">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Clear All Data
+                </button>
             </div>
-            <button onclick="clearAllData()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0">
-                <i class="fas fa-trash-alt mr-2"></i>Clear All Data
-            </button>
         </div>
     </div>
 
-    <div id="settings-message" class="text-center text-sm hidden mb-4"></div>
-</div>
+    <div id="settings-message" class="text-center text-sm hidden"></div>
+</main>
 {% endblock %}
 
 {% block scripts %}
 <script>
-/**
- * SETTINGS PAGE LOGIC
- */
 let currentSettings = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -155,10 +200,53 @@ async function checkAuth() {
         const resp = await fetch('/api/auth/status');
         const data = await resp.json();
         if (!data.authenticated) { window.location.href = '/'; return false; }
-        document.getElementById('user-info').textContent = data.display_name;
-        document.getElementById('logout-btn').classList.remove('hidden');
         return true;
     } catch(e) { window.location.href = '/'; return false; }
+}
+
+function toggleSwitch(btn) {
+    const checkbox = btn.querySelector('input[type="checkbox"]');
+    checkbox.checked = !checkbox.checked;
+    
+    const span = btn.querySelector('span');
+    if (checkbox.checked) {
+        btn.classList.replace('bg-gray-200', 'bg-blue-600');
+        span.classList.replace('translate-x-0', 'translate-x-5');
+    } else {
+        btn.classList.replace('bg-blue-600', 'bg-gray-200');
+        span.classList.replace('translate-x-5', 'translate-x-0');
+    }
+}
+
+function setSwitchState(id, checked) {
+    const checkbox = document.getElementById(id);
+    if (!checkbox) return;
+    checkbox.checked = checked;
+    const btn = checkbox.parentElement;
+    const span = btn.querySelector('span');
+    if (checked) {
+        btn.className = "relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-blue-600";
+        span.className = "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-5";
+    } else {
+        btn.className = "relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200";
+        span.className = "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-0";
+    }
+}
+
+function onPillChange(input) {
+    const label = input.closest('.checkbox-pill');
+    if (!label) return;
+    const checkmarkBox = label.querySelector('.checkmark-box');
+    const svg = label.querySelector('.checkmark-svg');
+    if (input.checked) {
+        label.className = "checkbox-pill inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm select-none bg-blue-50 border-blue-300 text-blue-800";
+        checkmarkBox.className = "checkmark-box w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all bg-blue-600 border-blue-600";
+        svg.classList.remove('hidden');
+    } else {
+        label.className = "checkbox-pill inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm select-none bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50";
+        checkmarkBox.className = "checkmark-box w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all border-gray-300 bg-white";
+        svg.classList.add('hidden');
+    }
 }
 
 function setupTagInput(inputId, containerId) {
@@ -182,15 +270,21 @@ function addTag(container, text) {
     const existing = Array.from(container.querySelectorAll('.tag-text')).map(t => t.textContent);
     if (existing.includes(text)) return;
 
-    const tag = document.createElement('div');
-    tag.className = 'flex items-center bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs group';
+    const tag = document.createElement('span');
+    tag.className = 'inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium px-2 py-1 rounded-md';
     tag.innerHTML = `
         <span class="tag-text">${text}</span>
-        <button type="button" onclick="this.parentElement.remove()" class="ml-2 text-blue-400 hover:text-white">
-            <i class="fas fa-times text-[10px]"></i>
+        <button type="button" onclick="this.parentElement.remove()" class="hover:text-blue-900 ml-0.5">
+            <i data-lucide="x" class="w-2.5 h-2.5"></i>
         </button>
     `;
     container.insertBefore(tag, container.querySelector('input'));
+    if (window.lucide) {
+        lucide.createIcons({
+            attrs: { class: 'w-2.5 h-2.5' },
+            nameAttr: 'data-lucide'
+        });
+    }
 }
 
 async function loadSettings() {
@@ -209,15 +303,16 @@ async function loadSettings() {
         
         // Render Tags
         const instContainer = document.getElementById('instructor-tags');
-        instContainer.querySelectorAll('.flex').forEach(t => t.remove());
+        instContainer.querySelectorAll('span.inline-flex').forEach(t => t.remove());
         (currentSettings.instructor_exclude || []).forEach(t => addTag(instContainer, t));
 
         const titleContainer = document.getElementById('title-tags');
-        titleContainer.querySelectorAll('.flex').forEach(t => t.remove());
+        titleContainer.querySelectorAll('span.inline-flex').forEach(t => t.remove());
         (currentSettings.title_exclude || []).forEach(t => addTag(titleContainer, t));
 
-        document.getElementById('save-txt').checked = !!currentSettings.save_txt;
-        document.getElementById('discounted-only').checked = !!currentSettings.discounted_only;
+        setSwitchState('save-txt', !!currentSettings.save_txt);
+        setSwitchState('discounted-only', !!currentSettings.discounted_only);
+        
         document.getElementById('proxy-url').value = currentSettings.proxy_url || '';
         
     } catch(e) { 
@@ -232,15 +327,19 @@ function renderCheckboxGrid(containerId, items) {
 
     const entries = Object.entries(items);
     if (entries.length === 0) {
-        container.innerHTML = '<p class="col-span-full text-center text-gray-500 text-xs py-2 italic">No options found.</p>';
+        container.innerHTML = '<p class="w-full text-center text-gray-400 text-xs py-2 italic font-light">No options found.</p>';
         return;
     }
     
     container.innerHTML = entries.map(([key, val]) => `
-        <label class="flex items-center space-x-2 bg-gray-700/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-600 transition-all border border-gray-700/50">
-            <input type="checkbox" data-group="${containerId}" data-key="${key}" ${val ? 'checked' : ''}
-                class="rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500 h-4 w-4">
-            <span class="text-xs text-gray-300 truncate font-medium">${key}</span>
+        <label class="checkbox-pill inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm select-none ${val ? 'bg-blue-50 border-blue-300 text-blue-800' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}">
+            <input type="checkbox" data-group="${containerId}" data-key="${key}" ${val ? 'checked' : ''} onchange="onPillChange(this)" class="hidden">
+            <div class="checkmark-box w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all ${val ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}">
+                <svg class="${val ? '' : 'hidden'} checkmark-svg" width="10" height="8" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <span class="font-medium">${key}</span>
         </label>
     `).join('');
 }
@@ -276,7 +375,7 @@ async function saveSettings() {
     const btn = document.querySelector('button[onclick="saveSettings()"]');
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Saving...';
+    btn.innerHTML = '<span class="flex items-center gap-1.5"><i class="fas fa-spinner fa-spin"></i> Saving...</span>';
 
     const settings = gatherSettings();
     try {
@@ -327,8 +426,17 @@ async function clearAllData() {
 
 function showMsg(msg, color) {
     const el = document.getElementById('settings-message');
-    el.className = `fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-[100] transition-all
-        ${color === 'green' ? 'bg-green-600 text-white' : color === 'red' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`;
+    let colorClass = '';
+    
+    if (color === 'green') {
+        colorClass = 'bg-green-600 text-white';
+    } else if (color === 'red') {
+        colorClass = 'bg-red-600 text-white';
+    } else {
+        colorClass = 'bg-blue-600 text-white';
+    }
+    
+    el.className = `fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-[100] transition-all ${colorClass}`;
     el.textContent = msg;
     el.classList.remove('hidden');
     setTimeout(() => el.classList.add('hidden'), 4000);

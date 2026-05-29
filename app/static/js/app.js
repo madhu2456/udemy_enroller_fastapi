@@ -4,9 +4,31 @@ window.csrfToken = null;
 
 function getCsrfToken() {
     if (window.csrfToken) return window.csrfToken;
+    
+    // Prioritize cookie (most fresh/accurate session-bound value)
     const match = document.cookie.match(new RegExp('(^| )csrf_token=([^;]+)'));
-    return match ? decodeURIComponent(match[2]) : null;
+    if (match) {
+        const token = decodeURIComponent(match[2]);
+        window.csrfToken = token;
+        try {
+            localStorage.setItem('csrf_token', token);
+        } catch (e) {}
+        return token;
+    }
+    
+    // Fall back to localStorage if cookie not found
+    try {
+        const localToken = localStorage.getItem('csrf_token');
+        if (localToken) {
+            window.csrfToken = localToken;
+            return localToken;
+        }
+    } catch (e) {
+        console.warn('Error reading from localStorage:', e);
+    }
+    return null;
 }
+
 
 async function apiFetch(url, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
@@ -22,8 +44,11 @@ async function apiFetch(url, options = {}) {
 
 async function logout() {
     try {
+        showToast('Logging out...', 'info');
+        
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        // A generous 10-second timeout to allow the backend to gracefully close the Udemy HTTP client session
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         
         const response = await apiFetch('/api/auth/logout', { 
             method: 'POST',
@@ -33,20 +58,42 @@ async function logout() {
         
         if (response.ok) {
             console.log('Logout successful');
+            handleSuccessfulLogout();
         } else {
             console.warn('Logout returned status:', response.status);
+            // Handle cases where the session was already cleaned up on the server (401/403)
+            if (response.status === 401 || response.status === 403) {
+                console.log('Session invalid on server, clearing frontend cookies anyway.');
+                handleSuccessfulLogout();
+            } else {
+                showToast('Logout failed. Please try again.', 'error');
+            }
         }
     } catch (e) {
         console.warn('Logout request failed or timed out:', e);
+        if (e.name === 'AbortError') {
+            showToast('Logout request timed out. Please try again.', 'error');
+        } else {
+            showToast('Connection error. Logout failed.', 'error');
+        }
+    }
+}
+
+function handleSuccessfulLogout() {
+    window.csrfToken = null;
+    try {
+        localStorage.clear();
+        sessionStorage.clear();
+    } catch (e) {
+        console.warn('Error clearing storage:', e);
     }
     
-    window.csrfToken = null;
-    localStorage.clear();
-    sessionStorage.clear();
-    
+    // Clear cookies by setting their expiration date to the past under both root and API paths
     document.cookie.split(";").forEach(c => {
         const [name] = c.split("=");
-        document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        const trimmedName = name.trim();
+        document.cookie = `${trimmedName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        document.cookie = `${trimmedName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/api/auth;`;
     });
     
     window.location.href = '/';
@@ -65,18 +112,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Toast notification utility
 function showToast(message, type = 'info') {
-    const colors = {
-        success: 'bg-green-800 text-green-200 border border-green-600',
-        error: 'bg-red-800 text-red-200 border border-red-600',
-        info: 'bg-blue-800 text-blue-200 border border-blue-600',
-        warning: 'bg-yellow-800 text-yellow-200 border border-yellow-600',
-    };
     const toast = document.createElement('div');
-    toast.className = `toast ${colors[type] || colors.info}`;
-    toast.textContent = message;
+    toast.className = 'toast';
+    
+    // Set colors inline to avoid specificity conflicts and ensure premium light theme aesthetics
+    const themes = {
+        success: { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46', icon: 'check-circle' },
+        error: { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B', icon: 'alert-circle' },
+        info: { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', icon: 'info' },
+        warning: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E', icon: 'alert-triangle' }
+    };
+    
+    const theme = themes[type] || themes.info;
+    toast.style.backgroundColor = theme.bg;
+    toast.style.borderColor = theme.border;
+    toast.style.color = theme.text;
+    toast.style.borderStyle = 'solid';
+    toast.style.borderWidth = '1px';
+
+    // Add Lucide icon
+    const iconSpan = document.createElement('span');
+    iconSpan.style.display = 'inline-flex';
+    iconSpan.style.alignItems = 'center';
+    
+    const iconElement = document.createElement('i');
+    iconElement.setAttribute('data-lucide', theme.icon);
+    iconElement.style.width = '16px';
+    iconElement.style.height = '16px';
+    iconSpan.appendChild(iconElement);
+    
+    toast.appendChild(iconSpan);
+    
+    const textSpan = document.createElement('span');
+    textSpan.textContent = message;
+    toast.appendChild(textSpan);
+    
     document.body.appendChild(toast);
+    
+    if (window.lucide) {
+        lucide.createIcons({
+            attrs: {
+                class: 'lucide-icon'
+            },
+            nameAttr: 'data-lucide'
+        });
+    }
+    
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 4000);
 }

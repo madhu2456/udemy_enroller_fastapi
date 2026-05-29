@@ -1,45 +1,76 @@
 {% extends "components/base.html" %}
-{% block title %}History - Udemy Enroller{% endblock %}
+{% block title %}Enrollment Activity Logs & History: Udemy Enroller{% endblock %}
+{% block meta_title %}Enrollment Activity Logs & History: Udemy Enroller{% endblock %}
+{% block meta_description %}Review your automated Udemy enrollment history. Track claimed courses, skipped enrollments, and view detailed activity logs anytime from your dashboard.{% endblock %}
+
+{% block og_title %}Enrollment Activity Logs & History: Udemy Enroller{% endblock %}
+{% block og_description %}Review your automated Udemy enrollment history. Track claimed courses, skipped enrollments, and view detailed activity logs anytime from your dashboard.{% endblock %}
+
+{% block twitter_title %}Enrollment Activity Logs & History: Udemy Enroller{% endblock %}
+{% block twitter_description %}Review your automated Udemy enrollment history. Track claimed courses, skipped enrollments, and view detailed activity logs anytime from your dashboard.{% endblock %}
+
+{% block robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto pb-20">
-    <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 space-y-8">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <h1 class="text-4xl font-black text-white tracking-tight">Activity History</h1>
-            <p class="text-gray-500 mt-2">Comprehensive logs of your automated enrollment sessions.</p>
+            <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Activity History</h1>
+            <p class="text-sm text-gray-500 mt-1 font-light">Comprehensive logs of your automated enrollment sessions.</p>
         </div>
-        <div class="flex items-center space-x-3">
-            <button onclick="fetchHistory()" class="flex items-center bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-2xl border border-gray-700 transition-all active:scale-95">
-                <i class="fas fa-sync-alt mr-2"></i>Sync Data
+        <div class="flex items-center">
+            <button onclick="fetchHistory()" class="flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all active:scale-95">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sync Data
             </button>
         </div>
     </div>
 
     <!-- Stats Overview -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
-            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Lifetime Enrolled</p>
-            <p id="total-enrolled" class="text-2xl font-black text-green-400">...</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <div class="flex items-start justify-between mb-3">
+                <p class="text-xs font-medium text-gray-500 leading-tight max-w-[110px]">Lifetime Enrolled</p>
+                <div class="w-8 h-8 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-green-600"></i>
+                </div>
+            </div>
+            <p id="total-enrolled" class="text-2xl font-semibold text-gray-900 tracking-tight">...</p>
         </div>
-        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
-            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Total Saved</p>
-            <p id="total-saved" class="text-2xl font-black text-emerald-400">...</p>
+        <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <div class="flex items-start justify-between mb-3">
+                <p class="text-xs font-medium text-gray-500 leading-tight max-w-[110px]">Total Saved</p>
+                <div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="trending-up" class="w-4 h-4 text-blue-600"></i>
+                </div>
+            </div>
+            <p id="total-saved" class="text-2xl font-semibold text-gray-900 tracking-tight">...</p>
         </div>
-        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
-            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Runs Performed</p>
-            <p id="total-runs" class="text-2xl font-black text-blue-400">...</p>
+        <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <div class="flex items-start justify-between mb-3">
+                <p class="text-xs font-medium text-gray-500 leading-tight max-w-[110px]">Runs Performed</p>
+                <div class="w-8 h-8 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="clock" class="w-4 h-4 text-purple-600"></i>
+                </div>
+            </div>
+            <p id="total-runs" class="text-2xl font-semibold text-gray-900 tracking-tight">...</p>
         </div>
-        <div class="bg-gray-800/40 p-6 rounded-3xl border border-gray-700/50">
-            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Average Success</p>
-            <p id="avg-success" class="text-2xl font-black text-white">...</p>
+        <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <div class="flex items-start justify-between mb-3">
+                <p class="text-xs font-medium text-gray-500 leading-tight max-w-[110px]">Average Success</p>
+                <div class="w-8 h-8 rounded-lg bg-yellow-50 border border-yellow-200 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 text-yellow-600"></i>
+                </div>
+            </div>
+            <p id="avg-success" class="text-2xl font-semibold text-gray-900 tracking-tight">...</p>
         </div>
     </div>
 
     <!-- History Feed -->
-    <div id="history-feed" class="space-y-6">
-        <div class="text-center py-20 bg-gray-800/20 rounded-3xl border border-dashed border-gray-700">
-            <i class="fas fa-circle-notch fa-spin text-blue-500 text-3xl mb-4"></i>
-            <p class="text-gray-500 font-medium">Connecting to learning infrastructure...</p>
+    <div id="history-feed" class="space-y-4">
+        <div class="text-center py-20 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center">
+            <i data-lucide="loader" class="text-blue-500 w-8 h-8 mb-4 animate-spin"></i>
+            <p class="text-gray-500 font-medium text-sm font-light">Connecting to learning infrastructure...</p>
         </div>
     </div>
 </div>
@@ -47,11 +78,6 @@
 
 {% block scripts %}
 <script>
-/**
- * NO-MODAL HISTORY ENGINE v3
- * 100% Inline Expansion | High-Contrast Design
- */
-
 // Time Formatter
 const formatTime = (ts) => {
     if (!ts) return "N/A";
@@ -80,9 +106,11 @@ async function loadSummaryStats() {
     try {
         const r = await fetch('/api/dashboard/stats');
         const d = await r.json();
-        document.getElementById('total-enrolled').textContent = d.total_enrolled;
-        document.getElementById('total-saved').textContent = `$${d.total_amount_saved.toFixed(2)}`;
-        document.getElementById('total-runs').textContent = d.total_runs;
+        const currencySym = d.currency === 'inr' ? '₹' : '$';
+
+        document.getElementById('total-enrolled').textContent = d.total_enrolled.toLocaleString();
+        document.getElementById('total-saved').textContent = `${currencySym}${d.total_amount_saved.toFixed(2)}`;
+        document.getElementById('total-runs').textContent = d.total_runs.toLocaleString();
         const rate = d.total_processed > 0 ? (d.total_enrolled / d.total_processed * 100).toFixed(1) : 0;
         document.getElementById('avg-success').textContent = `${rate}%`;
     } catch (e) {}
@@ -102,9 +130,9 @@ async function fetchHistory() {
 
         if (!data || data.length === 0) {
             feed.innerHTML = `
-                <div class="bg-gray-800/40 rounded-3xl p-20 text-center border border-gray-700">
-                    <p class="text-gray-500 italic mb-6">Your history log is currently empty.</p>
-                    <a href="/dashboard" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-black transition-all">Start Automated Enrollment</a>
+                <div class="bg-white border border-gray-200 rounded-xl p-20 text-center shadow-sm">
+                    <p class="text-gray-400 italic mb-6 font-light">Your history log is currently empty.</p>
+                    <a href="/dashboard" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full text-sm font-semibold transition-all shadow-sm">Start Automated Enrollment</a>
                 </div>
             `;
             return;
@@ -113,26 +141,30 @@ async function fetchHistory() {
         feed.innerHTML = data.map(run => {
             const isSuccess = run.status === 'completed';
             const isError = run.status === 'failed';
-            const badgeClass = isSuccess ? 'bg-green-900/30 text-green-400 border-green-800/50' : 
-                               (isError ? 'bg-red-900/30 text-red-400 border-red-800/50' : 'bg-yellow-900/30 text-yellow-400 border-yellow-800/50');
+            
+            let badgeClass = 'bg-yellow-55 text-yellow-700 border-yellow-200';
+            if (isSuccess) badgeClass = 'bg-green-50 text-green-700 border-green-200';
+            if (isError) badgeClass = 'bg-red-50 text-red-700 border-red-200';
+
+            const currencySym = run.currency === 'inr' ? '₹' : '$';
 
             return `
-                <div class="run-card group bg-gray-800/40 rounded-3xl border border-gray-800 transition-all duration-300 hover:border-gray-600 overflow-hidden" id="card-${run.run_id}">
+                <div class="bg-white border border-gray-200 rounded-xl transition-all duration-300 hover:border-gray-300 overflow-hidden shadow-sm" id="card-${run.run_id}">
                     <!-- Main Header (Clickable) -->
-                    <div class="p-6 md:p-8 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6" onclick="handleCardToggle(${run.run_id})">
-                        <div class="flex items-center gap-6">
-                            <div class="hidden md:flex w-14 h-14 rounded-2xl bg-gray-800 border border-gray-700 items-center justify-center text-gray-500 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-all">
-                                <i class="fas fa-terminal text-xl"></i>
+                    <div class="p-6 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6" onclick="handleCardToggle(${run.run_id})">
+                        <div class="flex items-center gap-4">
+                            <div class="hidden md:flex w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 items-center justify-center text-gray-400 group-hover:text-blue-600 transition-all">
+                                <i data-lucide="terminal" class="w-5 h-5"></i>
                             </div>
                             <div>
                                 <div class="flex items-center gap-3 mb-1">
-                                    <span class="text-white font-black text-lg tracking-tight">Run #${run.run_id}</span>
-                                    <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border ${badgeClass}">${run.status}</span>
+                                    <span class="text-gray-900 font-semibold text-base tracking-tight">Run #${run.run_id}</span>
+                                    <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase border ${badgeClass}">${run.status}</span>
                                 </div>
-                                <div class="flex items-center gap-4 text-xs text-gray-500 font-medium">
+                                <div class="flex items-center gap-3 text-xs text-gray-400 font-light">
                                     <span>${formatTime(run.started_at)}</span>
-                                    <span class="opacity-30">|</span>
-                                    <span><i class="far fa-clock mr-1"></i>${getRunTime(run.started_at, run.completed_at)}</span>
+                                    <span class="opacity-40">|</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i>${getRunTime(run.started_at, run.completed_at)}</span>
                                 </div>
                             </div>
                         </div>
@@ -140,38 +172,44 @@ async function fetchHistory() {
                         <div class="flex items-center justify-between md:justify-end gap-8 md:gap-12">
                             <div class="flex gap-8">
                                 <div class="text-center md:text-left">
-                                    <p class="text-[9px] text-gray-500 font-black uppercase tracking-tighter mb-0.5">Courses Claimed</p>
-                                    <p class="text-xl font-black text-green-400 leading-none">${run.successfully_enrolled}</p>
+                                    <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">Enrolled</p>
+                                    <p class="text-lg font-semibold text-green-600 leading-none">${run.successfully_enrolled}</p>
                                 </div>
                                 <div class="text-center md:text-left">
-                                    <p class="text-[9px] text-gray-500 font-black uppercase tracking-tighter mb-0.5">Total Savings</p>
-                                    <p class="text-xl font-black text-emerald-400 leading-none">$${(run.amount_saved || 0).toFixed(2)}</p>
+                                    <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">Savings</p>
+                                    <p class="text-lg font-semibold text-blue-600 leading-none">${currencySym}${(run.amount_saved || 0).toFixed(2)}</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
-                                <button onclick="event.stopPropagation(); requestDelete(${run.run_id})" class="w-10 h-10 rounded-xl bg-gray-800/50 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-900/20 transition-all">
-                                    <i class="fas fa-trash-alt"></i>
+                                <button onclick="event.stopPropagation(); requestDelete(${run.run_id})" class="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
-                                <div class="text-gray-700 group-hover:text-blue-500 transition-all transform duration-300" id="chevron-${run.run_id}">
-                                    <i class="fas fa-chevron-down text-lg"></i>
+                                <div class="text-gray-400 transition-all duration-300 transform" id="chevron-${run.run_id}">
+                                    <i data-lucide="chevron-down" class="w-5 h-5"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Expansion Area -->
-                    <div id="expansion-${run.run_id}" class="hidden border-t border-gray-700/30 bg-black/10">
-                        <div class="p-8" id="details-${run.run_id}">
-                            <div class="flex justify-center py-10"><i class="fas fa-circle-notch fa-spin text-blue-500"></i></div>
+                    <div id="expansion-${run.run_id}" class="hidden border-t border-gray-100 bg-gray-50/50">
+                        <div class="p-6 md:p-8" id="details-${run.run_id}">
+                            <div class="flex justify-center py-10"><i data-lucide="loader" class="text-blue-500 w-6 h-6 animate-spin"></i></div>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
 
+        if (window.lucide) {
+            lucide.createIcons({
+                attrs: { class: 'w-4 h-4' },
+                nameAttr: 'data-lucide'
+            });
+        }
     } catch (e) {
         console.error(e);
-        feed.innerHTML = `<div class="p-10 bg-red-900/10 border border-red-900/50 rounded-3xl text-center"><p class="text-red-500 font-bold">Network synchronization error. Please check your connection.</p></div>`;
+        feed.innerHTML = `<div class="p-10 bg-red-50 border border-red-200 rounded-xl text-center"><p class="text-red-600 font-semibold text-sm">Network synchronization error. Please check your connection.</p></div>`;
     }
 }
 
@@ -179,7 +217,6 @@ async function fetchHistory() {
  * Handle Card Toggle
  */
 async function handleCardToggle(id) {
-    const card = document.getElementById(`card-${id}`);
     const box = document.getElementById(`expansion-${id}`);
     const chevron = document.getElementById(`chevron-${id}`);
     const content = document.getElementById(`details-${id}`);
@@ -188,15 +225,15 @@ async function handleCardToggle(id) {
 
     if (!isClosed) {
         box.classList.add('hidden');
-        chevron.style.transform = 'rotate(0deg)';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
         return;
     }
 
     // Open
     box.classList.remove('hidden');
-    chevron.style.transform = 'rotate(180deg)';
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
 
-    // Load if needed
+    // Load details if not cached
     if (sessionCache.has(id)) return;
 
     try {
@@ -208,68 +245,78 @@ async function handleCardToggle(id) {
         const courses = data.courses || [];
         const enrolled = courses.filter(c => c.status === 'enrolled');
         const other = courses.filter(c => c.status !== 'enrolled');
+        const currencySym = data.run.currency === 'inr' ? '₹' : '$';
 
         content.innerHTML = `
-            <div class="space-y-12">
+            <div class="space-y-6">
                 <!-- Data Grid -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/30">
-                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-2">Internal Status</p>
-                        <p class="text-xs text-white font-bold uppercase">${data.run.status}</p>
+                    <div class="bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
+                        <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Status</p>
+                        <p class="text-xs text-gray-700 font-bold uppercase">${data.run.status}</p>
                     </div>
-                    <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/30">
-                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-2">Sources Found</p>
-                        <p class="text-xs text-white font-bold">${data.run.total_courses_found} valid links</p>
+                    <div class="bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
+                        <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Links Discovered</p>
+                        <p class="text-xs text-gray-700 font-bold">${data.run.total_courses_found} links</p>
                     </div>
-                    <div class="bg-gray-800/60 p-5 rounded-2xl border border-gray-700/30">
-                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-2">Run Duration</p>
-                        <p class="text-xs text-white font-bold">${getRunTime(data.run.started_at, data.run.completed_at)}</p>
+                    <div class="bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
+                        <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Session Duration</p>
+                        <p class="text-xs text-gray-700 font-bold">${getRunTime(data.run.started_at, data.run.completed_at)}</p>
                     </div>
-                    <div class="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-900/30">
-                        <p class="text-[9px] text-emerald-500/70 font-black uppercase tracking-widest mb-2">Net Value</p>
-                        <p class="text-xl font-black text-emerald-400">$${(data.run.amount_saved || 0).toFixed(2)}</p>
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm">
+                        <p class="text-[9px] text-blue-500/80 font-semibold uppercase tracking-wider mb-1">Session Savings</p>
+                        <p class="text-lg font-bold text-blue-600 leading-none">${currencySym}${(data.run.amount_saved || 0).toFixed(2)}</p>
                     </div>
                 </div>
 
-                <!-- Dual Columns for Course Breakdown -->
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                    <!-- Column 1: Enrolled -->
-                    <div>
-                        <h4 class="text-green-400 font-black text-[11px] uppercase tracking-[0.2em] mb-6 flex items-center">
-                            <i class="fas fa-check-double mr-2"></i>Claimed Successfully (${enrolled.length})
+                <!-- claimed / skipped course columns -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <!-- Column: Enrolled -->
+                    <div class="space-y-4">
+                        <h4 class="text-green-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="check-check" class="w-4 h-4 text-green-600"></i> Enrolled Successfully (${enrolled.length})
                         </h4>
-                        <div class="space-y-3">
+                        <div class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                             ${enrolled.length > 0 ? enrolled.map(c => `
-                                <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700/50 hover:border-blue-500/30 transition-all group/item">
-                                    <a href="${c.url}" target="_blank" class="text-sm font-black text-blue-400 group-hover/item:text-blue-300 block mb-2 leading-snug">${c.title || 'Untitled'}</a>
-                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-gray-500 font-bold">
-                                        <span class="bg-emerald-900/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/30">$${(c.price || 0).toFixed(2)}</span>
-                                        <span class="flex items-center"><i class="fas fa-tag mr-1.5 opacity-40"></i>${c.category || 'Course'}</span>
-                                        <span class="flex items-center"><i class="fas fa-language mr-1.5 opacity-40"></i>${c.language || 'English'}</span>
-                                        <span class="opacity-60 italic">Src: ${c.site_source || 'Web'}</span>
+                                <div class="bg-white p-4 rounded-xl border border-gray-150 hover:border-blue-300 transition-colors shadow-sm">
+                                    <a href="${c.url}" target="_blank" class="text-xs font-semibold text-blue-600 hover:underline block mb-2 leading-snug">${c.title || 'Untitled'}</a>
+                                    <div class="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
+                                        <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-200 font-semibold">${currencySym}${(c.price || 0).toFixed(2)}</span>
+                                        <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">${c.category || 'Course'}</span>
+                                        <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">${c.language || 'English'}</span>
+                                        <span class="italic text-[9px] text-gray-400 ml-auto">Src: ${c.site_source || 'Web'}</span>
                                     </div>
                                 </div>
-                            `).join('') : '<p class="text-gray-600 text-xs italic py-10 text-center bg-gray-800/20 rounded-2xl border border-dashed border-gray-800">No new courses were claimed in this specific session.</p>'}
+                            `).join('') : '<p class="text-gray-400 text-xs italic py-10 text-center bg-white border border-gray-250 rounded-xl font-light">No new courses were claimed in this session.</p>'}
                         </div>
                     </div>
 
-                    <!-- Column 2: Others -->
-                    <div>
-                        <h4 class="text-gray-500 font-black text-[11px] uppercase tracking-[0.2em] mb-6 flex items-center">
-                            <i class="fas fa-history mr-2 opacity-50"></i>Other Attempts (${other.length})
+                    <!-- Column: Others -->
+                    <div class="space-y-4">
+                        <h4 class="text-gray-500 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="help-circle" class="w-4 h-4 text-gray-400"></i> Checked & Skipped (${other.length})
                         </h4>
-                        <div class="bg-gray-800/30 rounded-3xl border border-gray-800/50 overflow-hidden divide-y divide-gray-800">
-                            <div class="max-h-[500px] overflow-y-auto custom-scrollbar p-2">
-                                ${other.length > 0 ? other.map(c => `
-                                    <div class="flex items-center justify-between p-4 hover:bg-gray-800/50 rounded-xl transition-colors gap-4">
-                                        <span class="text-gray-400 text-[11px] font-bold truncate flex-grow">${c.title || 'Untitled Session Item'}</span>
-                                        <span class="text-[8px] font-black uppercase px-2 py-1 rounded-md whitespace-nowrap border
-                                            ${c.status === 'expired' ? 'bg-red-900/20 text-red-400 border-red-900/50' :
-                                              c.status === 'excluded' ? 'bg-yellow-900/20 text-yellow-500 border-yellow-900/50' :
-                                              c.status === 'already_enrolled' ? 'bg-cyan-900/20 text-cyan-400 border-cyan-900/50' :
-                                              'bg-gray-700 text-gray-500 border-gray-600'}">${(c.status || 'skip').replace(/_/g, ' ')}</span>
-                                    </div>
-                                `).join('') : '<p class="text-gray-600 text-xs italic p-10 text-center">No other course events logged.</p>'}
+                        <div class="bg-white rounded-xl border border-gray-150 overflow-hidden shadow-sm">
+                            <div class="max-h-[400px] overflow-y-auto p-2 space-y-1">
+                                ${other.length > 0 ? other.map(c => {
+                                    let statusBadge = '';
+                                    if (c.status === 'already_enrolled') {
+                                        statusBadge = '<span class="text-[8px] font-semibold uppercase px-2 py-0.5 rounded bg-cyan-50 border border-cyan-200 text-cyan-700">Already Owned</span>';
+                                    } else if (c.status === 'excluded') {
+                                        statusBadge = '<span class="text-[8px] font-semibold uppercase px-2 py-0.5 rounded bg-yellow-50 border border-yellow-200 text-yellow-700">Excluded</span>';
+                                    } else if (c.status === 'expired') {
+                                        statusBadge = '<span class="text-[8px] font-semibold uppercase px-2 py-0.5 rounded bg-red-50 border border-red-200 text-red-700">Expired</span>';
+                                    } else {
+                                        statusBadge = `<span class="text-[8px] font-semibold uppercase px-2 py-0.5 rounded bg-gray-50 border border-gray-200 text-gray-500">${c.status}</span>`;
+                                    }
+
+                                    return `
+                                        <div class="flex items-center justify-between p-2.5 hover:bg-gray-50 rounded-lg transition-colors gap-4">
+                                            <span class="text-gray-600 text-xs font-medium truncate flex-grow">${c.title || 'Untitled Session Item'}</span>
+                                            ${statusBadge}
+                                        </div>
+                                    `;
+                                }).join('') : '<p class="text-gray-400 text-xs italic py-10 text-center font-light">No other course events logged.</p>'}
                             </div>
                         </div>
                     </div>
@@ -278,9 +325,15 @@ async function handleCardToggle(id) {
         `;
         sessionCache.set(id, true);
 
+        if (window.lucide) {
+            lucide.createIcons({
+                attrs: { class: 'w-4 h-4' },
+                nameAttr: 'data-lucide'
+            });
+        }
     } catch (e) {
         console.error(e);
-        content.innerHTML = `<div class="p-10 text-center"><p class="text-red-500 font-black">UNABLE TO PARSE SESSION LOGS</p><p class="text-gray-600 text-xs mt-2">${e.message}</p></div>`;
+        content.innerHTML = `<div class="p-10 text-center"><p class="text-red-500 font-bold">UNABLE TO PARSE SESSION LOGS</p><p class="text-gray-400 text-xs mt-2">${e.message}</p></div>`;
     }
 }
 
@@ -307,17 +360,4 @@ async function requestDelete(id) {
 // Initial Kickoff
 document.addEventListener('DOMContentLoaded', fetchHistory);
 </script>
-
-<style>
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
-
-/* Animation Hook */
-.run-card {
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-</style>
 {% endblock %}
