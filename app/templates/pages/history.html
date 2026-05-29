@@ -357,7 +357,28 @@ async function requestDelete(id) {
     } catch (e) { showToast("Critical connection error", "error"); }
 }
 
+async function checkAuth() {
+    try {
+        const resp = await fetch('/api/auth/status');
+        const data = await resp.json();
+        if (!data.authenticated) {
+            window.location.href = '/';
+            return false;
+        }
+        return true;
+    } catch (e) {
+        window.location.href = '/';
+        return false;
+    }
+}
+
+async function initHistory() {
+    const isAuthenticated = await checkAuth();
+    if (!isAuthenticated) return;
+    fetchHistory();
+}
+
 // Initial Kickoff
-document.addEventListener('DOMContentLoaded', fetchHistory);
+document.addEventListener('DOMContentLoaded', initHistory);
 </script>
 {% endblock %}

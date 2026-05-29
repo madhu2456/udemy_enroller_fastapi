@@ -247,17 +247,15 @@
 
                 <!-- Navigation Tabs (Middle) -->
                 <div class="hidden md:flex items-center gap-2" id="nav-links">
-                    {% if request.url.path != '/' %}
-                    <a href="/dashboard" class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                    <a href="/dashboard" class="nav-link auth-only hidden flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                         <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Dashboard
                     </a>
-                    <a href="/settings" class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                    <a href="/settings" class="nav-link auth-only hidden flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                         <i data-lucide="settings" class="w-3.5 h-3.5"></i>Settings
                     </a>
-                    <a href="/history" class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                    <a href="/history" class="nav-link auth-only hidden flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                         <i data-lucide="history" class="w-3.5 h-3.5"></i>History
                     </a>
-                    {% endif %}
                     <a href="/faq" class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50{% if request.url.path == '/faq' %} active{% endif %}">
                         FAQ
                     </a>
@@ -354,9 +352,15 @@
                         // Hide github-link using style.display to override Tailwind responsive classes
                         const githubLink = document.getElementById('github-link');
                         if (githubLink) githubLink.style.display = 'none';
+
+                        // Show all auth-only nav links
+                        document.querySelectorAll('.auth-only').forEach(el => el.classList.remove('hidden'));
                     } else {
                         const githubLink = document.getElementById('github-link');
                         if (githubLink) githubLink.style.display = '';
+
+                        // Hide all auth-only nav links
+                        document.querySelectorAll('.auth-only').forEach(el => el.classList.add('hidden'));
                     }
                 })
                 .catch(() => {
