@@ -636,9 +636,19 @@ function startProgressPolling() {
                 clearInterval(progressInterval);
                 document.getElementById('running-banner').classList.add('hidden');
                 document.getElementById('progress-panel').classList.add('hidden');
-                document.getElementById('start-btn').classList.remove('hidden');
-                document.getElementById('start-btn').disabled = false;
-                document.getElementById('stop-btn').classList.add('hidden');
+                
+                const startBtn = document.getElementById('start-btn');
+                startBtn.classList.remove('hidden');
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Start Enrollment';
+                
+                const stopBtn = document.getElementById('stop-btn');
+                stopBtn.classList.add('hidden');
+                stopBtn.innerHTML = '<i data-lucide="square" class="w-3.5 h-3.5 fill-current"></i> Stop Enrollment';
+                
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
                 
                 loadDashboardStats();
                 loadRecentRuns();
