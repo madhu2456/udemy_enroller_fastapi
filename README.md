@@ -1,5 +1,12 @@
 # Udemy Course Enroller — Automated Free Udemy Course Enrollment
 
+* **Built by**: Madhu Dadi
+* **Canonical profile**: https://madhudadi.in/profile/
+* **Case study**: https://madhudadi.in/case-studies/udemy-enroller-fastapi/
+* **Service relevance**: Python/FastAPI Automation & Data Engineering
+
+---
+
 > A free, open-source FastAPI application that automatically finds and enrolls you in 100% discounted Udemy courses. Built by [Madhu Dadi](https://madhudadi.in).
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python)](https://python.org)
@@ -97,11 +104,29 @@ The application will be available at `http://localhost:8000`.
 
 ### Option 2: Docker
 
-```bash
-git clone https://github.com/madhu2456/udemy_enroller_fastapi.git
-cd udemy_enroller_fastapi
-docker-compose up -d
-```
+By default, containerized deployments run in `DEPLOYMENT_ENV=server` mode to enforce strict production security. **The container will fail to start if you do not configure a strong, unique `SECRET_KEY`**.
+
+1. Clone and navigate to the directory:
+   ```bash
+   git clone https://github.com/madhu2456/udemy_enroller_fastapi.git
+   cd udemy_enroller_fastapi
+   ```
+
+2. Generate and set a strong `SECRET_KEY` in a `.env` file:
+   ```bash
+   # Generate a secure 32-byte key
+   openssl rand -hex 32
+   ```
+
+   Create a `.env` file:
+   ```env
+   SECRET_KEY=your_generated_strong_hex_key_here
+   ```
+
+3. Launch the container:
+   ```bash
+   docker-compose up -d
+   ```
 
 ---
 
