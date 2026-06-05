@@ -15,6 +15,13 @@ from app.services.scraper import (
     KorshubScraper,
 )
 from app.services.http_client import AsyncHTTPClient
+import os
+
+# Skip all live scraper tests by default in CI unless RUN_LIVE_TESTS=true is specified
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_LIVE_TESTS") != "true",
+    reason="Live scraper tests require RUN_LIVE_TESTS=true"
+)
 
 @pytest_asyncio.fixture(loop_scope="function")
 async def http_client():

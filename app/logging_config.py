@@ -27,7 +27,13 @@ def setup_logging():
 
     # 2. Silence loguru
     logger.remove()
-    concise_fmt = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{line} - {message}"
+
+    def concise_fmt(record):
+        fmt = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{line} - {message}"
+        if "user_id" in record["extra"]:
+            fmt += " [user:{extra[user_id]}]"
+        fmt += "\n"
+        return fmt
 
     # Standard logging bridge
     logging.basicConfig(

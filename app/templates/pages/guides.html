@@ -1,13 +1,13 @@
 {% extends "components/base.html" %}
-{% block title %}Udemy Cookie Setup Guide for Automated Enrollment{% endblock %}
-{% block meta_title %}Udemy Cookie Setup Guide for Automated Enrollment{% endblock %}
-{% block meta_description %}Learn how to extract Udemy session cookies step-by-step. Get our setup tutorials to start claiming free Udemy courses automatically.{% endblock %}
+{% block title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
+{% block meta_title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
+{% block meta_description %}Technical deep dives into the architecture, session state management, and data pipelines of the Udemy Enroller case study.{% endblock %}
 
-{% block og_title %}Udemy Cookie Setup Guide for Automated Enrollment{% endblock %}
-{% block og_description %}Learn how to extract Udemy session cookies step-by-step. Get our setup tutorials to start claiming free Udemy courses automatically.{% endblock %}
+{% block og_title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
+{% block og_description %}Technical deep dives into the architecture, session state management, and data pipelines of the Udemy Enroller case study.{% endblock %}
 
-{% block twitter_title %}Udemy Cookie Setup Guide for Automated Enrollment{% endblock %}
-{% block twitter_description %}Learn how to extract Udemy session cookies step-by-step. Get our setup tutorials to start claiming free Udemy courses automatically.{% endblock %}
+{% block twitter_title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
+{% block twitter_description %}Technical deep dives into the architecture, session state management, and data pipelines of the Udemy Enroller case study.{% endblock %}
 
 {% block content %}
 <!-- Breadcrumb -->
@@ -29,28 +29,28 @@
 {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
-  "name": "Udemy Course Enroller Guides & Resources",
+  "name": "Udemy Enroller Architecture Guides",
   "url": "https://udemyenroller.madhudadi.in/guides",
-  "description": "Step-by-step guides and tutorials for getting the most out of the Udemy Course Enroller.",
+  "description": "Technical guides for the Udemy Enroller case study.",
   "mainEntity": {
     "@type": "ItemList",
     "itemListElement": [
       {
         "@type": "ListItem",
         "position": 1,
-        "name": "Getting Started Guide",
+        "name": "System Architecture Overview",
         "url": "https://udemyenroller.madhudadi.in/guides#getting-started"
       },
       {
         "@type": "ListItem",
         "position": 2,
-        "name": "Cookie Login Tutorial",
+        "name": "Session State Management",
         "url": "https://udemyenroller.madhudadi.in/guides#cookie-login"
       },
       {
         "@type": "ListItem",
         "position": 3,
-        "name": "Advanced Filtering",
+        "name": "Data Pipeline & Telemetry",
         "url": "https://udemyenroller.madhudadi.in/guides#advanced-filtering"
       }
     ]
@@ -62,10 +62,10 @@
 <section class="py-16 md:py-24 bg-[#F9FAFB] border-b border-gray-200">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 class="text-4xl font-semibold tracking-tight text-gray-900 mb-4">
-            Guides & Resources
+            Architecture & Guides
         </h1>
         <p class="text-lg text-gray-500 leading-relaxed font-light">
-            Master the Udemy Course Enroller with step-by-step tutorials, pro tips, and deep-dives into the automation engine.
+            Deep-dives into the architecture, workflow orchestration, and automation engine behind the case study.
         </p>
     </div>
 </section>
@@ -86,32 +86,28 @@
                         </span>
                     </div>
                     <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Getting Started
+                        System Architecture Overview
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        New to the Udemy Course Enroller? This guide walks you through connecting your account and running your first automated enrollment in under 5 minutes.
+                        Explore how FastAPI orchestrates background tasks and how the components interact in a high-throughput environment.
                     </p>
                     
                     <div class="space-y-2 text-sm text-gray-600 leading-relaxed font-light">
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span>Visit the homepage and click <strong>Start Automating</strong>.</span>
+                            <span><strong>FastAPI Backend:</strong> Serves asynchronous endpoints and manages long-running background tasks.</span>
                         </div>
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span>Log into udemy.com in your browser.</span>
+                            <span><strong>Playwright Engine:</strong> Handles external API interactions dynamically with headless browser automation.</span>
                         </div>
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span>Extract cookies (F12 → Application → Cookies).</span>
+                            <span><strong>SQLAlchemy:</strong> Maintains robust session state and transaction boundaries.</span>
                         </div>
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span>Paste access_token, client_id, and csrftoken.</span>
-                        </div>
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span>Click <strong>Connect via Cookies</strong> to begin automation.</span>
+                            <span><strong>SSE Telemetry:</strong> Streams isolated task progress to the client asynchronously.</span>
                         </div>
                     </div>
                 </div>
@@ -128,10 +124,10 @@
                         </div>
                     </div>
                     <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Cookie Login Deep Dive
+                        Session State Management
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        Cookie-based authentication is the most reliable way to use the enroller. Learn exactly where to find each cookie and how to keep your session alive.
+                        The application leverages external session tokens rather than storing primary credentials, reducing security risk across asynchronous queues.
                     </p>
                     
                     <div class="flex flex-wrap gap-2 mb-6">
@@ -149,7 +145,7 @@
                     <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3">
                         <i data-lucide="info" class="text-blue-600 w-5 h-5 flex-shrink-0"></i>
                         <p class="text-xs text-blue-800 leading-relaxed">
-                            <strong>Pro tip:</strong> If your session expires, simply re-extract fresh cookies from your browser. The enroller will automatically update your stored session tokens upon connecting.
+                            <strong>Architecture Insight:</strong> By explicitly passing access_token, client_id, and csrftoken headers during initialization, the headless workflow avoids complex interactive login flows.
                         </p>
                     </div>
                 </div>
@@ -166,28 +162,28 @@
                         </div>
                     </div>
                     <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Advanced Filtering
+                        Data Pipeline & Telemetry
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        Stop enrolling courses you'll never watch. Use smart filters to build a library that actually matches your learning goals.
+                        The case study processes inputs dynamically via defined rules engines, filtering objects before committing states to the database.
                     </p>
                     
                     <div class="space-y-2 text-sm text-gray-600 leading-relaxed font-light">
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Categories:</strong> Development, Business, Design, Marketing, etc.</span>
+                            <span><strong>Type Matching:</strong> Applies language and category schema validation via Pydantic.</span>
                         </div>
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Languages:</strong> English, Spanish, Hindi, and more.</span>
+                            <span><strong>Conditional Triggers:</strong> Evaluates rating thresholds via metadata aggregation.</span>
                         </div>
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Min Rating:</strong> Filter out courses below your quality threshold (0.0 – 5.0).</span>
+                            <span><strong>Blocklists:</strong> Rejects payloads originating from untrusted schemas (e.g. instructor blocklists).</span>
                         </div>
                         <div class="flex items-start py-1">
                             <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Instructor Blocklist:</strong> Exclude specific instructors by username.</span>
+                            <span><strong>Log Isolation:</strong> Generates real-time, user-specific streams utilizing Server-Sent Events (SSE).</span>
                         </div>
                     </div>
                 </div>
@@ -207,7 +203,7 @@
                         Self-Hosting with Docker
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        Want full control? Deploy the Udemy Course Enroller on your own server or VPS using the included Docker setup.
+                        Want to deploy this case study infrastructure? The project is fully containerized for deployment on any modern VPS using Docker.
                     </p>
                     
                     <div class="bg-gray-900 rounded-xl p-5 mb-6 overflow-hidden shadow-inner">

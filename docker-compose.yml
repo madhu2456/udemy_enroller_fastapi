@@ -9,7 +9,8 @@ services:
     environment:
       - APP_NAME=Udemy Course Enroller
       - DEBUG=false
-      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEPLOYMENT_ENV=server
       - DATABASE_URL=sqlite:////app/data/udemy_enroller.db
       - LOG_LEVEL=INFO
     volumes:

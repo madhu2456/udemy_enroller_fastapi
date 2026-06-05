@@ -1,4 +1,4 @@
-"""Course scraper service - Technatic-style (No Playwright for enrollment, Playwright allowed for scraping fallback)."""
+"""Course scraper service - standard emulated client logic (No Playwright for enrollment, Playwright allowed for scraping fallback)."""
 
 import asyncio
 import random
@@ -55,19 +55,22 @@ class Scraper(ABC):
         if "trk.udemy.com" not in trk_url:
             return trk_url
         try:
-            resp = await self.http.head(trk_url, follow_redirects=True, timeout=15)
+            resp = await self.http.head(trk_url, follow_redirects=True, timeout=15, raise_for_status=False)
             if resp and resp.status_code in (200, 301, 302, 307, 308):
                 resolved = str(resp.url)
                 if "udemy.com/course/" in resolved:
                     return resolved
-            # Fallback: try GET if HEAD didn't work
-            resp = await self.http.get(trk_url, follow_redirects=True, timeout=15)
+        except Exception as e:
+            logger.debug(f"HEAD redirect resolution failed for {trk_url}: {e}")
+
+        try:
+            resp = await self.http.get(trk_url, follow_redirects=True, timeout=15, raise_for_status=False)
             if resp:
                 resolved = str(resp.url)
                 if "udemy.com/course/" in resolved:
                     return resolved
         except Exception as e:
-            logger.debug(f"Failed to resolve trk redirect {trk_url}: {e}")
+            logger.debug(f"GET fallback redirect resolution failed for {trk_url}: {e}")
         return None
 
     def cleanup_link(self, link: str) -> Optional[str]:

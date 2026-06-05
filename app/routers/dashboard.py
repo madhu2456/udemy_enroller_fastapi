@@ -3,6 +3,8 @@
 import logging
 import asyncio
 import os
+import re
+from typing import Optional
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -53,15 +55,43 @@ async def login_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request):
-    """Settings page."""
-    return templates.TemplateResponse(request, "pages/settings.html")
+async def settings_page(request: Request, user_id: int = Depends(get_current_user_id)):
+    """Render settings configuration page."""
+    return templates.TemplateResponse(
+        "pages/settings.html", {"request": request, "user_id": user_id}
+    )
 
 
 @router.get("/history", response_class=HTMLResponse)
-async def history_page(request: Request):
-    """Enrollment history page."""
-    return templates.TemplateResponse(request, "pages/history.html")
+async def history_page(request: Request, user_id: int = Depends(get_current_user_id)):
+    """Render history logs page."""
+    return templates.TemplateResponse(
+        "pages/history.html", {"request": request, "user_id": user_id}
+    )
+
+
+@router.get("/faq", response_class=HTMLResponse)
+async def faq_page(request: Request, user_id: int = Depends(get_current_user_id)):
+    """Render FAQ page."""
+    return templates.TemplateResponse(
+        "pages/faq.html", {"request": request, "user_id": user_id}
+    )
+
+
+@router.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request, user_id: int = Depends(get_current_user_id)):
+    """Render About page."""
+    return templates.TemplateResponse(
+        "pages/about.html", {"request": request, "user_id": user_id}
+    )
+
+
+@router.get("/guides", response_class=HTMLResponse)
+async def guides_page(request: Request, user_id: int = Depends(get_current_user_id)):
+    """Render Guides page."""
+    return templates.TemplateResponse(
+        "pages/guides.html", {"request": request, "user_id": user_id}
+    )
 
 
 @router.get("/api/dashboard/stats")
@@ -96,14 +126,21 @@ async def dashboard_stats(
             or 0
         )
 
+        total_enrolled = user.total_enrolled or 0
+        total_already_enrolled = user.total_already_enrolled or 0
+        total_expired = user.total_expired or 0
+        total_excluded = user.total_excluded or 0
+        total_processed = total_enrolled + total_already_enrolled + total_expired + total_excluded
+
         return {
             "total_runs": total_runs,
-            "total_enrolled": user.total_enrolled or 0,
+            "total_enrolled": total_enrolled,
             "total_amount_saved": float(user.total_amount_saved or 0),
             "currency": user.currency or "usd",
-            "total_already_enrolled": user.total_already_enrolled or 0,
-            "total_expired": user.total_expired or 0,
-            "total_excluded": user.total_excluded or 0,
+            "total_already_enrolled": total_already_enrolled,
+            "total_expired": total_expired,
+            "total_excluded": total_excluded,
+            "total_processed": total_processed,
         }
 
     return get_cached_or_compute(_stats_cache, user_id, compute_stats, ttl_seconds=10)
@@ -114,27 +151,31 @@ async def dashboard_analytics(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
-    """Get historical analytics for the current user (savings per day for last 30 days)."""
+    """Get weekly enrollment analytics data."""
 
     def compute_analytics():
-        # Aggregate successful enrollments by date
         stats = (
             db.query(
-                func.date(EnrolledCourse.enrolled_at).label("date"),
-                func.count(EnrolledCourse.id).label("count"),
-                func.sum(EnrolledCourse.price).label("savings"),
+                func.strftime("%Y-%m-%d", EnrollmentRun.started_at).label("day"),
+                func.sum(EnrollmentRun.successfully_enrolled).label("enrolled"),
+                func.sum(EnrollmentRun.amount_saved).label("saved"),
             )
-            .join(EnrollmentRun)
             .filter(
-                EnrollmentRun.user_id == user_id, EnrolledCourse.status == "enrolled"
+                EnrollmentRun.user_id == user_id,
+                EnrollmentRun.started_at >= func.date("now", "-7 days"),
+                EnrollmentRun.status != "deleted",
             )
-            .group_by(func.date(EnrolledCourse.enrolled_at))
-            .order_by(func.date(EnrolledCourse.enrolled_at))
+            .group_by("day")
+            .order_by("day")
             .all()
         )
 
         return [
-            {"date": str(s.date), "count": s.count, "savings": float(s.savings or 0)}
+            {
+                "date": s.day,
+                "courses_enrolled": s.enrolled or 0,
+                "savings": float(s.saved or 0.0),
+            }
             for s in stats
         ]
 
@@ -156,20 +197,32 @@ async def stream_logs(
             yield "data: Log file not found\n\n"
             return
 
+        def process_log_line(l: str) -> Optional[str]:
+            match = re.search(r" \[user:(\d+)\]", l)
+            if match:
+                line_user_id = int(match.group(1))
+                if line_user_id == user_id:
+                    return l.replace(match.group(0), "")
+            return None
+
         # Start by tailing the file, only last few lines then live
         with open(log_file, "r", encoding="utf-8", errors="replace") as f:
-            # Get last 20 lines
             f.seek(0, os.SEEK_END)
             end_pos = f.tell()
             if end_pos > 0:
-                f.seek(max(0, end_pos - 4000))  # approx 20-40 lines
+                f.seek(max(0, end_pos - 10000))  # read last ~100 lines
                 if f.tell() > 0:
-                    # Discard the first partial line since seek might land in the middle
                     f.readline()
 
             lines = f.readlines()
-            for line in lines[-20:]:
-                yield f"data: {line.strip()}\n\n"
+            yielded_count = 0
+            for line in reversed(lines):
+                processed = process_log_line(line)
+                if processed and processed.strip():
+                    yield f"data: {processed.strip()}\n\n"
+                    yielded_count += 1
+                    if yielded_count >= 30:
+                        break
 
             # Live tail
             from app.core.constants import shutdown_event
@@ -179,8 +232,9 @@ async def stream_logs(
                     break
                 line = f.readline()
                 if line:
-                    if line.strip():
-                        yield f"data: {line.strip()}\n\n"
+                    processed = process_log_line(line)
+                    if processed and processed.strip():
+                        yield f"data: {processed.strip()}\n\n"
                 else:
                     await asyncio.sleep(0.5)
 

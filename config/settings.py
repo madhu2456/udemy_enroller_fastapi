@@ -55,6 +55,24 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
 
+    from pydantic import model_validator
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> "Settings":
+        if self.DEPLOYMENT_ENV == "server":
+            if self.SECRET_KEY in (
+                "change-me-in-production-use-a-strong-secret-key",
+                "change-me-in-production",
+                "change-me",
+                "",
+            ):
+                raise ValueError(
+                    "Insecure SECRET_KEY is not allowed when DEPLOYMENT_ENV is set to 'server'. "
+                    "Please configure a strong unique SECRET_KEY environment variable."
+                )
+            self.COOKIE_SECURE = True
+        return self
+
 
 @lru_cache()
 def get_settings() -> Settings:

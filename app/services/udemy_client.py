@@ -1,4 +1,4 @@
-"""Udemy API client for authentication and course enrollment - Technatic-style (No Playwright)."""
+"""Udemy API client for authentication and course enrollment - standard emulated client logic (No Playwright)."""
 
 import re
 import asyncio
@@ -25,15 +25,16 @@ class LoginException(Exception):
 
 
 class UdemyClient:
-    """Handles asynchronous authentication and enrollment using Technatic-style emulation."""
+    """Handles asynchronous authentication and enrollment using standard client emulation."""
 
     def __init__(self, proxy: Optional[str] = None):
-        logger.warning("UdemyClient v2.1 (Technatic logic active)")
+        logger.warning("UdemyClient v2.1 (standard emulated client logic active)")
         self.http = AsyncHTTPClient(proxy=proxy)
         # Persistent CloudScraper session for enrollment (matches DUCE)
         self._init_cloudscraper()
 
         self.display_name: str = ""
+        self.udemy_user_id: Optional[str] = None
         self.currency: str = "usd"
         self.cookie_dict: dict = {}
         self.enrolled_courses: Optional[Dict[str, str]] = None
@@ -223,9 +224,9 @@ class UdemyClient:
             (self._account_block_cooldown_until - datetime.now(UTC)).total_seconds(),
         )
 
-    def set_proxy(self, proxy: Optional[str]):
+    async def set_proxy(self, proxy: Optional[str]):
         """Update proxy for the underlying HTTP client."""
-        self.http.set_proxy(proxy)
+        await self.http.set_proxy(proxy)
 
     async def _extract_csrf_from_html(self, html: str) -> Optional[str]:
         if not html:
@@ -244,8 +245,8 @@ class UdemyClient:
         return None
 
     async def manual_login(self, email: str, password: str):
-        """Technatic-style login using CloudScraper and Mobile Emulation."""
-        logger.info(f"Attempting login for {email} (Technatic-Style)")
+        """Standard emulated login using CloudScraper and Mobile Emulation."""
+        logger.info(f"Attempting login for {email} (standard emulated)")
         try:
             # 1. Fetch login page via CloudScraper
             resp = await self.http.get(
@@ -282,7 +283,7 @@ class UdemyClient:
                 "password": password,
             }
 
-            # 3. Submit Login via CloudScraper (Technatic pattern)
+            # 3. Submit Login via CloudScraper (standard emulated pattern)
             logger.info("  Submitting login via CloudScraper...")
             resp = await self.http.post(
                 constants.UDEMY_LOGIN_POPUP_URL,
@@ -380,9 +381,23 @@ class UdemyClient:
                     )
                 raise LoginException("Session invalid.")
 
-            self.display_name = ctx["header"]["user"]["display_name"]
+            header = ctx.get("header", {})
+            user_data = header.get("user") or {}
+
+            self.display_name = user_data.get("display_name") or "Udemy User"
+            raw_id = user_data.get("id")
+            if raw_id:
+                self.udemy_user_id = str(raw_id)
+            else:
+                import hashlib
+                # Stable deterministic fallback using cookie material (client_id, then access_token) and display name salt
+                cookie_material = self.cookie_dict.get("client_id") or self.cookie_dict.get("access_token") or ""
+                salt = self.display_name
+                hash_input = f"{cookie_material}:{salt}"
+                self.udemy_user_id = "fallback_" + hashlib.sha256(hash_input.encode("utf-8")).hexdigest()[:12]
+
             self.is_authenticated = True
-            logger.info(f"Authenticated as {self.display_name}")
+            logger.info(f"Authenticated as {self.display_name} (ID: {self.udemy_user_id})")
 
         except Exception as e:
             if not isinstance(e, LoginException):
@@ -441,6 +456,91 @@ class UdemyClient:
                 return cid
         return None
 
+    def _extract_device_market_attributes(self, html: str) -> Optional[dict]:
+        import json
+        import html as html_lib
+        try:
+            soup = bs(html, "lxml")
+            # 1. Search for element with class containing device-market-attributes
+            element = soup.find(class_=re.compile(r"device-market-attributes", re.I))
+            if element:
+                if element.name == "script":
+                    try:
+                        data = json.loads(element.string)
+                        if data:
+                            return data
+                    except Exception:
+                        pass
+
+                for attr_name in ["data-server-side-props", "data-client-side-arguments", "data-server-side-arguments"]:
+                    val = element.get(attr_name)
+                    if val:
+                        try:
+                            decoded = html_lib.unescape(val)
+                            data = json.loads(decoded)
+                            if data:
+                                return data
+                        except Exception:
+                            pass
+
+            # 2. General regex fallback
+            match = re.search(r'data-server-side-props="([^"]+)"', html)
+            if match:
+                try:
+                    decoded = html_lib.unescape(match.group(1))
+                    data = json.loads(decoded)
+                    if data:
+                        return data
+                except Exception:
+                    pass
+
+            match_sq = re.search(r"data-server-side-props='([^']+)'", html)
+            if match_sq:
+                try:
+                    decoded = html_lib.unescape(match_sq.group(1))
+                    data = json.loads(decoded)
+                    if data:
+                        return data
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.debug(f"Error extracting device market attributes: {e}")
+        return None
+
+    async def populate_course_metadata(self, course: Course):
+        """Fetch course HTML page and populate metadata if not already done."""
+        if course.language is not None:
+            # Already populated, skip to prevent double fetching
+            return
+
+        if self.is_account_blocked():
+            return
+
+        await self._course_fetch_throttle()
+
+        logger.info(f"  Fetching HTML for metadata extraction: {course.title}")
+        resp = await self.http.get(
+            course.url, use_cloudscraper=True, req_type="document"
+        )
+        if resp and resp.status_code == 200:
+            final_url = str(resp.url)
+            if final_url != course.url:
+                course.url = final_url
+                course.extract_coupon_code()
+
+            if not course.course_id:
+                course.course_id = self._extract_course_id(resp.text)
+
+            dma = self._extract_device_market_attributes(resp.text)
+            if dma:
+                course.set_metadata(dma)
+                self._course_fetch_report(200)
+            else:
+                logger.warning(f"  Failed to extract device market attributes for {course.title}")
+        else:
+            status = resp.status_code if resp else "No Response"
+            logger.warning(f"  Failed to fetch course page for metadata (Status: {status})")
+
     async def get_course_id(self, course: Course):
         """Slug resolution using Slug API and CloudScraper."""
         if course.course_id:
@@ -482,6 +582,10 @@ class UdemyClient:
 
             course.course_id = self._extract_course_id(resp.text)
             if course.course_id:
+                # Also extract and set metadata since we have fetched the HTML anyway!
+                dma = self._extract_device_market_attributes(resp.text)
+                if dma:
+                    course.set_metadata(dma)
                 self._course_fetch_report(200)
                 return
             else:
@@ -647,18 +751,85 @@ class UdemyClient:
 
     def is_course_excluded(self, course: Course, settings: dict):
         min_rating = settings.get("min_rating", 0)
-        if course.rating and min_rating > 0 and course.rating < min_rating:
+        if course.rating is not None and min_rating > 0 and course.rating < min_rating:
             course.is_excluded = True
+            course.error = f"Rating {course.rating} below minimum {min_rating}"
             return
 
-        allowed_langs = [lang.lower() for lang in settings.get("languages", []) if lang]
-        if (
-            allowed_langs
-            and course.language
-            and course.language.lower() not in allowed_langs
-        ):
-            course.is_excluded = True
-            return
+        # Languages filter (narrowed/active if at least one option is False)
+        langs_dict = settings.get("languages", {})
+        allowed_langs = {k.lower(): v for k, v in langs_dict.items() if v}
+        languages_filter_active = any(not v for v in langs_dict.values())
+
+        if languages_filter_active:
+            if not course.language:
+                course.is_excluded = True
+                course.error = "Language filter enabled but course language is missing"
+                return
+            elif course.language.lower() not in allowed_langs:
+                course.is_excluded = True
+                course.error = f"Language '{course.language}' not allowed"
+                return
+        elif course.language and allowed_langs:
+            if course.language.lower() not in allowed_langs:
+                course.is_excluded = True
+                course.error = f"Language '{course.language}' not allowed"
+                return
+
+        # Categories filter (narrowed/active if at least one option is False)
+        cats_dict = settings.get("categories", {})
+        allowed_cats = {k.lower(): v for k, v in cats_dict.items() if v}
+        categories_filter_active = any(not v for v in cats_dict.values())
+
+        if categories_filter_active:
+            if not course.category:
+                course.is_excluded = True
+                course.error = "Category filter enabled but course category is missing"
+                return
+            elif course.category.lower() not in allowed_cats:
+                course.is_excluded = True
+                course.error = f"Category '{course.category}' not allowed"
+                return
+        elif course.category and allowed_cats:
+            if course.category.lower() not in allowed_cats:
+                course.is_excluded = True
+                course.error = f"Category '{course.category}' not allowed"
+                return
+
+        # Instructor exclusions
+        instructor_exclude = [inst.lower().strip() for inst in settings.get("instructor_exclude", []) if inst]
+        if instructor_exclude and course.instructors:
+            for inst in course.instructors:
+                if inst.lower() in instructor_exclude:
+                    course.is_excluded = True
+                    course.error = f"Instructor '{inst}' is excluded"
+                    return
+
+        # Title exclusions
+        title_exclude = [kw.lower().strip() for kw in settings.get("title_exclude", []) if kw]
+        if title_exclude and course.title:
+            title_lower = course.title.lower()
+            for kw in title_exclude:
+                if kw in title_lower:
+                    course.is_excluded = True
+                    course.error = f"Title contains excluded keyword '{kw}'"
+                    return
+
+        # Last updated date threshold
+        threshold_months = settings.get("course_update_threshold_months", 24)
+        if threshold_months > 0 and course.last_update:
+            try:
+                date_parts = [int(p) for p in re.findall(r"\d+", course.last_update)]
+                if len(date_parts) >= 2:
+                    update_year, update_month = date_parts[0], date_parts[1]
+                    now = datetime.now()
+                    diff_months = (now.year - update_year) * 12 + (now.month - update_month)
+                    if diff_months > threshold_months:
+                        course.is_excluded = True
+                        course.error = f"Course last updated {diff_months} months ago (Threshold: {threshold_months})"
+                        return
+            except Exception as e:
+                logger.debug(f"Failed to parse course last_update '{course.last_update}': {e}")
 
     async def _du_checkout(self, course: Course):
         """DUCE-style single course checkout using persistent CloudScraper session."""
@@ -805,7 +976,7 @@ class UdemyClient:
         """Free course checkout: GET subscribe URL then verify enrollment via API."""
         logger.info(f"[FREE_CHECKOUT] {course.title} | ID={course.course_id}")
 
-        # Step 1: GET the subscribe URL (old working Technatic logic)
+        # Step 1: GET the subscribe URL (old working checkout logic)
         sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
         headers = {
             "User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
