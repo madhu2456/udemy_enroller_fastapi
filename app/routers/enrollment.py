@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.models.database import get_db, UserSettings, EnrollmentRun, EnrolledCourse
+from app.models.database import get_db, UserSettings, EnrollmentRun, EnrolledCourse, _utcnow_naive
 from app.deps import get_current_user_id, get_udemy_client
 from app.schemas.schemas import EnrollmentStatus, CourseInfo, RunDetail
 from app.security import verify_csrf_token
@@ -93,13 +93,16 @@ async def start_enrollment(
         )
 
     # Sync client proxy with current user settings
-    client.set_proxy(settings_dict["proxy_url"])
+    await client.set_proxy(settings_dict["proxy_url"])
 
     # Update settings_dict with filtered sites for the run
     settings_dict["sites"] = {site: True for site in enabled_sites}
 
     logger.debug(f"Starting enrollment with filtered settings: {settings_dict}")
-    run_id = await EnrollmentManager.start_run(user_id, client, settings_dict)
+    try:
+        run_id = await EnrollmentManager.start_run(user_id, client, settings_dict)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
     # Invalidate cache so the new run appears in history immediately
     clear_user_caches(user_id)

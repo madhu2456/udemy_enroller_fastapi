@@ -26,6 +26,13 @@ class EnrollmentManager:
 
     # Track active tasks to prevent duplicate runs per user
     active_tasks: Dict[int, asyncio.Task] = {}
+    locks: Dict[int, asyncio.Lock] = {}
+
+    @classmethod
+    def get_lock(cls, user_id: int) -> asyncio.Lock:
+        if user_id not in cls.locks:
+            cls.locks[user_id] = asyncio.Lock()
+        return cls.locks[user_id]
 
     def __init__(
         self,
@@ -80,6 +87,7 @@ class EnrollmentManager:
             "expired": run.expired,
             "excluded": run.excluded,
             "amount_saved": float(run.amount_saved or 0.0),
+            "currency": run.currency or "usd",
             "current_course_title": pd.get("current_course_title"),
             "current_course_url": pd.get("current_course_url"),
             "scraping_progress": pd.get("scraping_progress", []),
@@ -94,28 +102,38 @@ class EnrollmentManager:
         close_client: bool = False,
     ) -> int:
         """Create a run and start the background task."""
-        logger.warning(f"Creating enrollment run for user {user_id}")
-        db = SessionLocal()
-        try:
-            # Create the run record
-            run = EnrollmentRun(
-                user_id=user_id, status="pending", currency=udemy_client.currency
-            )
-            db.add(run)
-            db.commit()
-            db.refresh(run)
+        lock = cls.get_lock(user_id)
+        async with lock:
+            logger.warning(f"Creating enrollment run for user {user_id}")
+            db = SessionLocal()
+            try:
+                active = cls.get_active_run(db, user_id)
+                if active:
+                    raise ValueError("An enrollment run is already active")
 
-            logger.warning(f"Run {run.id} created. Starting background task.")
-            manager = cls(user_id, run.id, udemy_client, settings, close_client)
-            task = asyncio.create_task(manager.run_pipeline())
-            cls.active_tasks[run.id] = task
+                # Create the run record
+                run = EnrollmentRun(
+                    user_id=user_id, status="pending", currency=udemy_client.currency
+                )
+                db.add(run)
+                db.commit()
+                db.refresh(run)
 
-            return run.id
-        finally:
-            db.close()
+                logger.warning(f"Run {run.id} created. Starting background task.")
+                manager = cls(user_id, run.id, udemy_client, settings, close_client)
+                task = asyncio.create_task(manager.run_pipeline())
+                cls.active_tasks[run.id] = task
+
+                return run.id
+            finally:
+                db.close()
 
     async def run_pipeline(self):
         """Main enrollment pipeline: Scrape -> Filter -> Enroll."""
+        with logger.contextualize(user_id=self.user_id):
+            await self._run_pipeline_impl()
+
+    async def _run_pipeline_impl(self):
         logger.warning(f"Starting enrollment pipeline for run {self.run_id}")
         db = SessionLocal()
         try:
@@ -251,11 +269,11 @@ class EnrollmentManager:
             self.status = "enrolling"
 
             # Phase 2: Process and enroll (Single Course Mode only)
-            logger.info("🔄 Single-course checkout mode active (Technatic-style logic)")
+            logger.info("🔄 Single-course checkout mode active (emulated mobile checkout)")
 
             async def process_single_course(course: Course):
                 """Process single course checkout with metrics tracking."""
-                # Add jitter delay between enrollments (Technatic style)
+                # Add jitter delay between enrollments
                 course_delay = random.uniform(2.0, 5.0)
                 logger.info(f"[PROCESS] Delaying {course_delay:.1f}s before enrolling {course.title}")
                 await asyncio.sleep(course_delay)
@@ -354,12 +372,14 @@ class EnrollmentManager:
                                 f"  Status: Already enrolled (Live API: {course.slug})"
                             )
                         else:
-                            # Apply user filters
+                            # Apply user filters (fetch HTML page metadata first if not already populated)
+                            await self.udemy.populate_course_metadata(course)
                             self.udemy.is_course_excluded(course, self.settings)
                             if course.is_excluded:
                                 self.udemy.excluded_c += 1
                                 course_status = "excluded"
-                                logger.info("  Status: Excluded (Filter match)")
+                                error_msg = course.error or "Filter match"
+                                logger.info(f"  Status: Excluded ({error_msg})")
                             else:
                                 # Course is valid and free/couponed - Enrolling
                                 logger.info(f"[PIPELINE] Checking coupon for {course.title}")
@@ -375,15 +395,25 @@ class EnrollmentManager:
                                     else:
                                         self.udemy.expired_c += 1
                                         course_status = "expired"
+                                        error_msg = course.error
                                     
                                     logger.warning(
                                         f"  Status: {course_status.capitalize()} ({course.error}) for {course.title}"
                                     )
                                 else:
-                                    # Enrolling in single course mode
-                                    logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
-                                    await process_single_course(course)
-                                    saved_already = True
+                                    # Check discounted_only filter: if course is free without coupon, exclude it
+                                    if self.settings.get("discounted_only") and course.is_free:
+                                        self.udemy.excluded_c += 1
+                                        course_status = "excluded"
+                                        error_msg = "Course is free by default (discounted_only filter active)"
+                                        course.is_excluded = True
+                                        course.error = error_msg
+                                        logger.info(f"  Status: Excluded ({error_msg})")
+                                    else:
+                                        # Enrolling in single course mode
+                                        logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
+                                        await process_single_course(course)
+                                        saved_already = True
                 except Exception as e:
                     logger.exception(f"[PIPELINE ERROR] Unexpected error processing {course.title}: {e}")
                     course_status = "failed"
@@ -532,6 +562,18 @@ class EnrollmentManager:
                     user.total_excluded += 1
 
             db.commit()
+
+            # If the course was successfully enrolled and save_txt is True, append it to a text file
+            if status == "enrolled" and self.settings.get("save_txt"):
+                try:
+                    import os
+                    os.makedirs("Courses", exist_ok=True)
+                    filename = f"Courses/enrolled_courses_{self.user_id}.txt"
+                    with open(filename, "a", encoding="utf-8") as f:
+                        f.write(f"{course.title} - {course.url}\n")
+                    logger.info(f"Saved {course.title} to {filename}")
+                except Exception as e:
+                    logger.error(f"Failed to write course to enrolled_courses.txt: {e}")
 
             # Invalidate dashboard stats cache so the scorecards reflect
             # the latest lifetime totals immediately.

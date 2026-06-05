@@ -251,6 +251,7 @@ class TestEnrollmentSessionRestore:
         mock_client = MagicMock()
         mock_client.is_authenticated = True
         mock_client.get_session_info = AsyncMock(return_value=None)
+        mock_client.set_proxy = AsyncMock(return_value=None)
         mock_udemy_client_class.return_value = mock_client
 
         response = client.post(

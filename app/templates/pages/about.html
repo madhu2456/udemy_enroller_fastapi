@@ -1,13 +1,14 @@
 {% extends "components/base.html" %}
-{% block title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
-{% block meta_title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
-{% block meta_description %}Discover the open-source Udemy Course Enroller. Learn how this automated Python tool helps students access free educational content easily.{% endblock %}
+{% extends "components/base.html" %}
+{% block title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
+{% block meta_title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
+{% block meta_description %}Learn about the architecture and mission behind the Udemy Enroller case study. Discover how it handles workflow orchestration and concurrency.{% endblock %}
 
-{% block og_title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
-{% block og_description %}Discover the open-source Udemy Course Enroller. Learn how this automated Python tool helps students access free educational content easily.{% endblock %}
+{% block og_title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
+{% block og_description %}Learn about the architecture and mission behind the Udemy Enroller case study. Discover how it handles workflow orchestration and concurrency.{% endblock %}
 
-{% block twitter_title %}About Udemy Course Enroller: Free Open Source Tool{% endblock %}
-{% block twitter_description %}Discover the open-source Udemy Course Enroller. Learn how this automated Python tool helps students access free educational content easily.{% endblock %}
+{% block twitter_title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
+{% block twitter_description %}Learn about the architecture and mission behind the Udemy Enroller case study. Discover how it handles workflow orchestration and concurrency.{% endblock %}
 
 {% block content %}
 <!-- Breadcrumb -->
@@ -29,11 +30,11 @@
 {
   "@context": "https://schema.org",
   "@type": "AboutPage",
-  "name": "About Udemy Course Enroller",
+  "name": "About Udemy Enroller",
   "url": "https://udemyenroller.madhudadi.in/about",
   "mainEntity": {
     "@type": "SoftwareApplication",
-    "name": "Udemy Course Enroller",
+    "name": "Udemy Enroller Case Study",
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
     "url": "https://udemyenroller.madhudadi.in",
@@ -54,7 +55,7 @@
             About the Project
         </h1>
         <p class="text-lg text-gray-500 leading-relaxed font-light">
-            The story, architecture, and mission behind the Udemy Course Enroller — a free tool built to make premium education accessible.
+            The story, architecture, and mission behind the Udemy Enroller — a case study demonstrating advanced FastAPI orchestration.
         </p>
     </div>
 </section>
@@ -72,13 +73,13 @@
             </div>
             <div class="space-y-6 text-sm text-gray-600 leading-relaxed font-light">
                 <p>
-                    Online education should be a right, not a privilege. While platforms like Udemy offer incredible courses taught by industry experts, the cost can be prohibitive for students and self-learners worldwide.
+                    Building robust, concurrent, and fault-tolerant web applications requires understanding how to manage asynchronous queues, external APIs, and session states securely.
                 </p>
                 <p>
-                    The reality is that instructors <strong>want</strong> to give their courses away for free — they share 100% off coupons on aggregator sites to build reviews and reach. But these coupons expire within hours, sometimes minutes.
+                    The reality of integrating with third-party systems is that developers must handle rate limits, headless browser automation, and dynamic data filtering without blocking the main thread or compromising telemetry.
                 </p>
                 <p>
-                    The Udemy Course Enroller was built to solve this exact problem: <strong>automatically monitor, discover, and claim these free coupons before they vanish</strong>, giving users a perpetual library of premium knowledge at zero cost.
+                    The Udemy Enroller was built as a case study to solve this exact problem: <strong>demonstrate an automated workflow that orchestrates these systems efficiently</strong>, giving developers a reference architecture for high-throughput FastAPI applications.
                 </p>
             </div>
         </div>
@@ -91,8 +92,8 @@
                     <i data-lucide="search" class="text-blue-600 w-4 h-4"></i>
                 </div>
                 <div>
-                    <h4 class="text-sm font-semibold text-gray-900 mb-1">1. Scrape</h4>
-                    <p class="text-xs text-gray-500 leading-relaxed font-light">Headless browser pools scan aggregators like Real Discount for 100% off deals.</p>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">1. Automate</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed font-light">Headless browser pools manage external integration state seamlessly.</p>
                 </div>
             </div>
             <!-- Filter -->
@@ -101,18 +102,18 @@
                     <i data-lucide="zap" class="text-blue-600 w-4 h-4"></i>
                 </div>
                 <div>
-                    <h4 class="text-sm font-semibold text-gray-900 mb-1">2. Filter</h4>
-                    <p class="text-xs text-gray-500 leading-relaxed font-light">Smart rules filter by category, language, and rating before enrollment.</p>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">2. Process</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed font-light">Smart pipelines filter payloads and execute schema validation asynchronously.</p>
                 </div>
             </div>
             <!-- Enroll -->
             <div class="flex gap-4 items-start">
                 <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                    <i data-lucide="graduation-cap" class="text-blue-600 w-4 h-4"></i>
+                    <i data-lucide="database" class="text-blue-600 w-4 h-4"></i>
                 </div>
                 <div>
-                    <h4 class="text-sm font-semibold text-gray-900 mb-1">3. Enroll</h4>
-                    <p class="text-xs text-gray-500 leading-relaxed font-light">The Udemy API batch-enrolls courses directly into your account.</p>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">3. Orchestrate</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed font-light">The API aggregates inputs and persists the execution state to the database.</p>
                 </div>
             </div>
         </div>

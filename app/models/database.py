@@ -12,6 +12,8 @@ from sqlalchemy import (
     JSON,
     create_engine,
     ForeignKey,
+    Index,
+    text,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from config.settings import get_settings
@@ -209,6 +211,16 @@ class UserSettings(Base):
 
 class EnrollmentRun(Base):
     __tablename__ = "enrollment_runs"
+
+    __table_args__ = (
+        Index(
+            "idx_active_run_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status IN ('pending', 'scraping', 'enrolling')"),
+            sqlite_where=text("status IN ('pending', 'scraping', 'enrolling')"),
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

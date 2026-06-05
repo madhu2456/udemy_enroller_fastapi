@@ -102,12 +102,18 @@ class AsyncHTTPClient:
                     self._scraper.proxies = {"http": self.proxy, "https": self.proxy}
             return self._scraper
 
-    def set_proxy(self, proxy: Optional[str]):
-        """Update proxy and re-initialize client."""
+    async def set_proxy(self, proxy: Optional[str]):
+        """Update proxy and re-initialize client, safely closing the old client."""
         if self.proxy == proxy:
             return
         self.proxy = proxy
+        old_client = self.client
         self._init_client()
+        if old_client:
+            try:
+                await old_client.aclose()
+            except Exception as e:
+                logger.warning(f"Error closing old HTTP client: {e}")
 
     def _get_headers(
         self,
@@ -498,6 +504,48 @@ class AsyncHTTPClient:
                             else 30
                         )
 
+                    await asyncio.sleep(delay)
+                else:
+                    break
+        return None
+
+    async def head(self, url: str, **kwargs) -> Optional[httpx.Response]:
+        """Perform an async HEAD request with retries."""
+        attempts = kwargs.pop("attempts", 3)
+        raise_for_status = kwargs.pop("raise_for_status", True)
+        log_failures = kwargs.pop("log_failures", True)
+
+        await self._apply_human_like_delay()
+
+        headers = self._get_headers(url, kwargs.get("headers"), req_type="document")
+
+        for attempt in range(attempts):
+            try:
+                call_kwargs = kwargs.copy()
+                call_kwargs.pop("headers", None)
+
+                async with self._request_semaphore:
+                    response = await self.client.head(url, headers=headers, **call_kwargs)
+
+                if raise_for_status:
+                    response.raise_for_status()
+                return response
+
+            except Exception as e:
+                error_name = type(e).__name__
+                if log_failures:
+                    logger.info(
+                        f"HEAD attempt {attempt + 1}/{attempts} failed for {url}: {error_name}"
+                    )
+
+                should_retry = attempt < attempts - 1
+                if isinstance(e, httpx.HTTPStatusError):
+                    status = e.response.status_code
+                    if status != 429 and status < 500:
+                        should_retry = False
+
+                if should_retry:
+                    delay = (2 ** attempt) + random.uniform(1, 3)
                     await asyncio.sleep(delay)
                 else:
                     break

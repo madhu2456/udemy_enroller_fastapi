@@ -147,14 +147,27 @@ async def login_with_cookies(
         )
         await client.get_session_info()
 
+        udemy_email = f"udemy_{client.udemy_user_id}@udemy.local"
         user = (
             db.query(User)
-            .filter(User.udemy_display_name == client.display_name)
+            .filter(User.email == udemy_email)
             .first()
         )
         if not user:
+            # Backwards compatibility: fallback to display name check for legacy records
+            user = (
+                db.query(User)
+                .filter(User.udemy_display_name == client.display_name)
+                .first()
+            )
+            if user:
+                logger.warning(f"Migrating user display name '{client.display_name}' to stable ID email: {udemy_email}")
+                user.email = udemy_email
+                db.commit()
+
+        if not user:
             user = User(
-                email=f"{client.display_name.replace(' ', '_').lower()}@udemy.local",
+                email=udemy_email,
                 udemy_display_name=client.display_name,
                 udemy_cookies=encrypt_cookies(client.cookie_dict),
                 currency=client.currency,
@@ -164,12 +177,13 @@ async def login_with_cookies(
             db.refresh(user)
             db.add(UserSettings(user_id=user.id))
             db.commit()
-            logger.info(f"New user via cookie: {client.display_name}")
+            logger.info(f"New user via cookie: {client.display_name} (ID: {client.udemy_user_id})")
         else:
             user.udemy_cookies = encrypt_cookies(client.cookie_dict)
             user.currency = client.currency
+            user.udemy_display_name = client.display_name  # Keep display name in sync
             db.commit()
-            logger.info(f"User cookies updated: {client.display_name}")
+            logger.info(f"User cookies updated: {client.display_name} (ID: {client.udemy_user_id})")
 
         token = _create_session(user, client, request, db)
         logger.info(f"Cookie login successful: {client.display_name}")

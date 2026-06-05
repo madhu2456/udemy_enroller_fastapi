@@ -1,13 +1,13 @@
 {% extends "components/base.html" %}
-{% block title %}FAQ & Troubleshooting Help: Udemy Course Enroller{% endblock %}
-{% block meta_title %}FAQ & Troubleshooting Help: Udemy Course Enroller{% endblock %}
-{% block meta_description %}Find answers to common questions about the automated Udemy course enroller. Learn how to log in safely with cookies and resolve setup errors.{% endblock %}
+{% block title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
+{% block meta_title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
+{% block meta_description %}Find answers to common questions about the Udemy Enroller case study. Learn about its architecture, session-state handling, and background task processing.{% endblock %}
 
-{% block og_title %}FAQ & Troubleshooting Help: Udemy Course Enroller{% endblock %}
-{% block og_description %}Find answers to common questions about the automated Udemy course enroller. Learn how to log in safely with cookies and resolve setup errors.{% endblock %}
+{% block og_title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
+{% block og_description %}Find answers to common questions about the Udemy Enroller case study. Learn about its architecture, session-state handling, and background task processing.{% endblock %}
 
-{% block twitter_title %}FAQ & Troubleshooting Help: Udemy Course Enroller{% endblock %}
-{% block twitter_description %}Find answers to common questions about the automated Udemy course enroller. Learn how to log in safely with cookies and resolve setup errors.{% endblock %}
+{% block twitter_title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
+{% block twitter_description %}Find answers to common questions about the Udemy Enroller case study. Learn about its architecture, session-state handling, and background task processing.{% endblock %}
 
 {% block content %}
 <!-- Breadcrumb -->
@@ -32,50 +32,50 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "What is the Udemy Course Enroller?",
+      "name": "What is the Udemy Enroller Case Study?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The Udemy Course Enroller is a free, open-source web application built by Madhu Dadi that automatically finds and enrolls users in 100% discounted Udemy courses. It monitors coupon aggregator websites like Real Discount and Discudemy, then uses the Udemy API to claim courses directly to your account."
+        "text": "The Udemy Enroller is a technical case study built by Madhu Dadi demonstrating FastAPI workflow orchestration, Playwright browser automation, and asynchronous background task management."
       }
     },
     {
       "@type": "Question",
-      "name": "Is the Udemy Course Enroller free to use?",
+      "name": "What concepts does this case study demonstrate?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. The Udemy Course Enroller is completely free and open-source. It is hosted at https://udemyenroller.madhudadi.in and the source code is available on GitHub."
+        "text": "It showcases bounded concurrency, robust session-state management, real-time telemetry logging via Server-Sent Events (SSE), and secure interactions with external APIs."
       }
     },
     {
       "@type": "Question",
-      "name": "Is the Udemy Course Enroller safe and secure?",
+      "name": "Is the Udemy Enroller architecture secure?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. The tool uses direct Udemy API integration and stores only encrypted authentication cookies. No plaintext passwords are ever stored. All database interactions use SQLAlchemy ORM with parameterized queries to prevent injection attacks."
+        "text": "Yes. The architecture prioritizes secure session management. It stores only session tokens — never plaintext credentials. All database interactions use SQLAlchemy ORM with parameterized queries to prevent SQL injection."
       }
     },
     {
       "@type": "Question",
-      "name": "How do I log in to the Udemy Course Enroller?",
+      "name": "How is authentication handled?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Users can log in using their Udemy session cookies (access_token, client_id, csrftoken) extracted from their browser after logging into udemy.com. This is the recommended method for hosted deployments."
+        "text": "The application demonstrates both credential-based and session-based authentication flows, focusing on secure token extraction, validation, and CSRF protection within an automated pipeline."
       }
     },
     {
       "@type": "Question",
-      "name": "Who built the Udemy Course Enroller?",
+      "name": "Who developed this case study?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The Udemy Course Enroller was designed and developed by Madhu Dadi, a software engineer and AI specialist from India. You can learn more about Madhu at https://madhudadi.in and read technical articles at https://madhudadi.in/blog."
+        "text": "This project was architected and developed by Madhu Dadi, a software engineer and AI specialist. You can view the full portfolio at https://madhudadi.in and read technical deep dives at https://madhudadi.in/blog."
       }
     },
     {
       "@type": "Question",
-      "name": "What technologies power the Udemy Course Enroller?",
+      "name": "What technologies are used in the stack?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The application is built with Python 3.13, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper for headless browser automation, and Tailwind CSS for the frontend."
+        "text": "The project is built on Python 3.13 utilizing FastAPI for the asynchronous backend API, SQLAlchemy and SQLite for state persistence, Playwright for headless automation, and Tailwind CSS for the frontend UI."
       }
     }
   ]
@@ -89,7 +89,7 @@
             Frequently Asked Questions
         </h1>
         <p class="text-lg text-gray-500 leading-relaxed font-light">
-            Everything you need to know about the Udemy Course Enroller — how it works, security, and getting started.
+            Everything you need to know about the Udemy Enroller Case Study — its architecture, security design, and system capabilities.
         </p>
     </div>
 </section>
@@ -106,11 +106,11 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            What is the Udemy Course Enroller?
+                            What is the Udemy Enroller Case Study?
                         </h3>
                         <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                             <p itemprop="text">
-                                The Udemy Course Enroller is a free, open-source web application built by <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-600 hover:underline">Madhu Dadi</a> that automatically finds and enrolls you in 100% free discounted Udemy courses. It continuously monitors coupon aggregator websites and uses Udemy's official API to claim courses directly to your account.
+                                The Udemy Enroller is a technical case study built by <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-600 hover:underline">Madhu Dadi</a> demonstrating FastAPI workflow orchestration, Playwright browser automation, and asynchronous background task management. It highlights scalable patterns for integrating with external data sources.
                             </p>
                         </div>
                     </div>
@@ -125,11 +125,11 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            Is the Udemy Course Enroller free to use?
+                            What concepts does this case study demonstrate?
                         </h3>
                         <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                             <p itemprop="text">
-                                Yes, absolutely. The Udemy Course Enroller is completely free to use and will remain so. It is hosted as a community tool and the source code is available on GitHub for anyone who wants to self-host or contribute.
+                                It showcases bounded concurrency to handle API rate limits, robust session-state management for headless browsers, real-time telemetry logging via Server-Sent Events (SSE), and secure architectural patterns for external integration workflows.
                             </p>
                         </div>
                     </div>
@@ -144,11 +144,11 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            Is the Udemy Course Enroller safe and secure?
+                            Is the architecture secure?
                         </h3>
                         <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                             <p itemprop="text">
-                                Security is a top priority. The tool uses direct Udemy API integration and stores only session tokens — never plaintext passwords. The backend uses parameterized queries to prevent SQL injection and all database actions are handled via SQLAlchemy ORM.
+                                Security is a core focus. The architecture uses strict session token isolation and never stores plaintext credentials. The backend relies on SQLAlchemy ORM to mitigate SQL injection, and environment configuration strictly separates production secrets from development defaults.
                             </p>
                         </div>
                     </div>
@@ -163,11 +163,11 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            How do I log in to the Udemy Course Enroller?
+                            How is authentication handled in the pipeline?
                         </h3>
                         <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                             <p itemprop="text">
-                                The recommended method is Cookie Login. After logging into udemy.com in your browser, open the Developer Tools (F12) → Application → Cookies, then copy your access_token, client_id, and csrftoken into the login form. This avoids CAPTCHA issues that occur with email login on cloud servers.
+                                The application demonstrates robust stateless authentication integration by accepting raw session tokens (access_token, client_id, csrftoken). This approach allows seamless background orchestration without storing long-lived credentials in the database.
                             </p>
                         </div>
                     </div>
@@ -182,11 +182,11 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            Who built the Udemy Course Enroller?
+                            Who developed this case study?
                         </h3>
                         <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                             <p itemprop="text">
-                                The Udemy Course Enroller was designed and developed by Madhu Dadi, a software engineer and AI specialist. Madhu builds automation tools and shares technical deep-dives on his personal blog.
+                                This technical showcase was designed and developed by Madhu Dadi, a software engineer and AI specialist. Madhu architects complex automation workflows and shares deep technical insights on his personal blog.
                             </p>
                         </div>
                     </div>
@@ -201,11 +201,11 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            What technologies power the Udemy Course Enroller?
+                            What technologies are used in the stack?
                         </h3>
                         <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                             <p itemprop="text">
-                                The stack is modern and asynchronous: Python 3.13 with FastAPI for the backend, SQLAlchemy for data persistence, CloudScraper for browser automation, and Tailwind CSS for styling.
+                                The project is built with a modern asynchronous stack: Python 3.13 paired with FastAPI for the core API, SQLAlchemy for state persistence, Playwright for headless automation orchestration, and Tailwind CSS for the frontend interface.
                             </p>
                         </div>
                     </div>
@@ -220,11 +220,11 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            Can I self-host the Udemy Course Enroller?
+                            Is the source code available?
                         </h3>
                         <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
                             <p itemprop="text">
-                                Yes! The project is fully open-source and includes a Dockerfile and docker-compose.yml. You can deploy it on your own server, VPS, or local machine in minutes.
+                                Yes. The complete codebase is open-source and includes a reproducible Docker environment. It serves as a reference implementation for anyone looking to build scalable Python APIs and automated scraping workflows.
                             </p>
                         </div>
                     </div>

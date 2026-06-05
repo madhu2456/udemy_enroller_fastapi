@@ -732,23 +732,28 @@ function renderRunCourses(resetPage = false) {
                 statusBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-50 border border-orange-200 text-orange-700">Failed</span>';
                 break;
             default:
-                statusBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-50 border border-gray-200 text-gray-700">${course.status}</span>`;
+                statusBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-50 border border-gray-200 text-gray-700">${escapeHTML(course.status)}</span>`;
         }
         
+        const escapedTitle = escapeHTML(course.title || 'Untitled');
+        const sanitizedUrl = sanitizeURL(course.url);
+        const escapedUrl = escapeHTML(course.url);
+        const escapedSite = escapeHTML(course.site_source || 'Unknown');
+
         return `
             <tr class="hover:bg-gray-50/50 transition-colors">
                 <td class="px-6 py-4">
                     <div class="flex flex-col">
-                        <span class="text-gray-900 font-semibold text-xs line-clamp-1">${course.title || 'Untitled'}</span>
-                        <a href="${course.url}" target="_blank" class="text-[10px] text-blue-500 hover:underline truncate max-w-md mt-0.5 flex items-center gap-1">
-                            ${course.url} <i data-lucide="external-link" class="w-2.5 h-2.5 inline"></i>
+                        <span class="text-gray-900 font-semibold text-xs line-clamp-1">${escapedTitle}</span>
+                        <a href="${escapeAttr(sanitizedUrl)}" target="_blank" class="text-[10px] text-blue-500 hover:underline truncate max-w-md mt-0.5 flex items-center gap-1">
+                            ${escapedUrl} <i data-lucide="external-link" class="w-2.5 h-2.5 inline"></i>
                         </a>
                     </div>
                 </td>
                 <td class="px-6 py-4">${statusBadge}</td>
                 <td class="px-6 py-4 text-right">
                     <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-500 text-[10px] border border-gray-200 font-mono italic">
-                        ${course.site_source || 'Unknown'}
+                        ${escapedSite}
                     </span>
                 </td>
             </tr>
@@ -842,7 +847,7 @@ function updateProgress(data) {
         document.getElementById('current-course').classList.remove('hidden');
         document.getElementById('current-title').textContent = data.current_course_title;
         document.getElementById('current-url').textContent = data.current_course_url;
-        document.getElementById('current-url').href = data.current_course_url;
+        document.getElementById('current-url').href = sanitizeURL(data.current_course_url);
     }
 
     // Scraping progress grids
@@ -860,7 +865,7 @@ function updateProgress(data) {
                 return `
                 <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                     <div class="flex items-center justify-between mb-1.5 gap-2">
-                        <span class="text-xs font-semibold text-gray-800 truncate">${s.site}</span>
+                        <span class="text-xs font-semibold text-gray-800 truncate">${escapeHTML(s.site)}</span>
                         ${icon}
                     </div>
                     <div class="w-full bg-gray-100 rounded-full h-1">

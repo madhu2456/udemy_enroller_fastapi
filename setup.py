@@ -21,7 +21,7 @@ def main():
     """Main setup flow."""
     print("""
 ╔════════════════════════════════════════════════════════════════╗
-║          Udemy Enroller - Technatic Edition                    ║
+║          Udemy Enroller - Emulated Edition                     ║
 ║            Pure Emulation Logic (No Playwright)                 ║
 ╚════════════════════════════════════════════════════════════════╝
     """)
