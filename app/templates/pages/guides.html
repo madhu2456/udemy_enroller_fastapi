@@ -1,13 +1,13 @@
 {% extends "components/base.html" %}
-{% block title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
-{% block meta_title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
-{% block meta_description %}Technical deep dives into the architecture, session state management, and data pipelines of the Udemy Enroller case study.{% endblock %}
+{% block title %}Architecture & Workflow Guides{% endblock %}
+{% block meta_title %}Architecture & Workflow Guides{% endblock %}
+{% block meta_description %}Technical guides for the production architecture behind Udemy Enroller.{% endblock %}
 
-{% block og_title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
-{% block og_description %}Technical deep dives into the architecture, session state management, and data pipelines of the Udemy Enroller case study.{% endblock %}
+{% block og_title %}Architecture & Workflow Guides{% endblock %}
+{% block og_description %}Technical guides for the production architecture behind Udemy Enroller.{% endblock %}
 
-{% block twitter_title %}Architecture & Workflow Guides: Udemy Enroller Case Study{% endblock %}
-{% block twitter_description %}Technical deep dives into the architecture, session state management, and data pipelines of the Udemy Enroller case study.{% endblock %}
+{% block twitter_title %}Architecture & Workflow Guides{% endblock %}
+{% block twitter_description %}Technical guides for the production architecture behind Udemy Enroller.{% endblock %}
 
 {% block content %}
 <!-- Breadcrumb -->
@@ -31,7 +31,7 @@
   "@type": "CollectionPage",
   "name": "Udemy Enroller Architecture Guides",
   "url": "https://udemyenroller.madhudadi.in/guides",
-  "description": "Technical guides for the Udemy Enroller case study.",
+  "description": "Technical guides for the production architecture behind Udemy Enroller.",
   "mainEntity": {
     "@type": "ItemList",
     "itemListElement": [
@@ -62,10 +62,10 @@
 <section class="py-16 md:py-24 bg-[#F9FAFB] border-b border-gray-200">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 class="text-4xl font-semibold tracking-tight text-gray-900 mb-4">
-            Architecture & Guides
+            Architecture & Workflow Guides
         </h1>
         <p class="text-lg text-gray-500 leading-relaxed font-light">
-            Deep-dives into the architecture, workflow orchestration, and automation engine behind the case study.
+            Technical guides for the production architecture behind Udemy Enroller.
         </p>
     </div>
 </section>
@@ -89,27 +89,8 @@
                         System Architecture Overview
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        Explore how FastAPI orchestrates background tasks and how the components interact in a high-throughput environment.
+                        Udemy Enroller uses FastAPI to coordinate asynchronous enrollment workflow runs, Celery and Redis for background processing, PostgreSQL for durable workflow records, SQLAlchemy for transactional persistence, Playwright for browser-workflow orchestration, and SSE for real-time telemetry.
                     </p>
-                    
-                    <div class="space-y-2 text-sm text-gray-600 leading-relaxed font-light">
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>FastAPI Backend:</strong> Serves asynchronous endpoints and manages long-running background tasks.</span>
-                        </div>
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Playwright Engine:</strong> Handles external API interactions dynamically with headless browser automation.</span>
-                        </div>
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>SQLAlchemy:</strong> Maintains robust session state and transaction boundaries.</span>
-                        </div>
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>SSE Telemetry:</strong> Streams isolated task progress to the client asynchronously.</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -124,30 +105,11 @@
                         </div>
                     </div>
                     <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Session State Management
+                        Session-State Handling
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        The application leverages external session tokens rather than storing primary credentials, reducing security risk across asynchronous queues.
+                        Udemy Enroller is designed around secure, user-authorized session-state handling. Sensitive authentication data should be protected through encryption, access controls, environment isolation, and short-lived credentials where possible.
                     </p>
-                    
-                    <div class="flex flex-wrap gap-2 mb-6">
-                        <span class="bg-white border border-gray-200 rounded-full px-3.5 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider shadow-sm">
-                            access_token
-                        </span>
-                        <span class="bg-white border border-gray-200 rounded-full px-3.5 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider shadow-sm">
-                            client_id
-                        </span>
-                        <span class="bg-white border border-gray-200 rounded-full px-3.5 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider shadow-sm">
-                            csrftoken
-                        </span>
-                    </div>
-
-                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3">
-                        <i data-lucide="info" class="text-blue-600 w-5 h-5 flex-shrink-0"></i>
-                        <p class="text-xs text-blue-800 leading-relaxed">
-                            <strong>Architecture Insight:</strong> By explicitly passing access_token, client_id, and csrftoken headers during initialization, the headless workflow avoids complex interactive login flows.
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -165,27 +127,8 @@
                         Data Pipeline & Telemetry
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        The case study processes inputs dynamically via defined rules engines, filtering objects before committing states to the database.
+                        The platform validates workflow inputs, applies filtering rules, records task outcomes, and streams isolated execution logs through Server-Sent Events.
                     </p>
-                    
-                    <div class="space-y-2 text-sm text-gray-600 leading-relaxed font-light">
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Type Matching:</strong> Applies language and category schema validation via Pydantic.</span>
-                        </div>
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Conditional Triggers:</strong> Evaluates rating thresholds via metadata aggregation.</span>
-                        </div>
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Blocklists:</strong> Rejects payloads originating from untrusted schemas (e.g. instructor blocklists).</span>
-                        </div>
-                        <div class="flex items-start py-1">
-                            <span class="text-gray-400 mr-3 font-mono">-</span>
-                            <span><strong>Log Isolation:</strong> Generates real-time, user-specific streams utilizing Server-Sent Events (SSE).</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -203,7 +146,7 @@
                         Self-Hosting with Docker
                     </h2>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        Want to deploy this case study infrastructure? The project is fully containerized for deployment on any modern VPS using Docker.
+                        The project is containerized for deployment on a modern VPS using Docker.
                     </p>
                     
                     <div class="bg-gray-900 rounded-xl p-5 mb-6 overflow-hidden shadow-inner">
