@@ -1,14 +1,13 @@
 {% extends "components/base.html" %}
-{% extends "components/base.html" %}
-{% block title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
-{% block meta_title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
-{% block meta_description %}Learn about the architecture and mission behind the Udemy Enroller case study. Discover how it handles workflow orchestration and concurrency.{% endblock %}
+{% block title %}About Udemy Enroller{% endblock %}
+{% block meta_title %}About Udemy Enroller{% endblock %}
+{% block meta_description %}Udemy Enroller is a production FastAPI automation platform built by Madhu Dadi.{% endblock %}
 
-{% block og_title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
-{% block og_description %}Learn about the architecture and mission behind the Udemy Enroller case study. Discover how it handles workflow orchestration and concurrency.{% endblock %}
+{% block og_title %}About Udemy Enroller{% endblock %}
+{% block og_description %}Udemy Enroller is a production FastAPI automation platform built by Madhu Dadi.{% endblock %}
 
-{% block twitter_title %}About Udemy Enroller: FastAPI Case Study{% endblock %}
-{% block twitter_description %}Learn about the architecture and mission behind the Udemy Enroller case study. Discover how it handles workflow orchestration and concurrency.{% endblock %}
+{% block twitter_title %}About Udemy Enroller{% endblock %}
+{% block twitter_description %}Udemy Enroller is a production FastAPI automation platform built by Madhu Dadi.{% endblock %}
 
 {% block content %}
 <!-- Breadcrumb -->
@@ -34,7 +33,7 @@
   "url": "https://udemyenroller.madhudadi.in/about",
   "mainEntity": {
     "@type": "SoftwareApplication",
-    "name": "Udemy Enroller Case Study",
+    "name": "Udemy Enroller",
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
     "url": "https://udemyenroller.madhudadi.in",
@@ -49,101 +48,20 @@
 </script>
 
 <!-- Hero Section -->
-<section class="py-16 md:py-24 bg-white">
+<section class="py-16 md:py-24 bg-[#F9FAFB] border-b border-gray-200">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 class="text-4xl font-semibold tracking-tight text-gray-900 mb-6">
-            About the Project
+            About Udemy Enroller
         </h1>
-        <p class="text-lg text-gray-500 leading-relaxed font-light">
-            The story, architecture, and mission behind the Udemy Enroller — a case study demonstrating advanced FastAPI orchestration.
-        </p>
-    </div>
-</section>
-
-<!-- Content Sections -->
-<section class="py-20 bg-[#F9FAFB] border-y border-gray-200">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- The Mission Card -->
-        <div class="bg-white rounded-xl border border-gray-200 p-8 md:p-12 mb-12 shadow-sm">
-            <div class="flex items-center gap-2 mb-6">
-                <i data-lucide="target" class="text-blue-600 w-5 h-5"></i>
-                <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">
-                    The Mission
-                </h2>
-            </div>
-            <div class="space-y-6 text-sm text-gray-600 leading-relaxed font-light">
-                <p>
-                    Building robust, concurrent, and fault-tolerant web applications requires understanding how to manage asynchronous queues, external APIs, and session states securely.
-                </p>
-                <p>
-                    The reality of integrating with third-party systems is that developers must handle rate limits, headless browser automation, and dynamic data filtering without blocking the main thread or compromising telemetry.
-                </p>
-                <p>
-                    The Udemy Enroller was built as a case study to solve this exact problem: <strong>demonstrate an automated workflow that orchestrates these systems efficiently</strong>, giving developers a reference architecture for high-throughput FastAPI applications.
-                </p>
-            </div>
-        </div>
-
-        <!-- 3 Pillars Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 py-12 border-b border-gray-200">
-            <!-- Scrape -->
-            <div class="flex gap-4 items-start">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                    <i data-lucide="search" class="text-blue-600 w-4 h-4"></i>
-                </div>
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-900 mb-1">1. Automate</h4>
-                    <p class="text-xs text-gray-500 leading-relaxed font-light">Headless browser pools manage external integration state seamlessly.</p>
-                </div>
-            </div>
-            <!-- Filter -->
-            <div class="flex gap-4 items-start">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                    <i data-lucide="zap" class="text-blue-600 w-4 h-4"></i>
-                </div>
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-900 mb-1">2. Process</h4>
-                    <p class="text-xs text-gray-500 leading-relaxed font-light">Smart pipelines filter payloads and execute schema validation asynchronously.</p>
-                </div>
-            </div>
-            <!-- Enroll -->
-            <div class="flex gap-4 items-start">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                    <i data-lucide="database" class="text-blue-600 w-4 h-4"></i>
-                </div>
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-900 mb-1">3. Orchestrate</h4>
-                    <p class="text-xs text-gray-500 leading-relaxed font-light">The API aggregates inputs and persists the execution state to the database.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Technical Architecture -->
-        <div class="py-16">
-            <div class="flex items-center gap-2 mb-6">
-                <i data-lucide="cpu" class="text-blue-600 w-5 h-5"></i>
-                <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">
-                    Technical Architecture
-                </h2>
-            </div>
-            <p class="text-sm text-gray-600 leading-relaxed mb-8 font-light">
-                The application is built on a modern, fully asynchronous Python stack. <strong>FastAPI</strong> handles concurrent API requests, while <strong>CloudScraper</strong> manages a pool of headless instances to bypass anti-bot measures. Data is persisted in <strong>SQLite</strong> via <strong>SQLAlchemy ORM</strong>.
+        <div class="space-y-6 text-lg text-gray-500 leading-relaxed font-light">
+            <p>
+                Udemy Enroller is a production FastAPI automation platform built by Madhu Dadi. It coordinates asynchronous enrollment workflows using FastAPI, Playwright, Celery, Redis, PostgreSQL, Docker, and real-time telemetry.
             </p>
-            <div class="bg-gray-900 rounded-xl p-6 mb-8 overflow-hidden shadow-inner">
-                <pre class="text-xs text-blue-400 font-mono overflow-x-auto"><code>// Core Stack Overview
-const stack = {
-  backend: "Python 3.13 / FastAPI",
-  database: "SQLAlchemy / SQLite",
-  scrapers: "CloudScraper / Chromium",
-  frontend: "Vanilla JS / Tailwind CSS",
-  deployment: "Docker / Compose"
-};</code></pre>
-            </div>
-            <p class="text-sm text-gray-600 leading-relaxed font-light">
-                For a deep technical breakdown of the scraping architecture and rate-limiting strategies, read the case study on 
-                <a href="https://madhudadi.in/blog" target="_blank" class="text-blue-600 hover:underline inline-flex items-center gap-0.5 font-normal">
-                    madhudadi.in/blog <i data-lucide="external-link" class="w-3.5 h-3.5 inline"></i>
-                </a>.
+            <p>
+                The platform is designed to demonstrate production-grade workflow orchestration, bounded concurrency, secure session-state handling, background processing, and operational logging.
+            </p>
+            <p class="text-sm mt-8 border-t border-gray-200 pt-8 text-gray-400">
+                Udemy Enroller is an independent project and is not affiliated with Udemy, Inc.
             </p>
         </div>
     </div>
