@@ -44,9 +44,9 @@ class SessionCache:
             oldest_key, _ = self._cache.popitem(last=False)
             logger.info(f"Evicted oldest session from cache: {oldest_key[:8]}...")
 
-    def pop(self, key: str) -> Optional[Any]:
+    def pop(self, key: str, default: Any = None) -> Optional[Any]:
         entry = self._cache.pop(key, None)
-        return entry["value"] if entry else None
+        return entry["value"] if entry else default
 
     def __contains__(self, key: str) -> bool:
         return key in self._cache
