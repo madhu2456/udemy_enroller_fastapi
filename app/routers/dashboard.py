@@ -35,7 +35,7 @@ async def dashboard(request: Request):
 
 
 @router.get("/", response_class=HTMLResponse)
-async def login_page(request: Request, db: Session = Depends(get_db)):
+async def login_page(request: Request):
     """Login page.
 
     Redirect authenticated users server-side to avoid an extra client-side
@@ -43,13 +43,18 @@ async def login_page(request: Request, db: Session = Depends(get_db)):
     """
     token = request.cookies.get("session_id")
     if token:
-        session = db.query(UserSession).filter(UserSession.token == token).first()
-        if session:
-            if session.expires_at and session.expires_at < _utcnow_naive():
-                db.delete(session)
-                db.commit()
-            else:
-                return RedirectResponse(url="/dashboard", status_code=303)
+        from app.models.database import SessionLocal
+        db = SessionLocal()
+        try:
+            session = db.query(UserSession).filter(UserSession.token == token).first()
+            if session:
+                if session.expires_at and session.expires_at < _utcnow_naive():
+                    db.delete(session)
+                    db.commit()
+                else:
+                    return RedirectResponse(url="/dashboard", status_code=303)
+        finally:
+            db.close()
 
     return templates.TemplateResponse(request, "pages/login.html")
 
