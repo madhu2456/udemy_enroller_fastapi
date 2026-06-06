@@ -1,0 +1,24 @@
+diff --git a/src/error-overlay/ErrorOverlay.tsx b/src/error-overlay/ErrorOverlay.tsx
+index 983dc52..bbe737c 100644
+--- a/src/error-overlay/ErrorOverlay.tsx
++++ b/src/error-overlay/ErrorOverlay.tsx
+@@ -30,6 +30,7 @@ const HEADER_TITLE_MAP = {
+ export function LogBoxInspectorContainer() {
+   const { selectedLogIndex, logs } = useLogs();
+   const log = logs[selectedLogIndex];
++  return null;
+   if (log == null) {
+     return null;
+   }
+diff --git a/src/error-overlay/toast/ErrorToast.tsx b/src/error-overlay/toast/ErrorToast.tsx
+index 87a0c8b..c044c8f 100644
+--- a/src/error-overlay/toast/ErrorToast.tsx
++++ b/src/error-overlay/toast/ErrorToast.tsx
+@@ -34,6 +34,7 @@ export function ErrorToast(props: Props) {
+ 
+   useSymbolicatedLog(log);
+ 
++  return null;
+   return (
+     <View style={toastStyles.container}>
+       <Pressable style={{ flex: 1 }} onPress={props.onPressOpen}>

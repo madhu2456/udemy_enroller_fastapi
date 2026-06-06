@@ -1,0 +1,30 @@
+diff --git a/index.js b/index.js
+index c737c93..f3edd25 100644
+--- a/index.js
++++ b/index.js
+@@ -336,6 +336,9 @@ module.exports = {
+     return require('./src/private/components/virtualview/VirtualView')
+       .VirtualViewMode;
+   },
++  get Slider() {
++    return require('@react-native-community/slider').default;
++  },
+   // #endregion
+ } as ReactNativePublicAPI;
+ 
+@@ -405,15 +408,4 @@ if (__DEV__) {
+    * attempting to access Slider. */
+   /* $FlowFixMe[invalid-export] This is intentional: Flow will error when
+    * attempting to access Slider. */
+-  Object.defineProperty(module.exports, 'Slider', {
+-    configurable: true,
+-    get() {
+-      invariant(
+-        false,
+-        'Slider has been removed from react-native core. ' +
+-          "It can now be installed and imported from '@react-native-community/slider' instead of 'react-native'. " +
+-          'See https://github.com/callstack/react-native-slider',
+-      );
+-    },
+-  });
+ }

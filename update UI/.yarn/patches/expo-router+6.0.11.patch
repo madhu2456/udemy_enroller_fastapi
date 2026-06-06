@@ -1,0 +1,506 @@
+diff --git a/assets/native-tabs.module.css b/assets/native-tabs.module.css
+index f29cec5..0d71dad 100644
+--- a/assets/native-tabs.module.css
++++ b/assets/native-tabs.module.css
+@@ -22,22 +22,27 @@
+ }
+ 
+ .navigationMenuRoot {
+-  top: 24px;
++  bottom: 24px;
+   left: 50%;
+   transform: translateX(-50%);
+   position: fixed;
+   z-index: 10;
+   display: flex;
+-  background-color: var(--expo-router-tabs-background-color, #272727);
+-  height: 40px;
+-  border-radius: 25px;
++  background-color: var(--expo-router-tabs-background-color, rgba(30, 30, 30, 0.88));
++  backdrop-filter: blur(20px);
++  -webkit-backdrop-filter: blur(20px);
++  height: 56px;
++  border-radius: 28px;
+   align-items: center;
+-  justify-content: flex-start;
+-  padding: 5px;
++  justify-content: center;
++  padding: 4px;
+   box-sizing: border-box;
+   margin: 0;
+-  max-width: 90vw;
+-  overflow-x: auto;
++  max-width: 95vw;
++  overflow: hidden;
++  border: 1px solid rgba(255, 255, 255, 0.12);
++  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
++  gap: 2px;
+ }
+ 
+ .navigationMenuTrigger {
+@@ -48,36 +53,64 @@
+   height: 100%;
+   background-color: transparent;
+   border: none;
+-  margin: 0;
+-  height: 100%;
+-  border-radius: 20px;
+-  padding: 0 20px;
++  border-radius: 24px;
++  padding: 6px 16px;
++  transition: background-color 0.2s ease, backdrop-filter 0.2s ease;
+   cursor: pointer;
+-  outline-color: var(--expo-router-tabs-tab-outline-color, #444444);
++  outline-color: var(--expo-router-tabs-tab-outline-color, rgba(255, 255, 255, 0.2));
+   position: relative;
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  justify-content: center;
++  gap: 2px;
++}
++
++.tabIcon {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  color: var(--expo-router-tabs-icon-color, rgba(255, 255, 255, 0.6));
++  font-size: 18px;
++  width: 20px;
++  height: 20px;
++}
++
++.tabIcon > * {
++  color: inherit;
++}
++
++.navigationMenuTrigger[data-state="active"] .tabIcon {
++  color: var(--expo-router-tabs-active-icon-color, #ffffff);
+ }
+ 
+ .navigationMenuTrigger[data-state="active"] {
+-  background-color: var(--expo-router-tabs-active-background-color, #444444);
++  background-color: var(--expo-router-tabs-active-background-color, rgba(255, 255, 255, 0.15));
++  backdrop-filter: blur(10px);
++  -webkit-backdrop-filter: blur(10px);
++  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+ }
+ 
+ .tabText {
+   font-weight: var(--expo-router-tabs-font-weight, 500);
+-  font-size: var(--expo-router-tabs-font-size, 15px);
++  font-size: var(--expo-router-tabs-font-size, 11px);
+   font-family: var(--expo-router-tabs-font-family);
+   font-style: var(--expo-router-tabs-font-style, normal);
+   opacity: var(--expo-router-tabs-text-opacity, 1);
+-  color: var(--expo-router-tabs-text-color, #8b8b8b);
++  color: var(--expo-router-tabs-text-color, rgba(255, 255, 255, 0.6));
+   white-space: nowrap;
+ }
+ 
+ .navigationMenuTrigger[data-state="active"] .tabText {
+   color: var(--expo-router-tabs-active-text-color, #ffffff);
+-  font-size: var(--expo-router-tabs-active-font-size, var(--expo-router-tabs-font-size, 15px));
++}
++
++.navigationMenuTrigger:not([data-state="active"]):hover {
++  background-color: rgba(255, 255, 255, 0.08);
+ }
+ 
+ .navigationMenuTrigger:not([data-state="active"]) .tabText:hover {
+-  opacity: var(--expo-router-tabs-text-hover-opacity, 0.6);
++  opacity: var(--expo-router-tabs-text-hover-opacity, 0.9);
+ }
+ 
+ .tabBadge {
+@@ -107,3 +140,101 @@
+   min-height: var(--expo-router-tabs-local-badge-size);
+   border-radius: calc(var(--expo-router-tabs-local-badge-size) / 2);
+ }
++
++/* More screen styles - Apple Settings inspired */
++.moreScreen {
++  flex: 1;
++  display: flex;
++  flex-direction: column;
++  background-color: #000000;
++  max-height: 100%;
++  max-width: 100%;
++  overflow-y: auto;
++  padding-bottom: 120px;
++}
++
++.moreScreenHeader {
++  padding: 60px 20px 8px;
++}
++
++.moreScreenTitle {
++  font-family: var(--expo-router-tabs-font-family);
++  font-size: 34px;
++  font-weight: 700;
++  color: #ffffff;
++  margin: 0;
++  letter-spacing: 0.37px;
++}
++
++.moreScreenContent {
++  display: flex;
++  flex-direction: column;
++  padding: 20px 20px 0;
++}
++
++.moreScreenGroup {
++  background-color: #1c1c1e;
++  border-radius: 10px;
++  overflow: hidden;
++}
++
++.moreScreenItem {
++  display: flex;
++  align-items: center;
++  gap: 12px;
++  padding: 8px 16px 8px 12px;
++  min-height: 44px;
++  border: none;
++  background-color: transparent;
++  cursor: pointer;
++  font-family: var(--expo-router-tabs-font-family);
++  text-align: left;
++  transition: background-color 0.1s ease;
++  position: relative;
++  width: 100%;
++  box-sizing: border-box;
++}
++
++.moreScreenItem:hover {
++  background-color: rgba(255, 255, 255, 0.08);
++}
++
++.moreScreenItem:active {
++  background-color: rgba(255, 255, 255, 0.12);
++}
++
++/* Separator line between items */
++.moreScreenItem:not(:last-child)::after {
++  content: '';
++  position: absolute;
++  bottom: 0;
++  left: 54px;
++  right: 0;
++  height: 0.5px;
++  background-color: rgba(84, 84, 88, 0.65);
++}
++
++.moreScreenItemIcon {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  width: 30px;
++  height: 30px;
++  border-radius: 6px;
++  background: linear-gradient(180deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0) 100%), #636366;
++  color: #ffffff;
++  flex-shrink: 0;
++}
++
++.moreScreenItemLabel {
++  flex: 1;
++  font-size: 17px;
++  font-weight: 400;
++  color: #ffffff;
++  letter-spacing: -0.41px;
++}
++
++.moreScreenItemChevron {
++  color: rgba(235, 235, 245, 0.3);
++  flex-shrink: 0;
++}
+diff --git a/build/getLinkingConfig.js b/build/getLinkingConfig.js
+index 2a0ee73..302afc0 100644
+--- a/build/getLinkingConfig.js
++++ b/build/getLinkingConfig.js
+@@ -8,6 +8,7 @@ const constants_1 = require("./constants");
+ const getReactNavigationConfig_1 = require("./getReactNavigationConfig");
+ const getRoutesRedirects_1 = require("./getRoutesRedirects");
+ const linking_1 = require("./link/linking");
++const isAnythingApp = expo_modules_core_1.Platform.OS === 'ios' && !globalThis.expo?.modules?.ExpoGo;
+ function getNavigationConfig(routes, metaOnly, { sitemap, notFound }) {
+     const config = (0, getReactNavigationConfig_1.getReactNavigationConfig)(routes, metaOnly);
+     const sitemapRoute = (() => {
+@@ -61,7 +62,10 @@ function getLinkingConfig(routes, context, getRouteInfo, { metaOnly = true, serv
+             // Expo Router calls `getInitialURL` twice, which may confuse the user if they provide a custom `getInitialURL`.
+             // Therefor we memoize the result.
+             if (!hasCachedInitialUrl) {
+-                if (expo_modules_core_1.Platform.OS === 'web') {
++                if (isAnythingApp) {
++                    initialUrl = '/';
++                }
++                else if (expo_modules_core_1.Platform.OS === 'web') {
+                     initialUrl = serverUrl ?? (0, linking_1.getInitialURL)();
+                 }
+                 else {
+diff --git a/build/link/linking.js b/build/link/linking.js
+index b9535b5..ec99c96 100644
+--- a/build/link/linking.js
++++ b/build/link/linking.js
+@@ -47,6 +47,7 @@ Object.defineProperty(exports, "getStateFromPath", { enumerable: true, get: func
+ const useLinking_1 = require("../fork/useLinking");
+ const getRoutesRedirects_1 = require("../getRoutesRedirects");
+ const isExpoGo = typeof expo !== 'undefined' && globalThis.expo?.modules?.ExpoGo;
++const isAnythingApp = react_native_1.Platform.OS === 'ios' && !globalThis.expo?.modules?.ExpoGo;
+ // A custom getInitialURL is used on native to ensure the app always starts at
+ // the root path if it's launched from something other than a deep link.
+ // This helps keep the native functionality working like the web functionality.
+@@ -124,7 +125,12 @@ function subscribe(nativeLinking, redirects) {
+                 }
+             };
+         }
+-        const subscription = Linking.addEventListener('url', callback);
++        let subscription;
++
++        if (!isAnythingApp) {
++            subscription = Linking.addEventListener('url', callback);
++        }
++
+         return () => {
+             // https://github.com/facebook/react-native/commit/6d1aca806cee86ad76de771ed3a1cc62982ebcd7
+             subscription?.remove?.();
+diff --git a/build/native-tabs/NativeBottomTabs/NativeTabTrigger.js b/build/native-tabs/NativeBottomTabs/NativeTabTrigger.js
+index cd3d597..8bc0b00 100644
+--- a/build/native-tabs/NativeBottomTabs/NativeTabTrigger.js
++++ b/build/native-tabs/NativeBottomTabs/NativeTabTrigger.js
+@@ -129,6 +129,16 @@ function appendLabelOptions(options, props) {
+     else {
+         options.title = props.children;
+         options.selectedLabelStyle = props.selectedStyle;
++        // Extract label color for web
++        if (props.style?.color) {
++            options.webLabelColor = props.style.color;
++        }
++        if (props.color) {
++            options.webLabelColor = props.color;
++        }
++        if (props.selectedStyle?.color) {
++            options.webLabelSelectedColor = props.selectedStyle.color;
++        }
+     }
+ }
+ function appendIconOptions(options, props) {
+@@ -136,6 +146,21 @@ function appendIconOptions(options, props) {
+         const icon = convertIconSrcToIconOption(props);
+         options.icon = icon?.icon;
+         options.selectedIcon = icon?.selectedIcon;
++        // Preserve icon info for web rendering
++        const srcValue = typeof props.src === 'object' && 'selected' in props.src ? props.src.default : props.src;
++        if ((0, react_1.isValidElement)(srcValue) && srcValue.type === elements_1.VectorIcon) {
++            options.webIconFamily = srcValue.props.family;
++            options.webIconName = srcValue.props.name;
++            // Extract colors from VectorIcon props for web
++            if (srcValue.props.color) {
++                options.webIconColor = srcValue.props.color;
++            }
++            if (srcValue.props.selectedColor) {
++                options.webIconSelectedColor = srcValue.props.selectedColor;
++            }
++        } else {
++            options.webIcon = srcValue;
++        }
+     }
+     else if ('sf' in props && process.env.EXPO_OS === 'ios') {
+         if (typeof props.sf === 'string') {
+@@ -169,6 +194,13 @@ function appendIconOptions(options, props) {
+         options.selectedIcon = undefined;
+     }
+     options.selectedIconColor = props.selectedColor;
++    // Extract icon color for web
++    if (props.color) {
++        options.webIconColor = props.color;
++    }
++    if (props.selectedColor) {
++        options.webIconSelectedColor = props.selectedColor;
++    }
+ }
+ function convertIconSrcToIconOption(icon) {
+     if (icon && icon.src) {
+diff --git a/build/native-tabs/NativeBottomTabs/NativeTabsView.web.js b/build/native-tabs/NativeBottomTabs/NativeTabsView.web.js
+index d3d738b..a27f83d 100644
+--- a/build/native-tabs/NativeBottomTabs/NativeTabsView.web.js
++++ b/build/native-tabs/NativeBottomTabs/NativeTabsView.web.js
+@@ -41,16 +41,45 @@ const react_tabs_1 = require("@radix-ui/react-tabs");
+ const react_1 = __importStar(require("react"));
+ const utils_1 = require("./utils");
+ const native_tabs_module_css_1 = __importDefault(require("../../../assets/native-tabs.module.css"));
++
++const MAX_VISIBLE_TABS = 5;
++
+ function NativeTabsView(props) {
+     const { builder, focusedIndex } = props;
+     const { state, descriptors, navigation } = builder;
+     const { routes } = state;
++    const [showMoreScreen, setShowMoreScreen] = (0, react_1.useState)(false);
+     const defaultTabName = (0, react_1.useMemo)(() => state.routes[focusedIndex]?.name ?? state.routes[0].name, []);
+     const value = state.routes[focusedIndex]?.name ?? state.routes[0].name;
+     const currentTabKey = state.routes[focusedIndex]?.key ?? state.routes[0].key;
+-    const items = routes
+-        .filter(({ key }) => (0, utils_1.shouldTabBeVisible)(descriptors[key].options))
+-        .map((route) => (<TabItem key={route.key} route={route} title={descriptors[route.key].options.title ?? route.name} badgeValue={descriptors[route.key].options.badgeValue}/>));
++
++    const visibleRoutes = routes.filter(({ key }) => (0, utils_1.shouldTabBeVisible)(descriptors[key].options));
++    const hasOverflow = visibleRoutes.length > MAX_VISIBLE_TABS;
++    const primaryRoutes = hasOverflow ? visibleRoutes.slice(0, MAX_VISIBLE_TABS - 1) : visibleRoutes;
++    const overflowRoutes = hasOverflow ? visibleRoutes.slice(MAX_VISIBLE_TABS - 1) : [];
++
++    // Check if an overflow tab is currently active
++    const isOverflowTabActive = overflowRoutes.some(route => route.name === value);
++
++    const items = primaryRoutes.map((route) => (
++        <TabItem
++            key={route.key}
++            route={route}
++            title={descriptors[route.key].options.title ?? route.name}
++            badgeValue={descriptors[route.key].options.badgeValue}
++            webIcon={descriptors[route.key].options.webIcon}
++            webIconFamily={descriptors[route.key].options.webIconFamily}
++            webIconName={descriptors[route.key].options.webIconName}
++            webIconColor={descriptors[route.key].options.webIconColor}
++            webIconSelectedColor={descriptors[route.key].options.webIconSelectedColor}
++            webLabelColor={descriptors[route.key].options.webLabelColor}
++            webLabelSelectedColor={descriptors[route.key].options.webLabelSelectedColor}
++            onClick={() => setShowMoreScreen(false)}
++            forceInactive={showMoreScreen}
++            isActive={route.name === value && !showMoreScreen}
++        />
++    ));
++
+     const children = routes
+         .filter(({ key }) => (0, utils_1.shouldTabBeVisible)(descriptors[key].options))
+         .map((route) => {
+@@ -58,26 +87,116 @@ function NativeTabsView(props) {
+           {descriptors[route.key].render()}
+         </react_tabs_1.TabsContent>);
+     });
+-    return (<react_tabs_1.Tabs className={native_tabs_module_css_1.default.nativeTabsContainer} defaultValue={defaultTabName} value={value} onValueChange={(value) => {
+-            navigation.dispatch({
+-                type: 'JUMP_TO',
+-                target: state.key,
+-                payload: {
+-                    name: value,
+-                },
+-            });
++
++    const handleNavigate = (routeName) => {
++        navigation.dispatch({
++            type: 'JUMP_TO',
++            target: state.key,
++            payload: {
++                name: routeName,
++            },
++        });
++        setShowMoreScreen(false);
++    };
++
++    return (<react_tabs_1.Tabs className={native_tabs_module_css_1.default.nativeTabsContainer} defaultValue={defaultTabName} value={value} onValueChange={(newValue) => {
++            handleNavigate(newValue);
+         }} style={convertNativeTabsPropsToStyleVars(props, descriptors[currentTabKey]?.options)}>
++
++      {/* More Screen - shown when More tab is active */}
++      {showMoreScreen && (
++          <div className={native_tabs_module_css_1.default.moreScreen}>
++              <div className={native_tabs_module_css_1.default.moreScreenHeader}>
++                  <h1 className={native_tabs_module_css_1.default.moreScreenTitle}>More</h1>
++              </div>
++              <div className={native_tabs_module_css_1.default.moreScreenContent}>
++                  <div className={native_tabs_module_css_1.default.moreScreenGroup}>
++                      {overflowRoutes.map((route) => (
++                          <button
++                              key={route.key}
++                              type="button"
++                              className={native_tabs_module_css_1.default.moreScreenItem}
++                              onClick={() => handleNavigate(route.name)}
++                          >
++                              <div className={native_tabs_module_css_1.default.moreScreenItemIcon}>
++                                  <OverflowTabIcon
++                                      webIcon={descriptors[route.key].options.webIcon}
++                                      webIconFamily={descriptors[route.key].options.webIconFamily}
++                                      webIconName={descriptors[route.key].options.webIconName}
++                                  />
++                              </div>
++                              <span className={native_tabs_module_css_1.default.moreScreenItemLabel}>
++                                  {descriptors[route.key].options.title ?? route.name}
++                              </span>
++                              <svg className={native_tabs_module_css_1.default.moreScreenItemChevron} width="7" height="12" viewBox="0 0 7 12" fill="none">
++                                  <path d="M1 1L6 6L1 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
++                              </svg>
++                          </button>
++                      ))}
++                  </div>
++              </div>
++          </div>
++      )}
++
++      {/* Tab Content - hidden when More screen is shown */}
++      {!showMoreScreen && children}
++
+       <react_tabs_1.TabsList aria-label="Main" className={native_tabs_module_css_1.default.navigationMenuRoot}>
+         {items}
++        {hasOverflow && (
++            <button
++                type="button"
++                className={native_tabs_module_css_1.default.navigationMenuTrigger}
++                data-state={showMoreScreen ? "active" : "inactive"}
++                onClick={() => setShowMoreScreen(true)}
++            >
++                <span className={native_tabs_module_css_1.default.tabIcon}>
++                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
++                        <circle cx="12" cy="12" r="1"></circle>
++                        <circle cx="19" cy="12" r="1"></circle>
++                        <circle cx="5" cy="12" r="1"></circle>
++                    </svg>
++                </span>
++                <span className={native_tabs_module_css_1.default.tabText}>More</span>
++            </button>
++        )}
+       </react_tabs_1.TabsList>
+-      {children}
+     </react_tabs_1.Tabs>);
+ }
++
++function OverflowTabIcon(props) {
++    const { webIcon, webIconFamily, webIconName } = props;
++    if (webIconFamily && webIconName) {
++        const IconComponent = webIconFamily;
++        return <IconComponent name={webIconName} size={20} />;
++    } else if (webIcon) {
++        return webIcon;
++    }
++    return null;
++}
++
+ function TabItem(props) {
+-    const { title, badgeValue, route } = props;
++    const { title, badgeValue, route, webIcon, webIconFamily, webIconName, webIconColor, webIconSelectedColor, webLabelColor, webLabelSelectedColor, onClick, forceInactive, isActive } = props;
+     const isBadgeEmpty = badgeValue === ' ';
+-    return (<react_tabs_1.TabsTrigger value={route.name} className={native_tabs_module_css_1.default.navigationMenuTrigger}>
+-      <span className={native_tabs_module_css_1.default.tabText}>{title}</span>
++    const dataState = forceInactive ? "inactive" : (isActive ? "active" : "inactive");
++
++    // Resolve colors based on active state
++    const resolvedIconColor = isActive && webIconSelectedColor ? webIconSelectedColor : webIconColor;
++    const resolvedLabelColor = isActive && webLabelSelectedColor ? webLabelSelectedColor : webLabelColor;
++
++    const iconStyle = resolvedIconColor ? { color: resolvedIconColor } : {};
++    const labelStyle = resolvedLabelColor ? { color: resolvedLabelColor } : {};
++
++    let iconElement = null;
++    if (webIconFamily && webIconName) {
++        const IconComponent = webIconFamily;
++        iconElement = (<span className={native_tabs_module_css_1.default.tabIcon} style={iconStyle}><IconComponent name={webIconName} size={18} color={resolvedIconColor} /></span>);
++    } else if (webIcon) {
++        iconElement = (<span className={native_tabs_module_css_1.default.tabIcon} style={iconStyle}>{webIcon}</span>);
++    }
++    return (<react_tabs_1.TabsTrigger value={route.name} className={native_tabs_module_css_1.default.navigationMenuTrigger} onClick={onClick} data-state={dataState}>
++      {iconElement}
++      <span className={native_tabs_module_css_1.default.tabText} style={labelStyle}>{title}</span>
+       {badgeValue && (<div className={`${native_tabs_module_css_1.default.tabBadge} ${isBadgeEmpty ? native_tabs_module_css_1.default.emptyTabBadge : ''}`}>
+           {badgeValue}
+         </div>)}

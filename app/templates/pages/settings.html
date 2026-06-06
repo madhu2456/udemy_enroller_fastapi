@@ -1,14 +1,14 @@
 {% extends "components/base.html" %}
 {% extends "components/base.html" %}
-{% block title %}Configure Pipelines: Udemy Enroller Case Study{% endblock %}
-{% block meta_title %}Configure Pipelines: Udemy Enroller Case Study{% endblock %}
-{% block meta_description %}Configure case study pipeline thresholds. Set processing metrics, schemas, and rule limits instantly.{% endblock %}
+{% block title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block meta_title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block meta_description %}Customize your automated course enrollment preferences. Set rating thresholds, filter languages, and refine your learning feed instantly.{% endblock %}
 
-{% block og_title %}Configure Pipelines: Udemy Enroller Case Study{% endblock %}
-{% block og_description %}Configure case study pipeline thresholds. Set processing metrics, schemas, and rule limits instantly.{% endblock %}
+{% block og_title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block og_description %}Customize your automated course enrollment preferences. Set rating thresholds, filter languages, and refine your learning feed instantly.{% endblock %}
 
-{% block twitter_title %}Configure Pipelines: Udemy Enroller Case Study{% endblock %}
-{% block twitter_description %}Configure case study pipeline thresholds. Set processing metrics, schemas, and rule limits instantly.{% endblock %}
+{% block twitter_title %}Configure Filters & Preferences: Udemy Course Enroller{% endblock %}
+{% block twitter_description %}Customize your automated course enrollment preferences. Set rating thresholds, filter languages, and refine your learning feed instantly.{% endblock %}
 
 {% block robots %}noindex, nofollow{% endblock %}
 
@@ -21,7 +21,7 @@
                 <i data-lucide="settings" class="text-blue-600 w-5 h-5"></i>
             </div>
             <h1 class="text-xl font-semibold text-gray-900 tracking-tight">
-                Pipeline Configuration
+                Enrollment Settings
             </h1>
         </div>
         <div class="flex items-center gap-2">
@@ -136,8 +136,8 @@
             <div class="divide-y divide-gray-100">
                 <div class="flex items-center justify-between py-3">
                     <div>
-                        <p class="text-sm font-medium text-gray-800">Persist processed entities to external storage</p>
-                        <p class="text-xs text-gray-400 mt-0.5">Generates a local .txt log of every processed item</p>
+                        <p class="text-sm font-medium text-gray-800">Save enrolled courses to text file</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Generates a local .txt log of every enrolled course title</p>
                     </div>
                     <button type="button" onclick="toggleSwitch(this)" class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200">
                         <input type="checkbox" id="save-txt" class="hidden">
@@ -146,8 +146,8 @@
                 </div>
                 <div class="flex items-center justify-between py-3">
                     <div>
-                        <p class="text-sm font-medium text-gray-800">Process restricted payloads only</p>
-                        <p class="text-xs text-gray-400 mt-0.5">Only process heavily discounted inputs, skip default payloads</p>
+                        <p class="text-sm font-medium text-gray-800">Discounted courses only (skip free)</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Only enroll paid courses with 100% off coupons, skip already-free courses</p>
                     </div>
                     <button type="button" onclick="toggleSwitch(this)" class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200">
                         <input type="checkbox" id="discounted-only" class="hidden">
@@ -167,9 +167,9 @@
         <div class="p-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-xl p-5">
                 <div>
-                    <p class="text-sm font-semibold text-red-800">Clear All Processing Data</p>
+                    <p class="text-sm font-semibold text-red-800">Clear All Enrollment Data</p>
                     <p class="text-xs text-red-600 mt-0.5 max-w-lg leading-relaxed font-light">
-                        Permanently deletes all historical logs, run state, and resets telemetry statistics. This cannot be undone.
+                        Permanently deletes all enrollment history, run logs, and resets lifetime statistics. This cannot be undone.
                     </p>
                 </div>
                 <button onclick="clearAllData()" class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-sm">
@@ -411,8 +411,8 @@ async function resetSettings() {
 }
 
 async function clearAllData() {
-    if (!confirm('Are you absolutely sure you want to delete ALL processing history and statistics? This cannot be undone.')) return;
-    if (!confirm('REALLY? This will wipe your history and reset all telemetry counters to zero.')) return;
+    if (!confirm('Are you absolutely sure you want to delete ALL enrollment history and statistics? This cannot be undone.')) return;
+    if (!confirm('REALLY? This will wipe your history and reset all counters to zero.')) return;
     
     try {
         const r = await apiFetch('/api/settings/clear-data', { method: 'POST' });

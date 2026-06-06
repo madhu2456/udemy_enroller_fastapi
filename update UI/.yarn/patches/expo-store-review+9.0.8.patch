@@ -1,0 +1,375 @@
+diff --git a/build/ExpoStoreReview.d.ts b/build/ExpoStoreReview.d.ts
+index 00e8119..ed3992e 100644
+--- a/build/ExpoStoreReview.d.ts
++++ b/build/ExpoStoreReview.d.ts
+@@ -1,6 +1,9 @@
+ declare const _default: Partial<{
+     isAvailableAsync: () => Promise<boolean>;
+     requestReview: () => Promise<void>;
++    prePromptReview: () => Promise<void>;
++    resetReviewState: () => Promise<void>;
++    hasUserRated: () => Promise<boolean>;
+ }>;
+ export default _default;
+ //# sourceMappingURL=ExpoStoreReview.d.ts.map
+\ No newline at end of file
+diff --git a/build/ExpoStoreReview.d.ts.map b/build/ExpoStoreReview.d.ts.map
+index aec682b..0a49993 100644
+--- a/build/ExpoStoreReview.d.ts.map
++++ b/build/ExpoStoreReview.d.ts.map
+@@ -1 +1 @@
+-{"version":3,"file":"ExpoStoreReview.d.ts","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"wBACqB,OAAO,CAAC;IAC3B,gBAAgB,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;IACzC,aAAa,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;CACpC,CAAC;AAHF,wBAGG"}
+\ No newline at end of file
++{"version":3,"file":"ExpoStoreReview.d.ts","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"wBACqB,OAAO,CAAC;IAC3B,gBAAgB,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;IACzC,aAAa,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACnC,eAAe,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACrC,gBAAgB,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACtC,YAAY,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;CACtC,CAAC;AANF,wBAMG"}
+\ No newline at end of file
+diff --git a/build/ExpoStoreReview.d.ts.map.orig b/build/ExpoStoreReview.d.ts.map.orig
+new file mode 100644
+index 0000000..4e06d74
+--- /dev/null
++++ b/build/ExpoStoreReview.d.ts.map.orig
+@@ -0,0 +1 @@
++{"version":3,"file":"ExpoStoreReview.d.ts","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"wBACqB,OAAO,CAAC;IAC3B,gBAAgB,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;IACzC,aAAa,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACnC,eAAe,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACrC,gBAAgB,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;CACvC,CAAC;AALF,wBAKG"}
+\ No newline at end of file
+diff --git a/build/ExpoStoreReview.d.ts.map.rej b/build/ExpoStoreReview.d.ts.map.rej
+new file mode 100644
+index 0000000..93ac91c
+--- /dev/null
++++ b/build/ExpoStoreReview.d.ts.map.rej
+@@ -0,0 +1,5 @@
++@@ -1,1 +1,1 @@
++-{"version":3,"file":"ExpoStoreReview.d.ts","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"wBACqB,OAAO,CAAC;IAC3B,gBAAgB,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;IACzC,aAAa,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;CACpC,CAAC;AAHF,wBAGG"}
++\ No newline at end of line
+++{"version":3,"file":"ExpoStoreReview.d.ts","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"wBACqB,OAAO,CAAC;IAC3B,gBAAgB,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;IACzC,aAAa,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACnC,eAAe,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACrC,gBAAgB,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACtC,YAAY,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;CACtC,CAAC;AANF,wBAMG"}
++\ No newline at end of line
+diff --git a/build/ExpoStoreReview.js.map b/build/ExpoStoreReview.js.map
+index 80fdadb..7fdbdfa 100644
+--- a/build/ExpoStoreReview.js.map
++++ b/build/ExpoStoreReview.js.map
+@@ -1 +1 @@
+-{"version":3,"file":"ExpoStoreReview.js","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"AAAA,uBAAuB;AACvB,eAAe,EAGb,CAAC","sourcesContent":["// Unimplemented on web\nexport default {} as Partial<{\n  isAvailableAsync: () => Promise<boolean>;\n  requestReview: () => Promise<void>;\n}>;\n"]}
+\ No newline at end of file
++{"version":3,"file":"ExpoStoreReview.js","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"AAAA,uBAAuB;AACvB,eAAe,EAMb,CAAC","sourcesContent":["// Unimplemented on web\nexport default {} as Partial<{\n  isAvailableAsync: () => Promise<boolean>;\n  requestReview: () => Promise<void>;\n  prePromptReview: () => Promise<void>;\n  resetReviewState: () => Promise<void>;\n  hasUserRated: () => Promise<boolean>;\n}>;\n"]}
+\ No newline at end of file
+diff --git a/build/ExpoStoreReview.js.map.orig b/build/ExpoStoreReview.js.map.orig
+new file mode 100644
+index 0000000..867130c
+--- /dev/null
++++ b/build/ExpoStoreReview.js.map.orig
+@@ -0,0 +1 @@
++{"version":3,"file":"ExpoStoreReview.js","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"AAAA,uBAAuB;AACvB,eAAe,EAKb,CAAC","sourcesContent":["// Unimplemented on web\nexport default {} as Partial<{\n  isAvailableAsync: () => Promise<boolean>;\n  requestReview: () => Promise<void>;\n  prePromptReview: () => Promise<void>;\n  resetReviewState: () => Promise<void>;\n}>;\n"]}
+\ No newline at end of file
+diff --git a/build/ExpoStoreReview.js.map.rej b/build/ExpoStoreReview.js.map.rej
+new file mode 100644
+index 0000000..8a0b07d
+--- /dev/null
++++ b/build/ExpoStoreReview.js.map.rej
+@@ -0,0 +1,5 @@
++@@ -1,1 +1,1 @@
++-{"version":3,"file":"ExpoStoreReview.js","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"AAAA,uBAAuB;AACvB,eAAe,EAGb,CAAC","sourcesContent":["// Unimplemented on web\nexport default {} as Partial<{\n  isAvailableAsync: () => Promise<boolean>;\n  requestReview: () => Promise<void>;\n}>;\n"]}
++\ No newline at end of line
+++{"version":3,"file":"ExpoStoreReview.js","sourceRoot":"","sources":["../src/ExpoStoreReview.ts"],"names":[],"mappings":"AAAA,uBAAuB;AACvB,eAAe,EAMb,CAAC","sourcesContent":["// Unimplemented on web\nexport default {} as Partial<{\n  isAvailableAsync: () => Promise<boolean>;\n  requestReview: () => Promise<void>;\n  prePromptReview: () => Promise<void>;\n  resetReviewState: () => Promise<void>;\n  hasUserRated: () => Promise<boolean>;\n}>;\n"]}
++\ No newline at end of line
+diff --git a/build/ExpoStoreReview.native.js b/build/ExpoStoreReview.native.js
+index 39755d3..a110bfe 100644
+--- a/build/ExpoStoreReview.native.js
++++ b/build/ExpoStoreReview.native.js
+@@ -1,3 +1,4 @@
+ import { requireNativeModule } from 'expo-modules-core';
+-export default requireNativeModule('ExpoStoreReview');
++
++export default globalThis && globalThis.expo && globalThis.expo.modules && globalThis.expo.modules.ExpoStoreReview ? requireNativeModule('ExpoStoreReview') : {};
+ //# sourceMappingURL=ExpoStoreReview.native.js.map
+diff --git a/build/StoreReview.d.ts b/build/StoreReview.d.ts
+index 00cf30a..0f91d73 100644
+--- a/build/StoreReview.d.ts
++++ b/build/StoreReview.d.ts
+@@ -7,6 +7,25 @@
+  * - On Web, it will resolve to `false`.
+  */
+ export declare function isAvailableAsync(): Promise<boolean>;
++/**
++ * Shows a pre-prompt alert asking the user if they'd like to rate the app. If they select "Yes",
++ * it will then show the native store review prompt. This is useful for improving review conversion rates.
++ * Currently only available on iOS.
++ */
++export declare function prePromptReview(): Promise<void>;
++/**
++ * Resets the review state stored in UserDefaults. This allows you to clear the
++ * tracking of whether the user has already been prompted for a review.
++ * Currently only available on iOS.
++ */
++export declare function resetReviewState(): Promise<void>;
++/**
++ * Checks whether the user has already rated the app (i.e., they selected "Rate Now"
++ * in the pre-prompt dialog). This can be used to conditionally show or hide rating prompts.
++ * Currently only available on iOS.
++ * @return A promise that resolves to true if the user has rated, false otherwise.
++ */
++export declare function hasUserRated(): Promise<boolean>;
+ /**
+  * In ideal circumstances this will open a native modal and allow the user to select a star rating
+  * that will then be applied to the App Store, without leaving the app. If the device is running
+diff --git a/build/StoreReview.d.ts.map b/build/StoreReview.d.ts.map
+index 4ce88d2..6f7f508 100644
+--- a/build/StoreReview.d.ts.map
++++ b/build/StoreReview.d.ts.map
+@@ -1 +1 @@
+-{"version":3,"file":"StoreReview.d.ts","sourceRoot":"","sources":["../src/StoreReview.ts"],"names":[],"mappings":"AAOA;;;;;;;GAOG;AACH,wBAAsB,gBAAgB,IAAI,OAAO,CAAC,OAAO,CAAC,CAEzD;AAGD;;;;GAIG;AACH,wBAAsB,aAAa,IAAI,OAAO,CAAC,IAAI,CAAC,CAmBnD;AAGD;;;;;GAKG;AACH,wBAAgB,QAAQ,IAAI,MAAM,GAAG,IAAI,CAQxC;AAGD;;;;;;;;;;;;GAYG;AACH,wBAAsB,SAAS,IAAI,OAAO,CAAC,OAAO,CAAC,CAElD"}
+\ No newline at end of file
++{"version":3,"file":"StoreReview.d.ts","sourceRoot":"","sources":["../src/StoreReview.ts"],"names":[],"mappings":"AAOA;;;;;;;GAOG;AACH,wBAAsB,gBAAgB,IAAI,OAAO,CAAC,OAAO,CAAC,CAEzD;AAGD;;;;GAIG;AACH,wBAAsB,eAAe,IAAI,OAAO,CAAC,IAAI,CAAC,CAMrD;AAGD;;;;GAIG;AACH,wBAAsB,gBAAgB,IAAI,OAAO,CAAC,IAAI,CAAC,CAMtD;AAGD;;;;;GAKG;AACH,wBAAsB,YAAY,IAAI,OAAO,CAAC,OAAO,CAAC,CAOrD;AAGD;;;;GAIG;AACH,wBAAsB,aAAa,IAAI,OAAO,CAAC,IAAI,CAAC,CAmBnD;AAGD;;;;;GAKG;AACH,wBAAgB,QAAQ,IAAI,MAAM,GAAG,IAAI,CAQxC;AAGD;;;;;;;;;;;;GAYG;AACH,wBAAsB,SAAS,IAAI,OAAO,CAAC,OAAO,CAAC,CAElD"}
+\ No newline at end of file
+diff --git a/build/StoreReview.js b/build/StoreReview.js
+index 5ddf98b..232423f 100644
+--- a/build/StoreReview.js
++++ b/build/StoreReview.js
+@@ -15,6 +15,47 @@ export async function isAvailableAsync() {
+     return StoreReview.isAvailableAsync?.() ?? false;
+ }
+ // @needsAudit
++/**
++ * Shows a pre-prompt alert asking the user if they'd like to rate the app. If they select "Yes",
++ * it will then show the native store review prompt. This is useful for improving review conversion rates.
++ * Currently only available on iOS.
++ */
++export async function prePromptReview() {
++    if (StoreReview?.prePromptReview) {
++        return StoreReview.prePromptReview();
++    }
++    // Fallback: if prePromptReview is not available, just do nothing
++    // (This will be the case on web and Android)
++}
++// @needsAudit
++/**
++ * Resets the review state by clearing the last review request timestamp and rating status.
++ * This is useful for testing or if you want to allow the review prompt to be shown again
++ * regardless of the normal rate limiting. Currently only available on iOS.
++ */
++export async function resetReviewState() {
++    if (StoreReview?.resetReviewState) {
++        return StoreReview.resetReviewState();
++    }
++    // Fallback: if resetReviewState is not available, just do nothing
++    // (This will be the case on web and Android)
++}
++// @needsAudit
++/**
++ * Checks whether the user has already rated the app (i.e., they selected "Rate Now"
++ * in the pre-prompt dialog). This can be used to conditionally show or hide rating prompts.
++ * Currently only available on iOS.
++ * @return A promise that resolves to true if the user has rated, false otherwise.
++ */
++export async function hasUserRated() {
++    if (StoreReview?.hasUserRated) {
++        return StoreReview.hasUserRated();
++    }
++    // Fallback: if hasUserRated is not available, return false
++    // (This will be the case on web and Android)
++    return false;
++}
++// @needsAudit
+ /**
+  * In ideal circumstances this will open a native modal and allow the user to select a star rating
+  * that will then be applied to the App Store, without leaving the app. If the device is running
+diff --git a/build/StoreReview.js.map b/build/StoreReview.js.map
+index cd16b26..56882e2 100644
+--- a/build/StoreReview.js.map
++++ b/build/StoreReview.js.map
+@@ -1 +1 @@
+-{"version":3,"file":"StoreReview.js","sourceRoot":"","sources":["../src/StoreReview.ts"],"names":[],"mappings":"AAAA,OAAO,SAAS,MAAM,gBAAgB,CAAC;AACvC,OAAO,EAAE,QAAQ,EAAE,MAAM,mBAAmB,CAAC;AAC7C,OAAO,EAAE,OAAO,EAAE,MAAM,cAAc,CAAC;AAEvC,OAAO,WAAW,MAAM,mBAAmB,CAAC;AAE5C,cAAc;AACd;;;;;;;GAOG;AACH,MAAM,CAAC,KAAK,UAAU,gBAAgB;IACpC,OAAO,WAAW,CAAC,gBAAgB,EAAE,EAAE,IAAI,KAAK,CAAC;AACnD,CAAC;AAED,cAAc;AACd;;;;GAIG;AACH,MAAM,CAAC,KAAK,UAAU,aAAa;IACjC,IAAI,WAAW,EAAE,aAAa,EAAE,CAAC;QAC/B,OAAO,WAAW,CAAC,aAAa,EAAE,CAAC;IACrC,CAAC;IACD,6GAA6G;IAC7G,MAAM,GAAG,GAAG,QAAQ,EAAE,CAAC;IACvB,IAAI,GAAG,EAAE,CAAC;QACR,MAAM,SAAS,GAAG,MAAM,OAAO,CAAC,UAAU,CAAC,GAAG,CAAC,CAAC;QAChD,IAAI,CAAC,SAAS,EAAE,CAAC;YACf,OAAO,CAAC,IAAI,CAAC,qDAAqD,EAAE,GAAG,CAAC,CAAC;QAC3E,CAAC;aAAM,CAAC;YACN,MAAM,OAAO,CAAC,OAAO,CAAC,GAAG,CAAC,CAAC;QAC7B,CAAC;IACH,CAAC;SAAM,CAAC;QACN,iDAAiD;QACjD,OAAO,CAAC,IAAI,CACV,+JAA+J,CAChK,CAAC;IACJ,CAAC;AACH,CAAC;AAED,cAAc;AACd;;;;;GAKG;AACH,MAAM,UAAU,QAAQ;IACtB,MAAM,UAAU,GAAG,SAAS,CAAC,UAAU,CAAC;IACxC,IAAI,QAAQ,CAAC,EAAE,KAAK,KAAK,IAAI,UAAU,EAAE,GAAG,EAAE,CAAC;QAC7C,OAAO,UAAU,CAAC,GAAG,CAAC,WAAW,IAAI,IAAI,CAAC;IAC5C,CAAC;SAAM,IAAI,QAAQ,CAAC,EAAE,KAAK,SAAS,IAAI,UAAU,EAAE,OAAO,EAAE,CAAC;QAC5D,OAAO,UAAU,CAAC,OAAO,CAAC,YAAY,IAAI,IAAI,CAAC;IACjD,CAAC;IACD,OAAO,IAAI,CAAC;AACd,CAAC;AAED,cAAc;AACd;;;;;;;;;;;;GAYG;AACH,MAAM,CAAC,KAAK,UAAU,SAAS;IAC7B,OAAO,CAAC,CAAC,QAAQ,EAAE,IAAI,CAAC,MAAM,gBAAgB,EAAE,CAAC,CAAC;AACpD,CAAC","sourcesContent":["import Constants from 'expo-constants';\nimport { Platform } from 'expo-modules-core';\nimport { Linking } from 'react-native';\n\nimport StoreReview from './ExpoStoreReview';\n\n// @needsAudit\n/**\n * Determines if the platform has the capabilities to use `StoreReview.requestReview()`.\n * @return\n * This returns a promise fulfills with `boolean`, depending on the platform:\n * - On iOS, it will resolve to `true` unless the app is distributed through TestFlight.\n * - On Android, it will resolve to `true` if the device is running Android 5.0+.\n * - On Web, it will resolve to `false`.\n */\nexport async function isAvailableAsync(): Promise<boolean> {\n  return StoreReview.isAvailableAsync?.() ?? false;\n}\n\n// @needsAudit\n/**\n * In ideal circumstances this will open a native modal and allow the user to select a star rating\n * that will then be applied to the App Store, without leaving the app. If the device is running\n * a version of Android lower than 5.0, this will attempt to get the store URL and link the user to it.\n */\nexport async function requestReview(): Promise<void> {\n  if (StoreReview?.requestReview) {\n    return StoreReview.requestReview();\n  }\n  // If StoreReview is unavailable then get the store URL from `app.config.js` or `app.json` and open the store\n  const url = storeUrl();\n  if (url) {\n    const supported = await Linking.canOpenURL(url);\n    if (!supported) {\n      console.warn(\"StoreReview.requestReview(): Can't open store url: \", url);\n    } else {\n      await Linking.openURL(url);\n    }\n  } else {\n    // If the store URL is missing, let the dev know.\n    console.warn(\n      \"StoreReview.requestReview(): Couldn't link to store, please make sure the `android.playStoreUrl` & `ios.appStoreUrl` fields are filled out in your `app.json`\"\n    );\n  }\n}\n\n// @needsAudit\n/**\n * This uses the `Constants` API to get the `Constants.expoConfig.ios.appStoreUrl` on iOS, or the\n * `Constants.expoConfig.android.playStoreUrl` on Android.\n *\n * On Web this will return `null`.\n */\nexport function storeUrl(): string | null {\n  const expoConfig = Constants.expoConfig;\n  if (Platform.OS === 'ios' && expoConfig?.ios) {\n    return expoConfig.ios.appStoreUrl ?? null;\n  } else if (Platform.OS === 'android' && expoConfig?.android) {\n    return expoConfig.android.playStoreUrl ?? null;\n  }\n  return null;\n}\n\n// @needsAudit\n/**\n * @return This returns a promise that fulfills to `true` if `StoreReview.requestReview()` is capable\n * directing the user to some kind of store review flow. If the app config (`app.json`) does not\n * contain store URLs and native store review capabilities are not available then the promise\n * will fulfill to `false`.\n *\n * @example\n * ```ts\n * if (await StoreReview.hasAction()) {\n *   // you can call StoreReview.requestReview()\n * }\n * ```\n */\nexport async function hasAction(): Promise<boolean> {\n  return !!storeUrl() || (await isAvailableAsync());\n}\n"]}
+\ No newline at end of file
++{"version":3,"file":"StoreReview.js","sourceRoot":"","sources":["../src/StoreReview.ts"],"names":[],"mappings":"AAAA,OAAO,SAAS,MAAM,gBAAgB,CAAC;AACvC,OAAO,EAAE,QAAQ,EAAE,MAAM,mBAAmB,CAAC;AAC7C,OAAO,EAAE,OAAO,EAAE,MAAM,cAAc,CAAC;AAEvC,OAAO,WAAW,MAAM,mBAAmB,CAAC;AAE5C,cAAc;AACd;;;;;;;GAOG;AACH,MAAM,CAAC,KAAK,UAAU,gBAAgB;IACpC,OAAO,WAAW,CAAC,gBAAgB,EAAE,EAAE,IAAI,KAAK,CAAC;AACnD,CAAC;AAED,cAAc;AACd;;;;GAIG;AACH,MAAM,CAAC,KAAK,UAAU,eAAe;IACnC,IAAI,WAAW,EAAE,eAAe,EAAE,CAAC;QACjC,OAAO,WAAW,CAAC,eAAe,EAAE,CAAC;IACvC,CAAC;IACD,iEAAiE;IACjE,6CAA6C;AAC/C,CAAC;AAED,cAAc;AACd;;;;GAIG;AACH,MAAM,CAAC,KAAK,UAAU,gBAAgB;IACpC,IAAI,WAAW,EAAE,gBAAgB,EAAE,CAAC;QAClC,OAAO,WAAW,CAAC,gBAAgB,EAAE,CAAC;IACxC,CAAC;IACD,iEAAiE;IACjE,6CAA6C;AAC/C,CAAC;AAED,cAAc;AACd;;;;;GAKG;AACH,MAAM,CAAC,KAAK,UAAU,YAAY;IAChC,IAAI,WAAW,EAAE,YAAY,EAAE,CAAC;QAC9B,OAAO,WAAW,CAAC,YAAY,EAAE,CAAC;IACpC,CAAC;IACD,yEAAyE;IACzE,6CAA6C;IAC7C,OAAO,KAAK,CAAC;AACf,CAAC;AAED,cAAc;AACd;;;;GAIG;AACH,MAAM,CAAC,KAAK,UAAU,aAAa;IACjC,IAAI,WAAW,EAAE,aAAa,EAAE,CAAC;QAC/B,OAAO,WAAW,CAAC,aAAa,EAAE,CAAC;IACrC,CAAC;IACD,6GAA6G;IAC7G,MAAM,GAAG,GAAG,QAAQ,EAAE,CAAC;IACvB,IAAI,GAAG,EAAE,CAAC;QACR,MAAM,SAAS,GAAG,MAAM,OAAO,CAAC,UAAU,CAAC,GAAG,CAAC,CAAC;QAChD,IAAI,CAAC,SAAS,EAAE,CAAC;YACf,OAAO,CAAC,IAAI,CAAC,qDAAqD,EAAE,GAAG,CAAC,CAAC;QAC3E,CAAC;aAAM,CAAC;YACN,MAAM,OAAO,CAAC,OAAO,CAAC,GAAG,CAAC,CAAC;QAC7B,CAAC;IACH,CAAC;SAAM,CAAC;QACN,iDAAiD;QACjD,OAAO,CAAC,IAAI,CACV,+JAA+J,CAChK,CAAC;IACJ,CAAC;AACH,CAAC;AAED,cAAc;AACd;;;;;GAKG;AACH,MAAM,UAAU,QAAQ;IACtB,MAAM,UAAU,GAAG,SAAS,CAAC,UAAU,CAAC;IACxC,IAAI,QAAQ,CAAC,EAAE,KAAK,KAAK,IAAI,UAAU,EAAE,GAAG,EAAE,CAAC;QAC7C,OAAO,UAAU,CAAC,GAAG,CAAC,WAAW,IAAI,IAAI,CAAC;IAC5C,CAAC;SAAM,IAAI,QAAQ,CAAC,EAAE,KAAK,SAAS,IAAI,UAAU,EAAE,OAAO,EAAE,CAAC;QAC5D,OAAO,UAAU,CAAC,OAAO,CAAC,YAAY,IAAI,IAAI,CAAC;IACjD,CAAC;IACD,OAAO,IAAI,CAAC;AACd,CAAC;AAED,cAAc;AACd;;;;;;;;;;;;GAYG;AACH,MAAM,CAAC,KAAK,UAAU,SAAS;IAC7B,OAAO,CAAC,CAAC,QAAQ,EAAE,IAAI,CAAC,MAAM,gBAAgB,EAAE,CAAC,CAAC;AACpD,CAAC","sourcesContent":["import Constants from 'expo-constants';\nimport { Platform } from 'expo-modules-core';\nimport { Linking } from 'react-native';\n\nimport StoreReview from './ExpoStoreReview';\n\n// @needsAudit\n/**\n * Determines if the platform has the capabilities to use `StoreReview.requestReview()`.\n * @return\n * This returns a promise fulfills with `boolean`, depending on the platform:\n * - On iOS, it will resolve to `true` unless the app is distributed through TestFlight.\n * - On Android, it will resolve to `true` if the device is running Android 5.0+.\n * - On Web, it will resolve to `false`.\n */\nexport async function isAvailableAsync(): Promise<boolean> {\n  return StoreReview.isAvailableAsync?.() ?? false;\n}\n\n// @needsAudit\n/**\n * Shows a pre-prompt alert asking the user if they'd like to rate the app. If they select \"Yes\",\n * it will then show the native store review prompt. This is useful for improving review conversion rates.\n * Currently only available on iOS.\n */\nexport async function prePromptReview(): Promise<void> {\n  if (StoreReview?.prePromptReview) {\n    return StoreReview.prePromptReview();\n  }\n  // Fallback: if prePromptReview is not available, just do nothing\n  // (This will be the case on web and Android)\n}\n\n// @needsAudit\n/**\n * Resets the review state stored in UserDefaults. This allows you to clear the\n * tracking of whether the user has already been prompted for a review.\n * Currently only available on iOS.\n */\nexport async function resetReviewState(): Promise<void> {\n  if (StoreReview?.resetReviewState) {\n    return StoreReview.resetReviewState();\n  }\n  // Fallback: if resetReviewState is not available, just do nothing\n  // (This will be the case on web and Android)\n}\n\n// @needsAudit\n/**\n * Checks whether the user has already rated the app (i.e., they selected \"Rate Now\"\n * in the pre-prompt dialog). This can be used to conditionally show or hide rating prompts.\n * Currently only available on iOS.\n * @return A promise that resolves to true if the user has rated, false otherwise.\n */\nexport async function hasUserRated(): Promise<boolean> {\n  if (StoreReview?.hasUserRated) {\n    return StoreReview.hasUserRated();\n  }\n  // Fallback: if hasUserRated is not available, return false\n  // (This will be the case on web and Android)\n  return false;\n}\n\n// @needsAudit\n/**\n * In ideal circumstances this will open a native modal and allow the user to select a star rating\n * that will then be applied to the App Store, without leaving the app. If the device is running\n * a version of Android lower than 5.0, this will attempt to get the store URL and link the user to it.\n */\nexport async function requestReview(): Promise<void> {\n  if (StoreReview?.requestReview) {\n    return StoreReview.requestReview();\n  }\n  // If StoreReview is unavailable then get the store URL from `app.config.js` or `app.json` and open the store\n  const url = storeUrl();\n  if (url) {\n    const supported = await Linking.canOpenURL(url);\n    if (!supported) {\n      console.warn(\"StoreReview.requestReview(): Can't open store url: \", url);\n    } else {\n      await Linking.openURL(url);\n    }\n  } else {\n    // If the store URL is missing, let the dev know.\n    console.warn(\n      \"StoreReview.requestReview(): Couldn't link to store, please make sure the `android.playStoreUrl` & `ios.appStoreUrl` fields are filled out in your `app.json`\"\n    );\n  }\n}\n\n// @needsAudit\n/**\n * This uses the `Constants` API to get the `Constants.expoConfig.ios.appStoreUrl` on iOS, or the\n * `Constants.expoConfig.android.playStoreUrl` on Android.\n *\n * On Web this will return `null`.\n */\nexport function storeUrl(): string | null {\n  const expoConfig = Constants.expoConfig;\n  if (Platform.OS === 'ios' && expoConfig?.ios) {\n    return expoConfig.ios.appStoreUrl ?? null;\n  } else if (Platform.OS === 'android' && expoConfig?.android) {\n    return expoConfig.android.playStoreUrl ?? null;\n  }\n  return null;\n}\n\n// @needsAudit\n/**\n * @return This returns a promise that fulfills to `true` if `StoreReview.requestReview()` is capable\n * directing the user to some kind of store review flow. If the app config (`app.json`) does not\n * contain store URLs and native store review capabilities are not available then the promise\n * will fulfill to `false`.\n *\n * @example\n * ```ts\n * if (await StoreReview.hasAction()) {\n *   // you can call StoreReview.requestReview()\n * }\n * ```\n */\nexport async function hasAction(): Promise<boolean> {\n  return !!storeUrl() || (await isAvailableAsync());\n}\n"]}
+\ No newline at end of file
+diff --git a/ios/StoreReviewModule.swift b/ios/StoreReviewModule.swift
+index c44c468..4eb6ea0 100644
+--- a/ios/StoreReviewModule.swift
++++ b/ios/StoreReviewModule.swift
+@@ -1,5 +1,8 @@
+ import ExpoModulesCore
+ import StoreKit
++import UIKit
++
++private let HAS_RATED_KEY = "anything_has_rated"
+ 
+ public class StoreReviewModule: Module {
+   public func definition() -> ModuleDefinition {
+@@ -9,11 +12,55 @@ public class StoreReviewModule: Module {
+       return !isRunningFromTestFlight()
+     }
+ 
++    AsyncFunction("prePromptReview") {
++      if isRunningFromTestFlight() {
++        return
++      }
++
++      try await MainActor.run {
++        let defaults = UserDefaults.standard
++
++        if defaults.bool(forKey: HAS_RATED_KEY) {
++          return
++        }
++
++        guard let currentScene = getForegroundActiveScene() else {
++          throw MissingCurrentWindowSceneException()
++        }
++
++        let keyWindow = currentScene.windows.first(where: { $0.isKeyWindow })
++        guard let rootVC = keyWindow?.rootViewController else {
++          throw MissingCurrentWindowSceneException()
++        }
++
++        let alert = UIAlertController(
++          title: "Thanks for using Anything!",
++          message: "Share what you love about Anything in the App Store. Your review will help us reach more people.",
++          preferredStyle: .alert
++        )
++
++        let noAction = UIAlertAction(title: "No Thanks", style: .cancel, handler: nil)
++
++        let yesAction = UIAlertAction(title: "Rate Now", style: .default) { _ in
++          defaults.set(true, forKey: HAS_RATED_KEY)
++
++          if #available(iOS 16.0, *) {
++            AppStore.requestReview(in: currentScene)
++          } else {
++            SKStoreReviewController.requestReview(in: currentScene)
++          }
++        }
++
++        alert.addAction(noAction)
++        alert.addAction(yesAction)
++
++        rootVC.present(alert, animated: true, completion: nil)
++      }
++    }
++
+     AsyncFunction("requestReview") {
+       try await MainActor.run {
+         guard let currentScene = getForegroundActiveScene() else {
+-          // If no valid foreground scene is found, throw an exception
+-          // as the review prompt won't be visible in background
+           throw MissingCurrentWindowSceneException()
+         }
+         if #available(iOS 16.0, *) {
+@@ -23,23 +70,30 @@ public class StoreReviewModule: Module {
+         }
+       }
+     }
++
++    AsyncFunction("resetReviewState") {
++      let defaults = UserDefaults.standard
++      defaults.removeObject(forKey: HAS_RATED_KEY)
++    }
++
++    AsyncFunction("hasUserRated") { () -> Bool in
++      let defaults = UserDefaults.standard
++      return defaults.bool(forKey: HAS_RATED_KEY)
++    }
++    
+   }
+ 
+   private func getForegroundActiveScene() -> UIWindowScene? {
+-    // First try to find a foreground active scene
+-    if let activeScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
++    if let activeScene = UIApplication.shared.connectedScenes
++      .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+       return activeScene
+     }
+ 
+-    // If no foreground active scene is found (e.g., app is in App Switcher),
+-    // try to find any foreground inactive scene
+-    if let foregroundScene = UIApplication.shared.connectedScenes.first(where: {
+-      $0.activationState == .foregroundInactive
+-    }) as? UIWindowScene {
++    if let foregroundScene = UIApplication.shared.connectedScenes
++      .first(where: { $0.activationState == .foregroundInactive }) as? UIWindowScene {
+       return foregroundScene
+     }
+ 
+-    // If no valid foreground scene is found, return nil
+     return nil
+   }
+ 
+@@ -48,12 +102,7 @@ public class StoreReviewModule: Module {
+     return false
+     #endif
+ 
+-    // For apps distributed through TestFlight or intalled from Xcode the receipt file is named "StoreKit/sandboxReceipt"
+-    // instead of "StoreKit/receipt"
+     let isSandboxEnv = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+-
+-    // Apps distributed through TestFlight or the App Store will not have an embedded provisioning profile
+-    // Source: https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles#Profile-location
+     return isSandboxEnv && !hasEmbeddedMobileProvision()
+   }
+ 
+diff --git a/src/ExpoStoreReview.ts b/src/ExpoStoreReview.ts
+index cb9ee95..94b9581 100644
+--- a/src/ExpoStoreReview.ts
++++ b/src/ExpoStoreReview.ts
+@@ -2,4 +2,7 @@
+ export default {} as Partial<{
+   isAvailableAsync: () => Promise<boolean>;
+   requestReview: () => Promise<void>;
++  prePromptReview: () => Promise<void>;
++  resetReviewState: () => Promise<void>;
++  hasUserRated: () => Promise<boolean>;
+ }>;
+diff --git a/src/StoreReview.ts b/src/StoreReview.ts
+index a9b9094..570caa6 100644
+--- a/src/StoreReview.ts
++++ b/src/StoreReview.ts
+@@ -17,6 +17,20 @@ export async function isAvailableAsync(): Promise<boolean> {
+   return StoreReview.isAvailableAsync?.() ?? false;
+ }
+ 
++// @needsAudit
++/**
++ * Shows a pre-prompt alert asking the user if they'd like to rate the app. If they select "Yes",
++ * it will then show the native store review prompt. This is useful for improving review conversion rates.
++ * Currently only available on iOS.
++ */
++export async function prePromptReview(): Promise<void> {
++  if (StoreReview?.prePromptReview) {
++    return StoreReview.prePromptReview();
++  }
++  // Fallback: if prePromptReview is not available, just do nothing
++  // (This will be the case on web and Android)
++}
++
+ // @needsAudit
+ /**
+  * In ideal circumstances this will open a native modal and allow the user to select a star rating
+@@ -78,3 +92,33 @@ export function storeUrl(): string | null {
+ export async function hasAction(): Promise<boolean> {
+   return !!storeUrl() || (await isAvailableAsync());
+ }
++
++// @needsAudit
++/**
++ * Resets the review state stored in UserDefaults. This allows you to clear the
++ * tracking of whether the user has already been prompted for a review.
++ * Currently only available on iOS.
++ */
++export async function resetReviewState(): Promise<void> {
++  if (StoreReview?.resetReviewState) {
++    return StoreReview.resetReviewState();
++  }
++  // Fallback: if resetReviewState is not available, just do nothing
++  // (This will be the case on web and Android)
++}
++
++// @needsAudit
++/**
++ * Checks whether the user has already rated the app (i.e., they selected "Rate Now"
++ * in the pre-prompt dialog). This can be used to conditionally show or hide rating prompts.
++ * Currently only available on iOS.
++ * @return A promise that resolves to true if the user has rated, false otherwise.
++ */
++export async function hasUserRated(): Promise<boolean> {
++  if (StoreReview?.hasUserRated) {
++    return StoreReview.hasUserRated();
++  }
++  // Fallback: if hasUserRated is not available, return false
++  // (This will be the case on web and Android)
++  return false;
++}

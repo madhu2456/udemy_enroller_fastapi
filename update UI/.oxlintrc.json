@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript"],
+  "rules": {
+    "eslint/no-const-assign": "deny",
+    "eslint/constructor-super": "deny",
+    "eslint/no-this-before-super": "deny",
+    "eslint/no-obj-calls": "deny",
+    "eslint/no-new-native-nonconstructor": "deny",
+    "eslint/no-unsafe-optional-chaining": "deny",
+    "eslint/no-import-assign": "deny",
+    "eslint/valid-typeof": "deny",
+    "react/jsx-key": "deny",
+    "react/jsx-no-undef": "deny",
+    "react/no-direct-mutation-state": "deny",
+    "react/exhaustive-deps": "deny",
+    "typescript/no-misused-spread": "deny",
+    "oxc/missing-throw": "deny",
+    "oxc/uninvoked-array-callback": "deny"
+  }
+}

@@ -1,256 +1,102 @@
 {% extends "components/base.html" %}
-{% block title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
-{% block meta_title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
-{% block meta_description %}Find answers to common questions about the Udemy Enroller case study. Learn about its architecture, session-state handling, and background task processing.{% endblock %}
-
-{% block og_title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
-{% block og_description %}Find answers to common questions about the Udemy Enroller case study. Learn about its architecture, session-state handling, and background task processing.{% endblock %}
-
-{% block twitter_title %}FAQ & Architecture Details: Udemy Enroller Case Study{% endblock %}
-{% block twitter_description %}Find answers to common questions about the Udemy Enroller case study. Learn about its architecture, session-state handling, and background task processing.{% endblock %}
+{% block title %}FAQ – Udemy Enroller{% endblock %}
+{% block meta_title %}FAQ – Udemy Enroller{% endblock %}
+{% block meta_description %}Answers to the most common questions about the Udemy Enroller automation tool — how it works, security, filters, and Cookie vs Email login.{% endblock %}
 
 {% block content %}
-<!-- Breadcrumb -->
-<nav aria-label="Breadcrumb" class="text-sm text-gray-400 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-    <ol class="flex items-center space-x-2" itemscope itemtype="https://schema.org/BreadcrumbList">
-        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            <a href="/" itemprop="item" class="hover:text-blue-600 transition-colors"><span itemprop="name">Home</span></a>
-            <meta itemprop="position" content="1" />
-        </li>
-        <li class="text-gray-400">/</li>
-        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            <span itemprop="name" class="text-gray-600">FAQ</span>
-            <meta itemprop="position" content="2" />
-        </li>
-    </ol>
-</nav>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "What is the Udemy Enroller Case Study?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "The Udemy Enroller is a technical case study built by Madhu Dadi demonstrating FastAPI workflow orchestration, Playwright browser automation, and asynchronous background task management."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What concepts does this case study demonstrate?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "It showcases bounded concurrency, robust session-state management, real-time telemetry logging via Server-Sent Events (SSE), and secure interactions with external APIs."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Is the Udemy Enroller architecture secure?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes. The architecture prioritizes secure session management. It stores only session tokens — never plaintext credentials. All database interactions use SQLAlchemy ORM with parameterized queries to prevent SQL injection."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How is authentication handled?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "The application demonstrates both credential-based and session-based authentication flows, focusing on secure token extraction, validation, and CSRF protection within an automated pipeline."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Who developed this case study?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "This project was architected and developed by Madhu Dadi, a software engineer and AI specialist. You can view the full portfolio at https://madhudadi.in and read technical deep dives at https://madhudadi.in/blog."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What technologies are used in the stack?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "The project is built on Python 3.13 utilizing FastAPI for the asynchronous backend API, SQLAlchemy and SQLite for state persistence, Playwright for headless automation, and Tailwind CSS for the frontend UI."
-      }
-    }
-  ]
-}
-</script>
-
-<!-- Hero Section -->
-<section class="py-16 md:py-24 bg-[#F9FAFB] border-b border-gray-200">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h1 class="text-4xl font-semibold tracking-tight text-gray-900 mb-4">
-            Frequently Asked Questions
+<div class="min-h-screen bg-white text-gray-900">
+  <main>
+    <!-- Hero -->
+    <section class="max-w-6xl mx-auto px-6 pt-14 pb-10" aria-labelledby="faq-hero-heading">
+      <div class="max-w-2xl">
+        <span class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1 text-xs font-medium mb-4">
+          Support
+        </span>
+        <h1 id="faq-hero-heading" class="text-3xl font-semibold text-gray-900 tracking-tight mb-3">
+          Frequently Asked Questions
         </h1>
-        <p class="text-lg text-gray-500 leading-relaxed font-light">
-            Everything you need to know about the Udemy Enroller Case Study — its architecture, security design, and system capabilities.
+        <p class="text-sm text-gray-500 leading-relaxed">
+          Everything you need to know about how the Udemy Enroller works, how to set it up, and how to keep your account secure.
         </p>
-    </div>
-</section>
+      </div>
+    </section>
 
-<!-- FAQ List -->
-<section class="py-20 bg-white" itemscope itemtype="https://schema.org/FAQPage">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 gap-6">
-            <!-- FAQ 1 -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                        <i data-lucide="help-circle" class="text-blue-600 w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            What is the Udemy Enroller Case Study?
-                        </h3>
-                        <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                            <p itemprop="text">
-                                The Udemy Enroller is a technical case study built by <a href="https://madhudadi.in" target="_blank" rel="noopener author" class="text-blue-600 hover:underline">Madhu Dadi</a> demonstrating FastAPI workflow orchestration, Playwright browser automation, and asynchronous background task management. It highlights scalable patterns for integrating with external data sources.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+    <!-- FAQ Categories -->
+    <section class="max-w-6xl mx-auto px-6 pb-20">
+      <div class="space-y-10">
+        <!-- How it Works -->
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#EFF6FF] border border-blue-100">
+              <svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
-
-            <!-- FAQ 2 -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                        <i data-lucide="credit-card" class="text-blue-600 w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            What concepts does this case study demonstrate?
-                        </h3>
-                        <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                            <p itemprop="text">
-                                It showcases bounded concurrency to handle API rate limits, robust session-state management for headless browsers, real-time telemetry logging via Server-Sent Events (SSE), and secure architectural patterns for external integration workflows.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FAQ 3 -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                        <i data-lucide="shield" class="text-blue-600 w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            Is the architecture secure?
-                        </h3>
-                        <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                            <p itemprop="text">
-                                Security is a core focus. The architecture uses strict session token isolation and never stores plaintext credentials. The backend relies on SQLAlchemy ORM to mitigate SQL injection, and environment configuration strictly separates production secrets from development defaults.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FAQ 4 -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                        <i data-lucide="zap" class="text-blue-600 w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            How is authentication handled in the pipeline?
-                        </h3>
-                        <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                            <p itemprop="text">
-                                The application demonstrates robust stateless authentication integration by accepting raw session tokens (access_token, client_id, csrftoken). This approach allows seamless background orchestration without storing long-lived credentials in the database.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FAQ 5 -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                        <i data-lucide="user" class="text-blue-600 w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            Who developed this case study?
-                        </h3>
-                        <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                            <p itemprop="text">
-                                This technical showcase was designed and developed by Madhu Dadi, a software engineer and AI specialist. Madhu architects complex automation workflows and shares deep technical insights on his personal blog.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FAQ 6 -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                        <i data-lucide="code" class="text-blue-600 w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            What technologies are used in the stack?
-                        </h3>
-                        <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                            <p itemprop="text">
-                                The project is built with a modern asynchronous stack: Python 3.13 paired with FastAPI for the core API, SQLAlchemy for state persistence, Playwright for headless automation orchestration, and Tailwind CSS for the frontend interface.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FAQ 7 -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100">
-                        <i data-lucide="server" class="text-blue-600 w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-2" itemprop="name">
-                            Is the source code available?
-                        </h3>
-                        <div class="text-sm text-gray-500 leading-relaxed font-light" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                            <p itemprop="text">
-                                Yes. The complete codebase is open-source and includes a reproducible Docker environment. It serves as a reference implementation for anyone looking to build scalable Python APIs and automated scraping workflows.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <h2 class="text-base font-semibold text-gray-900">How it Works</h2>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How does the automated Udemy course enroller work?</h3><p class="text-sm text-gray-500 leading-relaxed">The tool continuously monitors a curated list of coupon aggregator websites — sites like Real.Discount, Discudemy, Tutorialbar, and others. The moment a new 100% off Udemy coupon is detected, the engine validates it against your smart filters and applies it to your Udemy account via the Udemy API, enrolling you instantly without any manual action.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Which coupon aggregator sites does it monitor?</h3><p class="text-sm text-gray-500 leading-relaxed">The open-source project ships with scrapers for the most popular coupon sites, including Real.Discount, Discudemy, and Tutorialbar. New scrapers are contributed regularly by the community. You can check the GitHub repository for the current list.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How fast does enrollment happen after a coupon is posted?</h3><p class="text-sm text-gray-500 leading-relaxed">Typically under 2 seconds from detection to enrollment. Because the engine polls continuously and applies coupons programmatically via the API, it beats manual methods by orders of magnitude — reducing the chance of a coupon expiring before you claim it.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Does the tool work 24/7 without me being online?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. Once the engine is running (either locally or on a server), it operates continuously in the background. You do not need to keep a browser or tab open.</p></div>
+          </div>
         </div>
 
-        <!-- Cross-promotion Card -->
-        <div class="mt-16 bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center shadow-sm">
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">
-                Still have questions?
-            </h3>
-            <p class="text-sm text-gray-600 mb-6 max-w-md mx-auto font-light">
-                If you can't find what you're looking for, feel free to reach out or check the technical documentation.
-            </p>
-            <div class="flex justify-center gap-4">
-                <a href="https://madhudadi.in/blog" target="_blank"
-                    class="bg-white border border-gray-200 text-gray-900 px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm inline-flex items-center gap-1.5">
-                    Read the Blog <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                </a>
-                <a href="https://github.com/madhu2456" target="_blank"
-                    class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-                    GitHub Repo
-                </a>
+        <!-- Security & Privacy -->
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#EFF6FF] border border-blue-100">
+              <svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
             </div>
+            <h2 class="text-base font-semibold text-gray-900">Security & Privacy</h2>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Is it safe to connect my Udemy account?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. The tool talks directly to Udemy's official API. Your credentials are used only to obtain a session token — the same way the Udemy website itself works. No credentials are logged, persisted, or transmitted to any third-party server. Because the project is fully open source, you can audit every line of code on GitHub.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Does the tool store my email or password anywhere?</h3><p class="text-sm text-gray-500 leading-relaxed">No. When you use Email Login, your credentials are sent directly to the Udemy API and are not written to disk or any database. The session token returned is used for subsequent requests and expires on Udemy's schedule. Cookie Login avoids sending your password entirely.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">What data does the tool collect about me?</h3><p class="text-sm text-gray-500 leading-relaxed">None. The tool does not collect, store, or transmit personal data. It acts purely as a local automation layer between your browser session and the Udemy API.</p></div>
+          </div>
         </div>
-    </div>
-</section>
+
+        <!-- Authentication -->
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#EFF6FF] border border-blue-100">
+              <svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            </div>
+            <h2 class="text-base font-semibold text-gray-900">Authentication</h2>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">What is the difference between Email Login and Cookie Login?</h3><p class="text-sm text-gray-500 leading-relaxed">Email Login uses your Udemy email and password to authenticate via the Udemy API. It is the simplest option but may trigger a CAPTCHA challenge on server or cloud environments. Cookie Login uses session cookies you extract from your browser — specifically access_token, client_id, and csrftoken — which avoids CAPTCHA entirely and is the recommended method for reliability.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">I got a CSRF error with Email Login. What do I do?</h3><p class="text-sm text-gray-500 leading-relaxed">Switch to Cookie Login. A CSRF error typically means Udemy's anti-bot system flagged the login request coming from the server's IP address. Cookie Login bypasses this because the token was already issued by Udemy to your real browser session.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How do I extract my Udemy cookies for Cookie Login?</h3><p class="text-sm text-gray-500 leading-relaxed">Log in to udemy.com in Chrome or Firefox. Press F12 to open DevTools. Go to Application → Cookies → https://www.udemy.com. Find and copy the values for access_token, client_id, and csrftoken. Paste them into the Cookie Login form.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How long do my session cookies last before I need to refresh them?</h3><p class="text-sm text-gray-500 leading-relaxed">Udemy session cookies typically last 30–90 days. When the engine starts returning authentication errors, simply repeat the cookie extraction process from your browser and update the values.</p></div>
+          </div>
+        </div>
+
+        <!-- Smart Filters -->
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#EFF6FF] border border-blue-100">
+              <svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" /></svg>
+            </div>
+            <h2 class="text-base font-semibold text-gray-900">Smart Filters</h2>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Can I filter which courses are automatically enrolled?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. The smart filter system lets you define a minimum course rating (e.g. only 4.0+), a preferred language (e.g. English only), and a blocklist of instructor names to skip. Only courses that pass all your filters will be enrolled.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Can I exclude courses from a specific instructor?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. Add the instructor's name to your exclusion list and the engine will skip any course published by them, regardless of rating or language.</p></div>
+            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Will it enroll me in courses outside my preferred language?</h3><p class="text-sm text-gray-500 leading-relaxed">Only if you allow it. By setting a language filter, the engine will skip any course whose listed language does not match your preference.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Still have questions CTA -->
+      <div class="mt-12 bg-[#F9FAFB] rounded-xl border border-gray-200 p-8 text-center">
+        <p class="text-sm font-semibold text-gray-900 mb-1">Still have a question?</p>
+        <p class="text-sm text-gray-500 mb-5">Open an issue on GitHub or check the guides for step-by-step walkthroughs.</p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a href="https://github.com/madhu2456/udemy_enroller_fastapi/issues" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-4 py-2 text-xs font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors duration-150">Open a GitHub Issue</a>
+          <a href="/guides" class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150">Browse Guides →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
 {% endblock %}
