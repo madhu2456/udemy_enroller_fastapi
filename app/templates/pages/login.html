@@ -33,9 +33,9 @@
 
         <div class="flex flex-col items-center gap-4">
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
-                <a href="#connect" class="w-full sm:w-auto bg-blue-600 text-white px-8 py-3.5 rounded-full font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                    Connect Session
-                    <i data-lucide="chevron-right" class="w-4.5 h-4.5"></i>
+                <a href="#architecture" class="w-full sm:w-auto bg-blue-600 text-white px-8 py-3.5 rounded-full font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                    View Architecture
+                    <i data-lucide="chevron-down" class="w-4.5 h-4.5"></i>
                 </a>
                 <span class="bg-white border border-gray-200 rounded-full px-5 py-2 text-xs text-gray-700 inline-flex items-center justify-center gap-1.5 font-medium shadow-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
@@ -88,128 +88,101 @@
     </div>
 </section>
 
-<!-- Connect Section -->
-<section id="connect" class="py-24 bg-white">
-    <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12">
-            <h2 class="text-3xl font-semibold tracking-tight text-gray-900 mb-4">Connect Account</h2>
-            <p class="text-gray-500 text-sm">Choose your preferred connection method below.</p>
-        </div>
-
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <!-- Tabs -->
-            <div class="flex border-b border-gray-200 px-6 bg-gray-50">
-                <button id="tab-email" onclick="switchTab('email')" 
-                    class="pb-3 pt-5 text-sm font-medium transition-all border-b-2 -mb-[1px] px-4 text-gray-500 border-transparent hover:text-gray-700">
-                    Credential Auth
-                </button>
-                <button id="tab-cookies" onclick="switchTab('cookies')" 
-                    class="pb-3 pt-5 text-sm font-medium transition-all border-b-2 -mb-[1px] px-4 text-gray-500 border-transparent hover:text-gray-700">
-                    Session Auth
-                </button>
+<!-- Architecture & Demo Section -->
+<section id="architecture" class="py-24 bg-white border-b border-gray-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Architecture Overview -->
+        <div class="mb-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-semibold tracking-tight text-gray-900 mb-4">Architecture Overview</h2>
+                <p class="text-gray-500 text-lg font-light">High-throughput orchestration components powering the case study.</p>
             </div>
-
-            <div class="p-8">
-                <!-- Email Login Form -->
-                <form id="email-form" class="hidden space-y-6" onsubmit="loginWithEmail(event)">
-                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3">
-                        <i data-lucide="info" class="text-blue-600 w-5 h-5 flex-shrink-0"></i>
-                        <p class="text-xs text-blue-800 leading-relaxed">
-                            Credential authentication demonstrates stateless API login flows. For robust server deployments, <strong>Session Auth</strong> is recommended.
-                        </p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                        <i data-lucide="server" class="w-6 h-6"></i>
                     </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Email Address</label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i data-lucide="mail" class="text-gray-400 w-4 h-4"></i>
-                                </div>
-                                <input type="email" id="email" required placeholder="name@example.com" 
-                                    class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Password</label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i data-lucide="lock" class="text-gray-400 w-4 h-4"></i>
-                                </div>
-                                <input type="password" id="password" required placeholder="••••••••" 
-                                    class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all">
-                            </div>
-                        </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">FastAPI Gateway</h4>
+                    <p class="text-sm text-gray-500 font-light">Asynchronous API endpoints handling HTTP requests and SSE telemetry streams.</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                        <i data-lucide="layers" class="w-6 h-6"></i>
                     </div>
-
-                    <button type="submit" id="login-btn-email" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                        Connect Account
-                        <i data-lucide="chevron-right" class="w-[18px] h-[18px]"></i>
-                    </button>
-                </form>
-
-                <!-- Cookie Login Form -->
-                <form id="cookies-form" class="space-y-6" onsubmit="loginWithCookies(event)">
-                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-2">
-                        <h4 class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                            <i data-lucide="info" class="text-blue-600 w-4 h-4"></i>
-                            Session Authentication Flow:
-                        </h4>
-                        <ol class="list-decimal list-inside text-xs text-blue-800 space-y-1">
-                            <li>Authenticate via external identity provider</li>
-                            <li>Extract session tokens from application state</li>
-                            <li>Provide tokens for secure workflow orchestration</li>
-                        </ol>
+                    <h4 class="font-semibold text-gray-900 mb-2">Celery Worker Queue</h4>
+                    <p class="text-sm text-gray-500 font-light">Distributes long-running workflow processes across multiple horizontal worker nodes.</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                        <i data-lucide="database" class="w-6 h-6"></i>
                     </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">access_token</label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i data-lucide="cookie" class="text-gray-400 w-4 h-4"></i>
-                                </div>
-                                <input type="text" id="access_token" required placeholder="Paste access_token here" 
-                                    class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all font-mono">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">client_id</label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i data-lucide="cookie" class="text-gray-400 w-4 h-4"></i>
-                                </div>
-                                <input type="text" id="client_id" required placeholder="Paste client_id here" 
-                                    class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all font-mono">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">csrftoken</label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i data-lucide="cookie" class="text-gray-400 w-4 h-4"></i>
-                                </div>
-                                <input type="text" id="csrf_token" required placeholder="Paste csrftoken here" 
-                                    class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all font-mono">
-                            </div>
-                        </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Redis Broker</h4>
+                    <p class="text-sm text-gray-500 font-light">High-throughput message broker coordinating sub-tasks between FastAPI and Celery.</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                        <i data-lucide="hard-drive" class="w-6 h-6"></i>
                     </div>
-
-                    <button type="submit" id="login-btn-cookie" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                        Connect via Session
-                        <i data-lucide="chevron-right" class="w-[18px] h-[18px]"></i>
-                    </button>
-                </form>
-
-                <!-- Status Message -->
-                <div id="login-message" class="mt-6 text-center text-sm font-medium hidden"></div>
+                    <h4 class="font-semibold text-gray-900 mb-2">PostgreSQL Records</h4>
+                    <p class="text-sm text-gray-500 font-light">Persistent relational storage for application state, run telemetry, and logs.</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                        <i data-lucide="monitor" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Playwright Runner</h4>
+                    <p class="text-sm text-gray-500 font-light">Headless browser automation engine executing dynamic, obfuscated workflows.</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                        <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">SSE Telemetry</h4>
+                    <p class="text-sm text-gray-500 font-light">Real-time Server-Sent Events propagating asynchronous task status to the frontend.</p>
+                </div>
             </div>
         </div>
-        <div class="text-center mt-6">
-            <p class="text-[11px] text-gray-400 font-light">
+
+        <!-- Demo Mode & What it Demonstrates -->
+        <div class="bg-blue-50 border border-blue-200 rounded-2xl p-8 md:p-12 shadow-sm text-center relative overflow-hidden">
+            <!-- Decorative Background Element -->
+            <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-100 rounded-full opacity-50 pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-blue-100 rounded-full opacity-50 pointer-events-none"></div>
+
+            <div class="relative z-10">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white mb-6 shadow-md">
+                    <i data-lucide="play-circle" class="w-6 h-6"></i>
+                </div>
+                <h2 class="text-2xl font-semibold tracking-tight text-gray-900 mb-4">Demo Mode</h2>
+                <p class="text-blue-900 text-lg mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+                    This public demo uses mocked workflow events and <strong class="font-medium text-blue-700">does not</strong> collect credentials, passwords, cookies, tokens, or third-party account data.
+                </p>
+
+                <h3 class="text-sm uppercase tracking-widest font-semibold text-blue-800 mb-6">What This Demonstrates</h3>
+                <div class="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+                    <span class="bg-white border border-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-blue-500"></i> Async task queue orchestration
+                    </span>
+                    <span class="bg-white border border-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-blue-500"></i> Controlled worker concurrency
+                    </span>
+                    <span class="bg-white border border-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-blue-500"></i> Secure session-state design patterns
+                    </span>
+                    <span class="bg-white border border-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-blue-500"></i> Telemetry logging
+                    </span>
+                    <span class="bg-white border border-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-blue-500"></i> Background processing
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-12">
+            <p class="text-[11px] text-gray-400 font-light tracking-wide">
                 Educational case study. Not affiliated with Udemy, Inc.
             </p>
         </div>
@@ -219,143 +192,6 @@
 
 {% block scripts %}
 <script>
-function switchTab(tab) {
-    const emailForm = document.getElementById('email-form');
-    const cookiesForm = document.getElementById('cookies-form');
-    const tabEmail = document.getElementById('tab-email');
-    const tabCookies = document.getElementById('tab-cookies');
-
-    const activeClasses = 'pb-3 pt-5 text-sm font-medium transition-all border-b-2 -mb-[1px] px-4 text-gray-900 border-blue-600';
-    const inactiveClasses = 'pb-3 pt-5 text-sm font-medium transition-all border-b-2 -mb-[1px] px-4 text-gray-500 border-transparent hover:text-gray-700';
-
-    if (tab === 'email') {
-        emailForm.classList.remove('hidden');
-        cookiesForm.classList.add('hidden');
-        tabEmail.className = activeClasses;
-        tabCookies.className = inactiveClasses;
-    } else {
-        emailForm.classList.add('hidden');
-        cookiesForm.classList.remove('hidden');
-        tabCookies.className = activeClasses;
-        tabEmail.className = inactiveClasses;
-    }
-}
-
-// Default to Cookies tab
-window.addEventListener('DOMContentLoaded', () => {
-    switchTab('cookies');
-});
-
-function isLoginSuccess(data) {
-    return !!data && (data.success === true || data.status === 'success');
-}
-
-async function loginWithEmail(e) {
-    e.preventDefault();
-    showMessage('Connecting to Udemy...', 'blue');
-    const btn = document.getElementById('login-btn-email');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Connecting...</span>';
-
-    try {
-        const resp = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value
-            })
-        });
-        const data = await resp.json();
-        if (isLoginSuccess(data)) {
-            window.csrfToken = data.csrf_token || null;
-            if (data.csrf_token) {
-                try {
-                    localStorage.setItem('csrf_token', data.csrf_token);
-                } catch (e) {
-                    console.warn('Error writing to localStorage:', e);
-                }
-            }
-            showMessage(`Welcome, ${data.display_name}! Redirecting...`, 'green');
-            setTimeout(() => window.location.href = '/dashboard', 1000);
-        } else {
-            showMessage(data.message || data.detail || 'Connection failed', 'red');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    } catch (err) {
-        showMessage('Connection error. Please try again.', 'red');
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
-}
-
-async function loginWithCookies(e) {
-    e.preventDefault();
-    showMessage('Validating session...', 'blue');
-    const btn = document.getElementById('login-btn-cookie');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Validating...</span>';
-
-    try {
-        const resp = await fetch('/api/auth/login/cookies', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                access_token: document.getElementById('access_token').value,
-                client_id: document.getElementById('client_id').value,
-                csrf_token: document.getElementById('csrf_token').value
-            })
-        });
-        const data = await resp.json();
-        if (isLoginSuccess(data)) {
-            window.csrfToken = data.csrf_token || null;
-            if (data.csrf_token) {
-                try {
-                    localStorage.setItem('csrf_token', data.csrf_token);
-                } catch (e) {
-                    console.warn('Error writing to localStorage:', e);
-                }
-            }
-            showMessage(`Welcome back, ${data.display_name}! Redirecting...`, 'green');
-            setTimeout(() => window.location.href = '/dashboard', 1000);
-        } else {
-            showMessage(data.message || data.detail || 'Session validation failed', 'red');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    } catch (err) {
-        showMessage('Connection error. Please try again.', 'red');
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
-}
-
-function showMessage(msg, color) {
-    const el = document.getElementById('login-message');
-    let colorClass = '';
-    let bgClass = '';
-    let borderClass = '';
-    
-    if (color === 'green') {
-        colorClass = 'text-green-800';
-        bgClass = 'bg-green-50';
-        borderClass = 'border-green-200';
-    } else if (color === 'red') {
-        colorClass = 'text-red-800';
-        bgClass = 'bg-red-50';
-        borderClass = 'border-red-200';
-    } else {
-        colorClass = 'text-blue-800';
-        bgClass = 'bg-blue-50';
-        borderClass = 'border-blue-200';
-    }
-    
-    el.className = `mt-6 text-center text-sm font-medium rounded-lg p-3 border ${colorClass} ${bgClass} ${borderClass}`;
-    el.textContent = msg;
-    el.classList.remove('hidden');
-}
+<!-- Scripts removed due to static demo mode -->
 </script>
 {% endblock %}
