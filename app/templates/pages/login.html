@@ -210,7 +210,7 @@
     </section>
 
     <!-- FAQ -->
-    <section class="border-t border-gray-200 bg-[#F9FAFB]" aria-labelledby="faq-heading">
+    <section class="border-t border-gray-200 bg-[#F9FAFB]" aria-labelledby="faq-heading" itemscope itemtype="https://schema.org/FAQPage">
       <div class="max-w-6xl mx-auto px-6 py-16">
         <div class="max-w-2xl mx-auto">
           <div class="mb-8">
@@ -218,12 +218,42 @@
             <p class="text-sm text-gray-500">Everything you need to know about the Udemy Enroller tool.</p>
           </div>
           <div class="bg-white rounded-xl border border-gray-200 px-6">
-            <div class="border-b border-gray-200 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How does the automated Udemy course enroller work?</h3><p class="text-sm text-gray-500 leading-relaxed">The tool monitors popular coupon aggregator websites in real time. When a valid 100% off Udemy coupon is detected, it automatically applies it to your account and enrolls you in the course — no manual steps required.</p></div>
-            <div class="border-b border-gray-200 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Is it safe to connect my Udemy account?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. The tool integrates directly with Udemy's API and only uses your credentials to generate a temporary authentication token. Your email and password are never stored on any server. Cookie Login is available as an alternative if you prefer not to share your password.</p></div>
-            <div class="border-b border-gray-200 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">What is the difference between Email Login and Cookie Login?</h3><p class="text-sm text-gray-500 leading-relaxed">Email Login uses your Udemy email and password to authenticate, but may trigger a CAPTCHA on server environments. Cookie Login uses three session cookies extracted from your browser (access_token, client_id, csrftoken), which bypasses CAPTCHA and is generally more reliable.</p></div>
-            <div class="border-b border-gray-200 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How do I get free Udemy courses with 100% off coupons?</h3><p class="text-sm text-gray-500 leading-relaxed">Connect your Udemy account using Email or Cookie Login, configure your smart filters (minimum rating, language, excluded instructors), and start the engine. It will automatically find and apply 100% off coupons to enroll you in free courses.</p></div>
-            <div class="border-b border-gray-200 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Is the Udemy Enroller free and open source?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. The Udemy Enroller is completely free and open source. The full source code is available on GitHub. Starring the repository helps support development and ensures you get new scraper updates.</p></div>
-            <div class="py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Can I filter which Udemy courses are enrolled automatically?</h3><p class="text-sm text-gray-500 leading-relaxed">Absolutely. The smart filter system lets you set a minimum course rating, preferred language, and a blocklist of instructors to skip. Only courses matching your criteria will be enrolled.</p></div>
+            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How does the automated Udemy course enroller work?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">The tool monitors popular coupon aggregator websites in real time. When a valid 100% off Udemy coupon is detected, it automatically applies it to your account and enrolls you in the course — no manual steps required.</p>
+              </div>
+            </div>
+            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Is it safe to connect my Udemy account?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. The tool integrates directly with Udemy's API and only uses your credentials to generate a temporary authentication token. Your email and password are never stored on any server. Cookie Login is available as an alternative if you prefer not to share your password.</p>
+              </div>
+            </div>
+            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">What is the difference between Email Login and Cookie Login?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Email Login uses your Udemy email and password to authenticate, but may trigger a CAPTCHA on server environments. Cookie Login uses three session cookies extracted from your browser (access_token, client_id, csrftoken), which bypasses CAPTCHA and is generally more reliable.</p>
+              </div>
+            </div>
+            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How do I get free Udemy courses with 100% off coupons?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Connect your Udemy account using Email or Cookie Login, configure your smart filters (minimum rating, language, excluded instructors), and start the engine. It will automatically find and apply 100% off coupons to enroll you in free courses.</p>
+              </div>
+            </div>
+            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Is the Udemy Enroller free and open source?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. The Udemy Enroller is completely free and open source. The full source code is available on GitHub. Starring the repository helps support development and ensures you get new scraper updates.</p>
+              </div>
+            </div>
+            <div class="py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Can I filter which Udemy courses are enrolled automatically?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Absolutely. The smart filter system lets you set a minimum course rating, preferred language, and a blocklist of instructors to skip. Only courses matching your criteria will be enrolled.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

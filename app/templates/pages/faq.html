@@ -23,7 +23,7 @@
 
     <!-- FAQ Categories -->
     <section class="max-w-6xl mx-auto px-6 pb-20">
-      <div class="space-y-10">
+      <div class="space-y-10" itemscope itemtype="https://schema.org/FAQPage">
         <!-- How it Works -->
         <div>
           <div class="flex items-center gap-2 mb-4">
@@ -33,10 +33,22 @@
             <h2 class="text-base font-semibold text-gray-900">How it Works</h2>
           </div>
           <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How does the automated Udemy course enroller work?</h3><p class="text-sm text-gray-500 leading-relaxed">The tool continuously monitors a curated list of coupon aggregator websites — sites like Real.Discount, Discudemy, Tutorialbar, and others. The moment a new 100% off Udemy coupon is detected, the engine validates it against your smart filters and applies it to your Udemy account via the Udemy API, enrolling you instantly without any manual action.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Which coupon aggregator sites does it monitor?</h3><p class="text-sm text-gray-500 leading-relaxed">The open-source project ships with scrapers for the most popular coupon sites, including Real.Discount, Discudemy, and Tutorialbar. New scrapers are contributed regularly by the community. You can check the GitHub repository for the current list.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How fast does enrollment happen after a coupon is posted?</h3><p class="text-sm text-gray-500 leading-relaxed">Typically under 2 seconds from detection to enrollment. Because the engine polls continuously and applies coupons programmatically via the API, it beats manual methods by orders of magnitude — reducing the chance of a coupon expiring before you claim it.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Does the tool work 24/7 without me being online?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. Once the engine is running (either locally or on a server), it operates continuously in the background. You do not need to keep a browser or tab open.</p></div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How does the automated Udemy course enroller work?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">The tool continuously monitors a curated list of coupon aggregator websites — sites like Real.Discount, Discudemy, Tutorialbar, and others. The moment a new 100% off Udemy coupon is detected, the engine validates it against your smart filters and applies it to your Udemy account via the Udemy API, enrolling you instantly without any manual action.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Which coupon aggregator sites does it monitor?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">The open-source project ships with scrapers for the most popular coupon sites, including Real.Discount, Discudemy, and Tutorialbar. New scrapers are contributed regularly by the community. You can check the GitHub repository for the current list.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How fast does enrollment happen after a coupon is posted?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Typically under 2 seconds from detection to enrollment. Because the engine polls continuously and applies coupons programmatically via the API, it beats manual methods by orders of magnitude — reducing the chance of a coupon expiring before you claim it.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Does the tool work 24/7 without me being online?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. Once the engine is running (either locally or on a server), it operates continuously in the background. You do not need to keep a browser or tab open.</p></div>
+            </div>
           </div>
         </div>
 
@@ -49,9 +61,18 @@
             <h2 class="text-base font-semibold text-gray-900">Security & Privacy</h2>
           </div>
           <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Is it safe to connect my Udemy account?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. The tool talks directly to Udemy's official API. Your credentials are used only to obtain a session token — the same way the Udemy website itself works. No credentials are logged, persisted, or transmitted to any third-party server. Because the project is fully open source, you can audit every line of code on GitHub.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Does the tool store my email or password anywhere?</h3><p class="text-sm text-gray-500 leading-relaxed">No. When you use Email Login, your credentials are sent directly to the Udemy API and are not written to disk or any database. The session token returned is used for subsequent requests and expires on Udemy's schedule. Cookie Login avoids sending your password entirely.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">What data does the tool collect about me?</h3><p class="text-sm text-gray-500 leading-relaxed">None. The tool does not collect, store, or transmit personal data. It acts purely as a local automation layer between your browser session and the Udemy API.</p></div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Is it safe to connect my Udemy account?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. The tool talks directly to Udemy's official API. Your credentials are used only to obtain a session token — the same way the Udemy website itself works. No credentials are logged, persisted, or transmitted to any third-party server. Because the project is fully open source, you can audit every line of code on GitHub.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Does the tool store my email or password anywhere?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">No. When you use Email Login, your credentials are sent directly to the Udemy API and are not written to disk or any database. The session token returned is used for subsequent requests and expires on Udemy's schedule. Cookie Login avoids sending your password entirely.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">What data does the tool collect about me?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">None. The tool does not collect, store, or transmit personal data. It acts purely as a local automation layer between your browser session and the Udemy API.</p></div>
+            </div>
           </div>
         </div>
 
@@ -64,10 +85,22 @@
             <h2 class="text-base font-semibold text-gray-900">Authentication</h2>
           </div>
           <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">What is the difference between Email Login and Cookie Login?</h3><p class="text-sm text-gray-500 leading-relaxed">Email Login uses your Udemy email and password to authenticate via the Udemy API. It is the simplest option but may trigger a CAPTCHA challenge on server or cloud environments. Cookie Login uses session cookies you extract from your browser — specifically access_token, client_id, and csrftoken — which avoids CAPTCHA entirely and is the recommended method for reliability.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">I got a CSRF error with Email Login. What do I do?</h3><p class="text-sm text-gray-500 leading-relaxed">Switch to Cookie Login. A CSRF error typically means Udemy's anti-bot system flagged the login request coming from the server's IP address. Cookie Login bypasses this because the token was already issued by Udemy to your real browser session.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How do I extract my Udemy cookies for Cookie Login?</h3><p class="text-sm text-gray-500 leading-relaxed">Log in to udemy.com in Chrome or Firefox. Press F12 to open DevTools. Go to Application → Cookies → https://www.udemy.com. Find and copy the values for access_token, client_id, and csrftoken. Paste them into the Cookie Login form.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">How long do my session cookies last before I need to refresh them?</h3><p class="text-sm text-gray-500 leading-relaxed">Udemy session cookies typically last 30–90 days. When the engine starts returning authentication errors, simply repeat the cookie extraction process from your browser and update the values.</p></div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">What is the difference between Email Login and Cookie Login?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Email Login uses your Udemy email and password to authenticate via the Udemy API. It is the simplest option but may trigger a CAPTCHA challenge on server or cloud environments. Cookie Login uses session cookies you extract from your browser — specifically access_token, client_id, and csrftoken — which avoids CAPTCHA entirely and is the recommended method for reliability.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">I got a CSRF error with Email Login. What do I do?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Switch to Cookie Login. A CSRF error typically means Udemy's anti-bot system flagged the login request coming from the server's IP address. Cookie Login bypasses this because the token was already issued by Udemy to your real browser session.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How do I extract my Udemy cookies for Cookie Login?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Log in to udemy.com in Chrome or Firefox. Press F12 to open DevTools. Go to Application → Cookies → https://www.udemy.com. Find and copy the values for access_token, client_id, and csrftoken. Paste them into the Cookie Login form.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How long do my session cookies last before I need to refresh them?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Udemy session cookies typically last 30–90 days. When the engine starts returning authentication errors, simply repeat the cookie extraction process from your browser and update the values.</p></div>
+            </div>
           </div>
         </div>
 
@@ -80,9 +113,18 @@
             <h2 class="text-base font-semibold text-gray-900">Smart Filters</h2>
           </div>
           <div class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Can I filter which courses are automatically enrolled?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. The smart filter system lets you define a minimum course rating (e.g. only 4.0+), a preferred language (e.g. English only), and a blocklist of instructor names to skip. Only courses that pass all your filters will be enrolled.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Can I exclude courses from a specific instructor?</h3><p class="text-sm text-gray-500 leading-relaxed">Yes. Add the instructor's name to your exclusion list and the engine will skip any course published by them, regardless of rating or language.</p></div>
-            <div class="px-6 py-5"><h3 class="text-sm font-semibold text-gray-900 mb-2">Will it enroll me in courses outside my preferred language?</h3><p class="text-sm text-gray-500 leading-relaxed">Only if you allow it. By setting a language filter, the engine will skip any course whose listed language does not match your preference.</p></div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Can I filter which courses are automatically enrolled?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. The smart filter system lets you define a minimum course rating (e.g. only 4.0+), a preferred language (e.g. English only), and a blocklist of instructor names to skip. Only courses that pass all your filters will be enrolled.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Can I exclude courses from a specific instructor?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. Add the instructor's name to your exclusion list and the engine will skip any course published by them, regardless of rating or language.</p></div>
+            </div>
+            <div class="px-6 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Will it enroll me in courses outside my preferred language?</h3>
+              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer"><p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Only if you allow it. By setting a language filter, the engine will skip any course whose listed language does not match your preference.</p></div>
+            </div>
           </div>
         </div>
       </div>
