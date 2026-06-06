@@ -1,0 +1,17 @@
+diff --git a/dist/utils/environment.js b/dist/utils/environment.js
+index 7c5d453..8457e4b 100644
+--- a/dist/utils/environment.js
++++ b/dist/utils/environment.js
+@@ -31,6 +31,12 @@ exports.shouldUseBrowserMode = shouldUseBrowserMode;
+  * Detects if the app is running in Expo Go
+  */
+ function isExpoGo() {
++    if (!__DEV__) {
++        return false;
++    }
++    if (globalThis.expo && globalThis.expo.modules && globalThis.expo.modules.AnythingLauncherModule) {
++      return true;
++    }
+     var _a, _b;
+     if (!!react_native_1.NativeModules.RNPurchases) {
+         return false;

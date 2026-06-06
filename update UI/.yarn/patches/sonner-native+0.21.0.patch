@@ -1,0 +1,43 @@
+diff --git a/lib/commonjs/positioner.js b/lib/commonjs/positioner.js
+index cac0f68..ec816b7 100644
+--- a/lib/commonjs/positioner.js
++++ b/lib/commonjs/positioner.js
+@@ -55,8 +55,12 @@ const Positioner = ({
+     return {};
+   }, [position, bottom, top, offset]);
+   return /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
++    ...(_reactNative.Platform.OS === 'web' ? {
++    style: [{ pointerEvents: 'box-none' }, containerStyle, insetValues, style],
++    } :{
+     style: [containerStyle, insetValues, style],
+     pointerEvents: "box-none",
++    }),
+     ...props,
+     children: children
+   });
+diff --git a/lib/module/positioner.js b/lib/module/positioner.js
+index 476f6bb..40f1968 100644
+--- a/lib/module/positioner.js
++++ b/lib/module/positioner.js
+@@ -1,7 +1,7 @@
+ "use strict";
+ 
+ import React from 'react';
+-import { View } from 'react-native';
++import { View, Platform } from 'react-native';
+ import { useSafeAreaInsets } from 'react-native-safe-area-context';
+ import { useToastContext } from "./context.js";
+ import { jsx as _jsx } from "react/jsx-runtime";
+@@ -50,8 +50,12 @@ export const Positioner = ({
+     return {};
+   }, [position, bottom, top, offset]);
+   return /*#__PURE__*/_jsx(View, {
++...(Platform.OS === 'web' ? {
++    style: [{ pointerEvents: 'box-none' }, containerStyle, insetValues, style],
++    } :{
+     style: [containerStyle, insetValues, style],
+     pointerEvents: "box-none",
++    }),
+     ...props,
+     children: children
+   });

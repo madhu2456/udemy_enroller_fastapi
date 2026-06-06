@@ -1,0 +1,35 @@
+# Applied when EAS bundles the workspace root for an iOS build of apps/mobile
+# (see apps/flux/core/src/services/interactive-terminal/create-shell.ts).
+# Keep yarn-workspace context (root package.json, yarn.lock, .yarnrc.yml,
+# .yarn/patches/) and apps/mobile/ — exclude everything else so EAS uploads
+# stay small.
+
+node_modules/
+**/node_modules/
+.yarn/cache/
+.yarn/install-state.gz
+.yarn/unplugged/
+
+apps/web/
+
+config/
+shared/
+examples/
+playwright-report/
+test-results/
+caches/
+
+Dockerfile
+docker-compose.test.yml
+README.md
+.dockerignore
+.eslintignore
+.gitignore
+.oxfmtrc.json
+.oxlintrc.json
+
+*.log
+*.tgz
+.env
+.env.*
+.DS_Store

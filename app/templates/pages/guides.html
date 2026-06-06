@@ -1,183 +1,328 @@
 {% extends "components/base.html" %}
-{% block title %}Architecture & Workflow Guides{% endblock %}
-{% block meta_title %}Architecture & Workflow Guides{% endblock %}
-{% block meta_description %}Technical guides for the production architecture behind Udemy Enroller.{% endblock %}
-
-{% block og_title %}Architecture & Workflow Guides{% endblock %}
-{% block og_description %}Technical guides for the production architecture behind Udemy Enroller.{% endblock %}
-
-{% block twitter_title %}Architecture & Workflow Guides{% endblock %}
-{% block twitter_description %}Technical guides for the production architecture behind Udemy Enroller.{% endblock %}
+{% block title %}Guides – Udemy Enroller{% endblock %}
+{% block meta_title %}Guides – Udemy Enroller{% endblock %}
+{% block meta_description %}Step-by-step guides for setting up the Udemy Enroller — from connecting your account and extracting cookies to configuring smart filters and running on a server.{% endblock %}
 
 {% block content %}
-<!-- Breadcrumb -->
-<nav aria-label="Breadcrumb" class="text-sm text-gray-400 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-    <ol class="flex items-center space-x-2" itemscope itemtype="https://schema.org/BreadcrumbList">
-        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            <a href="/" itemprop="item" class="hover:text-blue-600 transition-colors"><span itemprop="name">Home</span></a>
-            <meta itemprop="position" content="1" />
-        </li>
-        <li class="text-gray-400">/</li>
-        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-            <span itemprop="name" class="text-gray-600">Guides</span>
-            <meta itemprop="position" content="2" />
-        </li>
-    </ol>
-</nav>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  "name": "Udemy Enroller Architecture Guides",
-  "url": "https://udemyenroller.madhudadi.in/guides",
-  "description": "Technical guides for the production architecture behind Udemy Enroller.",
-  "mainEntity": {
-    "@type": "ItemList",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "System Architecture Overview",
-        "url": "https://udemyenroller.madhudadi.in/guides#getting-started"
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": "Session State Management",
-        "url": "https://udemyenroller.madhudadi.in/guides#cookie-login"
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
-        "name": "Data Pipeline & Telemetry",
-        "url": "https://udemyenroller.madhudadi.in/guides#advanced-filtering"
-      }
-    ]
-  }
-}
-</script>
-
-<!-- Hero Section -->
-<section class="py-16 md:py-24 bg-[#F9FAFB] border-b border-gray-200">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 class="text-4xl font-semibold tracking-tight text-gray-900 mb-4">
-            Architecture & Workflow Guides
+<div class="min-h-screen bg-white text-gray-900">
+  <main>
+    <!-- Hero -->
+    <section class="max-w-6xl mx-auto px-6 pt-14 pb-10" aria-labelledby="guides-hero-heading">
+      <div class="max-w-2xl">
+        <span class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1 text-xs font-medium mb-4">
+          Documentation
+        </span>
+        <h1 id="guides-hero-heading" class="text-3xl font-semibold text-gray-900 tracking-tight mb-3">
+          Guides & Walkthroughs
         </h1>
-        <p class="text-lg text-gray-500 leading-relaxed font-light">
-            Technical guides for the production architecture behind Udemy Enroller.
+        <p class="text-sm text-gray-500 leading-relaxed">
+          Step-by-step instructions for every part of the Udemy Enroller — from connecting your account in 5 minutes to deploying on a 24/7 cloud server.
         </p>
-    </div>
-</section>
+      </div>
+    </section>
 
-<!-- Guides List -->
-<section class="py-20 bg-white">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Getting Started Guide -->
-        <div id="getting-started" class="bg-white rounded-xl border border-gray-200 p-8 hover:border-gray-300 transition-colors shadow-sm mb-8">
-            <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                <div class="flex-grow">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                            <i data-lucide="rocket" class="text-blue-600 w-5 h-5"></i>
-                        </div>
-                        <span class="bg-blue-50 text-blue-600 rounded-full px-3 py-1 text-xs font-semibold">
-                            Beginner Friendly
-                        </span>
-                    </div>
-                    <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        System Architecture Overview
-                    </h2>
-                    <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        Udemy Enroller uses FastAPI to coordinate asynchronous enrollment workflow runs, Celery and Redis for background processing, PostgreSQL for durable workflow records, SQLAlchemy for transactional persistence, Playwright for browser-workflow orchestration, and SSE for real-time telemetry.
-                    </p>
-                </div>
+    <!-- Guides list -->
+    <section class="max-w-6xl mx-auto px-6 pb-20">
+      <div class="space-y-16">
+        
+        <!-- Guide 1: Get Started -->
+        <article id="get-started" aria-labelledby="guide-get-started">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-400 font-mono">01</span>
+              <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">
+                Beginner
+              </span>
             </div>
-        </div>
+            <span class="text-xs text-gray-400">5 min read</span>
+          </div>
+          <h2 id="guide-get-started" class="text-xl font-semibold text-gray-900 tracking-tight mb-1">Get Started in 5 Minutes</h2>
+          <p class="text-sm text-gray-500 mb-6">Connect your Udemy account and claim your first batch of free courses automatically.</p>
+          <ol class="space-y-0">
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">1</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Open the Connect section</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Scroll to the "Connect Your Account" section on the homepage, or click "Get Started" in the top nav.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">2</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Choose Email Login</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">For the quickest setup, enter your Udemy email and password. If you encounter a CAPTCHA or CSRF error, switch to Cookie Login (see the Cookie Login guide below).</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">3</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Click Connect Account</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">The engine will authenticate with the Udemy API and begin monitoring coupon sites immediately. No further action is required.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">4</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Wait for the first enrollments</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Within minutes, the engine will start finding and applying 100% off coupons. Check your Udemy dashboard to see new courses appearing in "My Learning".</p>
+              </div>
+            </li>
+          </ol>
+          <div class="border-b border-gray-200 mt-2"></div>
+        </article>
 
-        <!-- Cookie Login Tutorial -->
-        <div id="cookie-login" class="bg-white rounded-xl border border-gray-200 p-8 hover:border-gray-300 transition-colors shadow-sm mb-8">
-            <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                <div class="flex-grow">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                            <i data-lucide="cookie" class="text-blue-600 w-5 h-5"></i>
-                        </div>
-                    </div>
-                    <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Session-State Handling
-                    </h2>
-                    <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        Udemy Enroller is designed around secure, user-authorized session-state handling. Sensitive authentication data should be protected through encryption, access controls, environment isolation, and short-lived credentials where possible.
-                    </p>
-                </div>
+        <!-- Guide 2: Cookie Login -->
+        <article id="cookie-login" aria-labelledby="guide-cookie-login">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-400 font-mono">02</span>
+              <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+                Authentication
+              </span>
             </div>
-        </div>
+            <span class="text-xs text-gray-400">4 min read</span>
+          </div>
+          <h2 id="guide-cookie-login" class="text-xl font-semibold text-gray-900 tracking-tight mb-1">How to Use Cookie Login</h2>
+          <p class="text-sm text-gray-500 mb-6">The most reliable way to authenticate — bypasses CAPTCHA and works on any server environment.</p>
+          <ol class="space-y-0">
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">1</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Log in to Udemy in your browser</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Open Chrome or Firefox and sign in to udemy.com with your account.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">2</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Open DevTools</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Press F12 (or Cmd+Option+I on Mac) to open Browser Developer Tools.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">3</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Navigate to the Cookies panel</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Click the "Application" tab at the top of DevTools. In the left sidebar, expand "Cookies" and click on "https://www.udemy.com".</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">4</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Copy the three cookie values</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Find and copy the value (not the name) of each of these three cookies:</p>
+                <pre class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed">access_token
+client_id
+csrftoken</pre>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">5</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Paste into the Cookie Login form</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Switch to the Cookie Login tab on the Connect form. Paste each value into its corresponding field and click Connect Account.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">6</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Refreshing cookies when they expire</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Udemy cookies typically last 30–90 days. When you see authentication errors, repeat this process to get fresh cookies.</p>
+              </div>
+            </li>
+          </ol>
+          <div class="border-b border-gray-200 mt-2"></div>
+        </article>
 
-        <!-- Advanced Filtering Guide -->
-        <div id="advanced-filtering" class="bg-white rounded-xl border border-gray-200 p-8 hover:border-gray-300 transition-colors shadow-sm mb-8">
-            <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                <div class="flex-grow">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                            <i data-lucide="target" class="text-blue-600 w-5 h-5"></i>
-                        </div>
-                    </div>
-                    <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Data Pipeline & Telemetry
-                    </h2>
-                    <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        The platform validates workflow inputs, applies filtering rules, records task outcomes, and streams isolated execution logs through Server-Sent Events.
-                    </p>
-                </div>
+        <!-- Guide 3: Smart Filters -->
+        <article id="smart-filters" aria-labelledby="guide-smart-filters">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-400 font-mono">03</span>
+              <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200">
+                Configuration
+              </span>
             </div>
-        </div>
+            <span class="text-xs text-gray-400">3 min read</span>
+          </div>
+          <h2 id="guide-smart-filters" class="text-xl font-semibold text-gray-900 tracking-tight mb-1">Configuring Smart Filters</h2>
+          <p class="text-sm text-gray-500 mb-6">Control exactly which courses get enrolled — by rating, language, and instructor.</p>
+          <ol class="space-y-0">
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">1</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Set a minimum course rating</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Filter out low-quality courses by setting a minimum star rating. For example, setting 4.0 means only courses rated 4.0 stars or higher will be enrolled.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">2</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Choose preferred languages</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Specify one or more languages (e.g. English, Hindi) to ensure you only enroll in courses you can understand. The engine will skip courses listed in other languages.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">3</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Block specific instructors</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Add instructor names to your exclusion list. Any course published by a blocked instructor will be skipped, regardless of rating or language.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">4</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Save and apply your filters</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Filters are applied in real time. All new coupon checks will honour your updated preferences immediately after saving.</p>
+              </div>
+            </li>
+          </ol>
+          <div class="border-b border-gray-200 mt-2"></div>
+        </article>
 
-        <!-- Docker deployment -->
-        <div id="self-hosting" class="bg-white rounded-xl border border-gray-200 p-8 hover:border-gray-300 transition-colors shadow-sm mb-8">
-            <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                <div class="flex-grow">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                            <i data-lucide="terminal" class="text-blue-600 w-5 h-5"></i>
-                        </div>
-                    </div>
-                    <h2 class="text-2xl font-semibold text-gray-900 tracking-tight mb-3">
-                        Self-Hosting with Docker
-                    </h2>
-                    <p class="text-sm text-gray-500 leading-relaxed mb-6 font-light">
-                        The project is containerized for deployment on a modern VPS using Docker.
-                    </p>
-                    
-                    <div class="bg-gray-900 rounded-xl p-5 mb-6 overflow-hidden shadow-inner">
-                        <pre class="text-xs text-blue-400 font-mono overflow-x-auto leading-relaxed"><code>git clone https://github.com/madhu2456/udemy_enroller_fastapi
-cd udemy_enroller_fastapi
-docker-compose up -d</code></pre>
-                    </div>
-                    
-                    <a href="https://madhudadi.in/blog" target="_blank"
-                        class="text-sm font-semibold text-blue-600 inline-flex items-center gap-1 hover:underline">
-                        Read the full deployment guide <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                    </a>
-                </div>
+        <!-- Guide 4: Run on Server -->
+        <article id="run-on-server" aria-labelledby="guide-run-on-server">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-400 font-mono">04</span>
+              <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-orange-50 text-orange-700 border-orange-200">
+                Advanced
+              </span>
             </div>
-        </div>
+            <span class="text-xs text-gray-400">8 min read</span>
+          </div>
+          <h2 id="guide-run-on-server" class="text-xl font-semibold text-gray-900 tracking-tight mb-1">Running on a Cloud Server</h2>
+          <p class="text-sm text-gray-500 mb-6">Deploy the FastAPI backend on a VPS or cloud VM so the engine runs 24/7 without your computer.</p>
+          <ol class="space-y-0">
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">1</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Clone the repository</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">SSH into your server and clone the project:</p>
+                <pre class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed">git clone https://github.com/madhu2456/udemy_enroller_fastapi.git
+cd udemy_enroller_fastapi</pre>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">2</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Install dependencies</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Create a virtual environment and install the Python requirements:</p>
+                <pre class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed">python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt</pre>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">3</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Configure your credentials</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Copy the example environment file and add your Udemy credentials (or cookies) and any filter preferences:</p>
+                <pre class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed">cp .env.example .env
+nano .env</pre>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">4</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Start the FastAPI server</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Run the application with uvicorn:</p>
+                <pre class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed">uvicorn main:app --host 0.0.0.0 --port 8000</pre>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">5</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Keep it running with systemd or screen</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">To keep the process alive after you disconnect, use screen, tmux, or a systemd service file. See the GitHub README for a sample systemd config.</p>
+              </div>
+            </li>
+          </ol>
+          <div class="border-b border-gray-200 mt-2"></div>
+        </article>
 
-        <!-- Keep Learning Callout -->
-        <div class="mt-16 text-center">
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">
-                Keep Learning
-            </h3>
-            <p class="text-sm text-gray-500 mb-8 max-w-md mx-auto leading-relaxed font-light">
-                New guides and feature updates are announced regularly. Follow along for automation tips and FastAPI patterns.
-            </p>
-            <div class="flex justify-center gap-4">
-                <a href="https://madhudadi.in/blog" target="_blank"
-                    class="bg-blue-600 text-white px-8 py-3 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
-                    Visit Blog <i data-lucide="external-link" class="w-4 h-4"></i>
-                </a>
+        <!-- Guide 5: Troubleshooting -->
+        <article id="troubleshooting" aria-labelledby="guide-troubleshooting">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-400 font-mono">05</span>
+              <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-red-50 text-red-700 border-red-200">
+                Troubleshooting
+              </span>
             </div>
+            <span class="text-xs text-gray-400">5 min read</span>
+          </div>
+          <h2 id="guide-troubleshooting" class="text-xl font-semibold text-gray-900 tracking-tight mb-1">Common Issues & Fixes</h2>
+          <p class="text-sm text-gray-500 mb-6">Solutions to the most common problems: CSRF errors, expired cookies, and enrollment failures.</p>
+          <ol class="space-y-0">
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">1</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">CSRF error with Email Login</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">This happens when Udemy's anti-bot system flags the login from a server IP. Fix: switch to Cookie Login, which uses a token already issued by Udemy to your real browser session.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">2</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Cookies stopped working</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Udemy session cookies expire after 30–90 days. Fix: log in to udemy.com again in your browser, re-extract the three cookie values (access_token, client_id, csrftoken), and update them in the form.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">3</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">No courses being enrolled</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Check that your smart filters are not too restrictive. If your minimum rating is set very high or your language filter only includes rare languages, there may be few matching courses on any given day. Try relaxing the filters temporarily.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"></div>
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">4</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">Enrollment fails for specific courses</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">Some coupons expire between the moment the engine detects them and the time the API call completes. This is normal — the engine will continue checking and enrolling other valid coupons.</p>
+              </div>
+            </li>
+            <li class="flex gap-5 pb-6 relative">
+              <div class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500">5</div>
+              <div class="flex-1 pt-0.5">
+                <p class="text-sm font-semibold text-gray-900 mb-1">The engine is not starting</p>
+                <p class="text-sm text-gray-500 leading-relaxed mb-2">If running locally, ensure all dependencies are installed and your .env file contains valid credentials. If running on a server, check the process logs for Python errors and make sure the virtual environment is activated.</p>
+              </div>
+            </li>
+          </ol>
+        </article>
+      </div>
+
+      <!-- Still need help -->
+      <div class="mt-14 bg-[#F9FAFB] rounded-xl border border-gray-200 p-8 text-center">
+        <p class="text-sm font-semibold text-gray-900 mb-1">Still stuck?</p>
+        <p class="text-sm text-gray-500 mb-5">Open an issue on GitHub or check the FAQ for quick answers.</p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a href="https://github.com/madhu2456/udemy_enroller_fastapi/issues" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-4 py-2 text-xs font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors duration-150">Open a GitHub Issue</a>
+          <a href="/faq" class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150">Browse FAQ →</a>
         </div>
-    </div>
-</section>
+      </div>
+    </section>
+  </main>
+</div>
 {% endblock %}
