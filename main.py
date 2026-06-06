@@ -169,9 +169,10 @@ async def add_cache_headers(request: Request, call_next):
 
     if path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    elif path in {"/faq", "/about", "/guides", "/robots.txt", "/sitemap.xml", "/humans.txt", "/llms.txt", "/ai-profile.json"}:
+    elif path in {"/", "/faq", "/about", "/guides", "/robots.txt", "/sitemap.xml", "/humans.txt", "/llms.txt", "/ai-profile.json"}:
         response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
-    elif path in {"/", "/dashboard", "/settings", "/history"} or path.startswith("/api/"):
+        response.headers["Vary"] = "Cookie"
+    elif path in {"/dashboard", "/settings", "/history"} or path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
