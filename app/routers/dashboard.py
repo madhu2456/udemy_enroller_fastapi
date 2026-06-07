@@ -29,13 +29,13 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
+def dashboard(request: Request):
     """Main dashboard page."""
     return templates.TemplateResponse(request, "pages/dashboard.html")
 
 
 @router.get("/", response_class=HTMLResponse)
-async def login_page(request: Request):
+def login_page(request: Request):
     """Login page.
 
     Redirect authenticated users server-side to avoid an extra client-side
@@ -60,7 +60,7 @@ async def login_page(request: Request):
 
 
 @router.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request, user_id: int = Depends(get_current_user_id)):
+def settings_page(request: Request, user_id: int = Depends(get_current_user_id)):
     """Render settings configuration page."""
     return templates.TemplateResponse(
         "pages/settings.html", {"request": request, "user_id": user_id}
@@ -68,7 +68,7 @@ async def settings_page(request: Request, user_id: int = Depends(get_current_use
 
 
 @router.get("/history", response_class=HTMLResponse)
-async def history_page(request: Request, user_id: int = Depends(get_current_user_id)):
+def history_page(request: Request, user_id: int = Depends(get_current_user_id)):
     """Render history logs page."""
     return templates.TemplateResponse(
         "pages/history.html", {"request": request, "user_id": user_id}
@@ -76,7 +76,7 @@ async def history_page(request: Request, user_id: int = Depends(get_current_user
 
 
 @router.get("/faq", response_class=HTMLResponse)
-async def faq_page(request: Request, user_id: int = Depends(get_current_user_id)):
+def faq_page(request: Request, user_id: int = Depends(get_current_user_id)):
     """Render FAQ page."""
     return templates.TemplateResponse(
         "pages/faq.html", {"request": request, "user_id": user_id}
@@ -84,7 +84,7 @@ async def faq_page(request: Request, user_id: int = Depends(get_current_user_id)
 
 
 @router.get("/about", response_class=HTMLResponse)
-async def about_page(request: Request, user_id: int = Depends(get_current_user_id)):
+def about_page(request: Request, user_id: int = Depends(get_current_user_id)):
     """Render About page."""
     return templates.TemplateResponse(
         "pages/about.html", {"request": request, "user_id": user_id}
@@ -92,7 +92,7 @@ async def about_page(request: Request, user_id: int = Depends(get_current_user_i
 
 
 @router.get("/guides", response_class=HTMLResponse)
-async def guides_page(request: Request, user_id: int = Depends(get_current_user_id)):
+def guides_page(request: Request, user_id: int = Depends(get_current_user_id)):
     """Render Guides page."""
     return templates.TemplateResponse(
         "pages/guides.html", {"request": request, "user_id": user_id}
@@ -100,7 +100,7 @@ async def guides_page(request: Request, user_id: int = Depends(get_current_user_
 
 
 @router.get("/api/dashboard/stats")
-async def dashboard_stats(
+def dashboard_stats(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
@@ -152,7 +152,7 @@ async def dashboard_stats(
 
 
 @router.get("/api/dashboard/analytics")
-async def dashboard_analytics(
+def dashboard_analytics(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):

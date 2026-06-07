@@ -31,6 +31,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from loguru import logger
 
 from config.settings import get_settings
@@ -160,6 +161,9 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],  # For file downloads
     max_age=3600,  # Cache preflight for 1 hour
 )
+
+# GZip middleware to compress responses and lower TTFB / bandwidth
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 @app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
