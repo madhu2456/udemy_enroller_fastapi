@@ -61,19 +61,21 @@ async def test_trk_link_unwrapping(scraper):
     # Short trk link (needs resolve)
     html_short = '<a href="https://trk.udemy.com/short123">Get Deal</a>'
 
-    scraper._resolve_trk_redirect = AsyncMock(return_value="https://www.udemy.com/course/java/")
+    mock_resp = MagicMock()
+    mock_resp.url = "https://www.udemy.com/course/java/"
+    scraper.http.get = AsyncMock(return_value=mock_resp)
 
     seen_urls = set()
     courses_long = await scraper._extract_courses_from_html(html_long, "Title 1", seen_urls)
     assert len(courses_long) == 1
     assert courses_long[0][1] == "https://www.udemy.com/course/python/?couponCode=123"
-    assert scraper._resolve_trk_redirect.call_count == 0
+    scraper.http.get.assert_not_called()
 
     seen_urls = set()
     courses_short = await scraper._extract_courses_from_html(html_short, "Title 2", seen_urls)
     assert len(courses_short) == 1
     assert courses_short[0][1] == "https://www.udemy.com/course/java/"
-    assert scraper._resolve_trk_redirect.call_count == 1
+    scraper.http.get.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_rest_pagination_and_deduplication(scraper):

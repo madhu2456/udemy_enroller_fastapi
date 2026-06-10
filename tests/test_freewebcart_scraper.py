@@ -47,7 +47,7 @@ async def test_listing_parser_extracts_ordered_candidates(scraper):
 
 @pytest.mark.asyncio
 async def test_detail_extracts_source_url(scraper):
-    html = 'Some NextJS JSON: "sourceUrl":"https://www.udemy.com/course/test/?couponCode=ABC" '
+    html = '<html>Some NextJS JSON: "sourceUrl":"https://www.udemy.com/course/test/?couponCode=ABC" </html>'
     scraper.http.get.return_value.text = html
 
     candidate = {"detail_url": "https://freewebcart.com/course/test", "title": "Test Title", "slug": "test"}
@@ -179,7 +179,7 @@ async def test_does_not_request_disallowed_paths(scraper):
         elif "/course/c1" in url:
             mock = MagicMock()
             mock.status_code = 200
-            mock.text = '"sourceUrl":"https://www.udemy.com/course/x/"'
+            mock.text = '<html>"sourceUrl":"https://www.udemy.com/course/x/"</html>'
             return mock
         return None
 
@@ -214,13 +214,13 @@ async def test_full_scrape_collects_all_pages_to_fill_cap(scraper):
             mock.text = 'invalid'
             return mock
         elif "/course/c2" in url:
-            mock.text = '"sourceUrl":"https://www.udemy.com/course/u2/"'
+            mock.text = '<html>"sourceUrl":"https://www.udemy.com/course/u2/"</html>'
             return mock
         elif "/course/c3" in url:
-            mock.text = '"sourceUrl":"https://www.udemy.com/course/u3/"'
+            mock.text = '<html>"sourceUrl":"https://www.udemy.com/course/u3/"</html>'
             return mock
         elif "/course/c4" in url:
-            mock.text = '"sourceUrl":"https://www.udemy.com/course/u4/"'
+            mock.text = '<html>"sourceUrl":"https://www.udemy.com/course/u4/"</html>'
             return mock
         return None
 
