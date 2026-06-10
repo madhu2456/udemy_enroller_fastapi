@@ -233,10 +233,10 @@ async def test_full_scrape_collects_all_pages_to_fill_cap(scraper):
 
 @pytest.mark.asyncio
 async def test_sourceurl_skips_non_udemy_matches(scraper):
-    html = '''
+    html = '''<html>
         "sourceUrl":"https://www.google.com/"
         "sourceUrl":"https://www.udemy.com/course/real/"
-    '''
+    </html>'''
     scraper.http.get.return_value.text = html
 
     candidate = {"detail_url": "https://freewebcart.com/course/test", "title": "Test Title", "slug": "test"}

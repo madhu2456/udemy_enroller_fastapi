@@ -53,22 +53,38 @@ class Scraper(ABC):
         Returns the resolved URL or None if resolution fails.
         """
         if "trk.udemy.com" not in trk_url:
-            return trk_url
-        try:
-            resp = await self.http.head(trk_url, follow_redirects=True, timeout=15, raise_for_status=False)
-            if resp and resp.status_code in (200, 301, 302, 307, 308):
-                resolved = str(resp.url)
-                if "udemy.com/course/" in resolved:
-                    return resolved
-        except Exception as e:
-            logger.debug(f"HEAD redirect resolution failed for {trk_url}: {e}")
+            normalized = Course.normalize_link(trk_url)
+            return normalized if "udemy.com/course/" in normalized else None
+
+        # Course.normalize_link inherently extracts u=, url=, link=, target=, redirect=, go=
+        # and preserves any outer couponCode.
+        normalized = Course.normalize_link(trk_url)
+        if "udemy.com/course/" in normalized and "trk.udemy.com" not in normalized:
+            return normalized
+
+        import urllib.parse
+        outer_qs = urllib.parse.parse_qs(urllib.parse.urlparse(trk_url).query)
+        outer_coupon = outer_qs.get("couponCode", [None])[0]
 
         try:
-            resp = await self.http.get(trk_url, follow_redirects=True, timeout=15, raise_for_status=False)
+            resp = await self.http.get(
+                trk_url,
+                use_cloudscraper=True,
+                follow_redirects=True,
+                raise_for_status=False,
+                log_failures=False,
+                randomize_headers=True,
+                timeout=15,
+                attempts=2
+            )
             if resp:
                 resolved = str(resp.url)
                 if "udemy.com/course/" in resolved:
-                    return resolved
+                    resolved_norm = Course.normalize_link(resolved)
+                    if outer_coupon and "couponCode=" not in resolved_norm:
+                        separator = "&" if "?" in resolved_norm else "?"
+                        resolved_norm += f"{separator}couponCode={outer_coupon}"
+                    return resolved_norm
         except Exception as e:
             logger.debug(f"GET fallback redirect resolution failed for {trk_url}: {e}")
         return None
@@ -87,27 +103,50 @@ class Scraper(ABC):
 
         return None
 
+    def _html_text(self, raw: str, default: str = "") -> str:
+        """Safely extract text without MarkupResemblesLocatorWarning."""
+        if not raw:
+            return default
+        if "<" not in raw and "&" not in raw:
+            return raw.strip()
+        import html
+        try:
+            soup = self.parse_html(raw)
+            return html.unescape(soup.get_text(" ", strip=True))
+        except Exception:
+            return html.unescape(raw).strip()
+
+    def _is_generic_course_title(self, title: str) -> bool:
+        """Filter out generic CTA titles."""
+        if not title:
+            return False
+        import html, re
+        clean = html.unescape(title).lower().strip()
+        clean = re.sub(r'[^\w\s]', '', clean)
+        clean = re.sub(r'\s+', ' ', clean).strip()
+
+        words = clean.split()
+        if len(words) > 5:
+            return False
+
+        pattern = r"^(get|view|access|open|download|enroll|redeem|claim)\s+(?:(?:this|the|a|my|your)\s+)?(course|coupon|deal|offer|now|free|link|udemy)"
+        if re.match(pattern, clean):
+            return True
+
+        exact_matches = {
+            "get coupon", "get course", "get course now", "get course noe",
+            "enroll now", "redeem coupon", "download now", "view course",
+            "get this deal", "claim coupon", "access course",
+            "enroll for free", "free coupon", "click here", "learn more"
+        }
+        return clean in exact_matches
+
     def append_to_list(self, title: str, url: str):
         """Add a course to the data list with deduplication logic."""
         if not title or not url or "udemy.com" not in url:
             return
 
-        # Filter out generic titles that some scrapers pick up
-        generic_titles = {
-            "get coupon",
-            "redeem coupon",
-            "enroll now",
-            "enroll for free",
-            "free coupon",
-            "click here",
-            "get this deal",
-            "view course",
-            "learn more",
-            "download now",
-        }
-
-        clean_title = title.lower().strip()
-        if clean_title in generic_titles or len(title) < 4:
+        if self._is_generic_course_title(title) or len(title) < 4:
             # Try to extract from URL slug if possible
             match = re.search(r"udemy\.com/course/([^/?#]+)", url)
             if match:
@@ -313,18 +352,6 @@ class CourseCouponClubScraper(Scraper):
     def code_name(self) -> str:
         return "ccc"
 
-    @staticmethod
-    def _extract_udemy_url_from_trk(href: str) -> str | None:
-        """Extract the real Udemy URL from trk.udemy.com affiliate links.
-        Long links have a `u=` parameter; short ones cannot be resolved without a redirect.
-        """
-        parsed = urllib.parse.urlparse(href)
-        qs = urllib.parse.parse_qs(parsed.query)
-        if "u" in qs:
-            return urllib.parse.unquote(qs["u"][0])
-        # Short trk links (e.g. /4Gb2En) require a redirect; return as-is and let
-        # the enrollment pipeline resolve it later.
-        return href
 
     async def _scrape_rest_api(self, detail_semaphore: asyncio.Semaphore) -> bool:
         """Use WordPress REST API for fast bulk extraction.
@@ -377,16 +404,9 @@ class CourseCouponClubScraper(Scraper):
                         if "udemy.com" not in href:
                             continue
 
-                        # Resolve trk.udemy.com redirect URLs
-                        resolved = self._extract_udemy_url_from_trk(href)
+                        resolved = await self._resolve_trk_redirect(href)
                         if not resolved:
                             continue
-
-                        # Short trk links (e.g. /o4Mz6e) need a redirect resolution
-                        if "trk.udemy.com" in resolved and "/u=" not in resolved:
-                            resolved = await self._resolve_trk_redirect(resolved)
-                            if not resolved:
-                                continue
 
                         # Deduplicate by normalized URL (ignore coupon differences)
                         normalized = Course.normalize_link(resolved)
@@ -548,14 +568,6 @@ class InterviewGigScraper(Scraper):
     def code_name(self) -> str:
         return "ig"
 
-    @staticmethod
-    def _extract_udemy_url_from_trk(href: str) -> str | None:
-        """Extract the real Udemy URL from trk.udemy.com affiliate links."""
-        parsed = urllib.parse.urlparse(href)
-        qs = urllib.parse.parse_qs(parsed.query)
-        if "u" in qs:
-            return urllib.parse.unquote(qs["u"][0])
-        return href
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
@@ -602,16 +614,9 @@ class InterviewGigScraper(Scraper):
                             if "udemy.com" not in href:
                                 continue
 
-                            # Resolve trk.udemy.com redirect URLs
-                            resolved = self._extract_udemy_url_from_trk(href)
+                            resolved = await self._resolve_trk_redirect(href)
                             if not resolved:
                                 continue
-
-                            # Short trk links (e.g. /o4Mz6e) need a redirect resolution
-                            if "trk.udemy.com" in resolved and "/u=" not in resolved:
-                                resolved = await self._resolve_trk_redirect(resolved)
-                                if not resolved:
-                                    continue
 
                             # Deduplicate by normalized URL
                             normalized = Course.normalize_link(resolved)
@@ -1567,13 +1572,7 @@ class IDownloadCouponScraper(Scraper):
                     if not location:
                         return None, None
 
-                    # Parse u= parameter from trk.udemy.com redirect URL
-                    parsed = urllib.parse.urlparse(location)
-                    qs = urllib.parse.parse_qs(parsed.query)
-                    udemy_url = qs.get("u", [""])[0]
-                    if udemy_url:
-                        udemy_url = urllib.parse.unquote(udemy_url)
-
+                    udemy_url = await self._resolve_trk_redirect(location)
                     if not udemy_url or "udemy.com" not in udemy_url:
                         return None, None
 
@@ -1777,7 +1776,7 @@ class FreeCourseSitesScraper(Scraper):
 
     def _extract_post_title(self, post: dict) -> str:
         raw = post.get("title", {}).get("rendered", "") or ""
-        title = self.parse_html(raw).get_text(" ", strip=True)
+        title = self._html_text(raw)
         return title[:200] if title else "FreeCourseSites Course"
 
     async def _extract_courses_from_html(
@@ -1786,15 +1785,6 @@ class FreeCourseSitesScraper(Scraper):
         fallback_title: str,
         seen_urls: set[str],
     ) -> list[tuple[str, str]]:
-        GENERIC_LINK_TEXT = {
-            "get course now",
-            "download now",
-            "enroll now",
-            "get coupon",
-            "redeem coupon",
-            "view course",
-            "get this deal",
-        }
         soup = self.parse_html(html)
 
         candidates = []
@@ -1811,14 +1801,9 @@ class FreeCourseSitesScraper(Scraper):
             href = html_lib.unescape(href)
 
             if "trk.udemy.com" in href:
-                parsed = urllib.parse.urlparse(href)
-                qs = urllib.parse.parse_qs(parsed.query)
-                if "u" in qs:
-                    href = urllib.parse.unquote(qs["u"][0])
-                else:
-                    resolved = await self._resolve_trk_redirect(href)
-                    if resolved:
-                        href = resolved
+                resolved = await self._resolve_trk_redirect(href)
+                if resolved:
+                    href = resolved
 
             normalized = Course.normalize_link(href)
             if "udemy.com/course/" not in normalized:
@@ -1829,11 +1814,11 @@ class FreeCourseSitesScraper(Scraper):
 
             seen_urls.add(normalized)
 
-            title = a.get_text(strip=True).lower()
-            if not title or len(title) < 4 or title in GENERIC_LINK_TEXT:
+            raw_text = a.get_text(" ", strip=True)
+            if not raw_text or len(raw_text) < 4 or self._is_generic_course_title(raw_text):
                 final_title = fallback_title
             else:
-                final_title = a.get_text(strip=True)
+                final_title = raw_text
 
             courses.append((final_title[:200], normalized))
 

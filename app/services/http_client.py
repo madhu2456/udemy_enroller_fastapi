@@ -438,7 +438,7 @@ class AsyncHTTPClient:
                     if custom_cookies is not None:
                         custom_cookies.update(dict(response.cookies))
 
-                if response.status_code == 403:
+                if response.status_code == 403 and log_failures:
                     ua_preview = str(headers.get("User-Agent", "unknown"))[:60]
                     logger.warning(
                         f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {url} | UA: {ua_preview}"
@@ -668,7 +668,7 @@ class AsyncHTTPClient:
                     if custom_cookies is not None:
                         custom_cookies.update(dict(response.cookies))
 
-                if response.status_code == 403:
+                if response.status_code == 403 and log_failures:
                     ua_preview = str(headers.get("User-Agent", "unknown"))[:60]
                     logger.warning(
                         f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {url} | UA: {ua_preview}"
