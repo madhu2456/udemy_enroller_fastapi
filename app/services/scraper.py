@@ -2031,11 +2031,36 @@ class FreeWebCartScraper(Scraper):
             url = f"{self.BASE_URL}/courses" if page == 1 else f"{self.BASE_URL}/courses?page={page}"
 
             resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
-            if not resp or resp.status_code != 200:
+
+            fallback_used = False
+            if page == 1 and resp and resp.status_code == 200:
+                candidates = self._parse_listing_candidates(resp.text)
+                if not resp.text.strip() or not candidates:
+                    fallback_used = True
+
+                if fallback_used:
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept-Encoding": "identity",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                    }
+                    resp = await self.http.get(url, use_cloudscraper=False, timeout=20, raise_for_status=False, headers=headers)
+
+            if not resp:
+                self.diagnostics["listing_fetch_failures"] += 1
+                break
+
+            if resp.status_code != 200:
+                self.diagnostics["non_200_statuses"] += 1
+                break
+
+            if not resp.text.strip():
+                self.diagnostics["empty_bodies"] += 1
                 break
 
             candidates = self._parse_listing_candidates(resp.text)
             if not candidates:
+                self.diagnostics["zero_candidate_pages"] += 1
                 break
 
             seen = {c["detail_url"] for c in all_candidates}
@@ -2050,6 +2075,7 @@ class FreeWebCartScraper(Scraper):
         try:
             resp = await self.http.get(candidate["detail_url"], use_cloudscraper=True, timeout=15, raise_for_status=False)
             if not resp or resp.status_code != 200:
+                self.diagnostics["detail_fetch_failures"] += 1
                 return None
 
             html_text = resp.text
@@ -2076,15 +2102,17 @@ class FreeWebCartScraper(Scraper):
                         break
 
             if not udemy_url:
-                match = re.search(r'(https://www\.udemy\.com/course/[^"\'>\s]+couponCode=[^"\'>\s]+)', html_text)
+                match = re.search(r'(https://www\.udemy\.com/course/[a-zA-Z0-9_-]+/?(?:[^"\'>\s]+)?)', html_text)
                 if match:
                     udemy_url = match.group(1)
 
             if not udemy_url:
+                self.diagnostics["no_udemy_link_details"] += 1
                 return None
 
             normalized = Course.normalize_link(udemy_url)
             if "udemy.com/course/" not in normalized:
+                self.diagnostics["invalid_normalized_urls"] += 1
                 return None
 
             title = ""
@@ -2124,34 +2152,39 @@ class FreeWebCartScraper(Scraper):
             ]
 
             results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
-
-            for result in results_list:
+            for res in results_list:
                 self.progress += 1
-
-                if isinstance(result, Exception):
-                    logger.debug(f"FreeWebCart detail exception: {result}")
-                    continue
-
-                if not result or not isinstance(result, tuple) or len(result) != 2:
-                    continue
-
-                title, udemy_url = result
-
-                if udemy_url in seen_udemy_urls:
-                    continue
-
-                seen_udemy_urls.add(udemy_url)
-
-                if len(self.data) >= self.MAX_COURSES:
-                    break
-
-                self.append_to_list(title, udemy_url)
+                if isinstance(res, tuple) and len(res) == 2 and res[0] and res[1]:
+                    title, url = res
+                    if url not in seen_udemy_urls:
+                        seen_udemy_urls.add(url)
+                        if len(self.data) < self.MAX_COURSES:
+                            self.append_to_list(title, url)
+                    else:
+                        self.diagnostics["duplicates"] += 1
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        self.diagnostics = {
+            "listing_fetch_failures": 0,
+            "non_200_statuses": 0,
+            "empty_bodies": 0,
+            "zero_candidate_pages": 0,
+            "total_candidates": 0,
+            "detail_fetch_failures": 0,
+            "no_udemy_link_details": 0,
+            "invalid_normalized_urls": 0,
+            "duplicates": 0,
+            "appended_courses": 0
+        }
         try:
             candidates = await self._collect_listing_candidates()
+            self.diagnostics["total_candidates"] = len(candidates)
             if candidates:
                 await self._process_detail_candidates(candidates, detail_semaphore)
+
+            self.diagnostics["appended_courses"] = len(self.data)
+            if len(self.data) == 0:
+                logger.warning(f"FreeWebCart scrape ended with 0 courses. Diagnostics: {self.diagnostics}")
         except Exception:
             self.error = traceback.format_exc()
 
@@ -2195,7 +2228,7 @@ class ScraperService:
 
     async def scrape_all(self) -> List[Course]:
         logger.warning(f"Starting scrape for: {self.sites}")
-        detail_semaphore = asyncio.Semaphore(15)
+        detail_semaphore = asyncio.Semaphore(10)
 
         async def _run_scraper(scraper: Scraper):
             logger.warning(f"  Scraper started: {scraper.site_name}")

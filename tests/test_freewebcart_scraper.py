@@ -16,7 +16,20 @@ def http_client():
 
 @pytest.fixture
 def scraper(http_client):
-    return FreeWebCartScraper(http_client)
+    s = FreeWebCartScraper(http_client)
+    s.diagnostics = {
+        "listing_fetch_failures": 0,
+        "non_200_statuses": 0,
+        "empty_bodies": 0,
+        "zero_candidate_pages": 0,
+        "total_candidates": 0,
+        "detail_fetch_failures": 0,
+        "no_udemy_link_details": 0,
+        "invalid_normalized_urls": 0,
+        "duplicates": 0,
+        "appended_courses": 0
+    }
+    return s
 
 @pytest.mark.asyncio
 async def test_listing_parser_extracts_ordered_candidates(scraper):
@@ -245,3 +258,135 @@ async def test_sourceurl_skips_non_udemy_matches(scraper):
     assert result is not None
     title, url = result
     assert url == "https://www.udemy.com/course/real/"
+
+
+@pytest.mark.asyncio
+async def test_page_1_fallback_success(scraper):
+    scraper.MAX_LISTING_PAGES = 1
+
+    async def mock_get(url, use_cloudscraper=True, **kwargs):
+        mock = MagicMock()
+        mock.status_code = 200
+        if use_cloudscraper:
+            mock.text = "empty"
+        else:
+            mock.text = '<a class="course-card-link" href="/course/c1"></a>'
+        return mock
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    candidates = await scraper._collect_listing_candidates()
+
+    assert len(candidates) == 1
+    assert candidates[0]["slug"] == "c1"
+
+@pytest.mark.asyncio
+async def test_page_2_empty_ends_pagination_without_fallback(scraper):
+    scraper.MAX_LISTING_PAGES = 3
+
+    async def mock_get(url, use_cloudscraper=True, **kwargs):
+        mock = MagicMock()
+        mock.status_code = 200
+        if "page=2" in url:
+            mock.text = "empty body for page 2"
+        else:
+            mock.text = '<a class="course-card-link" href="/course/c1"></a>'
+        return mock
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    candidates = await scraper._collect_listing_candidates()
+
+    assert len(candidates) == 1
+    assert scraper.progress == 2
+    for call in scraper.http.get.call_args_list:
+        kwargs = call[1]
+        assert kwargs.get("use_cloudscraper") is True
+
+@pytest.mark.asyncio
+async def test_diagnostics_counters(scraper):
+    scraper.MAX_LISTING_PAGES = 1
+
+    scraper.http.get = AsyncMock(return_value=MagicMock(status_code=500))
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert scraper.diagnostics["non_200_statuses"] == 1
+
+    scraper.http.get = AsyncMock(return_value=MagicMock(status_code=200, text="   "))
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert scraper.diagnostics["empty_bodies"] == 1
+
+    scraper.http.get = AsyncMock(return_value=MagicMock(status_code=200, text="<html>No cards here</html>"))
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert scraper.diagnostics["zero_candidate_pages"] == 1
+
+    async def mock_get(url, **kwargs):
+        if "courses" in url:
+            return MagicMock(status_code=200, text='<a class="course-card-link" href="/course/c1"></a>')
+        return MagicMock(status_code=500)
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert scraper.diagnostics["total_candidates"] == 1
+    assert scraper.diagnostics["detail_fetch_failures"] == 1
+
+@pytest.mark.asyncio
+async def test_detail_extraction_raw_url_fallback(scraper):
+    html = 'Check out the course here: https://www.udemy.com/course/raw-course-name/'
+    scraper.http.get.return_value.text = html
+
+    candidate = {"detail_url": "https://freewebcart.com/course/test", "title": "Test Title", "slug": "test"}
+    result = await scraper._extract_course_from_detail(candidate)
+
+    assert result is not None
+    title, url = result
+    assert url == "https://www.udemy.com/course/raw-course-name/"
+
+@pytest.mark.asyncio
+async def test_detail_extraction_escaped_sourceurl(scraper):
+    html = '<html>"sourceUrl":"https:\\/\\/www.udemy.com\\/course\\/escaped-course\\/?couponCode=123"</html>'
+    scraper.http.get.return_value.text = html
+
+    candidate = {"detail_url": "https://freewebcart.com/course/test", "title": "Test Title", "slug": "test"}
+    result = await scraper._extract_course_from_detail(candidate)
+
+    assert result is not None
+    title, url = result
+    assert url == "https://www.udemy.com/course/escaped-course/?couponCode=123"
+
+@pytest.mark.asyncio
+async def test_detail_skips_non_udemy_sourceurl(scraper):
+    html = '''
+    "sourceUrl":"https://example.com/not-udemy"
+    "sourceUrl":"https://www.udemy.com/course/valid-course/"
+    '''
+    scraper.http.get.return_value.text = html
+
+    candidate = {"detail_url": "https://freewebcart.com/course/test", "title": "Test Title", "slug": "test"}
+    result = await scraper._extract_course_from_detail(candidate)
+
+    assert result is not None
+    title, url = result
+    assert url == "https://www.udemy.com/course/valid-course/"
+
+@pytest.mark.asyncio
+async def test_full_scrape_invalid_details_logs_diagnostics(scraper):
+    scraper.MAX_LISTING_PAGES = 1
+
+    async def mock_get(url, **kwargs):
+        if "courses" in url:
+            return MagicMock(status_code=200, text='<a class="course-card-link" href="/course/c1"></a>')
+        return MagicMock(status_code=200, text='No udemy links here')
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+
+    from unittest.mock import patch
+    with patch("app.services.scraper.logger.warning") as mock_warning:
+        await scraper.scrape(asyncio.Semaphore(1))
+
+        assert len(scraper.data) == 0
+        assert scraper.diagnostics["total_candidates"] == 1
+        assert scraper.diagnostics["no_udemy_link_details"] == 1
+
+        # Check if the warning was logged with correct text
+        warning_calls = [call[0][0] for call in mock_warning.call_args_list]
+        found_warning = any("FreeWebCart scrape ended with 0 courses" in call_text for call_text in warning_calls)
+        assert found_warning
+        found_diag = any("'no_udemy_link_details': 1" in call_text for call_text in warning_calls)
+        assert found_diag
