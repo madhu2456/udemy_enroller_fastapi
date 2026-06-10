@@ -13,6 +13,8 @@ from app.services.scraper import (
     CourseFolderScraper,
     CouponamiScraper,
     KorshubScraper,
+    FreeCourseSitesScraper,
+    FreeWebCartScraper,
 )
 from app.services.http_client import AsyncHTTPClient
 import os
@@ -37,6 +39,23 @@ async def test_real_discount_live(http_client):
     await scraper.scrape(semaphore)
     assert len(scraper.data) > 0, f"Real Discount found 0 courses. Error: {scraper.error}"
     print(f"\n[Real Discount] Found {len(scraper.data)} courses")
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_freecoursesites_live(http_client):
+    scraper = FreeCourseSitesScraper(http_client)
+    semaphore = asyncio.Semaphore(5)
+    await scraper.scrape(semaphore)
+    assert len(scraper.data) > 0, f"FreeCourseSites found 0 courses. Error: {scraper.error}"
+    assert len(scraper.data) <= 500
+    assert all("udemy.com/course/" in c.url for c in scraper.data)
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_freewebcart_live(http_client):
+    scraper = FreeWebCartScraper(http_client)
+    await scraper.scrape(asyncio.Semaphore(5))
+    assert 0 < len(scraper.data) <= 500
+    assert all("udemy.com/course/" in c.url for c in scraper.data)
+    assert any("couponCode=" in c.url for c in scraper.data)
 
 @pytest.mark.asyncio(loop_scope="function")
 async def test_coursecouponclub_live(http_client):

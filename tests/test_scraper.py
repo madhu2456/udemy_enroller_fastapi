@@ -11,16 +11,19 @@ async def test_scraper_service_initialization():
     scraper = ScraperService()
     assert len(scraper.sites) > 0
     assert "Real Discount" in scraper.sites
+    assert "FreeCourseSites" in scraper.sites
+    assert "FreeWebCart" in scraper.sites
     await scraper.http.close()
 
 
 @pytest.mark.asyncio
 async def test_scraper_progress_structure():
     """Test that get_progress returns the expected structure."""
-    scraper = ScraperService(sites_to_scrape=["Real Discount"])
+    scraper = ScraperService(sites_to_scrape=["FreeWebCart", "FreeCourseSites"])
     progress = scraper.get_progress()
-    assert len(progress) == 1
-    assert progress[0]["site"] == "Real Discount"
-    assert "progress" in progress[0]
-    assert "done" in progress[0]
+    assert len(progress) == 2
+
+    fwc_progress = next(p for p in progress if p["site"] == "FreeWebCart")
+    assert "progress" in fwc_progress
+    assert "done" in fwc_progress
     await scraper.http.close()

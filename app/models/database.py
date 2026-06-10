@@ -122,6 +122,8 @@ class UserSettings(Base):
     @staticmethod
     def default_sites():
         return {
+            "FreeWebCart": True,
+            "FreeCourseSites": True,
             "Real Discount": True,
             "E-next": True,
             "Course Coupon Club": True,
