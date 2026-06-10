@@ -80,7 +80,7 @@ class Scraper(ABC):
 
         # Delegate to Course.normalize_link which now handles tracking unwrapping
         clean_url = Course.normalize_link(link)
-        
+
         # Ensure it's a valid udemy course link
         if "udemy.com/course/" in clean_url:
             return clean_url
@@ -105,7 +105,7 @@ class Scraper(ABC):
             "learn more",
             "download now",
         }
-        
+
         clean_title = title.lower().strip()
         if clean_title in generic_titles or len(title) < 4:
             # Try to extract from URL slug if possible
@@ -1747,7 +1747,433 @@ class CourseJoinerScraper(Scraper):
             self.error = traceback.format_exc()
 
 
+class FreeCourseSitesScraper(Scraper):
+    BASE_URL = "https://freecoursesites.com"
+    CATEGORY_SLUG = "100-off-udemy-coupon"
+    FALLBACK_CATEGORY_ID = 137426
+    PER_PAGE = 100
+    MAX_COURSES = 500
+    MAX_REST_PAGES = 5
+    MAX_FALLBACK_ARCHIVE_PAGES = 25
+
+    @property
+    def site_name(self) -> str:
+        return "FreeCourseSites"
+
+    @property
+    def code_name(self) -> str:
+        return "fcs"
+
+    async def _get_category_id(self) -> int:
+        try:
+            url = f"{self.BASE_URL}/wp-json/wp/v2/categories?slug={self.CATEGORY_SLUG}"
+            resp = await self.http.get(url, use_cloudscraper=True, timeout=15, raise_for_status=False)
+            data = await self.http.safe_json(resp, "freecoursesites_category")
+            if isinstance(data, list) and data and data[0].get("id"):
+                return int(data[0]["id"])
+        except Exception as e:
+            logger.debug(f"FreeCourseSites: Error fetching category ID, using fallback. {e}")
+        return self.FALLBACK_CATEGORY_ID
+
+    def _extract_post_title(self, post: dict) -> str:
+        raw = post.get("title", {}).get("rendered", "") or ""
+        title = self.parse_html(raw).get_text(" ", strip=True)
+        return title[:200] if title else "FreeCourseSites Course"
+
+    async def _extract_courses_from_html(
+        self,
+        html: str,
+        fallback_title: str,
+        seen_urls: set[str],
+    ) -> list[tuple[str, str]]:
+        GENERIC_LINK_TEXT = {
+            "get course now",
+            "download now",
+            "enroll now",
+            "get coupon",
+            "redeem coupon",
+            "view course",
+            "get this deal",
+        }
+        soup = self.parse_html(html)
+
+        candidates = []
+        for anchor in soup.select("a.mks_button[href*='udemy.com'], a[href*='udemy.com/course/'], a[href*='trk.udemy.com']"):
+            candidates.append(anchor)
+
+        courses = []
+        import html as html_lib
+        for a in candidates:
+            href = a.get("href", "").strip()
+            if not href:
+                continue
+
+            href = html_lib.unescape(href)
+
+            if "trk.udemy.com" in href:
+                parsed = urllib.parse.urlparse(href)
+                qs = urllib.parse.parse_qs(parsed.query)
+                if "u" in qs:
+                    href = urllib.parse.unquote(qs["u"][0])
+                else:
+                    resolved = await self._resolve_trk_redirect(href)
+                    if resolved:
+                        href = resolved
+
+            normalized = Course.normalize_link(href)
+            if "udemy.com/course/" not in normalized:
+                continue
+
+            if normalized in seen_urls:
+                continue
+
+            seen_urls.add(normalized)
+
+            title = a.get_text(strip=True).lower()
+            if not title or len(title) < 4 or title in GENERIC_LINK_TEXT:
+                final_title = fallback_title
+            else:
+                final_title = a.get_text(strip=True)
+
+            courses.append((final_title[:200], normalized))
+
+        return courses
+
+    async def _scrape_html_fallback(
+        self,
+        detail_semaphore: asyncio.Semaphore,
+        seen_urls: set[str],
+    ) -> None:
+        logger.info(f"  {self.site_name}: Using HTML fallback")
+        no_new_links_count = 0
+        total_found = 0
+
+        async def _fetch_detail(url: str, post_title: str):
+            try:
+                resp = await self.http.get(url, use_cloudscraper=True, timeout=15, raise_for_status=False)
+                if not resp or resp.status_code != 200:
+                    return []
+                return await self._extract_courses_from_html(resp.text, post_title, seen_urls)
+            except Exception as e:
+                logger.debug(f"Error fetching detail {url}: {e}")
+                return []
+
+        for page in range(1, self.MAX_FALLBACK_ARCHIVE_PAGES + 1):
+            if total_found >= self.MAX_COURSES:
+                break
+
+            if page == 1:
+                url = f"{self.BASE_URL}/category/{self.CATEGORY_SLUG}/"
+            else:
+                url = f"{self.BASE_URL}/category/{self.CATEGORY_SLUG}/page/{page}/"
+
+            resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
+            if not resp or resp.status_code != 200:
+                break
+
+            soup = self.parse_html(resp.text)
+            detail_links = []
+            for a in soup.select("article h2 a, .entry-title a, h2 a"):
+                href = a.get("href", "").strip()
+                if "freecoursesites.com" in href and href not in [d[0] for d in detail_links]:
+                    title = a.get_text(strip=True)
+                    detail_links.append((href, title))
+
+            if not detail_links:
+                break
+
+            self.length = len(detail_links)
+            self.progress = 0
+            new_courses_on_page = 0
+
+            # Process in small chunks to prevent massive over-fetching near the cap
+            chunk_size = 5
+            for i in range(0, len(detail_links), chunk_size):
+                if total_found >= self.MAX_COURSES:
+                    break
+
+                chunk = detail_links[i:i + chunk_size]
+                detail_tasks = [
+                    self._run_detail_task(detail_semaphore, _fetch_detail, href, title)
+                    for href, title in chunk
+                ]
+
+                results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
+                for results in results_list:
+                    self.progress += 1
+                    if isinstance(results, Exception):
+                        logger.debug(f"Error in detail task: {results}")
+                        continue
+                    if isinstance(results, list):
+                        for title, url in results:
+                            if total_found >= self.MAX_COURSES:
+                                break
+                            self.append_to_list(title, url)
+                            new_courses_on_page += 1
+                            total_found += 1
+
+                if total_found >= self.MAX_COURSES:
+                    break
+
+            if new_courses_on_page == 0:
+                no_new_links_count += 1
+            else:
+                no_new_links_count = 0
+
+            if no_new_links_count >= 3:
+                break
+
+    async def _scrape_rest_api(self, seen_urls: set[str]) -> int:
+        cat_id = await self._get_category_id()
+        total_found = 0
+        self.length = self.MAX_REST_PAGES
+        actual_max_pages = self.MAX_REST_PAGES
+
+        for page in range(1, self.MAX_REST_PAGES + 1):
+            if page > actual_max_pages:
+                break
+
+            self.progress = page
+            url = f"{self.BASE_URL}/wp-json/wp/v2/posts?categories={cat_id}&per_page={self.PER_PAGE}&page={page}&orderby=date&order=desc&_fields=id,link,title,content,date"
+            resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
+            if not resp or resp.status_code != 200:
+                break
+
+            if page == 1:
+                total_pages_header = resp.headers.get("X-WP-TotalPages") or resp.headers.get("x-wp-totalpages")
+                if total_pages_header and total_pages_header.isdigit():
+                    actual_max_pages = min(self.MAX_REST_PAGES, int(total_pages_header))
+                    self.length = actual_max_pages
+
+            posts = await self.http.safe_json(resp, "freecoursesites_posts")
+            if not isinstance(posts, list) or not posts:
+                break
+
+            for post in posts:
+                if total_found >= self.MAX_COURSES:
+                    return total_found
+
+                post_title = self._extract_post_title(post)
+                html = post.get("content", {}).get("rendered", "")
+
+                courses = await self._extract_courses_from_html(html, post_title, seen_urls)
+                for title, url in courses:
+                    if total_found >= self.MAX_COURSES:
+                        break
+                    self.append_to_list(title, url)
+                    total_found += 1
+
+                if total_found >= self.MAX_COURSES:
+                    return total_found
+
+        return total_found
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            seen_urls: set[str] = set()
+            rest_count = await self._scrape_rest_api(seen_urls)
+            if rest_count == 0:
+                await self._scrape_html_fallback(detail_semaphore, seen_urls)
+        except Exception:
+            self.error = traceback.format_exc()
+
+
+class FreeWebCartScraper(Scraper):
+    BASE_URL = "https://freewebcart.com"
+    MAX_COURSES = 500
+    COURSES_PER_PAGE = 24
+    MAX_LISTING_PAGES = 25
+    DETAIL_CHUNK_SIZE = 5
+
+    @property
+    def site_name(self) -> str:
+        return "FreeWebCart"
+
+    @property
+    def code_name(self) -> str:
+        return "fwc"
+
+    def _parse_listing_candidates(self, html: str) -> list[dict]:
+        soup = self.parse_html(html)
+        candidates = []
+        for a in soup.select('a.course-card-link[href^="/course/"]'):
+            href = a.get("href", "").strip()
+            if not href or not href.startswith("/course/"):
+                continue
+
+            detail_url = urllib.parse.urljoin(self.BASE_URL, href)
+
+            title = ""
+            title_el = a.select_one("h3.title-modern")
+            if title_el:
+                title = title_el.get_text(" ", strip=True)
+
+            if not title:
+                img_el = a.select_one("img[alt]")
+                if img_el and img_el.get("alt"):
+                    title = img_el.get("alt").strip()
+
+            if not title:
+                slug = href.replace("/course/", "").strip("/")
+                title = slug.replace("-", " ").title()
+
+            suffix = " - Free Udemy Course"
+            if title.endswith(suffix):
+                title = title[:-len(suffix)].strip()
+
+            candidates.append({
+                "detail_url": detail_url,
+                "title": title,
+                "slug": href.replace("/course/", "").strip("/")
+            })
+
+        seen = set()
+        unique = []
+        for c in candidates:
+            if c["detail_url"] not in seen:
+                seen.add(c["detail_url"])
+                unique.append(c)
+
+        return unique
+
+    async def _collect_listing_candidates(self) -> list[dict]:
+        all_candidates = []
+        self.length = self.MAX_LISTING_PAGES
+
+        for page in range(1, self.MAX_LISTING_PAGES + 1):
+            self.progress = page
+
+            url = f"{self.BASE_URL}/courses" if page == 1 else f"{self.BASE_URL}/courses?page={page}"
+
+            resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
+            if not resp or resp.status_code != 200:
+                break
+
+            candidates = self._parse_listing_candidates(resp.text)
+            if not candidates:
+                break
+
+            seen = {c["detail_url"] for c in all_candidates}
+            for c in candidates:
+                if c["detail_url"] not in seen:
+                    all_candidates.append(c)
+                    seen.add(c["detail_url"])
+
+        return all_candidates
+
+    async def _extract_course_from_detail(self, candidate: dict) -> tuple[str, str] | None:
+        try:
+            resp = await self.http.get(candidate["detail_url"], use_cloudscraper=True, timeout=15, raise_for_status=False)
+            if not resp or resp.status_code != 200:
+                return None
+
+            html_text = resp.text
+            udemy_url = None
+
+            import re, json, html as html_lib
+            for match in re.finditer(r'"sourceUrl"\s*:\s*"((?:\\.|[^"\\])*)"', html_text):
+                raw = match.group(1)
+                try:
+                    decoded = json.loads(f'"{raw}"')
+                    candidate_url = html_lib.unescape(decoded).strip()
+                    if "udemy.com/course/" in candidate_url:
+                        udemy_url = candidate_url
+                        break
+                except Exception:
+                    pass
+
+            if not udemy_url:
+                soup = self.parse_html(html_text)
+                for a in soup.select('a[href*="udemy.com/course/"]'):
+                    href = a.get("href", "").strip()
+                    if href:
+                        udemy_url = href
+                        break
+
+            if not udemy_url:
+                match = re.search(r'(https://www\.udemy\.com/course/[^"\'>\s]+couponCode=[^"\'>\s]+)', html_text)
+                if match:
+                    udemy_url = match.group(1)
+
+            if not udemy_url:
+                return None
+
+            normalized = Course.normalize_link(udemy_url)
+            if "udemy.com/course/" not in normalized:
+                return None
+
+            title = ""
+            if 'soup' not in locals():
+                soup = self.parse_html(html_text)
+            h1 = soup.select_one("h1.detail-title")
+            if h1:
+                title = h1.get_text(" ", strip=True)
+
+            if not title:
+                title = candidate.get("title", "")
+
+            if not title:
+                title = candidate.get("slug", "").replace("-", " ").title()
+
+            return (title[:200] if title else "FreeWebCart Course", normalized)
+
+        except Exception as e:
+            logger.debug(f"Error extracting detail {candidate['detail_url']}: {e}")
+            return None
+
+    async def _process_detail_candidates(self, candidates: list[dict], detail_semaphore: asyncio.Semaphore) -> None:
+        self.length = len(candidates)
+        self.progress = 0
+
+        seen_udemy_urls = set()
+
+        for i in range(0, len(candidates), self.DETAIL_CHUNK_SIZE):
+            if len(self.data) >= self.MAX_COURSES:
+                break
+
+            chunk = candidates[i:i + self.DETAIL_CHUNK_SIZE]
+
+            detail_tasks = [
+                self._run_detail_task(detail_semaphore, self._extract_course_from_detail, c)
+                for c in chunk
+            ]
+
+            results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
+
+            for result in results_list:
+                self.progress += 1
+
+                if isinstance(result, Exception):
+                    logger.debug(f"FreeWebCart detail exception: {result}")
+                    continue
+
+                if not result or not isinstance(result, tuple) or len(result) != 2:
+                    continue
+
+                title, udemy_url = result
+
+                if udemy_url in seen_udemy_urls:
+                    continue
+
+                seen_udemy_urls.add(udemy_url)
+
+                if len(self.data) >= self.MAX_COURSES:
+                    break
+
+                self.append_to_list(title, udemy_url)
+
+    async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        try:
+            candidates = await self._collect_listing_candidates()
+            if candidates:
+                await self._process_detail_candidates(candidates, detail_semaphore)
+        except Exception:
+            self.error = traceback.format_exc()
+
+
 SCRAPER_REGISTRY = {
+    "FreeWebCart": FreeWebCartScraper,
+    "FreeCourseSites": FreeCourseSitesScraper,
     "Real Discount": RealDiscountScraper,
     "E-next": ENextScraper,
     "Course Coupon Club": CourseCouponClubScraper,
