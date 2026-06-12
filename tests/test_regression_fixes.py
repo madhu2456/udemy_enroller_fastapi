@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.services.udemy_client import UdemyClient
 from app.services.course import Course
-from app.services.scraper import CourseCouponClubScraper, IDownloadCouponScraper, ScraperService
+from app.services.scraper import IDownloadCouponScraper, ScraperService
 from app.services.enrollment_manager import EnrollmentManager
 
 @pytest.mark.asyncio

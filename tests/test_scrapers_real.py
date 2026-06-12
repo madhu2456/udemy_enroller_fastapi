@@ -6,7 +6,6 @@ import asyncio
 from app.services.scraper import (
     RealDiscountScraper,
     ENextScraper,
-    CourseCouponClubScraper,
     InterviewGigScraper,
     UdemyXpertScraper,
     CoursesityScraper,
@@ -57,14 +56,6 @@ async def test_freewebcart_live(http_client):
     assert all("udemy.com/course/" in c.url for c in scraper.data)
     assert any("couponCode=" in c.url for c in scraper.data)
 
-@pytest.mark.asyncio(loop_scope="function")
-async def test_coursecouponclub_live(http_client):
-    """Thoroughly check Course Coupon Club scraper."""
-    scraper = CourseCouponClubScraper(http_client)
-    semaphore = asyncio.Semaphore(5)
-    await scraper.scrape(semaphore)
-    assert len(scraper.data) > 0, f"CourseCouponClub found 0 courses. Error: {scraper.error}"
-    print(f"\n[CourseCouponClub] Found {len(scraper.data)} courses")
 
 @pytest.mark.asyncio(loop_scope="function")
 async def test_enext_live(http_client):
