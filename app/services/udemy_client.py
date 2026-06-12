@@ -554,7 +554,7 @@ class UdemyClient:
 
         # 1. Anonymous Slug API (Most efficient)
         if course.slug:
-            api_url = f"{constants.UDEMY_API_BASE}/courses/{course.slug}/?fields[course]=id,title,url"
+            api_url = f"{constants.UDEMY_API_BASE}/courses/{course.slug}/?fields[course]=id,title,url,last_update_date,locale,primary_category,avg_rating,visible_instructors"
             try:
                 resp = await self.http.get(
                     api_url, req_type="mobile", randomize_headers=True
@@ -562,6 +562,40 @@ class UdemyClient:
                 data = await self.http.safe_json(resp)
                 if data and data.get("id"):
                     course.course_id = str(data["id"])
+
+                    # Update metadata fallback if present
+                    if not course.last_update and data.get("last_update_date"):
+                        course.last_update = data.get("last_update_date")
+
+                    if not course.language and data.get("locale"):
+                        loc_data = data.get("locale")
+                        if isinstance(loc_data, dict):
+                            course.language = (
+                                loc_data.get("simple_english_title")
+                                or loc_data.get("english_title")
+                                or loc_data.get("title")
+                                or loc_data.get("locale")
+                            )
+                        else:
+                            course.language = loc_data
+
+                    if not course.category and data.get("primary_category"):
+                        course.category = data.get("primary_category").get("title") if isinstance(data.get("primary_category"), dict) else data.get("primary_category")
+
+                    if course.rating is None and data.get("avg_rating") is not None:
+                        course.rating = float(data.get("avg_rating"))
+
+                    if not course.instructors and data.get("visible_instructors"):
+                        instructors = []
+                        for i in data.get("visible_instructors", []):
+                            i_url = i.get("url")
+                            if i_url:
+                                parts = [p for p in i_url.split("/") if p]
+                                if parts:
+                                    instructors.append(parts[-1])
+                        if instructors:
+                            course.instructors = instructors
+
                     self._course_fetch_report(200)
                     return
             except Exception:
@@ -822,6 +856,10 @@ class UdemyClient:
                 date_parts = [int(p) for p in re.findall(r"\d+", course.last_update)]
                 if len(date_parts) >= 2:
                     update_year, update_month = date_parts[0], date_parts[1]
+                    # Fix bug where MM/YYYY parsed incorrectly as YYYY-MM
+                    if update_year < 100 and update_month > 1000:
+                        update_year, update_month = update_month, update_year
+
                     now = datetime.now()
                     diff_months = (now.year - update_year) * 12 + (now.month - update_month)
                     if diff_months > threshold_months:
