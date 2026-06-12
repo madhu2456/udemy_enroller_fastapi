@@ -268,6 +268,9 @@ class EnrollmentManager:
             db.commit()
             self.status = "enrolling"
 
+            from collections import defaultdict
+            source_stats = defaultdict(lambda: {"enrolled": 0, "already_enrolled": 0, "expired": 0, "failed": 0, "excluded": 0, "invalid": 0})
+
             # Phase 2: Process and enroll (Single Course Mode only)
             logger.info("🔄 Single-course checkout mode active (emulated mobile checkout)")
 
@@ -308,7 +311,7 @@ class EnrollmentManager:
                         )
 
                 await self._save_course(db, run, course, status)
-                return success
+                return success, status
 
             for index, course in enumerate(scraped_courses):
                 self.processed = index + 1
@@ -410,14 +413,16 @@ class EnrollmentManager:
                                         course.error = error_msg
                                         logger.info(f"  Status: Excluded ({error_msg})")
                                     else:
-                                        # Enrolling in single course mode
                                         logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
-                                        await process_single_course(course)
+                                        success, course_status = await process_single_course(course)
                                         saved_already = True
                 except Exception as e:
                     logger.exception(f"[PIPELINE ERROR] Unexpected error processing {course.title}: {e}")
                     course_status = "failed"
                     error_msg = str(e)
+
+                site_key = course.site or "Unknown"
+                source_stats[site_key][course_status] += 1
 
                 if not saved_already:
                     await self._save_course(db, run, course, course_status, error_msg)
@@ -456,7 +461,11 @@ class EnrollmentManager:
             db.commit()
             self.status = "completed"
 
-            # Log session health report for diagnostics
+            logger.info("--- Source Telemetry Summary ---")
+            for site, stats in source_stats.items():
+                total = sum(stats.values())
+                logger.info(f"  {site}: {total} processed | {stats['enrolled']} enrolled | {stats['already_enrolled']} already enrolled | {stats['expired']} expired | {stats['failed']} failed | {stats['excluded']} excluded | {stats['invalid']} invalid")
+            logger.info("--------------------------------")
             _health = self.udemy.get_session_health_report()
             logger.info(
                 f"Enrollment pipeline completed. Enrolled: {self.udemy.successfully_enrolled_c}"
