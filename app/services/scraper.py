@@ -120,8 +120,9 @@ class Scraper(ABC):
         """Filter out generic CTA titles."""
         if not title:
             return False
-        import html, re
-        clean = html.unescape(title).lower().strip()
+        import html, re, unicodedata
+        clean = html.unescape(title).strip()
+        clean = unicodedata.normalize('NFKD', clean).encode('ascii', 'ignore').decode('utf-8').lower()
         clean = re.sub(r'[^\w\s]', '', clean)
         clean = re.sub(r'\s+', ' ', clean).strip()
 
@@ -129,7 +130,7 @@ class Scraper(ABC):
         if len(words) > 5:
             return False
 
-        pattern = r"^(get|view|access|open|download|enroll|redeem|claim)\s+(?:(?:this|the|a|my|your)\s+)?(course|coupon|deal|offer|now|free|link|udemy)"
+        pattern = r"^(get|view|access|open|download|enroll|redeem|claim|start|grab)\s+(?:(?:this|the|a|my|your)\s+)?(course|coupon|deal|offer|now|free|link|udemy|discount)"
         if re.match(pattern, clean):
             return True
 
@@ -137,7 +138,9 @@ class Scraper(ABC):
             "get coupon", "get course", "get course now", "get course noe",
             "enroll now", "redeem coupon", "download now", "view course",
             "get this deal", "claim coupon", "access course",
-            "enroll for free", "free coupon", "click here", "learn more"
+            "enroll for free", "free coupon", "click here", "learn more",
+            "start course", "grab discount", "go to course",
+            "enroll here", "obtener el curso", "kursu incele"
         }
         return clean in exact_matches
 
@@ -282,6 +285,10 @@ class RealDiscountScraper(Scraper):
 
 
 class ENextScraper(Scraper):
+    MAX_COURSES = 500
+    MAX_LISTING_PAGES = 50
+    DETAIL_BATCH_SIZE = 10
+
     @property
     def site_name(self) -> str:
         return "E-next"
@@ -292,25 +299,9 @@ class ENextScraper(Scraper):
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            self.length = 20  # 20 listing pages
-            listing_tasks = [
-                self.http.get(f"https://jobs.e-next.in/course/udemy/{p}")
-                for p in range(1, 21)
-            ]
-            all_items = []
-            for i, task in enumerate(asyncio.as_completed(listing_tasks)):
-                resp = await task
-                if resp:
-                    soup = self.parse_html(resp.content)
-                    all_items.extend(
-                        soup.find_all(
-                            "a", {"class": "btn btn-secondary btn-sm btn-block"}
-                        )
-                    )
-                self.progress = i + 1
-
-            self.length = len(all_items)
-            self.progress = 0
+            self.length = self.MAX_LISTING_PAGES
+            seen_detail_urls = set()
+            seen_udemy_urls = set()
 
             async def _fetch_details(item):
                 try:
@@ -330,20 +321,71 @@ class ENextScraper(Scraper):
                 except Exception:
                     return None, None
 
-            detail_tasks = [
-                self._run_detail_task(detail_semaphore, _fetch_details, item)
-                for item in all_items
-            ]
-            for i, task in enumerate(asyncio.as_completed(detail_tasks)):
-                title, link = await task
-                if title and link:
-                    self.append_to_list(title, link)
-                self.progress = i + 1
+            for page in range(1, self.MAX_LISTING_PAGES + 1):
+                if len(self.data) >= self.MAX_COURSES:
+                    break
+                self.progress = page
+
+                resp = await self.http.get(f"https://jobs.e-next.in/course/udemy/{page}")
+                if not resp or resp.status_code != 200:
+                    break
+
+                soup = self.parse_html(resp.content)
+                buttons = soup.find_all("a", {"class": "btn btn-secondary btn-sm btn-block"})
+                if not buttons:
+                    break
+
+                pending_items = []
+                for btn in buttons:
+                    href = btn.get("href")
+                    if href and href not in seen_detail_urls:
+                        seen_detail_urls.add(href)
+                        pending_items.append(btn)
+
+                chunk_size = self.DETAIL_BATCH_SIZE
+                for i in range(0, len(pending_items), chunk_size):
+                    if len(self.data) >= self.MAX_COURSES:
+                        break
+
+                    chunk = pending_items[i:i + chunk_size]
+                    detail_tasks = [
+                        self._run_detail_task(detail_semaphore, _fetch_details, item)
+                        for item in chunk
+                    ]
+
+                    results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
+                    for results in results_list:
+                        if isinstance(results, Exception):
+                            continue
+
+                        title, link = results
+                        if title and link:
+                            if len(self.data) >= self.MAX_COURSES:
+                                break
+
+                            normalized_link = Course.normalize_link(link)
+                            if not normalized_link or "udemy.com/course/" not in normalized_link:
+                                continue
+
+                            if normalized_link in seen_udemy_urls:
+                                continue
+
+                            prev_len = len(self.data)
+                            self.append_to_list(title, normalized_link)
+
+                            if len(self.data) > prev_len:
+                                seen_udemy_urls.add(normalized_link)
+
         except Exception:
             self.error = traceback.format_exc()
 
 
 class CourseCouponClubScraper(Scraper):
+    MAX_COURSES = 500
+    MAX_REST_PAGES = 10
+    MAX_FALLBACK_PAGES = 30
+    DETAIL_BATCH_SIZE = 10
+
     @property
     def site_name(self) -> str:
         return "Course Coupon Club"
@@ -352,37 +394,27 @@ class CourseCouponClubScraper(Scraper):
     def code_name(self) -> str:
         return "ccc"
 
-
-    async def _scrape_rest_api(self, detail_semaphore: asyncio.Semaphore) -> bool:
-        """Use WordPress REST API for fast bulk extraction.
-        Returns True if successful, False to fall back to HTML scraping.
-        """
+    async def _scrape_rest_api(self, detail_semaphore: asyncio.Semaphore, seen_urls: set[str], seen_udemy_urls: set[str]) -> None:
+        """Use WordPress REST API for fast bulk extraction."""
         import json
 
         base_api = "https://coursecouponclub.com/wp-json/wp/v2/posts"
-        seen_urls: set[str] = set()
-        total_found = 0
-        max_courses = 500
 
-        # Fetch up to 10 pages (1000 posts).  Page 1 is a giant listicle with
-        # 700+ links (many old), so we include it but rely on deduplication.
-        max_api_pages = 10
-        self.length = max_api_pages
+        # Fetch up to MAX_REST_PAGES.
+        self.length = self.MAX_REST_PAGES
         page_tasks = []
-        for page in range(1, max_api_pages + 1):
+        for page in range(1, self.MAX_REST_PAGES + 1):
             url = f"{base_api}?per_page=100&page={page}"
             page_tasks.append(self.http.get(url, use_cloudscraper=True, timeout=20, retry_403=True))
 
-        logger.info(
-            f"  Course Coupon Club: Fetching up to {max_api_pages} REST API pages..."
-        )
+        logger.info(f"  Course Coupon Club: Fetching up to {self.MAX_REST_PAGES} REST API pages...")
 
-        # Process pages as they complete (fastest-first)
-        for i, task in enumerate(asyncio.as_completed(page_tasks)):
+        candidates_list = []
+        results = await asyncio.gather(*page_tasks, return_exceptions=True)
+        for i, resp in enumerate(results):
             self.progress = i + 1
             try:
-                resp = await task
-                if not resp or resp.status_code != 200:
+                if isinstance(resp, Exception) or not resp or resp.status_code != 200:
                     continue
 
                 posts = json.loads(resp.text)
@@ -391,13 +423,13 @@ class CourseCouponClubScraper(Scraper):
 
                 for post in posts:
                     content_html = post.get("content", {}).get("rendered", "")
-                    post_title = (
-                        post.get("title", {}).get("rendered", "")
-                        or "Unknown"
-                    )
+                    post_title = post.get("title", {}).get("rendered", "") or "Unknown"
 
                     soup = self.parse_html(content_html)
                     links = soup.select("a[href*='udemy.com']")
+
+                    post_candidates = []
+                    post_seen = set()
 
                     for link in links:
                         href = link.get("href", "")
@@ -408,41 +440,49 @@ class CourseCouponClubScraper(Scraper):
                         if not resolved:
                             continue
 
-                        # Deduplicate by normalized URL (ignore coupon differences)
-                        normalized = Course.normalize_link(resolved)
-                        if normalized in seen_urls:
-                            continue
-                        seen_urls.add(normalized)
+                        from urllib.parse import urlparse
+                        parsed = urlparse(resolved)
+                        path_parts = parsed.path.strip('/').split('/')
+                        slug = path_parts[1] if len(path_parts) > 1 and path_parts[0] == "course" else (path_parts[0] if path_parts and path_parts[0] else resolved)
 
-                        # Prefer link text, fall back to post title
+                        if slug in post_seen:
+                            continue
+
+                        post_seen.add(slug)
+                        normalized = Course.normalize_link(resolved)
+                        post_candidates.append((link, resolved, normalized))
+
+                    if len(post_seen) != 1:
+                        continue
+
+                    for link, resolved, normalized in post_candidates:
+                        if normalized in seen_udemy_urls:
+                            continue
+                        seen_udemy_urls.add(normalized)
+
                         title = link.get_text(strip=True)
                         if len(title) < 10:
                             title = post_title
                         if len(title) < 3:
                             title = "Unknown"
 
-                        self.append_to_list(title[:200], resolved)
-                        total_found += 1
-                        if total_found >= max_courses:
-                            logger.info(
-                                f"  Course Coupon Club: Reached {max_courses} course limit"
-                            )
-                            return True
+                        post_date = post.get("date", "1970-01-01T00:00:00")
+                        candidates_list.append((post_date, title[:200], resolved))
+            except Exception as e:
+                logger.debug(f"Error parsing CCC API response: {e}")
 
-            except Exception:
-                # One page failed — keep going with the rest
-                continue
+        candidates_list.sort(key=lambda x: x[0], reverse=True)
+        for post_date, title, resolved in candidates_list:
+            if len(self.data) >= self.MAX_COURSES:
+                break
+            self.append_to_list(title, resolved)
 
-        logger.info(
-            f"  Course Coupon Club: REST API found {total_found} unique courses"
-        )
-        return total_found > 0
+        logger.info(f"  Course Coupon Club: REST API yielded {len(self.data)} courses so far")
 
-    async def _scrape_html_fallback(self, detail_semaphore: asyncio.Semaphore):
+    async def _scrape_html_fallback(self, detail_semaphore: asyncio.Semaphore, seen_detail_urls: set[str], seen_udemy_urls: set[str]) -> None:
         """Legacy HTML fallback: scrape homepage + paginated archive pages."""
-        logger.info("  Course Coupon Club: Falling back to HTML scraping...")
+        logger.info("  Course Coupon Club: Scraping HTML fallback...")
 
-        all_items: list[BeautifulSoup] = []
         excluded = {
             "tag",
             "category",
@@ -452,46 +492,9 @@ class CourseCouponClubScraper(Scraper):
             "contact-us",
         }
 
-        # Fetch homepage + pages 2-5 concurrently
-        page_urls = ["https://coursecouponclub.com/"] + [
-            f"https://coursecouponclub.com/page/{p}/" for p in range(2, 6)
-        ]
-        self.length = len(page_urls)
-        page_tasks = [
-            self.http.get(u, use_cloudscraper=True, timeout=15) for u in page_urls
-        ]
-
-        for i, task in enumerate(asyncio.as_completed(page_tasks)):
-            self.progress = i + 1
+        async def _fetch_details(detail_url: str):
             try:
-                resp = await task
-                if not resp:
-                    continue
-                soup = self.parse_html(resp.content)
-                for a in soup.select(".rh-post-title a, h2 a, h3 a"):
-                    href = a.get("href", "").rstrip("/")
-                    if "coursecouponclub.com" not in href:
-                        continue
-                    parts = href.split("/")
-                    if len(parts) < 4 or any(p in href for p in excluded):
-                        continue
-                    all_items.append(a)
-            except Exception:
-                continue
-
-        # Deduplicate by href
-        unique_items: dict[str, BeautifulSoup] = {}
-        for a in all_items:
-            href = a.get("href", "")
-            if href and href not in unique_items:
-                unique_items[href] = a
-
-        self.length = len(unique_items)
-        self.progress = 0
-
-        async def _fetch_details(item):
-            try:
-                page = await self.http.get(item["href"], use_cloudscraper=True)
+                page = await self.http.get(detail_url, use_cloudscraper=True, timeout=15)
                 page_content = page.content if page else None
                 if not page_content:
                     return []
@@ -499,60 +502,112 @@ class CourseCouponClubScraper(Scraper):
                 detail_soup = self.parse_html(page_content)
                 found_courses = []
 
-                # Direct Udemy links
+                title_elem = detail_soup.find(["h1", "h2", "h3"])
+                default_title = title_elem.get_text(strip=True) if title_elem else "Unknown"
+
                 for link in detail_soup.select("a[href*='udemy.com']"):
                     href = link.get("href", "")
                     title = link.get_text(strip=True)
                     if len(title) < 10:
                         parent = link.find_parent(["h1", "h2", "h3", "h4", "p", "div"])
-                        title = parent.get_text(strip=True) if parent else item.get_text(strip=True)
-                    if "udemy.com" in href:
+                        title = parent.get_text(strip=True) if parent else default_title
+                    if "udemy.com/course/" in href:
                         found_courses.append((title[:200], href))
 
-                # Button fallbacks
                 if not found_courses:
                     for btn in detail_soup.select(".btn_offer_block, .re_-f-btn, .wp-block-button__link"):
                         href = btn.get("href", "")
                         if href and ("udemy.com" in href or "/go/" in href or "trk.udemy.com" in href):
-                            title = btn.get_text(strip=True) or item.get_text(strip=True)
+                            title = btn.get_text(strip=True) or default_title
                             found_courses.append((title[:200], href))
 
-                # Resolve short trk.udemy.com redirects
                 resolved_courses = []
                 for title, href in found_courses:
                     if "trk.udemy.com" in href and "/u=" not in href:
                         resolved = await self._resolve_trk_redirect(href)
-                        if resolved:
+                        if resolved and "udemy.com/course/" in resolved:
                             resolved_courses.append((title, resolved))
-                    else:
+                    elif "udemy.com/course/" in href:
                         resolved_courses.append((title, href))
                 return resolved_courses
             except Exception:
                 return []
 
-        detail_tasks = [
-            self._run_detail_task(detail_semaphore, _fetch_details, item)
-            for item in list(unique_items.values())[:150]
-        ]
-        for i, task in enumerate(asyncio.as_completed(detail_tasks)):
-            results = await task
-            if results:
-                for title, link in results:
-                    self.append_to_list(title, link)
-            self.progress = i + 1
+        self.length = self.MAX_FALLBACK_PAGES
+        for page_num in range(1, self.MAX_FALLBACK_PAGES + 1):
+            if len(self.data) >= self.MAX_COURSES:
+                break
+            self.progress = page_num
+
+            if page_num == 1:
+                url = "https://coursecouponclub.com/"
+            else:
+                url = f"https://coursecouponclub.com/page/{page_num}/"
+
+            resp = await self.http.get(url, use_cloudscraper=True, timeout=15)
+            if not resp or resp.status_code != 200:
+                break
+
+            soup = self.parse_html(resp.content)
+
+            pending_items = []
+            for a in soup.select(".rh-post-title a, h2 a, h3 a"):
+                href = a.get("href", "").rstrip("/")
+                if "coursecouponclub.com" not in href:
+                    continue
+                parts = href.split("/")
+                if len(parts) < 4 or any(p in href for p in excluded):
+                    continue
+                if href not in seen_detail_urls:
+                    seen_detail_urls.add(href)
+                    pending_items.append(href)
+
+            if not pending_items:
+                break
+
+            chunk_size = self.DETAIL_BATCH_SIZE
+            for i in range(0, len(pending_items), chunk_size):
+                if len(self.data) >= self.MAX_COURSES:
+                    break
+
+                chunk = pending_items[i:i + chunk_size]
+                detail_tasks = [
+                    self._run_detail_task(detail_semaphore, _fetch_details, href)
+                    for href in chunk
+                ]
+
+                results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
+                for results in results_list:
+                    if isinstance(results, Exception) or not results:
+                        continue
+
+                    for title, link in results:
+                        if len(self.data) >= self.MAX_COURSES:
+                            break
+
+                        normalized_link = Course.normalize_link(link)
+                        if not normalized_link or "udemy.com/course/" not in normalized_link:
+                            continue
+
+                        if normalized_link in seen_udemy_urls:
+                            continue
+
+                        prev_len = len(self.data)
+                        self.append_to_list(title[:200], normalized_link)
+
+                        if len(self.data) > prev_len:
+                            seen_udemy_urls.add(normalized_link)
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            # Strategy 1: WordPress REST API (fast, no detail pages needed)
-            ok = await self._scrape_rest_api(detail_semaphore)
-            if ok:
-                return
+            seen_urls: set[str] = set()
+            seen_udemy_urls: set[str] = set()
 
-            # Strategy 2: HTML fallback
-            await self._scrape_html_fallback(detail_semaphore)
+            await self._scrape_rest_api(detail_semaphore, seen_urls, seen_udemy_urls)
+            if len(self.data) < self.MAX_COURSES:
+                await self._scrape_html_fallback(detail_semaphore, seen_urls, seen_udemy_urls)
         except Exception:
             self.error = traceback.format_exc()
-
 
 class InterviewGigScraper(Scraper):
     """Interview Gig (elearn.interviewgig.com) — WordPress REST API scraper.
@@ -588,10 +643,12 @@ class InterviewGigScraper(Scraper):
                     self.http.get(url, use_cloudscraper=True, timeout=20)
                 )
 
-            for i, task in enumerate(asyncio.as_completed(page_tasks)):
+            results = await asyncio.gather(*page_tasks, return_exceptions=True)
+            for i, resp in enumerate(results):
                 self.progress = i + 1
                 try:
-                    resp = await task
+                    if isinstance(resp, Exception):
+                        continue
                     if not resp or resp.status_code != 200:
                         continue
 
@@ -1498,17 +1555,22 @@ class IDownloadCouponScraper(Scraper):
             listing_results: list[tuple[str, str]] = []
 
             self.length = max_pages
+            local_listing_semaphore = asyncio.Semaphore(8)
+            async def fetch_page(url):
+                async with local_listing_semaphore:
+                    return await self.http.get(url, use_cloudscraper=True, timeout=15)
+
             page_tasks = []
             for page_num in range(1, max_pages + 1):
                 url = f"https://idownloadcoupon.com/page/{page_num}/"
-                page_tasks.append(
-                    self.http.get(url, use_cloudscraper=True, timeout=15)
-                )
+                page_tasks.append(fetch_page(url))
 
-            for i, task in enumerate(asyncio.as_completed(page_tasks)):
+            results = await asyncio.gather(*page_tasks, return_exceptions=True)
+            for i, resp in enumerate(results):
                 self.progress = i + 1
                 try:
-                    resp = await task
+                    if isinstance(resp, Exception):
+                        continue
                     if not resp or resp.status_code != 200:
                         continue
 
@@ -1580,8 +1642,14 @@ class IDownloadCouponScraper(Scraper):
                 except Exception:
                     return None, None
 
+            local_detail_semaphore = asyncio.Semaphore(8)
+
+            async def _limited_resolve(cid: str, title: str):
+                async with local_detail_semaphore:
+                    return await self._run_detail_task(detail_semaphore, _resolve_redeem, cid, title)
+
             detail_tasks = [
-                self._run_detail_task(detail_semaphore, _resolve_redeem, cid, title)
+                _limited_resolve(cid, title)
                 for cid, title in listing_results
             ]
 
@@ -1612,6 +1680,10 @@ class CourseJoinerScraper(Scraper):
     payment or may no longer be available for free enrollment.
     """
 
+    MAX_COURSES = 500
+    MAX_LISTING_PAGES = 60
+    DETAIL_BATCH_SIZE = 10
+
     @property
     def site_name(self) -> str:
         return "Course Joiner"
@@ -1622,78 +1694,10 @@ class CourseJoinerScraper(Scraper):
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
-            seen_urls: set[str] = set()
-            max_courses = 500
-            courses_per_page = 20
-            max_pages = (max_courses // courses_per_page) + 2
+            self.length = self.MAX_LISTING_PAGES
+            seen_detail_urls = set()
+            seen_udemy_urls = set()
 
-            detail_urls: list[tuple[str, str]] = []
-
-            # Step 1: Fetch listing pages sequentially
-            self.length = max_pages
-            for page_num in range(1, max_pages + 1):
-                self.progress = page_num
-                url = f"https://coursejoiner.com/category/free-udemy/page/{page_num}/"
-                try:
-                    resp = await self.http.get(
-                        url, use_cloudscraper=True, timeout=15
-                    )
-                    if not resp or resp.status_code != 200:
-                        break
-
-                    soup = self.parse_html(resp.content)
-                    page_found = 0
-
-                    for h in soup.find_all(["h2", "h3"]):
-                        a = h.find("a", href=True)
-                        if not a:
-                            continue
-
-                        href = a.get("href", "")
-                        if "/free-udemy/" not in href or "#" in href:
-                            continue
-
-                        title = a.get_text(strip=True)
-                        if not title or len(title) < 3:
-                            continue
-
-                        # Clean title suffixes
-                        title = re.sub(
-                            r"\s*[-|]\s*\(?Free\s*Course\)?\s*$",
-                            "",
-                            title,
-                            flags=re.IGNORECASE,
-                        ).strip()
-
-                        detail_urls.append((href, title))
-                        page_found += 1
-
-                    if page_found == 0:
-                        break
-
-                    if len(detail_urls) >= max_courses:
-                        break
-                except Exception:
-                    continue
-
-            if not detail_urls:
-                logger.warning("  Course Joiner: No courses found in listings")
-                return
-
-            # Deduplicate by URL
-            unique_details: dict[str, str] = {}
-            for href, title in detail_urls:
-                if href not in unique_details:
-                    unique_details[href] = title
-
-            unique_list = list(unique_details.items())[:max_courses]
-            self.length = len(unique_list)
-            self.progress = 0
-            logger.info(
-                f"  Course Joiner: Found {len(unique_list)} unique detail URLs"
-            )
-
-            # Step 2: Fetch detail pages concurrently
             async def _fetch_detail(detail_url: str, title: str):
                 try:
                     page = await self.http.get(
@@ -1703,18 +1707,23 @@ class CourseJoinerScraper(Scraper):
                         return None, None
 
                     text = page.text
-
-                    # Extract Udemy course URL
-                    matches = re.findall(
-                        r'href="(https?://www\.udemy\.com/course/[^"]+)"',
-                        text,
-                    )
+                    soup = self.parse_html(text)
                     udemy_url = None
-                    for m in matches:
-                        if ".jpg" in m or ".png" in m:
-                            continue
-                        udemy_url = m
-                        break
+
+                    # Use BeautifulSoup anchors first
+                    for a in soup.find_all("a", href=True):
+                        href = a["href"]
+                        if "udemy.com/course/" in href:
+                            udemy_url = href
+                            break
+
+                    # Fall back to regex over full page text
+                    if not udemy_url:
+                        matches = re.findall(r'(https?://[^"\'\s<>]*udemy\.com/course/[^"\'\s<>]+)', text)
+                        for m in matches:
+                            if ".jpg" not in m and ".png" not in m:
+                                udemy_url = m
+                                break
 
                     if not udemy_url:
                         return None, None
@@ -1723,37 +1732,112 @@ class CourseJoinerScraper(Scraper):
                 except Exception:
                     return None, None
 
-            detail_tasks = [
-                self._run_detail_task(
-                    detail_semaphore, _fetch_detail, url, title
-                )
-                for url, title in unique_list
-            ]
+            for page_num in range(1, self.MAX_LISTING_PAGES + 1):
+                if len(self.data) >= self.MAX_COURSES:
+                    break
+                self.progress = page_num
 
-            found = 0
-            for i, task in enumerate(asyncio.as_completed(detail_tasks)):
-                title, link = await task
-                if title and link:
-                    normalized = Course.normalize_link(link)
-                    if normalized not in seen_urls:
-                        seen_urls.add(normalized)
-                        self.append_to_list(title[:200], link)
-                        found += 1
-                self.progress = i + 1
+                if page_num == 1:
+                    url = "https://coursejoiner.com/category/free-udemy/"
+                else:
+                    url = f"https://coursejoiner.com/category/free-udemy/page/{page_num}/"
 
-            logger.info(f"  Course Joiner: Found {found} unique Udemy courses")
+                resp = await self.http.get(url, use_cloudscraper=True, timeout=15)
+                if not resp or resp.status_code != 200:
+                    break
+
+                soup = self.parse_html(resp.content)
+
+                if page_num == 1:
+                    pagination = soup.find_all("a", class_="page-numbers")
+                    if pagination:
+                        try:
+                            pages = [int(p.get_text(strip=True).replace(',', '')) for p in pagination if p.get_text(strip=True).replace(',', '').isdigit()]
+                            if pages:
+                                max_found = max(pages)
+                                self.length = min(self.MAX_LISTING_PAGES, max_found)
+                        except Exception:
+                            pass
+
+                pending_items = []
+                for h in soup.find_all(["h2", "h3"]):
+                    a = h.find("a", href=True)
+                    if not a:
+                        continue
+
+                    href = a.get("href", "")
+                    if "/free-udemy/" not in href or "#" in href:
+                        continue
+
+                    title = a.get_text(strip=True)
+                    if not title or len(title) < 3:
+                        continue
+
+                    title = re.sub(
+                        r"\s*[-|]\s*\(?Free\s*Course\)?\s*$",
+                        "",
+                        title,
+                        flags=re.IGNORECASE,
+                    ).strip()
+
+                    if href not in seen_detail_urls:
+                        seen_detail_urls.add(href)
+                        pending_items.append((href, title))
+
+                if not pending_items:
+                    break
+
+                chunk_size = self.DETAIL_BATCH_SIZE
+                for i in range(0, len(pending_items), chunk_size):
+                    if len(self.data) >= self.MAX_COURSES:
+                        break
+
+                    chunk = pending_items[i:i + chunk_size]
+                    detail_tasks = [
+                        self._run_detail_task(detail_semaphore, _fetch_detail, href, title)
+                        for href, title in chunk
+                    ]
+
+                    results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
+                    for results in results_list:
+                        if isinstance(results, Exception):
+                            continue
+
+                        title, link = results
+                        if title and link:
+                            if len(self.data) >= self.MAX_COURSES:
+                                break
+
+                            normalized_link = Course.normalize_link(link)
+                            if not normalized_link or "udemy.com/course/" not in normalized_link:
+                                continue
+
+                            if normalized_link in seen_udemy_urls:
+                                continue
+
+                            prev_len = len(self.data)
+                            self.append_to_list(title[:200], normalized_link)
+
+                            if len(self.data) > prev_len:
+                                seen_udemy_urls.add(normalized_link)
+
+            if not self.data:
+                logger.warning("  Course Joiner: No courses found in listings")
+
         except Exception:
             self.error = traceback.format_exc()
 
 
 class FreeCourseSitesScraper(Scraper):
     BASE_URL = "https://freecoursesites.com"
-    CATEGORY_SLUG = "100-off-udemy-coupon"
-    FALLBACK_CATEGORY_ID = 137426
+    CATEGORY_SOURCES = [
+        {"slug": "udemy-free-courses", "fallback_id": 78256},
+        {"slug": "100-off-udemy-coupon", "fallback_id": 137426}
+    ]
     PER_PAGE = 100
     MAX_COURSES = 500
     MAX_REST_PAGES = 5
-    MAX_FALLBACK_ARCHIVE_PAGES = 25
+    MAX_FALLBACK_ARCHIVE_PAGES = 50
 
     @property
     def site_name(self) -> str:
@@ -1763,16 +1847,16 @@ class FreeCourseSitesScraper(Scraper):
     def code_name(self) -> str:
         return "fcs"
 
-    async def _get_category_id(self) -> int:
+    async def _get_category_id(self, slug: str, fallback_id: int) -> int:
         try:
-            url = f"{self.BASE_URL}/wp-json/wp/v2/categories?slug={self.CATEGORY_SLUG}"
+            url = f"{self.BASE_URL}/wp-json/wp/v2/categories?slug={slug}"
             resp = await self.http.get(url, use_cloudscraper=True, timeout=15, raise_for_status=False)
             data = await self.http.safe_json(resp, "freecoursesites_category")
             if isinstance(data, list) and data and data[0].get("id"):
                 return int(data[0]["id"])
         except Exception as e:
-            logger.debug(f"FreeCourseSites: Error fetching category ID, using fallback. {e}")
-        return self.FALLBACK_CATEGORY_ID
+            logger.debug(f"FreeCourseSites: Error fetching category ID for {slug}, using fallback {fallback_id}. {e}")
+        return fallback_id
 
     def _extract_post_title(self, post: dict) -> str:
         raw = post.get("title", {}).get("rendered", "") or ""
@@ -1831,7 +1915,6 @@ class FreeCourseSitesScraper(Scraper):
     ) -> None:
         logger.info(f"  {self.site_name}: Using HTML fallback")
         no_new_links_count = 0
-        total_found = 0
 
         async def _fetch_detail(url: str, post_title: str):
             try:
@@ -1843,121 +1926,139 @@ class FreeCourseSitesScraper(Scraper):
                 logger.debug(f"Error fetching detail {url}: {e}")
                 return []
 
-        for page in range(1, self.MAX_FALLBACK_ARCHIVE_PAGES + 1):
-            if total_found >= self.MAX_COURSES:
+        for source in self.CATEGORY_SOURCES:
+            if len(self.data) >= self.MAX_COURSES:
                 break
 
-            if page == 1:
-                url = f"{self.BASE_URL}/category/{self.CATEGORY_SLUG}/"
-            else:
-                url = f"{self.BASE_URL}/category/{self.CATEGORY_SLUG}/page/{page}/"
+            slug = source["slug"]
+            logger.info(f"  {self.site_name}: HTML fallback scraping category {slug}")
+            no_new_links_count = 0
 
-            resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
-            if not resp or resp.status_code != 200:
-                break
-
-            soup = self.parse_html(resp.text)
-            detail_links = []
-            for a in soup.select("article h2 a, .entry-title a, h2 a"):
-                href = a.get("href", "").strip()
-                if "freecoursesites.com" in href and href not in [d[0] for d in detail_links]:
-                    title = a.get_text(strip=True)
-                    detail_links.append((href, title))
-
-            if not detail_links:
-                break
-
-            self.length = len(detail_links)
-            self.progress = 0
-            new_courses_on_page = 0
-
-            # Process in small chunks to prevent massive over-fetching near the cap
-            chunk_size = 5
-            for i in range(0, len(detail_links), chunk_size):
-                if total_found >= self.MAX_COURSES:
+            for page in range(1, self.MAX_FALLBACK_ARCHIVE_PAGES + 1):
+                if len(self.data) >= self.MAX_COURSES:
                     break
 
-                chunk = detail_links[i:i + chunk_size]
-                detail_tasks = [
-                    self._run_detail_task(detail_semaphore, _fetch_detail, href, title)
-                    for href, title in chunk
-                ]
+                if page == 1:
+                    url = f"{self.BASE_URL}/category/{slug}/"
+                else:
+                    url = f"{self.BASE_URL}/category/{slug}/page/{page}/"
 
-                results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
-                for results in results_list:
-                    self.progress += 1
-                    if isinstance(results, Exception):
-                        logger.debug(f"Error in detail task: {results}")
-                        continue
-                    if isinstance(results, list):
-                        for title, url in results:
-                            if total_found >= self.MAX_COURSES:
-                                break
-                            self.append_to_list(title, url)
-                            new_courses_on_page += 1
-                            total_found += 1
-
-                if total_found >= self.MAX_COURSES:
+                resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
+                if not resp or resp.status_code != 200:
                     break
 
-            if new_courses_on_page == 0:
-                no_new_links_count += 1
-            else:
-                no_new_links_count = 0
+                soup = self.parse_html(resp.text)
+                detail_links = []
+                for a in soup.select("article h2 a, .entry-title a, h2 a"):
+                    href = a.get("href", "").strip()
+                    if "freecoursesites.com" in href and href not in [d[0] for d in detail_links]:
+                        title = a.get_text(strip=True)
+                        detail_links.append((href, title))
 
-            if no_new_links_count >= 3:
-                break
+                if not detail_links:
+                    break
 
-    async def _scrape_rest_api(self, seen_urls: set[str]) -> int:
-        cat_id = await self._get_category_id()
-        total_found = 0
-        self.length = self.MAX_REST_PAGES
-        actual_max_pages = self.MAX_REST_PAGES
+                self.length = len(detail_links)
+                self.progress = 0
+                new_courses_on_page = 0
 
-        for page in range(1, self.MAX_REST_PAGES + 1):
-            if page > actual_max_pages:
-                break
-
-            self.progress = page
-            url = f"{self.BASE_URL}/wp-json/wp/v2/posts?categories={cat_id}&per_page={self.PER_PAGE}&page={page}&orderby=date&order=desc&_fields=id,link,title,content,date"
-            resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
-            if not resp or resp.status_code != 200:
-                break
-
-            if page == 1:
-                total_pages_header = resp.headers.get("X-WP-TotalPages") or resp.headers.get("x-wp-totalpages")
-                if total_pages_header and total_pages_header.isdigit():
-                    actual_max_pages = min(self.MAX_REST_PAGES, int(total_pages_header))
-                    self.length = actual_max_pages
-
-            posts = await self.http.safe_json(resp, "freecoursesites_posts")
-            if not isinstance(posts, list) or not posts:
-                break
-
-            for post in posts:
-                if total_found >= self.MAX_COURSES:
-                    return total_found
-
-                post_title = self._extract_post_title(post)
-                html = post.get("content", {}).get("rendered", "")
-
-                courses = await self._extract_courses_from_html(html, post_title, seen_urls)
-                for title, url in courses:
-                    if total_found >= self.MAX_COURSES:
+                # Process in small chunks to prevent massive over-fetching near the cap
+                chunk_size = 5
+                for i in range(0, len(detail_links), chunk_size):
+                    if len(self.data) >= self.MAX_COURSES:
                         break
-                    self.append_to_list(title, url)
-                    total_found += 1
 
-                if total_found >= self.MAX_COURSES:
-                    return total_found
+                    chunk = detail_links[i:i + chunk_size]
+                    detail_tasks = [
+                        self._run_detail_task(detail_semaphore, _fetch_detail, href, title)
+                        for href, title in chunk
+                    ]
 
-        return total_found
+                    results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
+                    for results in results_list:
+                        self.progress += 1
+                        if isinstance(results, Exception):
+                            logger.debug(f"Error in detail task: {results}")
+                            continue
+                        if isinstance(results, list):
+                            for title, url in results:
+                                if len(self.data) >= self.MAX_COURSES:
+                                    break
+                                prev_len = len(self.data)
+                                self.append_to_list(title, url)
+                                if len(self.data) > prev_len:
+                                    new_courses_on_page += 1
+
+                    if len(self.data) >= self.MAX_COURSES:
+                        break
+
+                if new_courses_on_page == 0:
+                    no_new_links_count += 1
+                else:
+                    no_new_links_count = 0
+
+                if no_new_links_count >= 3:
+                    break
+
+    async def _scrape_rest_api(self, seen_urls: set[str]) -> None:
+        for source in self.CATEGORY_SOURCES:
+            if len(self.data) >= self.MAX_COURSES:
+                break
+
+            slug = source["slug"]
+            fallback_id = source["fallback_id"]
+            cat_id = await self._get_category_id(slug, fallback_id)
+
+            logger.info(f"  {self.site_name}: REST scraping category {slug} (ID: {cat_id})")
+
+            self.length = self.MAX_REST_PAGES
+            actual_max_pages = self.MAX_REST_PAGES
+            initial_count = len(self.data)
+
+            for page in range(1, self.MAX_REST_PAGES + 1):
+                if page > actual_max_pages:
+                    break
+
+                self.progress = page
+                url = f"{self.BASE_URL}/wp-json/wp/v2/posts?categories={cat_id}&per_page={self.PER_PAGE}&page={page}&orderby=date&order=desc&_fields=id,link,title,content,date"
+                resp = await self.http.get(url, use_cloudscraper=True, timeout=20, raise_for_status=False)
+                if not resp or resp.status_code != 200:
+                    break
+
+                if page == 1:
+                    total_pages_header = resp.headers.get("X-WP-TotalPages") or resp.headers.get("x-wp-totalpages")
+                    if total_pages_header and total_pages_header.isdigit():
+                        actual_max_pages = min(self.MAX_REST_PAGES, int(total_pages_header))
+                        self.length = actual_max_pages
+
+                posts = await self.http.safe_json(resp, "freecoursesites_posts")
+                if not isinstance(posts, list) or not posts:
+                    break
+
+                for post in posts:
+                    if len(self.data) >= self.MAX_COURSES:
+                        break
+
+                    post_title = self._extract_post_title(post)
+                    html = post.get("content", {}).get("rendered", "")
+
+                    courses = await self._extract_courses_from_html(html, post_title, seen_urls)
+                    for title, url in courses:
+                        if len(self.data) >= self.MAX_COURSES:
+                            break
+                        self.append_to_list(title, url)
+
+                if len(self.data) >= self.MAX_COURSES:
+                    break
+
+            added = len(self.data) - initial_count
+            logger.info(f"  {self.site_name}: Extracted {added} unique courses from {slug}. Total so far: {len(self.data)}")
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             seen_urls: set[str] = set()
-            rest_count = await self._scrape_rest_api(seen_urls)
-            if rest_count == 0:
+            await self._scrape_rest_api(seen_urls)
+            if len(self.data) < self.MAX_COURSES:
                 await self._scrape_html_fallback(detail_semaphore, seen_urls)
         except Exception:
             self.error = traceback.format_exc()
@@ -2164,6 +2265,8 @@ class FreeWebCartScraper(Scraper):
                         self.diagnostics["duplicates"] += 1
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
+        import time
+        start_time = time.time()
         self.diagnostics = {
             "listing_fetch_failures": 0,
             "non_200_statuses": 0,
@@ -2178,11 +2281,14 @@ class FreeWebCartScraper(Scraper):
         }
         try:
             candidates = await self._collect_listing_candidates()
+            listing_time = time.time() - start_time
             self.diagnostics["total_candidates"] = len(candidates)
             if candidates:
                 await self._process_detail_candidates(candidates, detail_semaphore)
 
+            detail_time = time.time() - start_time - listing_time
             self.diagnostics["appended_courses"] = len(self.data)
+            logger.info(f"  FreeWebCart timing: {listing_time:.1f}s listing, {detail_time:.1f}s details")
             if len(self.data) == 0:
                 logger.warning(f"FreeWebCart scrape ended with 0 courses. Diagnostics: {self.diagnostics}")
         except Exception:
