@@ -126,7 +126,6 @@ class UserSettings(Base):
             "FreeCourseSites": True,
             "Real Discount": True,
             "E-next": True,
-            "Course Coupon Club": True,
             "Interview Gig": True,
             "UdemyXpert": True,
             "Coursesity": True,
