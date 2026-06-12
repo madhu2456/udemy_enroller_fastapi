@@ -182,11 +182,23 @@ class Scraper(ABC):
                 logger.warning("  playwright_stealth not found, proceeding without it.")
 
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                launch_kwargs = {
+                    "headless": True,
+                    "args": [
+                        "--disable-blink-features=AutomationControlled",
+                        "--no-sandbox",
+                        "--disable-dev-shm-usage",
+                    ],
+                }
+                if self.proxy:
+                    launch_kwargs["proxy"] = {"server": self.proxy}
+
+                browser = await p.chromium.launch(**launch_kwargs)
                 try:
                     context = await browser.new_context(
                         viewport={"width": 1920, "height": 1080},
                         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                        locale="en-US",
                     )
                     page = await context.new_page()
 
@@ -216,7 +228,7 @@ class Scraper(ABC):
                         logger.warning(
                             f"  Playwright hit Cloudflare block on {url}, waiting 10 more seconds..."
                         )
-                        await asyncio.sleep(10)
+                        await asyncio.sleep(20)
                         content = await page.content()
                         if (
                             "Just a moment..." in content
@@ -379,235 +391,6 @@ class ENextScraper(Scraper):
         except Exception:
             self.error = traceback.format_exc()
 
-
-class CourseCouponClubScraper(Scraper):
-    MAX_COURSES = 500
-    MAX_REST_PAGES = 10
-    MAX_FALLBACK_PAGES = 30
-    DETAIL_BATCH_SIZE = 10
-
-    @property
-    def site_name(self) -> str:
-        return "Course Coupon Club"
-
-    @property
-    def code_name(self) -> str:
-        return "ccc"
-
-    async def _scrape_rest_api(self, detail_semaphore: asyncio.Semaphore, seen_urls: set[str], seen_udemy_urls: set[str]) -> None:
-        """Use WordPress REST API for fast bulk extraction."""
-        import json
-
-        base_api = "https://coursecouponclub.com/wp-json/wp/v2/posts"
-
-        # Fetch up to MAX_REST_PAGES.
-        self.length = self.MAX_REST_PAGES
-        page_tasks = []
-        for page in range(1, self.MAX_REST_PAGES + 1):
-            url = f"{base_api}?per_page=100&page={page}"
-            page_tasks.append(self.http.get(url, use_cloudscraper=True, timeout=20, retry_403=True))
-
-        logger.info(f"  Course Coupon Club: Fetching up to {self.MAX_REST_PAGES} REST API pages...")
-
-        candidates_list = []
-        results = await asyncio.gather(*page_tasks, return_exceptions=True)
-        for i, resp in enumerate(results):
-            self.progress = i + 1
-            try:
-                if isinstance(resp, Exception) or not resp or resp.status_code != 200:
-                    continue
-
-                posts = json.loads(resp.text)
-                if not isinstance(posts, list) or not posts:
-                    continue
-
-                for post in posts:
-                    content_html = post.get("content", {}).get("rendered", "")
-                    post_title = post.get("title", {}).get("rendered", "") or "Unknown"
-
-                    soup = self.parse_html(content_html)
-                    links = soup.select("a[href*='udemy.com']")
-
-                    post_candidates = []
-                    post_seen = set()
-
-                    for link in links:
-                        href = link.get("href", "")
-                        if "udemy.com" not in href:
-                            continue
-
-                        resolved = await self._resolve_trk_redirect(href)
-                        if not resolved:
-                            continue
-
-                        from urllib.parse import urlparse
-                        parsed = urlparse(resolved)
-                        path_parts = parsed.path.strip('/').split('/')
-                        slug = path_parts[1] if len(path_parts) > 1 and path_parts[0] == "course" else (path_parts[0] if path_parts and path_parts[0] else resolved)
-
-                        if slug in post_seen:
-                            continue
-
-                        post_seen.add(slug)
-                        normalized = Course.normalize_link(resolved)
-                        post_candidates.append((link, resolved, normalized))
-
-                    if len(post_seen) != 1:
-                        continue
-
-                    for link, resolved, normalized in post_candidates:
-                        if normalized in seen_udemy_urls:
-                            continue
-                        seen_udemy_urls.add(normalized)
-
-                        title = link.get_text(strip=True)
-                        if len(title) < 10:
-                            title = post_title
-                        if len(title) < 3:
-                            title = "Unknown"
-
-                        post_date = post.get("date", "1970-01-01T00:00:00")
-                        candidates_list.append((post_date, title[:200], resolved))
-            except Exception as e:
-                logger.debug(f"Error parsing CCC API response: {e}")
-
-        candidates_list.sort(key=lambda x: x[0], reverse=True)
-        for post_date, title, resolved in candidates_list:
-            if len(self.data) >= self.MAX_COURSES:
-                break
-            self.append_to_list(title, resolved)
-
-        logger.info(f"  Course Coupon Club: REST API yielded {len(self.data)} courses so far")
-
-    async def _scrape_html_fallback(self, detail_semaphore: asyncio.Semaphore, seen_detail_urls: set[str], seen_udemy_urls: set[str]) -> None:
-        """Legacy HTML fallback: scrape homepage + paginated archive pages."""
-        logger.info("  Course Coupon Club: Scraping HTML fallback...")
-
-        excluded = {
-            "tag",
-            "category",
-            "blog",
-            "9-99-courses",
-            "submit-coupon",
-            "contact-us",
-        }
-
-        async def _fetch_details(detail_url: str):
-            try:
-                page = await self.http.get(detail_url, use_cloudscraper=True, timeout=15)
-                page_content = page.content if page else None
-                if not page_content:
-                    return []
-
-                detail_soup = self.parse_html(page_content)
-                found_courses = []
-
-                title_elem = detail_soup.find(["h1", "h2", "h3"])
-                default_title = title_elem.get_text(strip=True) if title_elem else "Unknown"
-
-                for link in detail_soup.select("a[href*='udemy.com']"):
-                    href = link.get("href", "")
-                    title = link.get_text(strip=True)
-                    if len(title) < 10:
-                        parent = link.find_parent(["h1", "h2", "h3", "h4", "p", "div"])
-                        title = parent.get_text(strip=True) if parent else default_title
-                    if "udemy.com/course/" in href:
-                        found_courses.append((title[:200], href))
-
-                if not found_courses:
-                    for btn in detail_soup.select(".btn_offer_block, .re_-f-btn, .wp-block-button__link"):
-                        href = btn.get("href", "")
-                        if href and ("udemy.com" in href or "/go/" in href or "trk.udemy.com" in href):
-                            title = btn.get_text(strip=True) or default_title
-                            found_courses.append((title[:200], href))
-
-                resolved_courses = []
-                for title, href in found_courses:
-                    if "trk.udemy.com" in href and "/u=" not in href:
-                        resolved = await self._resolve_trk_redirect(href)
-                        if resolved and "udemy.com/course/" in resolved:
-                            resolved_courses.append((title, resolved))
-                    elif "udemy.com/course/" in href:
-                        resolved_courses.append((title, href))
-                return resolved_courses
-            except Exception:
-                return []
-
-        self.length = self.MAX_FALLBACK_PAGES
-        for page_num in range(1, self.MAX_FALLBACK_PAGES + 1):
-            if len(self.data) >= self.MAX_COURSES:
-                break
-            self.progress = page_num
-
-            if page_num == 1:
-                url = "https://coursecouponclub.com/"
-            else:
-                url = f"https://coursecouponclub.com/page/{page_num}/"
-
-            resp = await self.http.get(url, use_cloudscraper=True, timeout=15)
-            if not resp or resp.status_code != 200:
-                break
-
-            soup = self.parse_html(resp.content)
-
-            pending_items = []
-            for a in soup.select(".rh-post-title a, h2 a, h3 a"):
-                href = a.get("href", "").rstrip("/")
-                if "coursecouponclub.com" not in href:
-                    continue
-                parts = href.split("/")
-                if len(parts) < 4 or any(p in href for p in excluded):
-                    continue
-                if href not in seen_detail_urls:
-                    seen_detail_urls.add(href)
-                    pending_items.append(href)
-
-            if not pending_items:
-                break
-
-            chunk_size = self.DETAIL_BATCH_SIZE
-            for i in range(0, len(pending_items), chunk_size):
-                if len(self.data) >= self.MAX_COURSES:
-                    break
-
-                chunk = pending_items[i:i + chunk_size]
-                detail_tasks = [
-                    self._run_detail_task(detail_semaphore, _fetch_details, href)
-                    for href in chunk
-                ]
-
-                results_list = await asyncio.gather(*detail_tasks, return_exceptions=True)
-                for results in results_list:
-                    if isinstance(results, Exception) or not results:
-                        continue
-
-                    for title, link in results:
-                        if len(self.data) >= self.MAX_COURSES:
-                            break
-
-                        normalized_link = Course.normalize_link(link)
-                        if not normalized_link or "udemy.com/course/" not in normalized_link:
-                            continue
-
-                        if normalized_link in seen_udemy_urls:
-                            continue
-
-                        prev_len = len(self.data)
-                        self.append_to_list(title[:200], normalized_link)
-
-                        if len(self.data) > prev_len:
-                            seen_udemy_urls.add(normalized_link)
-
-    async def scrape(self, detail_semaphore: asyncio.Semaphore):
-        try:
-            seen_urls: set[str] = set()
-            seen_udemy_urls: set[str] = set()
-
-            await self._scrape_rest_api(detail_semaphore, seen_urls, seen_udemy_urls)
-            if len(self.data) < self.MAX_COURSES:
-                await self._scrape_html_fallback(detail_semaphore, seen_urls, seen_udemy_urls)
-        except Exception:
-            self.error = traceback.format_exc()
 
 class InterviewGigScraper(Scraper):
     """Interview Gig (elearn.interviewgig.com) — WordPress REST API scraper.
@@ -2300,7 +2083,6 @@ SCRAPER_REGISTRY = {
     "FreeCourseSites": FreeCourseSitesScraper,
     "Real Discount": RealDiscountScraper,
     "E-next": ENextScraper,
-    "Course Coupon Club": CourseCouponClubScraper,
     "Interview Gig": InterviewGigScraper,
     "UdemyXpert": UdemyXpertScraper,
     "Coursesity": CoursesityScraper,
@@ -2340,9 +2122,15 @@ class ScraperService:
             logger.warning(f"  Scraper started: {scraper.site_name}")
             try:
                 await scraper.scrape(detail_semaphore)
-                logger.warning(
-                    f"  Scraper finished: {scraper.site_name} (Found {len(scraper.data)} courses)"
-                )
+                if scraper.error:
+                    logger.warning(
+                        f"  Scraper finished: {scraper.site_name} "
+                        f"(Found {len(scraper.data)} courses, Error: {scraper.error})"
+                    )
+                else:
+                    logger.warning(
+                        f"  Scraper finished: {scraper.site_name} (Found {len(scraper.data)} courses)"
+                    )
             except Exception as e:
                 logger.error(f"  Scraper failed: {scraper.site_name} - {e}")
                 scraper.error = str(e)
