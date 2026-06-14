@@ -1,4 +1,4 @@
-# Udemy Course Enroller — Automated Free Udemy Course Enrollment
+# Udemy Course Enroller - Automated Free Udemy Course Enrollment
 
 * **Built by**: Madhu Dadi
 * **Canonical profile**: https://madhudadi.in/profile/
@@ -22,15 +22,15 @@
 
 ## What is Udemy Course Enroller?
 
-**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that automates the process of discovering and enrolling in free, 100% off discounted Udemy courses. It continuously monitors popular coupon aggregator websites — such as Real Discount, Discudemy, and Courson — and uses Udemy's official API to claim courses directly to your account.
+**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that automates the process of discovering and enrolling in free, 100% off discounted Udemy courses. It continuously monitors popular coupon aggregator websites - such as Real Discount, Discudemy, and Courson - and uses Udemy's official API to claim courses directly to your account.
 
-No more manually hunting for expired coupons or missing limited-time offers. The tool runs in the background, filters courses based on your preferences, and builds you a library of premium educational content — completely free.
+No more manually hunting for expired coupons or missing limited-time offers. The tool runs in the background, filters courses based on your preferences, and builds you a library of premium educational content - completely free.
 
 ---
 
 ## Why This Exists
 
-Premium online education on platforms like Udemy can be expensive. However, instructors frequently share **100% off coupons** on aggregator sites to build reviews and reach new students. The problem? These coupons expire within hours — sometimes minutes.
+Premium online education on platforms like Udemy can be expensive. However, instructors frequently share **100% off coupons** on aggregator sites to build reviews and reach new students. The problem? These coupons expire within hours - sometimes minutes.
 
 This tool solves that by:
 - **Monitoring** multiple coupon sources 24/7
@@ -46,7 +46,7 @@ This tool solves that by:
 |---------|-------------|
 | **Fully Automated** | Set filters once, let the engine handle everything else |
 | **Smart Filtering** | Exclude categories, languages, low-rated courses, or specific instructors |
-| **Cookie-Based Auth** | Secure login using Udemy session cookies — no passwords stored |
+| **Cookie-Based Auth** | Secure login using Udemy session cookies - no passwords stored |
 | **Bulk Enrollment** | Intelligently batches API requests to respect rate limits |
 | **Real-Time Dashboard** | Live progress tracking, savings analytics, and enrollment history |
 | **Session Persistence** | Encrypted cookie storage with automatic session reconstruction |
@@ -146,6 +146,25 @@ For detailed setup instructions, visit the [Guides](https://udemyenroller.madhud
 
 ---
 
+## Validating Expired Coupons
+
+The application includes a background script to automatically hit the Udemy pricing API and validate whether your scraped coupons are still active or have expired. This drives the public `/udemycoupons` deals page.
+
+### Running Locally
+If you are running the application locally via Python, simply run the bash script from the root directory:
+```bash
+./scripts/coupon_checker.sh
+```
+
+### Running on Production Server (Docker)
+If you have deployed the application using Docker (e.g., via `deploy.sh`), you must run the checker *inside* the running container:
+```bash
+docker compose exec web bash ./scripts/coupon_checker.sh
+```
+*(Note: You can safely add this command to your server's cron jobs to automatically check coupon statuses daily.)*
+
+---
+
 ## Project Impact
 
 - **~90% reduction** in manual enrollment effort
@@ -180,7 +199,7 @@ These features ensure the project is discoverable by Google, Bing, ChatGPT, Perp
 **[Madhu Dadi](https://madhudadi.in)** is an AI Developer & Marketing Analytics Leader with 9+ years of experience building production-grade AI systems, full-stack web applications, and marketing analytics platforms.
 
 - **Portfolio:** [https://madhudadi.in](https://madhudadi.in)
-- **Blog:** [https://madhudadi.in/blog](https://madhudadi.in/blog) — Technical articles on FastAPI, RAG, and automation
+- **Blog:** [https://madhudadi.in/blog](https://madhudadi.in/blog) - Technical articles on FastAPI, RAG, and automation
 - **LinkedIn:** [https://www.linkedin.com/in/madhu-dadi-54684531](https://www.linkedin.com/in/madhu-dadi-54684531)
 - **X / Twitter:** [https://x.com/madhu245](https://x.com/madhu245)
 
@@ -202,7 +221,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 

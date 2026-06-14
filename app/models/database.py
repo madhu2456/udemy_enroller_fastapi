@@ -271,11 +271,31 @@ class EnrolledCourse(Base):
     )  # enrolled, failed, excluded, expired
     error_message = Column(Text, nullable=True)
     enrolled_at = Column(DateTime, default=_utcnow_naive)
+    last_checked_at = Column(DateTime, nullable=True)
+    is_coupon_valid = Column(Boolean, nullable=True)
 
     # Relationships
     enrollment_run = relationship("EnrollmentRun", back_populates="courses")
 
 
 def create_tables():
-    """Create all database tables."""
+    """Create all database tables and perform lightweight migrations."""
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-migrate new columns for seamless deployment
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            # Check if columns exist by selecting them. If not, it throws OperationalError
+            try:
+                conn.execute(text("SELECT last_checked_at FROM enrolled_courses LIMIT 1"))
+            except Exception:
+                conn.execute(text("ALTER TABLE enrolled_courses ADD COLUMN last_checked_at DATETIME"))
+                
+            try:
+                conn.execute(text("SELECT is_coupon_valid FROM enrolled_courses LIMIT 1"))
+            except Exception:
+                conn.execute(text("ALTER TABLE enrolled_courses ADD COLUMN is_coupon_valid BOOLEAN"))
+    except Exception as e:
+        # Just pass if it's Postgres or another DB that handles this via Alembic
+        pass
