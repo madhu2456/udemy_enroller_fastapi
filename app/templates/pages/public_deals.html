@@ -1,0 +1,424 @@
+{% extends "components/base.html" %}
+
+{% block title %}100% Free Udemy Coupons & Discount Codes [Updated Daily]{% endblock %}
+{% block meta_title %}100% Free Udemy Coupons & Discount Codes [Updated Daily]{% endblock %}
+{% block meta_description %}Get 100% free Udemy coupons and discount codes updated daily. Our automated system checks and verifies free Udemy courses so you can enroll instantly without paying.{% endblock %}
+{% block meta_keywords %}free udemy coupons, 100% off udemy discount codes, valid udemy coupons, free udemy courses today, working udemy promo codes, udemy free coupons{% endblock %}
+
+{% block extra_head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "100% Free Udemy Coupons & Discount Codes",
+  "description": "A curated collection of 100% free Udemy courses, updated daily with verified discount codes.",
+  "url": "https://udemyenroller.madhudadi.in/udemycoupons",
+  "publisher": {
+    "@type": "Person",
+    "name": "Madhu Dadi",
+    "url": "https://madhudadi.in"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "Adticks",
+    "url": "https://adticks.com",
+    "description": "SEO, AEO, and GEO improvement platform."
+  },
+  "mainEntity": {
+    "@type": "ItemList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Latest Free Udemy Courses",
+        "description": "Browse today's valid 100% off promotional coupons for Udemy courses."
+      }
+    ]
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [{
+    "@type": "Question",
+    "name": "Are these Udemy coupons really 100% free?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Yes, all coupons listed here provide a 100% discount, making the courses entirely free. Our background system automatically verifies the pricing via Udemy's API to ensure the coupon hasn't expired."
+    }
+  }, {
+    "@type": "Question",
+    "name": "Do I get lifetime access to the free courses?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Yes! Once you enroll in a Udemy course using a 100% off coupon, you get full lifetime access, just as if you had paid for it. You also get a certificate of completion."
+    }
+  }, {
+    "@type": "Question",
+    "name": "How often are the coupon codes updated?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Our automated engine scrapes and updates new free Udemy courses multiple times a day. We also have a background checker that flags expired coupons in real-time."
+    }
+  }]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="py-10 text-gray-900">
+    <div class="max-w-6xl mx-auto px-6">
+        <!-- Header Section -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-semibold text-gray-900 tracking-tight mb-2">Free Udemy Coupons</h1>
+            <p class="text-sm text-gray-500">Browse the latest 100% off Udemy courses discovered by the enroller engine.</p>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="bg-white p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row gap-4 mb-8 shadow-sm">
+            <div class="relative flex-grow">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i data-lucide="search" class="w-4 h-4 text-gray-400"></i>
+                </div>
+                <input type="text" id="searchInput" class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors" placeholder="Search courses...">
+            </div>
+            <div class="w-full sm:w-48 relative">
+                <select id="categorySelect" class="block w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 transition-colors appearance-none cursor-pointer">
+                    <option value="">All Categories</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                </div>
+            </div>
+            <div class="w-full sm:w-48 relative">
+                <select id="statusSelect" class="block w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 transition-colors appearance-none cursor-pointer">
+                    <option value="all">All Statuses</option>
+                    <option value="enrolled" selected>Valid</option>
+                    <option value="expired">Expired</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- States -->
+        <div id="loadingState" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
+            <!-- Skeleton cards injected via JS -->
+        </div>
+
+        <div id="emptyState" class="hidden text-center py-20 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 text-gray-400 mb-4">
+                <i data-lucide="search-x" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-base font-semibold text-gray-900 mb-1">No deals found</h3>
+            <p class="text-sm text-gray-500 mb-4">Try adjusting your search or category filter.</p>
+            <button id="clearFiltersBtn" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150 shadow-sm">Clear Filters</button>
+        </div>
+
+        <!-- Course Grid -->
+        <div id="courseGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 hidden">
+            <!-- Course cards injected via JS -->
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm hidden">
+            <button id="prevPageBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i> Previous
+            </button>
+            <span id="pageIndicator" class="text-sm font-medium text-gray-500">Page 1 of 1</span>
+            <button id="nextPageBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150">
+                Next <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- SEO / GEO FAQ Section -->
+        <div class="mt-16 bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
+            <h2 class="text-xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">Are these Udemy coupons really 100% free?</h3>
+                    <p class="text-sm text-gray-600 mt-2">Yes, all coupons listed here provide a 100% discount, making the courses entirely free. Our background system automatically verifies the pricing via Udemy's official API to ensure the coupon hasn't expired.</p>
+                </div>
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">Do I get lifetime access to the free courses?</h3>
+                    <p class="text-sm text-gray-600 mt-2">Yes! Once you enroll in a Udemy course using a 100% off coupon, you get full lifetime access, just as if you had paid for it. You also get a certificate of completion.</p>
+                </div>
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">How often are the coupon codes updated?</h3>
+                    <p class="text-sm text-gray-600 mt-2">Our automated engine scrapes and updates new free Udemy courses multiple times a day. We also have a background checker that flags expired coupons in real-time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const state = {
+            page: 1,
+            search: '',
+            category: '',
+            status: 'enrolled',
+            totalPages: 1,
+            loading: true
+        };
+
+        const els = {
+            grid: document.getElementById('courseGrid'),
+            loading: document.getElementById('loadingState'),
+            empty: document.getElementById('emptyState'),
+            pagination: document.getElementById('pagination'),
+            searchInput: document.getElementById('searchInput'),
+            categorySelect: document.getElementById('categorySelect'),
+            statusSelect: document.getElementById('statusSelect'),
+            prevBtn: document.getElementById('prevPageBtn'),
+            nextBtn: document.getElementById('nextPageBtn'),
+            pageIndicator: document.getElementById('pageIndicator'),
+            clearFiltersBtn: document.getElementById('clearFiltersBtn')
+        };
+
+        // Custom Skeleton Animation
+        const skeletonStyle = document.createElement('style');
+        skeletonStyle.innerHTML = `
+            @keyframes pulse-light {
+                0%, 100% { opacity: 1; }
+                50% { opacity: .5; }
+            }
+            .animate-pulse-light {
+                animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .line-clamp-2 {
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;  
+                overflow: hidden;
+            }
+        `;
+        document.head.appendChild(skeletonStyle);
+
+        // Setup skeletons
+        els.loading.innerHTML = Array(8).fill().map(() => `
+            <article class="bg-white rounded-xl border border-gray-200 overflow-hidden h-80 flex flex-col">
+                <div class="h-28 bg-gray-100 animate-pulse-light"></div>
+                <div class="p-5 flex-grow flex flex-col gap-3">
+                    <div class="h-3 w-1/3 bg-gray-200 rounded animate-pulse-light"></div>
+                    <div class="h-4 w-full bg-gray-200 rounded animate-pulse-light"></div>
+                    <div class="h-4 w-4/5 bg-gray-200 rounded animate-pulse-light"></div>
+                    <div class="mt-auto pt-4 border-t border-gray-100 flex justify-between gap-3">
+                        <div class="h-8 w-1/2 bg-gray-100 rounded-lg animate-pulse-light"></div>
+                        <div class="h-8 w-1/2 bg-gray-200 rounded-lg animate-pulse-light"></div>
+                    </div>
+                </div>
+            </article>
+        `).join('');
+
+        async function fetchCoupons() {
+            state.loading = true;
+            updateUI();
+            
+            try {
+                const params = new URLSearchParams({
+                    page: state.page,
+                    limit: 24,
+                    ...(state.search && { search: state.search }),
+                    ...(state.category && { category: state.category }),
+                    ...(state.status && state.status !== 'all' && { status: state.status })
+                });
+                
+                const response = await fetch(`/udemycoupons/api/coupons?${params}`);
+                const data = await response.json();
+                
+                state.totalPages = data.pages;
+                
+                if (els.categorySelect.options.length <= 1 && data.categories) {
+                    data.categories.forEach(cat => {
+                        if (!cat) return;
+                        const option = document.createElement('option');
+                        option.value = cat;
+                        option.textContent = cat;
+                        els.categorySelect.appendChild(option);
+                    });
+                }
+                
+                renderCourses(data.items);
+                // Re-initialize Lucide icons for new DOM elements
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Failed to fetch coupons:', error);
+                els.grid.innerHTML = `<div class="col-span-full text-center text-red-500 py-10">Failed to load deals. Please try again later.</div>`;
+            } finally {
+                state.loading = false;
+                updateUI();
+            }
+        }
+
+        window.copyCoupon = function(btn, code) {
+            navigator.clipboard.writeText(code);
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-green-500"></i>';
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                if (window.lucide) lucide.createIcons();
+            }, 2000);
+        };
+
+        function renderCourses(courses) {
+            if (!courses || courses.length === 0) {
+                els.grid.innerHTML = '';
+                els.grid.classList.add('hidden');
+                els.empty.classList.remove('hidden');
+                return;
+            }
+            
+            els.empty.classList.add('hidden');
+            els.grid.classList.remove('hidden');
+            
+            els.grid.innerHTML = courses.map(course => {
+                let dateDisplay = 'Pending Check';
+                if (course.last_checked_at) {
+                    const checkedDate = new Date(course.last_checked_at);
+                    if (!isNaN(checkedDate)) {
+                        dateDisplay = `Last checked: ${checkedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                    }
+                } else if (course.enrolled_at) {
+                    const enrolledDate = new Date(course.enrolled_at);
+                    if (!isNaN(enrolledDate)) {
+                        dateDisplay = `Discovered: ${enrolledDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                    }
+                }
+                
+                let couponCode = course.coupon_code || 'N/A';
+                if (couponCode === 'N/A' && course.url && course.url.includes('couponCode=')) {
+                    couponCode = new URL(course.url).searchParams.get('couponCode') || 'N/A';
+                }
+
+                let badgeClass = "bg-gray-100 text-gray-700";
+                let badgeText = "Pending Check";
+                
+                if (course.is_coupon_valid === true) {
+                    badgeClass = "bg-green-100 text-green-700";
+                    badgeText = "Valid";
+                } else if (course.is_coupon_valid === false) {
+                    badgeClass = "bg-red-100 text-red-700";
+                    badgeText = "Expired";
+                }
+
+                return `
+                    <article class="bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden hover:border-gray-300 transition-colors duration-150 shadow-sm h-full group relative p-5 pt-6">
+                        <div class="absolute top-0 right-0 px-3 py-1.5 rounded-bl-lg text-[10px] font-bold uppercase tracking-wider ${badgeClass}">
+                            ${badgeText}
+                        </div>
+                        
+                        <div class="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-2 truncate pr-16">
+                            ${course.category || 'Course'}
+                        </div>
+
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors" title="${course.title}">
+                            ${course.title}
+                        </h3>
+
+                        <div class="flex items-center gap-2 text-[11px] text-gray-500 mb-4">
+                            <span class="font-medium flex items-center gap-1" title="Status Date"><i data-lucide="calendar" class="w-3 h-3"></i> ${dateDisplay}</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                ${course.price && course.price > 0 ? `<span class="line-through opacity-70">₹${course.price}</span> <span class="text-green-600 font-bold">Free</span>` : `<span class="text-green-600 font-bold">Free</span>`}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <div class="flex items-center justify-between mb-3 bg-[#F9FAFB] p-2 rounded-lg border border-gray-200">
+                                <div class="flex flex-col text-left overflow-hidden">
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Coupon Code</span>
+                                    <span class="font-mono text-xs text-gray-700 truncate max-w-[120px] font-medium" title="${couponCode}">${couponCode}</span>
+                                </div>
+                                <button onclick="copyCoupon(this, '${couponCode}')" class="flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none" title="Copy Coupon">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <a href="${course.url}" target="_blank" rel="noopener" class="w-full inline-flex items-center justify-center gap-1.5 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150">
+                                Enroll Now <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function updateUI() {
+            if (state.loading) {
+                els.grid.classList.add('hidden');
+                els.empty.classList.add('hidden');
+                els.loading.classList.remove('hidden');
+                els.pagination.classList.add('hidden');
+            } else {
+                els.loading.classList.add('hidden');
+                
+                if (state.totalPages > 1 && els.empty.classList.contains('hidden')) {
+                    els.pagination.classList.remove('hidden');
+                    els.pageIndicator.textContent = `Page ${state.page} of ${state.totalPages}`;
+                    els.prevBtn.disabled = state.page <= 1;
+                    els.nextBtn.disabled = state.page >= state.totalPages;
+                } else {
+                    els.pagination.classList.add('hidden');
+                }
+            }
+        }
+
+        let searchTimeout;
+        els.searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                state.search = e.target.value;
+                state.page = 1;
+                fetchCoupons();
+            }, 400);
+        });
+
+        els.categorySelect.addEventListener('change', (e) => {
+            state.category = e.target.value;
+            state.page = 1;
+            fetchCoupons();
+        });
+
+        els.statusSelect.addEventListener('change', (e) => {
+            state.status = e.target.value;
+            state.page = 1;
+            fetchCoupons();
+        });
+
+        els.prevBtn.addEventListener('click', () => {
+            if (state.page > 1) {
+                state.page--;
+                fetchCoupons();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        els.nextBtn.addEventListener('click', () => {
+            if (state.page < state.totalPages) {
+                state.page++;
+                fetchCoupons();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        els.clearFiltersBtn.addEventListener('click', () => {
+            state.search = '';
+            state.category = '';
+            state.status = 'enrolled';
+            state.page = 1;
+            els.searchInput.value = '';
+            els.categorySelect.value = '';
+            els.statusSelect.value = 'enrolled';
+            fetchCoupons();
+        });
+
+        fetchCoupons();
+    });
+</script>
+{% endblock %}

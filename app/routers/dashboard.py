@@ -75,28 +75,6 @@ def history_page(request: Request, user_id: int = Depends(get_current_user_id)):
     )
 
 
-@router.get("/faq", response_class=HTMLResponse)
-def faq_page(request: Request, user_id: int = Depends(get_current_user_id)):
-    """Render FAQ page."""
-    return templates.TemplateResponse(
-        "pages/faq.html", {"request": request, "user_id": user_id}
-    )
-
-
-@router.get("/about", response_class=HTMLResponse)
-def about_page(request: Request, user_id: int = Depends(get_current_user_id)):
-    """Render About page."""
-    return templates.TemplateResponse(
-        "pages/about.html", {"request": request, "user_id": user_id}
-    )
-
-
-@router.get("/guides", response_class=HTMLResponse)
-def guides_page(request: Request, user_id: int = Depends(get_current_user_id)):
-    """Render Guides page."""
-    return templates.TemplateResponse(
-        "pages/guides.html", {"request": request, "user_id": user_id}
-    )
 
 
 @router.get("/api/dashboard/stats")

@@ -46,7 +46,11 @@ class Scraper(ABC):
 
     def parse_html(self, content: Union[str, bytes]) -> BeautifulSoup:
         """Helper to parse HTML with BeautifulSoup."""
-        return BeautifulSoup(content, "lxml")
+        import warnings
+        from bs4 import MarkupResemblesLocatorWarning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", MarkupResemblesLocatorWarning)
+            return BeautifulSoup(content, "lxml")
 
     async def _resolve_trk_redirect(self, trk_url: str) -> str | None:
         """Follow a short trk.udemy.com redirect to the real course URL.

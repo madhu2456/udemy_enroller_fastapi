@@ -7,7 +7,7 @@
     
     <!-- Primary Meta Tags -->
     <meta name="title" content="{% block meta_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}">
-    <meta name="description" content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you instantly — no manual hunting required.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you instantly - no manual hunting required.{% endblock %}">
     <meta name="keywords" content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2025, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper{% endblock %}">
     <meta name="author" content="Madhu Dadi">
     <meta name="robots" content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
@@ -29,14 +29,14 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://udemyenroller.madhudadi.in{{ request.url.path }}">
-    <meta property="og:title" content="{% block og_title %}Udemy Enroller — FastAPI Automation Case Study{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}Udemy Enroller - FastAPI Automation Case Study{% endblock %}">
     <meta property="og:description" content="{% block og_description %}A private FastAPI and Playwright workflow-orchestration case study demonstrating async queues, bounded concurrency, session-state handling, and background processing.{% endblock %}">
     <meta property="og:image" content="https://udemyenroller.madhudadi.in/static/images/icon-512.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://udemyenroller.madhudadi.in{{ request.url.path }}">
-    <meta property="twitter:title" content="{% block twitter_title %}Udemy Enroller — FastAPI Automation Case Study{% endblock %}">
+    <meta property="twitter:title" content="{% block twitter_title %}Udemy Enroller - FastAPI Automation Case Study{% endblock %}">
     <meta property="twitter:description" content="{% block twitter_description %}A private FastAPI and Playwright workflow-orchestration case study demonstrating async queues, bounded concurrency, session-state handling, and background processing.{% endblock %}">
     <meta property="twitter:image" content="https://udemyenroller.madhudadi.in/static/images/icon-512.png">
 
@@ -65,7 +65,7 @@
             "@type": "WebSite",
             "@id": "https://madhudadi.in/#website",
             "url": "https://madhudadi.in",
-            "name": "Madhu Dadi — Portfolio"
+            "name": "Madhu Dadi - Portfolio"
           },
           "inLanguage": "en"
         },
@@ -94,6 +94,19 @@
             "price": "0",
             "priceCurrency": "USD"
           },
+          "provider": {
+            "@type": "Organization",
+            "name": "Adticks",
+            "url": "https://adticks.com",
+            "description": "SEO, AEO, and GEO improvement platform."
+          },
+          "hasPart": [
+            {
+              "@type": "WebPage",
+              "name": "100% Free Udemy Coupons Database",
+              "url": "https://udemyenroller.madhudadi.in/udemycoupons"
+            }
+          ],
           "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
@@ -232,10 +245,22 @@
             scrollbar-width: none;
         }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen flex flex-col">
+    <!-- Global Announcement Bar -->
+    <div class="bg-[#2563EB] px-4 py-2.5 text-center shadow-md relative z-[100]">
+        <p class="text-xs sm:text-sm font-medium text-white flex flex-wrap items-center justify-center gap-2">
+            <span class="animate-pulse w-2 h-2 rounded-full bg-green-400 inline-block shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span>
+            <span><strong>New Feature:</strong> Access our live database of manually verified, 100% free Udemy coupons!</span>
+            <a href="/udemycoupons" class="inline-flex items-center gap-1 font-bold text-white bg-white/20 hover:bg-white/30 border border-white/30 px-3 py-1 rounded-full transition-all ml-2 whitespace-nowrap">
+                Browse Deals <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </a>
+        </p>
+    </div>
+
     <!-- Navigation -->
-    <header class="sticky top-0 z-50 bg-white border-b border-gray-200">
+    <header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <!-- Main nav row -->
         <nav class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3" aria-label="Main navigation">
             <!-- Logo -->
@@ -244,11 +269,12 @@
                 <span class="text-sm font-semibold text-gray-900 hidden sm:block">Udemy Enroller</span>
             </a>
 
-            <!-- Centre nav links — always visible -->
+            <!-- Centre nav links - always visible -->
             <div class="flex items-center gap-0.5" id="nav-links">
                 <a href="/guides" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/guides' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Guides</a>
                 <a href="/faq" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/faq' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">FAQ</a>
                 <a href="/about" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/about' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">About</a>
+                <a href="/udemycoupons" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/udemycoupons' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Free Coupons</a>
                 <!-- Authenticated Links -->
                 <a href="/dashboard" class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/dashboard' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Dashboard</a>
                 <a href="/settings" class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/settings' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Settings</a>
@@ -291,28 +317,33 @@
     <!-- Footer -->
     <footer class="border-t border-gray-200 bg-white">
         <div class="max-w-6xl mx-auto px-6 py-8">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 sm:gap-4">
                 <!-- Brand -->
-                <div class="flex items-center gap-2">
-                    <div class="w-5 h-5 rounded-md bg-[#2563EB] flex items-center justify-center">
-                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                    </div>
+                <div class="flex items-center gap-2 h-7">
+                    <img src="/static/images/icon-512.png" alt="Udemy Enroller Logo" class="w-5 h-5 rounded-md grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" width="20" height="20">
                     <span class="text-xs font-semibold text-gray-700">Udemy Enroller</span>
                 </div>
 
                 <!-- Links -->
-                <nav class="flex items-center flex-wrap justify-center gap-x-6 gap-y-2" aria-label="Footer navigation">
+                <nav class="flex items-center flex-wrap justify-center gap-x-6 gap-y-2 h-7" aria-label="Footer navigation">
+                    <a href="/udemycoupons" class="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">Free Udemy Coupons</a>
                     <a href="/guides" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">Guides</a>
                     <a href="/faq" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">FAQ</a>
                     <a href="/about" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">About</a>
+                    <a href="https://madhudadi.in/blog" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">Blog</a>
                     <a href="https://madhudadi.in" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">Madhu Dadi</a>
                     <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">GitHub</a>
                 </nav>
 
-                <!-- Disclaimer -->
-                <p class="text-xs text-gray-400">Not affiliated with Udemy, Inc.</p>
+                <!-- Credits & Disclaimer -->
+                <div class="flex flex-col items-center sm:items-end gap-1.5">
+                    <a href="https://adticks.com" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors bg-blue-50/50 hover:bg-blue-50 px-2.5 h-7 rounded-md border border-blue-100/50 hover:border-blue-200">
+                        <span>SEO & GEO improved by</span>
+                        <span class="font-bold text-[#2563EB] group-hover:text-blue-800">Adticks</span>
+                        <svg class="w-3 h-3 text-blue-500 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                    <p class="text-[10px] text-gray-400">Not affiliated with Udemy, Inc.</p>
+                </div>
             </div>
         </div>
     </footer>

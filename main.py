@@ -37,7 +37,7 @@ from loguru import logger
 from config.settings import get_settings
 from app.logging_config import setup_logging
 from app.models.database import create_tables, engine
-from app.routers import auth, settings, enrollment, dashboard, seo
+from app.routers import auth, settings, enrollment, dashboard, seo, public_deals
 
 # Configure logging with JSON support
 setup_logging()
@@ -174,7 +174,7 @@ async def add_cache_headers(request: Request, call_next):
     if path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     elif path in {"/", "/faq", "/about", "/guides", "/robots.txt", "/sitemap.xml", "/humans.txt", "/llms.txt", "/ai-profile.json"}:
-        response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Vary"] = "Cookie"
     elif path in {"/dashboard", "/settings", "/history"} or path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -192,6 +192,7 @@ app.include_router(dashboard.router)
 app.include_router(auth.router)
 app.include_router(settings.router)
 app.include_router(enrollment.router)
+app.include_router(public_deals.router)
 
 
 @app.get("/api/health")
