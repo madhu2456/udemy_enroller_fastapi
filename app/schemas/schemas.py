@@ -167,11 +167,21 @@ class ScrapingProgress(BaseModel):
     total: int
     done: bool
     error: Optional[str] = None
+    state: str = "queued"
+    courses_found: int = 0
+    elapsed_seconds: float = 0.0
 
 
 class EnrollmentProgress(BaseModel):
     run_id: int
     status: str
+    phase: str = "scraping"
+    sources_total: int = 0
+    sources_completed: int = 0
+    sources_failed: int = 0
+    courses_discovered: int = 0
+    last_update_at: Optional[datetime] = None
+    
     total_courses: int
     processed: int
     successfully_enrolled: int

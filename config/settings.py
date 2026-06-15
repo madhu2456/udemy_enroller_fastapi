@@ -37,7 +37,9 @@ class Settings(BaseSettings):
 
     # Scraper defaults
     MAX_SCRAPER_WORKERS: int = 5
-    SCRAPER_TIMEOUT: int = 30
+    SCRAPER_SITE_TIMEOUT_SECONDS: int = 1800
+    SCRAPER_RUN_TIMEOUT_SECONDS: int = 2700
+    SCRAPER_TIMEOUT: int = 30  # Deprecated
     PROXIES: str = ""  # Comma-separated list of proxy URLs
 
     # Deployment environment: "local" or "server"
