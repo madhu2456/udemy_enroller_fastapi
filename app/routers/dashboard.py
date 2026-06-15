@@ -198,14 +198,18 @@ async def stream_logs(
                     f.readline()
 
             lines = f.readlines()
-            yielded_count = 0
+            
+            matching_lines = []
             for line in reversed(lines):
                 processed = process_log_line(line)
                 if processed and processed.strip():
-                    yield f"data: {processed.strip()}\n\n"
-                    yielded_count += 1
-                    if yielded_count >= 30:
+                    matching_lines.append(processed.strip())
+                    if len(matching_lines) >= 30:
                         break
+                        
+            # Yield in chronological order (oldest to newest)
+            for line in reversed(matching_lines):
+                yield f"data: {line}\n\n"
 
             # Live tail
             from app.core.constants import shutdown_event
@@ -221,4 +225,9 @@ async def stream_logs(
                 else:
                     await asyncio.sleep(0.5)
 
-    return StreamingResponse(log_generator(), media_type="text/event-stream")
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no"
+    }
+    return StreamingResponse(log_generator(), media_type="text/event-stream", headers=headers)
