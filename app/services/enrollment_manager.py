@@ -77,9 +77,25 @@ class EnrollmentManager:
         """Extract progress metrics from a run record."""
         pd = run.progress_data or {}
 
+        scraping_progress = pd.get("scraping_progress", [])
+        sources_total = len(scraping_progress)
+        sources_completed = sum(1 for s in scraping_progress if s.get("state") == "completed")
+        sources_failed = sum(1 for s in scraping_progress if s.get("state") in ("failed", "timed_out"))
+        courses_discovered = sum(s.get("courses_found", 0) for s in scraping_progress)
+        
+        phase = run.status
+        if run.status == "enrolling" and (sources_completed + sources_failed) < sources_total:
+            phase = "scraping_and_enrolling"
+
         return {
             "run_id": run.id,
             "status": run.status,
+            "phase": phase,
+            "sources_total": sources_total,
+            "sources_completed": sources_completed,
+            "sources_failed": sources_failed,
+            "courses_discovered": courses_discovered,
+            "last_update_at": None,
             "total_courses": run.total_courses_found,
             "processed": run.total_processed,
             "successfully_enrolled": run.successfully_enrolled,
@@ -90,7 +106,7 @@ class EnrollmentManager:
             "currency": run.currency or "usd",
             "current_course_title": pd.get("current_course_title"),
             "current_course_url": pd.get("current_course_url"),
-            "scraping_progress": pd.get("scraping_progress", []),
+            "scraping_progress": scraping_progress,
         }
 
     @classmethod
@@ -142,7 +158,6 @@ class EnrollmentManager:
                 logger.error(f"Run {self.run_id} not found in database.")
                 return
 
-            # Phase 1: Scraping
             run.status = "scraping"
             db.commit()
             self.status = "scraping"
@@ -153,35 +168,6 @@ class EnrollmentManager:
                 enabled_sites, proxy=self.settings.get("proxy_url")
             )
 
-            # Start scraping in background but wait for it, while periodically updating status
-            scrape_task = asyncio.create_task(self.scraper_service.scrape_all())
-
-            while not scrape_task.done():
-                # Update scraping progress in DB every 2 seconds
-                progress = self.scraper_service.get_progress()
-                # Must create a new dict copy so SQLAlchemy detects the mutation
-                pd = dict(run.progress_data or {})
-                pd["scraping_progress"] = progress
-                run.progress_data = pd
-                db.commit()
-                await asyncio.sleep(2)
-
-            raw_courses = await scrape_task
-            logger.warning(f"Scraper returned {len(raw_courses)} courses total.")
-
-            # Final scraping progress update
-            pd = dict(run.progress_data or {})
-            pd["scraping_progress"] = self.scraper_service.get_progress()
-            run.progress_data = pd
-            db.commit()
-
-            # Pre-filter for uniqueness and already enrolled (by slug)
-            scraped_courses: List[Course] = []
-            seen_slugs = set()
-
-            # Build a set of courses we KNOW are already enrolled from previous runs.
-            # This avoids hitting Udemy's API for courses we already discovered.
-            # For users with massive libraries (20k+), this is far safer than bulk-fetching.
             enrolled_slugs: set[str] = set()
             try:
                 from sqlalchemy import select
@@ -198,14 +184,10 @@ class EnrollmentManager:
                 )
                 for row in db.execute(stmt):
                     enrolled_slugs.add(row[0])
-                logger.warning(
-                    f"Loaded {len(enrolled_slugs)} already-enrolled courses from DB history."
-                )
+                logger.warning(f"Loaded {len(enrolled_slugs)} already-enrolled courses from DB history.")
             except Exception as e:
                 logger.warning(f"Could not load enrolled history from DB: {e}")
 
-            # Also load previously attempted course+coupon combos (any status)
-            # to avoid re-trying identical URLs with the same coupon.
             previously_attempted: set[tuple[str, str]] = set()
             try:
                 from sqlalchemy import select
@@ -220,63 +202,20 @@ class EnrollmentManager:
                 )
                 for row in db.execute(stmt):
                     previously_attempted.add((row[0], row[1] or ""))
-                logger.warning(
-                    f"Loaded {len(previously_attempted)} previously attempted course+coupon combos."
-                )
+                logger.warning(f"Loaded {len(previously_attempted)} previously attempted course+coupon combos.")
             except Exception as e:
                 logger.warning(f"Could not load previous attempts: {e}")
 
-            skipped_already_enrolled = 0
-            skipped_already_tried = 0
-
-            for course in raw_courses:
-                if not course.url:
-                    continue
-
-                # Deduplicate by URL/Slug
-                if course.url in seen_slugs:
-                    continue
-                seen_slugs.add(course.url)
-
-                if not course.slug and course.url:
-                    match = re.search(r"udemy\.com/course/([^/?#]+)", course.url)
-                    if match:
-                        course.slug = match.group(1)
-
-                # Skip if we already know this course is already enrolled from a prior run
-                if course.slug and course.slug in enrolled_slugs:
-                    skipped_already_enrolled += 1
-                    continue
-
-                # Skip if we already tried this exact course + coupon in a previous run
-                coupon = course.coupon_code or ""
-                if course.slug and (course.slug, coupon) in previously_attempted:
-                    skipped_already_tried += 1
-                    continue
-
-                scraped_courses.append(course)
-
-            self.total_courses = len(scraped_courses)
-            logger.warning(
-                f"Final course list to process: {self.total_courses} courses "
-                f"({skipped_already_enrolled} skipped as already enrolled from DB, "
-                f"{skipped_already_tried} skipped as already tried with same coupon)."
-            )
-
-            run.total_courses_found = self.total_courses
-            run.status = "enrolling"
-            db.commit()
-            self.status = "enrolling"
-
+            seen_slugs = set()
             from collections import defaultdict
             source_stats = defaultdict(lambda: {"enrolled": 0, "already_enrolled": 0, "expired": 0, "failed": 0, "excluded": 0, "invalid": 0})
 
-            # Phase 2: Process and enroll (Single Course Mode only)
-            logger.info("🔄 Single-course checkout mode active (emulated mobile checkout)")
+            skipped_already_enrolled = 0
+            skipped_already_tried = 0
+            scrapers_succeeded = 0
+            index = 0
 
             async def process_single_course(course: Course):
-                """Process single course checkout with metrics tracking."""
-                # Add jitter delay between enrollments
                 course_delay = random.uniform(2.0, 5.0)
                 logger.info(f"[PROCESS] Delaying {course_delay:.1f}s before enrolling {course.title}")
                 await asyncio.sleep(course_delay)
@@ -289,177 +228,153 @@ class EnrollmentManager:
                 if success:
                     status = "enrolled"
                     self.udemy.successfully_enrolled_c += 1
-                    # Add to amount saved only on success
                     if course.list_price:
                         self.udemy.amount_saved_c += course.list_price
-                    logger.info(
-                        f"✅ Enrollment Success: {course.title} ({duration:.1f}s)"
-                    )
+                    logger.info(f"✅ Enrollment Success: {course.title} ({duration:.1f}s)")
                 else:
-                    # Distinguish between expired coupon vs actual failure
                     err = (course.error or "").lower()
                     if "price mismatch" in err or "expired" in err:
                         status = "expired"
                         self.udemy.expired_c += 1
-                        logger.warning(
-                            f"⏰ Coupon Expired (checkout): {course.title} — {course.error}"
-                        )
+                        logger.warning(f"⏰ Coupon Expired (checkout): {course.title} — {course.error}")
                     else:
                         status = "failed"
-                        logger.warning(
-                            f"❌ Enrollment Failed: {course.title} ({duration:.1f}s)"
-                        )
+                        logger.warning(f"❌ Enrollment Failed: {course.title} ({duration:.1f}s)")
 
-                await self._save_course(db, run, course, status)
                 return success, status
 
-            for index, course in enumerate(scraped_courses):
-                self.processed = index + 1
-                self.current_course_title = course.title
-                self.current_course_url = course.url or ""
+            async for scraper, state in self.scraper_service.stream_results():
+                pd = dict(run.progress_data or {})
+                pd["scraping_progress"] = self.scraper_service.get_progress()
+                run.progress_data = pd
+                db.commit()
 
-                if (
-                    index == 0
-                    or (index + 1) % 25 == 0
-                    or (index + 1) == self.total_courses
-                ):
-                    logger.warning(
-                        f"Processing {index + 1}/{self.total_courses}: {course.title}"
-                    )
-                else:
-                    logger.debug(
-                        f"Processing {index + 1}/{self.total_courses}: {course.title}"
-                    )
+                if state == "completed":
+                    scrapers_succeeded += 1
 
-                course_status = "failed"
-                error_msg = None
-                saved_already = False
+                for course in scraper.data:
+                    if not course.url:
+                        continue
 
-                try:
-                    # Check if already enrolled
+                    if course.url in seen_slugs:
+                        continue
+                    seen_slugs.add(course.url)
+
                     if not course.slug and course.url:
                         match = re.search(r"udemy\.com/course/([^/?#]+)", course.url)
                         if match:
                             course.slug = match.group(1)
 
-                    if await self.udemy.is_already_enrolled(course, enrolled_slugs):
-                        self.udemy.already_enrolled_c += 1
-                        course_status = "already_enrolled"
-                        logger.debug(
-                            f"  Status: Already enrolled (DB cache: {course.slug})"
-                        )
-                    else:
-                        logger.info(f"[PIPELINE] Fetching course_id for {course.title}")
-                        await self.udemy.get_course_id(course)
-                        logger.info(
-                            f"[PIPELINE] course_id={course.course_id} | valid={course.is_valid} | "
-                            f"error={course.error or 'none'} for {course.title}"
-                        )
+                    if course.slug and course.slug in enrolled_slugs:
+                        skipped_already_enrolled += 1
+                        continue
 
-                        if not course.is_valid:
-                            error_msg = course.error or ""
-                            if "403" in error_msg:
-                                course_status = "failed"
-                                logger.info(
-                                    f"  Status: Skipped (403 Forbidden) - {error_msg}"
-                                )
-                            else:
-                                self.udemy.excluded_c += 1
-                                course_status = "invalid"
-                                logger.info(f"  Status: Invalid - {error_msg}")
-                        elif await self.udemy.check_already_enrolled_live(course):
-                            # Live API check with course_id confirms already enrolled
+                    coupon = course.coupon_code or ""
+                    if course.slug and (course.slug, coupon) in previously_attempted:
+                        skipped_already_tried += 1
+                        continue
+
+                    if self.status == "scraping":
+                        run.status = "enrolling"
+                        db.commit()
+                        self.status = "enrolling"
+
+                    self.total_courses += 1
+                    run.total_courses_found = self.total_courses
+                    self.processed = index + 1
+                    self.current_course_title = course.title
+                    self.current_course_url = course.url or ""
+
+                    logger.info(f"Processing {index + 1}: {course.title}")
+
+                    course_status = "failed"
+                    error_msg = None
+                    saved_already = False
+
+                    try:
+                        if await self.udemy.is_already_enrolled(course, enrolled_slugs):
                             self.udemy.already_enrolled_c += 1
                             course_status = "already_enrolled"
-                            logger.info(
-                                f"  Status: Already enrolled (Live API: {course.slug})"
-                            )
+                            logger.debug(f"  Status: Already enrolled (DB cache: {course.slug})")
                         else:
-                            # Apply user filters (fetch HTML page metadata first if not already populated)
-                            await self.udemy.populate_course_metadata(course)
-                            self.udemy.is_course_excluded(course, self.settings)
-                            if course.is_excluded:
-                                self.udemy.excluded_c += 1
-                                course_status = "excluded"
-                                error_msg = course.error or "Filter match"
-                                logger.info(f"  Status: Excluded ({error_msg})")
-                            else:
-                                # Course is valid and free/couponed - Enrolling
-                                logger.info(f"[PIPELINE] Checking coupon for {course.title}")
-                                await self.udemy.check_course(course)
-                                logger.info(
-                                    f"[PIPELINE] coupon_valid={course.is_coupon_valid} | "
-                                    f"price={course.price} | error={course.error or 'none'} for {course.title}"
-                                )
-                                if not course.is_coupon_valid:
-                                    if "403" in (course.error or ""):
-                                        course_status = "failed"
-                                        error_msg = course.error
-                                    else:
-                                        self.udemy.expired_c += 1
-                                        course_status = "expired"
-                                        error_msg = course.error
-                                    
-                                    logger.warning(
-                                        f"  Status: {course_status.capitalize()} ({course.error}) for {course.title}"
-                                    )
+                            logger.info(f"[PIPELINE] Fetching course_id for {course.title}")
+                            await self.udemy.get_course_id(course)
+                            if not course.is_valid:
+                                error_msg = course.error or ""
+                                if "403" in error_msg:
+                                    course_status = "failed"
                                 else:
-                                    # Check discounted_only filter: if course is free without coupon, exclude it
-                                    if self.settings.get("discounted_only") and course.is_free:
-                                        self.udemy.excluded_c += 1
-                                        course_status = "excluded"
-                                        error_msg = "Course is free by default (discounted_only filter active)"
-                                        course.is_excluded = True
-                                        course.error = error_msg
-                                        logger.info(f"  Status: Excluded ({error_msg})")
+                                    self.udemy.excluded_c += 1
+                                    course_status = "invalid"
+                            elif await self.udemy.check_already_enrolled_live(course):
+                                self.udemy.already_enrolled_c += 1
+                                course_status = "already_enrolled"
+                            else:
+                                await self.udemy.populate_course_metadata(course)
+                                self.udemy.is_course_excluded(course, self.settings)
+                                if course.is_excluded:
+                                    self.udemy.excluded_c += 1
+                                    course_status = "excluded"
+                                    error_msg = course.error or "Filter match"
+                                else:
+                                    logger.info(f"[PIPELINE] Checking coupon for {course.title}")
+                                    await self.udemy.check_course(course)
+                                    if not course.is_coupon_valid:
+                                        if "403" in (course.error or ""):
+                                            course_status = "failed"
+                                            error_msg = course.error
+                                        else:
+                                            self.udemy.expired_c += 1
+                                            course_status = "expired"
+                                            error_msg = course.error
                                     else:
-                                        logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
-                                        success, course_status = await process_single_course(course)
-                                        saved_already = True
-                except Exception as e:
-                    logger.exception(f"[PIPELINE ERROR] Unexpected error processing {course.title}: {e}")
-                    course_status = "failed"
-                    error_msg = str(e)
+                                        if self.settings.get("discounted_only") and course.is_free:
+                                            self.udemy.excluded_c += 1
+                                            course_status = "excluded"
+                                            error_msg = "Course is free by default"
+                                            course.is_excluded = True
+                                            course.error = error_msg
+                                        else:
+                                            logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
+                                            success, course_status = await process_single_course(course)
+                                            saved_already = True
+                    except Exception as e:
+                        logger.exception(f"[PIPELINE ERROR] Unexpected error processing {course.title}: {e}")
+                        course_status = "failed"
+                        error_msg = str(e)
 
-                site_key = course.site or "Unknown"
-                source_stats[site_key][course_status] += 1
+                    site_key = course.site or "Unknown"
+                    source_stats[site_key][course_status] += 1
 
-                if not saved_already:
-                    await self._save_course(db, run, course, course_status, error_msg)
+                    if not saved_already:
+                        await self._save_course(db, run, course, course_status, error_msg)
 
-                # Periodically update run progress
-                if (index + 1) % 5 == 0 or (index + 1) == self.total_courses:
                     await self._update_run_stats(db, run)
+                    index += 1
 
-                # Server-specific batch pauses to avoid Udemy rate limits
-                if self._is_server:
-                    # Detect account block signal and trigger longer cooldown
-                    if error_msg and "temporarily blocked" in error_msg.lower():
-                        cooldown = random.uniform(120, 180)
-                        logger.warning(
-                            f"  [SERVER] Account block signal detected. Cooling down for {cooldown:.0f}s..."
-                        )
-                        await asyncio.sleep(cooldown)
+                    if self._is_server:
+                        if error_msg and "temporarily blocked" in error_msg.lower():
+                            cooldown = random.uniform(120, 180)
+                            await asyncio.sleep(cooldown)
+                        if index % 25 == 0:
+                            await asyncio.sleep(random.uniform(20, 40))
+                        await asyncio.sleep(random.uniform(1.5, 3.5))
+                    else:
+                        await asyncio.sleep(random.uniform(0.5, 1.5))
 
-                    # After every 25 courses, take a longer breather
-                    if (index + 1) % 25 == 0:
-                        breather = random.uniform(20, 40)
-                        logger.info(
-                            f"  [SERVER] Batch pause after {index + 1} courses. Sleeping {breather:.0f}s..."
-                        )
-                        await asyncio.sleep(breather)
+            pd = dict(run.progress_data or {})
+            pd["scraping_progress"] = self.scraper_service.get_progress()
+            run.progress_data = pd
 
-                    # Standard server safety sleep (longer than local)
-                    await asyncio.sleep(random.uniform(1.5, 3.5))
-                else:
-                    # Local: small safety sleep (fast, residential IP)
-                    await asyncio.sleep(random.uniform(0.5, 1.5))
+            if scrapers_succeeded == 0 and index == 0:
+                run.status = "failed"
+                run.error_message = "All sources failed or timed out and no courses were found."
+            else:
+                run.status = "completed"
 
-            # Mark complete and log session health metrics
-            run.status = "completed"
             run.completed_at = _utcnow_naive()
             db.commit()
-            self.status = "completed"
+            self.status = run.status
 
             logger.info("--- Source Telemetry Summary ---")
             for site, stats in source_stats.items():
@@ -467,9 +382,7 @@ class EnrollmentManager:
                 logger.info(f"  {site}: {total} processed | {stats['enrolled']} enrolled | {stats['already_enrolled']} already enrolled | {stats['expired']} expired | {stats['failed']} failed | {stats['excluded']} excluded | {stats['invalid']} invalid")
             logger.info("--------------------------------")
             _health = self.udemy.get_session_health_report()
-            logger.info(
-                f"Enrollment pipeline completed. Enrolled: {self.udemy.successfully_enrolled_c}"
-            )
+            logger.info(f"Enrollment pipeline completed. Enrolled: {self.udemy.successfully_enrolled_c}")
 
         except asyncio.CancelledError:
             logger.info(f"Enrollment pipeline {self.run_id} cancelled")
