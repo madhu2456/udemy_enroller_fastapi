@@ -13,7 +13,22 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def public_deals_page(request: Request):
     """Render the public deals dashboard page."""
-    return templates.TemplateResponse("pages/public_deals.html", {"request": request})
+    import os
+    import json
+    
+    initial_courses = []
+    json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "public_deals.json")
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+            # Only valid coupons for initial SSR
+            valid_courses = [c for c in all_courses if c.get("is_coupon_valid")]
+            initial_courses = valid_courses[:24]
+        except Exception:
+            pass
+            
+    return templates.TemplateResponse("pages/public_deals.html", {"request": request, "initial_courses": initial_courses})
 
 @router.get("/api/coupons")
 def get_public_coupons(
