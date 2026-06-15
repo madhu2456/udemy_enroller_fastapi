@@ -25,6 +25,43 @@ def get_public_coupons(
     status: str = Query(None)
 ):
     """API endpoint to fetch coupons for the public dashboard."""
+    import os
+    import json
+    
+    json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "public_deals.json")
+    
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+                
+            categories = sorted(list(set(c.get("category") for c in all_courses if c.get("category"))))
+            
+            if search:
+                search_lower = search.lower()
+                all_courses = [c for c in all_courses if search_lower in (c.get("title") or "").lower()]
+                
+            if category:
+                all_courses = [c for c in all_courses if c.get("category") == category]
+                
+            if status and status.lower() != "all":
+                is_valid_filter = status.lower() == "enrolled"
+                all_courses = [c for c in all_courses if c.get("is_coupon_valid") == is_valid_filter]
+                
+            total = len(all_courses)
+            start_idx = (page - 1) * limit
+            paged_courses = all_courses[start_idx:start_idx + limit]
+            
+            return {
+                "items": paged_courses,
+                "categories": categories,
+                "total": total,
+                "page": page,
+                "pages": (total + limit - 1) // limit
+            }
+        except Exception as e:
+            pass # Fallback to DB
+            
     query = db.query(EnrolledCourse)
     
     if search:
