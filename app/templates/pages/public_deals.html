@@ -105,7 +105,7 @@
         </div>
 
         <!-- States -->
-        <div id="loadingState" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
+        <div id="loadingState" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 {% if initial_courses %}hidden{% endif %}">
             <!-- Skeleton cards injected via JS -->
         </div>
 
@@ -119,8 +119,51 @@
         </div>
 
         <!-- Course Grid -->
-        <div id="courseGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 hidden">
-            <!-- Course cards injected via JS -->
+        <div id="courseGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 {% if not initial_courses %}hidden{% endif %}">
+            {% if initial_courses %}
+                {% for course in initial_courses %}
+                <article class="bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden hover:border-gray-300 transition-colors duration-150 shadow-sm h-full group relative p-5 pt-6">
+                    <div class="absolute top-0 right-0 px-3 py-1.5 rounded-bl-lg text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700">
+                        Valid
+                    </div>
+                    
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-2 truncate pr-16">
+                        {{ course.category or 'Course' }}
+                    </div>
+
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors" title="{{ course.title }}">
+                        {{ course.title }}
+                    </h3>
+
+                    <div class="flex items-center gap-2 text-[11px] text-gray-500 mb-4">
+                        <span class="font-medium flex items-center gap-1" title="Status Date"><i data-lucide="calendar" class="w-3 h-3"></i> Discovered: {{ course.enrolled_at.split('T')[0] if course.enrolled_at else '' }}</span>
+                        <div class="ml-auto flex items-center gap-2">
+                            {% if course.price and course.price > 0 %}
+                                <span class="line-through opacity-70">₹{{ course.price }}</span>
+                            {% endif %}
+                            <span class="text-green-600 font-bold">Free</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-auto pt-4 border-t border-gray-100">
+                        <div class="flex items-center justify-between mb-3 bg-[#F9FAFB] p-2 rounded-lg border border-gray-200">
+                            <div class="flex flex-col text-left overflow-hidden">
+                                <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Coupon Code</span>
+                                <span class="font-mono text-xs text-gray-700 truncate max-w-[120px] font-medium" title="{{ course.coupon_code or 'N/A' }}">{{ course.coupon_code or 'N/A' }}</span>
+                            </div>
+                            <button onclick="copyCoupon(this, '{{ course.coupon_code or 'N/A' }}')" class="flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none" title="Copy Coupon">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <a href="{{ course.url }}" target="_blank" rel="noopener" class="w-full inline-flex items-center justify-center gap-1.5 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150">
+                            Enroll Now <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        </a>
+                    </div>
+                </article>
+                {% endfor %}
+            {% else %}
+                <!-- Course cards injected via JS -->
+            {% endif %}
         </div>
 
         <!-- Pagination -->
@@ -163,7 +206,7 @@
             category: '',
             status: 'enrolled',
             totalPages: 1,
-            loading: true
+            loading: {{ 'false' if initial_courses else 'true' }}
         };
 
         const els = {
@@ -379,17 +422,22 @@
             }, 400);
         });
 
-        els.categorySelect.addEventListener('change', (e) => {
-            state.category = e.target.value;
-            state.page = 1;
-            fetchCoupons();
+        els.categorySelect.addEventListener('change', (e) => { state.category = e.target.value; state.page = 1; fetchCoupons(); });
+        els.statusSelect.addEventListener('change', (e) => { state.status = e.target.value; state.page = 1; fetchCoupons(); });
+        els.clearFiltersBtn.addEventListener('click', () => { 
+            state.search = ''; state.category = ''; state.status = 'enrolled'; 
+            els.searchInput.value = ''; els.categorySelect.value = ''; els.statusSelect.value = 'enrolled';
+            state.page = 1; fetchCoupons(); 
         });
 
-        els.statusSelect.addEventListener('change', (e) => {
-            state.status = e.target.value;
-            state.page = 1;
+        // Initialize
+        {% if initial_courses %}
+            renderCourses({{ initial_courses | tojson }});
+            state.loading = false;
+            updateUI();
+        {% else %}
             fetchCoupons();
-        });
+        {% endif %}
 
         els.prevBtn.addEventListener('click', () => {
             if (state.page > 1) {
