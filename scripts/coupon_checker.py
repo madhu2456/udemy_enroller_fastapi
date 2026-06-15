@@ -122,6 +122,35 @@ async def main():
             await asyncio.sleep(3)
             
     finally:
+        # Export valid coupons to a JSON file for the server
+        logger.info("Exporting valid coupons to public_deals.json...")
+        import json
+        valid_courses = db.query(EnrolledCourse).filter(
+            EnrolledCourse.is_coupon_valid == True,
+            EnrolledCourse.coupon_code.isnot(None)
+        ).order_by(desc(EnrolledCourse.enrolled_at)).limit(500).all()
+        
+        export_data = []
+        for c in valid_courses:
+            export_data.append({
+                "id": c.id,
+                "title": c.title,
+                "url": c.url,
+                "coupon_code": c.coupon_code,
+                "price": c.price,
+                "category": c.category,
+                "language": c.language,
+                "rating": c.rating,
+                "is_coupon_valid": c.is_coupon_valid,
+                "enrolled_at": c.enrolled_at.isoformat() + "Z" if c.enrolled_at else None,
+                "last_checked_at": c.last_checked_at.isoformat() + "Z" if c.last_checked_at else None
+            })
+            
+        json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public_deals.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(export_data, f, ensure_ascii=False, indent=2)
+            
+        logger.info(f"Exported {len(export_data)} valid coupons to {json_path}")
         db.close()
         logger.info("Coupon Check Completed.")
 
