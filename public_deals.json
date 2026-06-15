@@ -1,5 +1,135 @@
 [
   {
+    "id": 11342,
+    "title": "Product Management & Product Ownership in Hindi (हिंदी)",
+    "url": "https://www.udemy.com/course/product-management-product-ownership-in-hindi/?couponCode=E4C9804053373F0A53D1",
+    "coupon_code": "E4C9804053373F0A53D1",
+    "price": 799.0,
+    "category": "Business",
+    "language": "Hindi",
+    "rating": 4.5172415,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:22:09.830773Z",
+    "last_checked_at": "2026-06-15T16:09:06.243900Z"
+  },
+  {
+    "id": 11335,
+    "title": "Machine Learning & Deep Learning A To Z Concepts",
+    "url": "https://www.udemy.com/course/machine-learning-deep-learning-a-to-z-concepts/?couponCode=A6C1DE99C436C48873D3",
+    "coupon_code": "A6C1DE99C436C48873D3",
+    "price": 799.0,
+    "category": "IT & Software",
+    "language": "Tamil",
+    "rating": 4.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:20:40.743830Z",
+    "last_checked_at": "2026-06-15T16:09:12.368212Z"
+  },
+  {
+    "id": 11330,
+    "title": "American English Consonants for Chinese Professionals",
+    "url": "https://www.udemy.com/course/consonants-for-advanced-chinese-learners-of-american-english/?couponCode=REALDISJUN26",
+    "coupon_code": "REALDISJUN26",
+    "price": 799.0,
+    "category": "Teaching & Academics",
+    "language": "English",
+    "rating": 4.796296,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:19:38.513684Z",
+    "last_checked_at": "2026-06-15T16:09:18.987010Z"
+  },
+  {
+    "id": 11328,
+    "title": "Media Training: Looking Good on TV- Preparing for the Camera",
+    "url": "https://www.udemy.com/course/looking-good-on-tv-how-to-prepare-for-the-video-camera/?couponCode=2BF5743D40C84FC0BF13",
+    "coupon_code": "2BF5743D40C84FC0BF13",
+    "price": 799.0,
+    "category": "Personal Development",
+    "language": "English",
+    "rating": 4.65,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:19:16.030858Z",
+    "last_checked_at": "2026-06-15T16:09:26.146074Z"
+  },
+  {
+    "id": 11327,
+    "title": "Public Speaking Emergency! Ace the Speech With Little Prep",
+    "url": "https://www.udemy.com/course/emergency-speech-preparation-last-minute-presentation-tips/?couponCode=7EB19CA82A8A40F2A8D4",
+    "coupon_code": "7EB19CA82A8A40F2A8D4",
+    "price": 1759.0,
+    "category": "Business",
+    "language": "English",
+    "rating": 4.28,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:19:05.506756Z",
+    "last_checked_at": "2026-06-15T16:09:26.146083Z"
+  },
+  {
+    "id": 11326,
+    "title": "Public Relations: Become a Media Star by Pitching with Video",
+    "url": "https://www.udemy.com/course/diy-public-relations-pr-through-youtube-video/?couponCode=98ED8928B20A078EE2F6",
+    "coupon_code": "98ED8928B20A078EE2F6",
+    "price": 1659.0,
+    "category": "Marketing",
+    "language": "English",
+    "rating": 4.68,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:18:53.969581Z",
+    "last_checked_at": "2026-06-15T16:09:26.146086Z"
+  },
+  {
+    "id": 11325,
+    "title": "Fundraising: Ask and Raise Contributions for Your Charity",
+    "url": "https://www.udemy.com/course/fundraising-ask-and-raise-contributions-for-your-charity/?couponCode=37413FCFDE52834173D7",
+    "coupon_code": "37413FCFDE52834173D7",
+    "price": 799.0,
+    "category": "Business",
+    "language": "English",
+    "rating": 4.43,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:18:46.417049Z",
+    "last_checked_at": "2026-06-15T16:09:26.146094Z"
+  },
+  {
+    "id": 11320,
+    "title": "Excel VBA Advanced 2 - Weniger Fehler durch schlaue Abläufe",
+    "url": "https://www.udemy.com/course/excel-vba-advanced-weniger-fehler-durch-schlaue-events/?couponCode=4A4D656A5F64044986B0",
+    "coupon_code": "4A4D656A5F64044986B0",
+    "price": 799.0,
+    "category": "Office Productivity",
+    "language": "German",
+    "rating": 4.59375,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:17:54.362211Z",
+    "last_checked_at": "2026-06-15T16:09:33.962755Z"
+  },
+  {
+    "id": 11317,
+    "title": "Бренд-директор: стратегия бренда и AI-инструменты [RU]",
+    "url": "https://www.udemy.com/course/ai-brand-director-ru/?couponCode=5846750887163F76FB63",
+    "coupon_code": "5846750887163F76FB63",
+    "price": 1369.0,
+    "category": "Marketing",
+    "language": "Russian",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:17:22.602204Z",
+    "last_checked_at": "2026-06-15T16:09:41.506771Z"
+  },
+  {
+    "id": 11315,
+    "title": "Claude AI для C&amp;B и Total Rewards: грейды, зарплаты, HR [RU]",
+    "url": "https://www.udemy.com/course/claude-ai-cb-total-rewards-hr-ru/?couponCode=ADB5C4814C43BEC09639",
+    "coupon_code": "ADB5C4814C43BEC09639",
+    "price": 3449.0,
+    "category": "Business",
+    "language": "Russian",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-15T13:16:48.990040Z",
+    "last_checked_at": "2026-06-15T16:09:41.506779Z"
+  },
+  {
     "id": 11257,
     "title": "100+ FRM Part 1 Interview Questions Practice Test 2025",
     "url": "https://www.udemy.com/course/100-frm-part-1-interview-questions-practice-test-2024/?couponCode=278C6CCE9BBCF61D8019",
@@ -10,7 +140,7 @@
     "rating": 2.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-14T13:18:29.567573Z",
-    "last_checked_at": "2026-06-15T12:35:11.575532Z"
+    "last_checked_at": "2026-06-15T16:11:17.655166Z"
   },
   {
     "id": 11256,
@@ -23,7 +153,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-14T13:18:17.324243Z",
-    "last_checked_at": "2026-06-15T12:35:11.575538Z"
+    "last_checked_at": "2026-06-15T16:11:17.655168Z"
   },
   {
     "id": 11255,
@@ -36,7 +166,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-14T13:18:09.089383Z",
-    "last_checked_at": "2026-06-15T12:35:11.575541Z"
+    "last_checked_at": "2026-06-15T16:11:17.655170Z"
   },
   {
     "id": 11247,
@@ -49,7 +179,7 @@
     "rating": 4.6666665,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-14T13:16:17.753245Z",
-    "last_checked_at": "2026-06-15T12:35:25.243594Z"
+    "last_checked_at": "2026-06-15T16:11:34.991225Z"
   },
   {
     "id": 11228,
@@ -62,7 +192,7 @@
     "rating": 4.44,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-14T13:12:16.483722Z",
-    "last_checked_at": "2026-06-15T12:36:08.251793Z"
+    "last_checked_at": "2026-06-15T16:12:08.989429Z"
   },
   {
     "id": 11221,
@@ -75,7 +205,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-14T04:23:45.748475Z",
-    "last_checked_at": "2026-06-15T12:36:15.373384Z"
+    "last_checked_at": "2026-06-15T16:12:16.178140Z"
   },
   {
     "id": 11197,
@@ -88,20 +218,7 @@
     "rating": 2.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-13T16:41:05.500820Z",
-    "last_checked_at": "2026-06-15T12:36:45.392359Z"
-  },
-  {
-    "id": 11147,
-    "title": "POSH 2.0: Prevention of Sexual Harassment in India",
-    "url": "https://www.udemy.com/course/posh-2-prevention-of-sexual-harassment-in-india/?couponCode=3117D4097F0291E6D5FA",
-    "coupon_code": "3117D4097F0291E6D5FA",
-    "price": 1239.0,
-    "category": "Business",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-13T11:12:24.243082Z",
-    "last_checked_at": "2026-06-15T12:37:48.491027Z"
+    "last_checked_at": "2026-06-15T16:12:44.269279Z"
   },
   {
     "id": 10394,
@@ -114,7 +231,7 @@
     "rating": 4.4,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:30:19.211905Z",
-    "last_checked_at": "2026-06-15T12:44:47.024550Z"
+    "last_checked_at": "2026-06-15T16:21:01.848980Z"
   },
   {
     "id": 10393,
@@ -127,7 +244,7 @@
     "rating": 4.8333335,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:30:07.661415Z",
-    "last_checked_at": "2026-06-15T12:44:47.024552Z"
+    "last_checked_at": "2026-06-15T16:21:01.848984Z"
   },
   {
     "id": 10392,
@@ -140,7 +257,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:29:55.094539Z",
-    "last_checked_at": "2026-06-15T12:44:47.024554Z"
+    "last_checked_at": "2026-06-15T16:21:01.848986Z"
   },
   {
     "id": 10391,
@@ -153,7 +270,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:29:47.609099Z",
-    "last_checked_at": "2026-06-15T12:44:53.391016Z"
+    "last_checked_at": "2026-06-15T16:21:01.848989Z"
   },
   {
     "id": 10390,
@@ -166,7 +283,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:29:39.375978Z",
-    "last_checked_at": "2026-06-15T12:44:53.391033Z"
+    "last_checked_at": "2026-06-15T16:21:08.467602Z"
   },
   {
     "id": 10389,
@@ -179,7 +296,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:29:27.702181Z",
-    "last_checked_at": "2026-06-15T12:44:53.391037Z"
+    "last_checked_at": "2026-06-15T16:21:08.467613Z"
   },
   {
     "id": 10388,
@@ -192,7 +309,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:29:17.361075Z",
-    "last_checked_at": "2026-06-15T12:44:53.391040Z"
+    "last_checked_at": "2026-06-15T16:21:08.467617Z"
   },
   {
     "id": 10320,
@@ -205,7 +322,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:08:46.131637Z",
-    "last_checked_at": "2026-06-15T12:46:34.264308Z"
+    "last_checked_at": "2026-06-15T16:22:43.657756Z"
   },
   {
     "id": 10319,
@@ -218,7 +335,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:08:24.903450Z",
-    "last_checked_at": "2026-06-15T12:46:34.264321Z"
+    "last_checked_at": "2026-06-15T16:22:50.571609Z"
   },
   {
     "id": 10318,
@@ -231,7 +348,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:07:44.446297Z",
-    "last_checked_at": "2026-06-15T12:46:34.264324Z"
+    "last_checked_at": "2026-06-15T16:22:50.571621Z"
   },
   {
     "id": 10304,
@@ -244,7 +361,7 @@
     "rating": 4.1666665,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:00:26.549828Z",
-    "last_checked_at": "2026-06-15T12:46:56.789481Z"
+    "last_checked_at": "2026-06-15T16:23:15.425901Z"
   },
   {
     "id": 10303,
@@ -257,7 +374,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-12T07:00:03.995872Z",
-    "last_checked_at": "2026-06-15T12:46:56.789487Z"
+    "last_checked_at": "2026-06-15T16:23:15.425914Z"
   },
   {
     "id": 10206,
@@ -270,7 +387,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-11T06:33:32.611823Z",
-    "last_checked_at": "2026-06-15T12:48:21.576873Z"
+    "last_checked_at": "2026-06-15T16:24:40.071588Z"
   },
   {
     "id": 10202,
@@ -283,7 +400,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-11T06:32:55.741460Z",
-    "last_checked_at": "2026-06-15T12:48:29.252731Z"
+    "last_checked_at": "2026-06-15T16:24:40.071600Z"
   },
   {
     "id": 10185,
@@ -296,20 +413,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-11T06:27:27.663209Z",
-    "last_checked_at": "2026-06-15T12:48:51.608179Z"
-  },
-  {
-    "id": 10184,
-    "title": "IAPP AIGP Practice Exams 2026: 6 Full Tests, 600 Questions",
-    "url": "https://www.udemy.com/course/iapp-aigp-practice-exams-2026-6-full-tests-600-questions/?couponCode=FREE-JUN2026",
-    "coupon_code": "FREE-JUN2026",
-    "price": 799.0,
-    "category": null,
-    "language": null,
-    "rating": null,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-11T06:27:02.615410Z",
-    "last_checked_at": "2026-06-15T12:48:51.608181Z"
+    "last_checked_at": "2026-06-15T16:25:10.892086Z"
   },
   {
     "id": 10178,
@@ -322,7 +426,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-11T06:24:17.559859Z",
-    "last_checked_at": "2026-06-15T12:48:58.768742Z"
+    "last_checked_at": "2026-06-15T16:25:18.119467Z"
   },
   {
     "id": 10177,
@@ -335,7 +439,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-11T06:23:46.603648Z",
-    "last_checked_at": "2026-06-15T12:49:04.958764Z"
+    "last_checked_at": "2026-06-15T16:25:18.119468Z"
   },
   {
     "id": 10175,
@@ -348,7 +452,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-11T06:23:01.050568Z",
-    "last_checked_at": "2026-06-15T12:49:04.958777Z"
+    "last_checked_at": "2026-06-15T16:25:26.047342Z"
   },
   {
     "id": 9899,
@@ -361,7 +465,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:45:08.898188Z",
-    "last_checked_at": "2026-06-15T12:54:44.220714Z"
+    "last_checked_at": "2026-06-15T16:31:32.909867Z"
   },
   {
     "id": 9898,
@@ -374,7 +478,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:44:57.384708Z",
-    "last_checked_at": "2026-06-15T12:54:44.220722Z"
+    "last_checked_at": "2026-06-15T16:31:40.544341Z"
   },
   {
     "id": 9897,
@@ -387,7 +491,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:44:44.224898Z",
-    "last_checked_at": "2026-06-15T12:54:44.220724Z"
+    "last_checked_at": "2026-06-15T16:31:40.544352Z"
   },
   {
     "id": 9896,
@@ -400,7 +504,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:44:33.991599Z",
-    "last_checked_at": "2026-06-15T12:54:44.220725Z"
+    "last_checked_at": "2026-06-15T16:31:40.544356Z"
   },
   {
     "id": 9895,
@@ -413,7 +517,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:44:24.905268Z",
-    "last_checked_at": "2026-06-15T12:54:44.220727Z"
+    "last_checked_at": "2026-06-15T16:31:40.544359Z"
   },
   {
     "id": 9894,
@@ -426,7 +530,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:44:17.483374Z",
-    "last_checked_at": "2026-06-15T12:54:48.990195Z"
+    "last_checked_at": "2026-06-15T16:31:40.544361Z"
   },
   {
     "id": 9893,
@@ -439,7 +543,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:44:07.080103Z",
-    "last_checked_at": "2026-06-15T12:54:48.990204Z"
+    "last_checked_at": "2026-06-15T16:31:47.633573Z"
   },
   {
     "id": 9892,
@@ -452,7 +556,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:43:57.744841Z",
-    "last_checked_at": "2026-06-15T12:54:48.990207Z"
+    "last_checked_at": "2026-06-15T16:31:47.633595Z"
   },
   {
     "id": 9891,
@@ -465,7 +569,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:43:45.493004Z",
-    "last_checked_at": "2026-06-15T12:54:48.990210Z"
+    "last_checked_at": "2026-06-15T16:31:47.633601Z"
   },
   {
     "id": 9890,
@@ -478,7 +582,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:43:34.657167Z",
-    "last_checked_at": "2026-06-15T12:54:48.990211Z"
+    "last_checked_at": "2026-06-15T16:31:47.633606Z"
   },
   {
     "id": 9889,
@@ -491,7 +595,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:43:26.671767Z",
-    "last_checked_at": "2026-06-15T12:54:56.397425Z"
+    "last_checked_at": "2026-06-15T16:31:47.633611Z"
   },
   {
     "id": 9888,
@@ -504,7 +608,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:43:17.136490Z",
-    "last_checked_at": "2026-06-15T12:54:56.397432Z"
+    "last_checked_at": "2026-06-15T16:31:55.256791Z"
   },
   {
     "id": 9887,
@@ -517,7 +621,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:43:06.943971Z",
-    "last_checked_at": "2026-06-15T12:54:56.397433Z"
+    "last_checked_at": "2026-06-15T16:31:55.256803Z"
   },
   {
     "id": 9886,
@@ -530,7 +634,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:42:56.520575Z",
-    "last_checked_at": "2026-06-15T12:54:56.397435Z"
+    "last_checked_at": "2026-06-15T16:31:55.256806Z"
   },
   {
     "id": 9885,
@@ -543,7 +647,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:42:44.317582Z",
-    "last_checked_at": "2026-06-15T12:54:56.397436Z"
+    "last_checked_at": "2026-06-15T16:31:55.256809Z"
   },
   {
     "id": 9884,
@@ -556,7 +660,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:42:33.486175Z",
-    "last_checked_at": "2026-06-15T12:55:04.103553Z"
+    "last_checked_at": "2026-06-15T16:31:55.256813Z"
   },
   {
     "id": 9883,
@@ -569,7 +673,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T10:42:20.878528Z",
-    "last_checked_at": "2026-06-15T12:55:04.103561Z"
+    "last_checked_at": "2026-06-15T16:32:02.459241Z"
   },
   {
     "id": 9855,
@@ -582,7 +686,7 @@
     "rating": null,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-10T08:15:08.096763Z",
-    "last_checked_at": "2026-06-15T12:55:41.556941Z"
+    "last_checked_at": "2026-06-15T16:32:34.832117Z"
   },
   {
     "id": 9738,
