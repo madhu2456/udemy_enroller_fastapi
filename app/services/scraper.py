@@ -2120,7 +2120,7 @@ class ScraperService:
 
     async def stream_results(self):
         """Yield each scraper as it finishes: (scraper_instance, state)."""
-        from app.core.config import get_settings
+        from config.settings import get_settings
         settings = get_settings()
         
         worker_sem = asyncio.Semaphore(settings.MAX_SCRAPER_WORKERS)
@@ -2131,7 +2131,7 @@ class ScraperService:
             
         async def _run_scraper(scraper: Scraper):
             self.source_states[id(scraper)] = "scraping"
-            logger.warning(f"  Scraper started: {scraper.site_name()}")
+            logger.warning(f"  Scraper started: {scraper.site_name}")
             
             try:
                 async with worker_sem:
@@ -2143,7 +2143,7 @@ class ScraperService:
                 self.source_states[id(scraper)] = state
                 return scraper, state
             except asyncio.TimeoutError:
-                logger.error(f"  Scraper timed out: {scraper.site_name()}")
+                logger.error(f"  Scraper timed out: {scraper.site_name}")
                 scraper.error = f"Timed out after {settings.SCRAPER_SITE_TIMEOUT_SECONDS}s"
                 scraper.done = True
                 self.source_states[id(scraper)] = "timed_out"
@@ -2152,7 +2152,7 @@ class ScraperService:
                 scraper.done = True
                 raise
             except Exception as e:
-                logger.error(f"  Scraper failed: {scraper.site_name()} - {e}")
+                logger.error(f"  Scraper failed: {scraper.site_name} - {e}")
                 scraper.error = str(e)
                 scraper.done = True
                 self.source_states[id(scraper)] = "failed"
@@ -2210,9 +2210,9 @@ class ScraperService:
         # Consume the stream but just collect
         async for scraper, state in self.stream_results():
             if scraper.error:
-                logger.warning(f"  Scraper finished: {scraper.site_name()} (Found {len(scraper.data)} courses, State: {state}, Error: {scraper.error})")
+                logger.warning(f"  Scraper finished: {scraper.site_name} (Found {len(scraper.data)} courses, State: {state}, Error: {scraper.error})")
             else:
-                logger.warning(f"  Scraper finished: {scraper.site_name()} (Found {len(scraper.data)} courses, State: {state})")
+                logger.warning(f"  Scraper finished: {scraper.site_name} (Found {len(scraper.data)} courses, State: {state})")
 
         all_data = []
         for s in self.scrapers:
