@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # Coupon Checker Script
 
 echo "=========================================="
@@ -17,6 +18,6 @@ fi
 
 # Run the python script
 echo "Starting coupon validation..."
-python scripts/coupon_checker.py
+python3 scripts/coupon_checker.py
 
 echo "Done!"
