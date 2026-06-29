@@ -184,6 +184,15 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 @app.middleware("http")
+async def head_to_get(request: Request, call_next):
+    """Convert HEAD requests to GET so public pages return 200 instead of 405."""
+    if request.method == "HEAD":
+        request.scope["method"] = "GET"
+    response = await call_next(request)
+    return response
+
+
+@app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
     """Add central cache control headers to satisfy proxy policies and optimize page speed."""
     response = await call_next(request)
@@ -234,6 +243,19 @@ async def add_security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
+    # CSP report-only: identifies violations without breaking functionality.
+    # After validating no violations in production logs, promote to enforcing CSP.
+    response.headers["Content-Security-Policy-Report-Only"] = (
+        "default-src 'self'; "
+        "script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://www.googletagmanager.com; "
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: https:; "
+        "font-src 'self'; "
+        "connect-src 'self' https://www.google-analytics.com; "
+        "frame-src https://www.googletagmanager.com; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
     return response
 
 

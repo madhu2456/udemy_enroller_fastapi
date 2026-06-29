@@ -248,7 +248,7 @@
         {% endif %}
 
         <!-- Lucide Icons CDN -->
-        <script src="https://unpkg.com/lucide@0.469.0"></script>
+        <script defer src="https://unpkg.com/lucide@0.469.0"></script>
 
         <style>
             /* Custom styles matching premium light mode */
@@ -488,11 +488,13 @@
         </div>
 
         <!-- Navigation -->
-        <header
+         <header
+            role="banner"
             class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm"
         >
             <!-- Main nav row -->
             <nav
+                role="navigation"
                 class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3"
                 aria-label="Main navigation"
             >
@@ -620,12 +622,12 @@
         </header>
 
         <!-- Main Content -->
-        <main id="main-content" class="flex-grow">
+        <main id="main-content" role="main" class="flex-grow">
             {% block content %}{% endblock %}
         </main>
 
         <!-- Footer -->
-        <footer class="border-t border-gray-200 bg-white">
+        <footer role="contentinfo" class="border-t border-gray-200 bg-white">
             <div class="max-w-6xl mx-auto px-6 py-8">
                 <div
                     class="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 sm:gap-4"
@@ -646,6 +648,7 @@
 
                     <!-- Links -->
                     <nav
+                        role="navigation"
                         class="flex items-center flex-wrap justify-center gap-x-6 gap-y-2 h-7"
                         aria-label="Footer navigation"
                     >

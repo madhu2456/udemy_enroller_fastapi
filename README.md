@@ -9,7 +9,7 @@
 
 > A free, open-source FastAPI application that automatically finds and enrolls you in 100% discounted Udemy courses. Built by [Madhu Dadi](https://madhudadi.in).
 
-[![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://udemyenroller.madhudadi.in)
@@ -166,9 +166,9 @@ docker compose exec web bash ./scripts/coupon_checker.sh
 
 ## Project Impact
 
-- **~90% reduction** in manual enrollment effort
-- **20,000+ courses** enrolled collectively within 6 months
-- **₹10,00,000+** estimated cost savings for active users
+- **Designed to reduce** manual enrollment effort by up to ~90%
+- **20,000+ courses** enrolled collectively (estimate based on aggregate usage data)
+- **₹10,00,000+** estimated cost savings (based on list prices of enrolled courses)
 - Scales to **hundreds of concurrent** coupon processing requests
 - **100% open-source** and self-hostable
 

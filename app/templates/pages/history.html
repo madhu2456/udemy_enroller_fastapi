@@ -382,7 +382,7 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
                                               );
                                               return `
                                     <div class="bg-white p-4 rounded-xl border border-gray-150 hover:border-blue-300 transition-colors shadow-sm">
-                                        <a href="${escapeAttr(sanitizedUrl)}" target="_blank" class="text-xs font-semibold text-blue-600 hover:underline block mb-2 leading-snug">${escapedTitle}</a>
+                                        <a href="${escapeAttr(sanitizedUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-blue-600 hover:underline block mb-2 leading-snug">${escapedTitle}</a>
                                         <div class="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
                                             <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-200 font-semibold">${currencySym}${(c.price || 0).toFixed(2)}</span>
                                             <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">${escapedCat}</span>
