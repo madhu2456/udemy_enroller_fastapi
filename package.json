@@ -8,6 +8,7 @@
     "build:css": "npm run build:css:app && npm run build:css:home"
   },
   "devDependencies": {
+    "caniuse-lite": "^1.0.30001799",
     "tailwindcss": "^3.4.17"
   }
 }

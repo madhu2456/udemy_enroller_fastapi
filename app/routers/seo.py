@@ -65,7 +65,9 @@ Sitemap: {SITE_URL}/sitemap.xml
 
 @router.get("/sitemap.xml", response_class=Response)
 async def sitemap_xml():
-    now = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Use date only (no time) so lastmod is stable within a day.
+    # Google recommends lastmod reflects actual content changes.
+    today = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
     pages = [
         ("", "1.00", "daily"),
         ("/udemycoupons", "0.95", "daily"),
@@ -77,7 +79,7 @@ async def sitemap_xml():
     urls = "\n".join(
         f"""<url>
 <loc>{SITE_URL}{path}</loc>
-<lastmod>{now}</lastmod>
+<lastmod>{today}</lastmod>
 <changefreq>{freq}</changefreq>
 <priority>{prio}</priority>
 </url>"""

@@ -321,6 +321,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                     <a
                         href="https://madhudadi.in/"
                         target="_blank"
+                        rel="noopener noreferrer"
                         class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-full bg-white transition-colors shadow-sm"
                     >
                         <i data-lucide="globe" class="w-3.5 h-3.5"></i>
@@ -329,6 +330,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                     <a
                         href="https://github.com/madhu2456"
                         target="_blank"
+                        rel="noopener noreferrer"
                         class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-full bg-white transition-colors shadow-sm"
                     >
                         <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
@@ -336,6 +338,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                     <a
                         href="https://madhudadi.in/blog"
                         target="_blank"
+                        rel="noopener noreferrer"
                         class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-full bg-white transition-colors shadow-sm"
                     >
                         <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Blog
@@ -411,6 +414,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                         id="current-url"
                         href="#"
                         target="_blank"
+                        rel="noopener noreferrer"
                         class="text-blue-600 text-xs hover:underline truncate block mt-0.5 flex items-center gap-1"
                     >
                         View link
@@ -1262,7 +1266,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 <td class="px-6 py-4">
                     <div class="flex flex-col">
                         <span class="text-gray-900 font-semibold text-xs line-clamp-1">${escapedTitle}</span>
-                        <a href="${escapeAttr(sanitizedUrl)}" target="_blank" class="text-[10px] text-blue-500 hover:underline truncate max-w-md mt-0.5 flex items-center gap-1">
+                        <a href="${escapeAttr(sanitizedUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] text-blue-500 hover:underline truncate max-w-md mt-0.5 flex items-center gap-1">
                             ${escapedUrl} <i data-lucide="external-link" class="w-2.5 h-2.5 inline"></i>
                         </a>
                     </div>
