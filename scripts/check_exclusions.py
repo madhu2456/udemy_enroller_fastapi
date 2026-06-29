@@ -1,6 +1,4 @@
 
-import sys
-import os
 from sqlalchemy import text
 from app.models.database import SessionLocal
 

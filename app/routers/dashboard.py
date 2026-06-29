@@ -1,30 +1,30 @@
 """Dashboard router - serves HTML pages and aggregated stats."""
 
-import logging
 import asyncio
+import logging
 import os
 import re
 from typing import Optional
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
+from app.core.cache import _analytics_cache, _stats_cache, get_cached_or_compute
+from app.deps import get_current_user_id
 from app.models.database import (
-    get_db,
+    EnrollmentRun,
     User,
     UserSession,
-    EnrollmentRun,
-    EnrolledCourse,
     _utcnow_naive,
+    get_db,
 )
-from app.deps import get_current_user_id
-from app.core.cache import _analytics_cache, _stats_cache, get_cached_or_compute
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Dashboard"], redirect_slashes=False)
+router = APIRouter(tags=["Dashboard"])
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -44,6 +44,7 @@ def login_page(request: Request):
     token = request.cookies.get("session_id")
     if token:
         from app.models.database import SessionLocal
+
         db = SessionLocal()
         try:
             session = db.query(UserSession).filter(UserSession.token == token).first()
@@ -73,8 +74,6 @@ def history_page(request: Request, user_id: int = Depends(get_current_user_id)):
     return templates.TemplateResponse(
         "pages/history.html", {"request": request, "user_id": user_id}
     )
-
-
 
 
 @router.get("/api/dashboard/stats")
@@ -113,7 +112,9 @@ def dashboard_stats(
         total_already_enrolled = user.total_already_enrolled or 0
         total_expired = user.total_expired or 0
         total_excluded = user.total_excluded or 0
-        total_processed = total_enrolled + total_already_enrolled + total_expired + total_excluded
+        total_processed = (
+            total_enrolled + total_already_enrolled + total_expired + total_excluded
+        )
 
         return {
             "total_runs": total_runs,
@@ -198,7 +199,7 @@ async def stream_logs(
                     f.readline()
 
             lines = f.readlines()
-            
+
             matching_lines = []
             for line in reversed(lines):
                 processed = process_log_line(line)
@@ -206,7 +207,7 @@ async def stream_logs(
                     matching_lines.append(processed.strip())
                     if len(matching_lines) >= 30:
                         break
-                        
+
             # Yield in chronological order (oldest to newest)
             for line in reversed(matching_lines):
                 yield f"data: {line}\n\n"
@@ -228,6 +229,8 @@ async def stream_logs(
     headers = {
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "X-Accel-Buffering": "no"
+        "X-Accel-Buffering": "no",
     }
-    return StreamingResponse(log_generator(), media_type="text/event-stream", headers=headers)
+    return StreamingResponse(
+        log_generator(), media_type="text/event-stream", headers=headers
+    )

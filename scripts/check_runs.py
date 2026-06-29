@@ -1,4 +1,3 @@
-import os
 import sys
 sys.path.append('.')
 from app.models.database import SessionLocal, EnrollmentRun

@@ -1,435 +1,834 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}</title>
-    
-    <!-- Primary Meta Tags -->
-    <meta name="title" content="{% block meta_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}">
-    <meta name="description" content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you instantly - no manual hunting required.{% endblock %}">
-    <meta name="keywords" content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2025, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper{% endblock %}">
-    <meta name="author" content="Madhu Dadi">
-    <meta name="robots" content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
-    <meta name="theme-color" content="#ffffff">
-    <link rel="canonical" href="https://udemyenroller.madhudadi.in{{ request.url.path }}">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            {% block title %}Free Udemy Courses Automation | Udemy Enroller by
+            Madhu Dadi{% endblock %}
+        </title>
 
-    <!-- Alternates for LLMs and AI Agents -->
-    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs profile">
-    <link rel="alternate" type="application/json" href="/ai-profile.json" title="AI profile JSON">
+        <!-- Primary Meta Tags -->
+        <meta
+            name="title"
+            content="{% block meta_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}"
+        />
+        <meta
+            name="description"
+            content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you instantly - no manual hunting required.{% endblock %}"
+        />
+        <meta
+            name="keywords"
+            content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2025, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper{% endblock %}"
+        />
+        <meta name="author" content="Madhu Dadi" />
+        {% if request.app.state.google_site_verification %}
+        <meta
+            name="google-site-verification"
+            content="{{ request.app.state.google_site_verification }}"
+        />
+        {% endif %}
+        <meta
+            name="robots"
+            content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}"
+        />
+        <meta name="theme-color" content="#ffffff" />
+        <link
+            rel="canonical"
+            href="https://udemyenroller.madhudadi.in{{ request.url.path }}"
+        />
 
-    <!-- Preconnect -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="preconnect" href="https://madhudadi.in" crossorigin>
-    <link rel="dns-prefetch" href="https://madhudadi.in">
+        <!-- Alternates for LLMs and AI Agents -->
+        <link
+            rel="alternate"
+            type="text/plain"
+            href="/llms.txt"
+            title="LLMs profile"
+        />
+        <link
+            rel="alternate"
+            type="application/json"
+            href="/ai-profile.json"
+            title="AI profile JSON"
+        />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://udemyenroller.madhudadi.in{{ request.url.path }}">
-    <meta property="og:title" content="{% block og_title %}Udemy Enroller - FastAPI Automation Case Study{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}A private FastAPI and Playwright workflow-orchestration case study demonstrating async queues, bounded concurrency, session-state handling, and background processing.{% endblock %}">
-    <meta property="og:image" content="https://udemyenroller.madhudadi.in/static/images/icon-512.png">
+        <!-- Self-hosted Inter font -->
+        <link
+            rel="preload"
+            href="/static/fonts/inter-latin.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
+        />
+        <link rel="stylesheet" href="/static/fonts/inter.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+            integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+        />
+        <link rel="preconnect" href="https://madhudadi.in" crossorigin />
+        <link rel="dns-prefetch" href="https://madhudadi.in" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://udemyenroller.madhudadi.in{{ request.url.path }}">
-    <meta property="twitter:title" content="{% block twitter_title %}Udemy Enroller - FastAPI Automation Case Study{% endblock %}">
-    <meta property="twitter:description" content="{% block twitter_description %}A private FastAPI and Playwright workflow-orchestration case study demonstrating async queues, bounded concurrency, session-state handling, and background processing.{% endblock %}">
-    <meta property="twitter:image" content="https://udemyenroller.madhudadi.in/static/images/icon-512.png">
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:url"
+            content="https://udemyenroller.madhudadi.in{{ request.url.path }}"
+        />
+        <meta
+            property="og:title"
+            content="{% block og_title %}Udemy Enroller - Free Udemy Course Automation{% endblock %}"
+        />
+        <meta
+            property="og:description"
+            content="{% block og_description %}An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.{% endblock %}"
+        />
+        <meta
+            property="og:image"
+            content="https://udemyenroller.madhudadi.in/static/images/icon-512.png"
+        />
 
-    <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="512x512" href="/static/images/icon-512.png">
-    <link rel="apple-touch-icon" href="/static/images/icon-512.png">
+        <!-- Twitter -->
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta
+            property="twitter:url"
+            content="https://udemyenroller.madhudadi.in{{ request.url.path }}"
+        />
+        <meta
+            property="twitter:title"
+            content="{% block twitter_title %}Udemy Enroller - Free Udemy Course Automation{% endblock %}"
+        />
+        <meta
+            property="twitter:description"
+            content="{% block twitter_description %}An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.{% endblock %}"
+        />
+        <meta
+            property="twitter:image"
+            content="https://udemyenroller.madhudadi.in/static/images/icon-512.png"
+        />
 
-    <!-- JSON-LD Structured Data -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebSite",
-          "@id": "https://udemyenroller.madhudadi.in/#website",
-          "url": "https://udemyenroller.madhudadi.in",
-          "name": "Udemy Enroller Case Study",
-          "description": "A private FastAPI and Playwright workflow-orchestration case study.",
-          "publisher": {
-            "@type": "Person",
-            "@id": "https://madhudadi.in/#person",
-            "name": "Madhu Dadi",
-            "url": "https://madhudadi.in"
-          },
-          "isPartOf": {
-            "@type": "WebSite",
-            "@id": "https://madhudadi.in/#website",
-            "url": "https://madhudadi.in",
-            "name": "Madhu Dadi - Portfolio"
-          },
-          "inLanguage": "en"
-        },
-        {
-          "@type": "SoftwareApplication",
-          "name": "Udemy Enroller Case Study",
-          "operatingSystem": "Web",
-          "applicationCategory": "EducationalApplication",
-          "description": "An educational case study demonstrating FastAPI workflow orchestration and background processing, developed by Madhu Dadi.",
-          "url": "https://udemyenroller.madhudadi.in",
-          "author": {
-            "@type": "Person",
-            "@id": "https://madhudadi.in/#person",
-            "name": "Madhu Dadi",
-            "url": "https://madhudadi.in",
-            "jobTitle": "AI Developer & Marketing Analytics Leader",
-            "sameAs": [
-              "https://madhudadi.in/blog",
-              "https://github.com/madhu2456/udemy_enroller_fastapi",
-              "https://www.linkedin.com/in/madhu-dadi-54684531",
-              "https://x.com/madhu245"
-            ]
-          },
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-          },
-          "provider": {
-            "@type": "Organization",
-            "name": "Adticks",
-            "url": "https://adticks.com",
-            "description": "SEO, AEO, and GEO improvement platform."
-          },
-          "hasPart": [
+        <!-- Icons -->
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="512x512"
+            href="/static/images/icon-512.png"
+        />
+        <link rel="apple-touch-icon" href="/static/images/icon-512.png" />
+
+        <!-- JSON-LD Structured Data -->
+        <script type="application/ld+json">
             {
-              "@type": "WebPage",
-              "name": "100% Free Udemy Coupons Database",
-              "url": "https://udemyenroller.madhudadi.in/udemycoupons"
-            }
-          ],
-          "mainEntityOfPage": {
-            "@type": "WebPage",
-            "@id": "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
-          }
-        },
-        {
-          "@type": "Person",
-          "@id": "https://madhudadi.in/#person",
-          "name": "Madhu Dadi",
-          "url": "https://madhudadi.in",
-          "jobTitle": "AI Developer & Marketing Analytics Leader",
-          "description": "AI consultant and ML engineer with 9+ years of experience delivering generative AI consulting, LLM applications, and RAG systems that drive measurable business outcomes.",
-          "sameAs": [
-            "https://madhudadi.in/blog",
-            "https://github.com/madhu2456/udemy_enroller_fastapi",
-            "https://www.linkedin.com/in/madhu-dadi-54684531",
-            "https://x.com/madhu245"
-          ],
-          "knowsAbout": [
-            "Python",
-            "FastAPI",
-            "SQL",
-            "Machine Learning",
-            "REST API Design",
-            "CloudScraper",
-            "Tailwind CSS"
-          ]
-        }
-      ]
-    }
-    </script>
-
-    {% if request.url.path == '/' %}
-    <style>{% include 'components/tailwind-home.min.css' %}</style>
-    {% else %}
-    <link rel="preload" href="/static/css/tailwind.min.css" as="style">
-    <link href="/static/css/tailwind.min.css" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="/static/css/tailwind.min.css" rel="stylesheet"></noscript>
-    {% endif %}
-
-    <!-- Lucide Icons CDN -->
-    <script src="https://unpkg.com/lucide@0.469.0"></script>
-
-    <style>
-        /* Custom styles matching premium light mode */
-        body {
-            margin: 0;
-            line-height: 1.5;
-            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #F9FAFB;
-            color: #111827;
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #E5E7EB;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #D1D5DB;
-        }
-
-        /* Active navigation layout link */
-        .nav-link.active {
-            background-color: #F3F4F6;
-            color: #111827;
-        }
-
-        /* Card and button micro-transitions */
-        * {
-            transition-property: background-color, border-color, color, transform, box-shadow;
-            transition-duration: 200ms;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Checkbox custom pill toggle checkmarks */
-        .checkbox-pill input[type="checkbox"]:checked ~ .checkmark-box {
-            background-color: #2563eb;
-            border-color: #2563eb;
-        }
-
-        /* Sonner-style custom Toast notifications */
-        .toast {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            padding: 1rem 1.25rem;
-            background-color: #18191B;
-            border: 1px solid #2C2D2F;
-            color: #F2F2F2;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
-            font-size: 0.8125rem;
-            font-weight: 500;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            min-width: 280px;
-            max-width: 380px;
-            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes slideUp {
-            from { transform: translateY(1rem); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @media (max-width: 767px) {
-            .toast {
-                bottom: auto;
-                top: 1rem;
-                left: 50%;
-                transform: translateX(-50%);
-                right: auto;
-                min-width: calc(100vw - 2rem);
-                animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            }
-            @keyframes slideDown {
-                from { transform: translate(-50%, -1rem); opacity: 0; }
-                to { transform: translate(-50%, 0); opacity: 1; }
-            }
-        }
-        
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .mask-edges {
-            -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
-            mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
-        }
-    </style>
-    {% block extra_head %}{% endblock %}
-</head>
-<body class="min-h-screen flex flex-col">
-    <!-- Global Announcement Bar -->
-    <div class="bg-[#2563EB] px-4 py-2.5 text-center shadow-md relative z-[100]">
-        <p class="text-xs sm:text-sm font-medium text-white flex flex-wrap items-center justify-center gap-2">
-            <span class="animate-pulse w-2 h-2 rounded-full bg-green-400 inline-block shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span>
-            <span><strong>New Feature:</strong> Access our live database of manually verified, 100% free Udemy coupons!</span>
-            <a href="/udemycoupons" class="inline-flex items-center gap-1 font-bold text-white bg-white/20 hover:bg-white/30 border border-white/30 px-3 py-1 rounded-full transition-all ml-2 whitespace-nowrap">
-                Browse Deals <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-            </a>
-        </p>
-    </div>
-
-    <!-- Navigation -->
-    <header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <!-- Main nav row -->
-        <nav class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3" aria-label="Main navigation">
-            <!-- Logo -->
-            <a href="/" class="flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm">
-                <img src="/static/images/icon-512.png" alt="Udemy Enroller Logo" class="w-6 h-6 rounded-md" width="24" height="24">
-                <span class="text-sm font-semibold text-gray-900 hidden sm:block">Udemy Enroller</span>
-            </a>
-
-            <!-- Centre nav links - always visible -->
-            <div class="flex items-center gap-0.5 overflow-x-auto no-scrollbar min-w-0 px-2 mask-edges" id="nav-links">
-                <a href="/guides" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/guides' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Guides</a>
-                <a href="/faq" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/faq' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">FAQ</a>
-                <a href="/about" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/about' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">About</a>
-                <a href="/udemycoupons" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/udemycoupons' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Free Coupons</a>
-                <!-- Authenticated Links -->
-                <a href="/dashboard" class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/dashboard' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Dashboard</a>
-                <a href="/settings" class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/settings' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">Settings</a>
-                <a href="/history" class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/history' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}">History</a>
-            </div>
-
-            <!-- Right actions -->
-            <div class="flex-shrink-0 flex items-center gap-2">
-                <a id="github-link" href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700 hover:border-gray-300 hover:bg-[#F9FAFB] transition-colors duration-150" aria-label="Star on GitHub">
-                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" /></svg>
-                    <span class="hidden sm:inline">★ Star</span>
-                </a>
-                
-                <a id="get-started-btn" href="/#connect" class="inline-flex items-center bg-[#2563EB] text-white rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150 whitespace-nowrap">
-                    Get Started
-                </a>
-
-                <!-- Stored User info (authenticated) -->
-                <div id="profile-badge" class="hidden flex items-center gap-2 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full">
-                    <div class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
-                        <i data-lucide="user" class="text-white w-2.5 h-2.5"></i>
-                    </div>
-                    <span id="user-info" class="text-xs font-medium text-gray-700"></span>
-                </div>
-
-                <!-- Logout -->
-                <button id="logout-btn" class="hidden flex items-center gap-1.5 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-200 transition-colors" onclick="logout()">
-                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">Logout</span>
-                </button>
-            </div>
-        </nav>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-grow">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer -->
-    <footer class="border-t border-gray-200 bg-white">
-        <div class="max-w-6xl mx-auto px-6 py-8">
-            <div class="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 sm:gap-4">
-                <!-- Brand -->
-                <div class="flex items-center gap-2 h-7">
-                    <img src="/static/images/icon-512.png" alt="Udemy Enroller Logo" class="w-5 h-5 rounded-md grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" width="20" height="20">
-                    <span class="text-xs font-semibold text-gray-700">Udemy Enroller</span>
-                </div>
-
-                <!-- Links -->
-                <nav class="flex items-center flex-wrap justify-center gap-x-6 gap-y-2 h-7" aria-label="Footer navigation">
-                    <a href="/udemycoupons" class="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">Free Udemy Coupons</a>
-                    <a href="/guides" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">Guides</a>
-                    <a href="/faq" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">FAQ</a>
-                    <a href="/about" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">About</a>
-                    <a href="https://madhudadi.in/blog" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">Blog</a>
-                    <a href="https://madhudadi.in" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">Madhu Dadi</a>
-                    <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-gray-700 transition-colors">GitHub</a>
-                </nav>
-
-                <!-- Credits & Disclaimer -->
-                <div class="flex flex-col items-center sm:items-end gap-1.5">
-                    <a href="https://adticks.com" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors bg-blue-50/50 hover:bg-blue-50 px-2.5 h-7 rounded-md border border-blue-100/50 hover:border-blue-200">
-                        <span>SEO & GEO improved by</span>
-                        <span class="font-bold text-[#2563EB] group-hover:text-blue-800">Adticks</span>
-                        <svg class="w-3 h-3 text-blue-500 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    </a>
-                    <p class="text-[10px] text-gray-400">Not affiliated with Udemy, Inc.</p>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <script src="/static/js/app.js"></script>
-    <script>
-        // Global security sanitization helpers
-        function escapeHTML(str) {
-            if (str === null || str === undefined) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#x27;')
-                .replace(/\//g, '&#x2F;');
-        }
-
-        function escapeAttr(str) {
-            if (str === null || str === undefined) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#x27;');
-        }
-
-        function sanitizeURL(url) {
-            if (!url) return '';
-            const clean = String(url).trim();
-            // Allow only http, https, mailto, tel protocols, or relative URLs
-            if (/^(https?|mailto|tel):/i.test(clean) || /^\//.test(clean)) {
-                return clean;
-            }
-            return 'about:blank';
-        }
-
-        // Initialize Lucide Icons globally
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.lucide) {
-                lucide.createIcons();
-            }
-            
-            // Check auth to render correct header state
-            fetch('/api/auth/status')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.authenticated) {
-                        document.getElementById('status-badge')?.classList.remove('hidden');
-                        document.getElementById('profile-badge')?.classList.remove('hidden');
-                        const info = document.getElementById('user-info');
-                        if (info) info.textContent = data.display_name;
-                        document.getElementById('logout-btn')?.classList.remove('hidden');
-                        
-                        // Hide github-link using style.display to override Tailwind responsive classes
-                        const githubLink = document.getElementById('github-link');
-                        if (githubLink) githubLink.style.display = 'none';
-
-                        // Show all auth-only nav links
-                        document.querySelectorAll('.auth-only').forEach(el => {
-                            el.classList.remove('hidden');
-                        });
-                        const getStartedBtn = document.getElementById('get-started-btn');
-                        if (getStartedBtn) getStartedBtn.style.display = 'none';
-                    } else {
-                        const githubLink = document.getElementById('github-link');
-                        if (githubLink) githubLink.style.display = '';
-                        const getStartedBtn = document.getElementById('get-started-btn');
-                        if (getStartedBtn) getStartedBtn.style.display = '';
-
-                        // Hide all auth-only nav links
-                        document.querySelectorAll('.auth-only').forEach(el => {
-                            el.classList.add('hidden');
-                        });
+                "@context": "https://schema.org",
+                "@graph": [
+                    {
+                        "@type": "WebSite",
+                        "@id": "https://udemyenroller.madhudadi.in/#website",
+                        "url": "https://udemyenroller.madhudadi.in",
+                        "name": "Udemy Enroller Case Study",
+                        "description": "A private FastAPI and Playwright workflow-orchestration case study.",
+                        "publisher": {
+                            "@type": "Person",
+                            "@id": "https://madhudadi.in/#person",
+                            "name": "Madhu Dadi",
+                            "url": "https://madhudadi.in"
+                        },
+                        "isPartOf": {
+                            "@type": "WebSite",
+                            "@id": "https://madhudadi.in/#website",
+                            "url": "https://madhudadi.in",
+                            "name": "Madhu Dadi - Portfolio"
+                        },
+                        "inLanguage": "en"
+                    },
+                    {
+                        "@type": "SoftwareApplication",
+                        "name": "Udemy Enroller",
+                        "operatingSystem": "Web",
+                        "applicationCategory": "EducationalApplication",
+                        "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
+                        "url": "https://udemyenroller.madhudadi.in",
+                        "author": {
+                            "@type": "Person",
+                            "@id": "https://madhudadi.in/#person",
+                            "name": "Madhu Dadi",
+                            "url": "https://madhudadi.in",
+                            "jobTitle": "AI Developer & Marketing Analytics Leader",
+                            "sameAs": [
+                                "https://madhudadi.in/blog",
+                                "https://github.com/madhu2456/udemy_enroller_fastapi",
+                                "https://www.linkedin.com/in/madhu-dadi-54684531",
+                                "https://x.com/madhu245"
+                            ]
+                        },
+                        "offers": {
+                            "@type": "Offer",
+                            "price": "0",
+                            "priceCurrency": "USD"
+                        },
+                        "provider": {
+                            "@type": "Organization",
+                            "name": "Adticks",
+                            "url": "https://adticks.com",
+                            "description": "SEO, AEO, and GEO improvement platform."
+                        },
+                        "hasPart": [
+                            {
+                                "@type": "WebPage",
+                                "name": "100% Free Udemy Coupons Database",
+                                "url": "https://udemyenroller.madhudadi.in/udemycoupons"
+                            }
+                        ],
+                        "mainEntityOfPage": {
+                            "@type": "WebPage",
+                            "@id": "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
+                        }
+                    },
+                    {
+                        "@type": "Person",
+                        "@id": "https://madhudadi.in/#person",
+                        "name": "Madhu Dadi",
+                        "url": "https://madhudadi.in",
+                        "jobTitle": "AI Developer & Marketing Analytics Leader",
+                        "description": "AI consultant and ML engineer with 9+ years of experience delivering generative AI consulting, LLM applications, and RAG systems that drive measurable business outcomes.",
+                        "sameAs": [
+                            "https://madhudadi.in/blog",
+                            "https://github.com/madhu2456/udemy_enroller_fastapi",
+                            "https://www.linkedin.com/in/madhu-dadi-54684531",
+                            "https://x.com/madhu245"
+                        ],
+                        "knowsAbout": [
+                            "Python",
+                            "FastAPI",
+                            "SQL",
+                            "Machine Learning",
+                            "REST API Design",
+                            "CloudScraper",
+                            "Tailwind CSS"
+                        ]
+                    },
+                    {
+                        "@type": "SoftwareSourceCode",
+                        "name": "Udemy Enroller",
+                        "url": "https://github.com/madhu2456/udemy_enroller_fastapi",
+                        "codeRepository": "https://github.com/madhu2456/udemy_enroller_fastapi",
+                        "programmingLanguage": ["Python", "JavaScript"],
+                        "license": "https://opensource.org/licenses/MIT",
+                        "author": {
+                            "@type": "Person",
+                            "@id": "https://madhudadi.in/#person",
+                            "name": "Madhu Dadi"
+                        },
+                        "isPartOf": {
+                            "@type": "WebApplication",
+                            "url": "https://udemyenroller.madhudadi.in"
+                        }
                     }
-                })
-                .catch(() => {
-                    document.getElementById('github-link')?.classList.remove('hidden');
+                ]
+            }
+        </script>
+
+        {% if request.url.path == '/' %}
+        <style>
+            {% include 'components/tailwind-home.min.css' %}
+        </style>
+        {% else %}
+        <link rel="preload" href="/static/css/tailwind.min.css" as="style" />
+        <link
+            href="/static/css/tailwind.min.css"
+            rel="stylesheet"
+            media="print"
+            onload="this.media = 'all'"
+        />
+        <noscript
+            ><link href="/static/css/tailwind.min.css" rel="stylesheet"
+        /></noscript>
+        {% endif %}
+
+        <!-- Lucide Icons CDN -->
+        <script src="https://unpkg.com/lucide@0.469.0"></script>
+
+        <style>
+            /* Custom styles matching premium light mode */
+            body {
+                margin: 0;
+                line-height: 1.5;
+                font-family:
+                    "Inter",
+                    ui-sans-serif,
+                    system-ui,
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    "Segoe UI",
+                    Roboto,
+                    "Helvetica Neue",
+                    Arial,
+                    sans-serif;
+                background-color: #f9fafb;
+                color: #111827;
+            }
+
+            /* Custom Scrollbar */
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #e5e7eb;
+                border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #d1d5db;
+            }
+
+            /* Active navigation layout link */
+            .nav-link.active {
+                background-color: #f3f4f6;
+                color: #111827;
+            }
+
+            /* Card and button micro-transitions */
+            * {
+                transition-property:
+                    background-color, border-color, color, transform, box-shadow;
+                transition-duration: 200ms;
+                transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* Checkbox custom pill toggle checkmarks */
+            .checkbox-pill input[type="checkbox"]:checked ~ .checkmark-box {
+                background-color: #2563eb;
+                border-color: #2563eb;
+            }
+
+            /* Sonner-style custom Toast notifications */
+            .toast {
+                position: fixed;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                padding: 1rem 1.25rem;
+                background-color: #18191b;
+                border: 1px solid #2c2d2f;
+                color: #f2f2f2;
+                border-radius: 12px;
+                box-shadow:
+                    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+                    0 8px 10px -6px rgba(0, 0, 0, 0.15);
+                font-size: 0.8125rem;
+                font-weight: 500;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                min-width: 280px;
+                max-width: 380px;
+                animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            @keyframes slideUp {
+                from {
+                    transform: translateY(1rem);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            @media (max-width: 767px) {
+                .toast {
+                    bottom: auto;
+                    top: 1rem;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    right: auto;
+                    min-width: calc(100vw - 2rem);
+                    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+                @keyframes slideDown {
+                    from {
+                        transform: translate(-50%, -1rem);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translate(-50%, 0);
+                        opacity: 1;
+                    }
+                }
+            }
+
+            /* Respect reduced motion preferences (WCAG 2.3.3) */
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                    scroll-behavior: auto !important;
+                }
+            }
+
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .mask-edges {
+                -webkit-mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 10px,
+                    black calc(100% - 10px),
+                    transparent
+                );
+                mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 10px,
+                    black calc(100% - 10px),
+                    transparent
+                );
+            }
+        </style>
+        {% block extra_head %}{% endblock %} {% if
+        request.app.state.gtm_container_id %}
+        <!-- Google Tag Manager -->
+        <script>
+            (function (w, d, s, l, i) {
+                w[l] = w[l] || [];
+                w[l].push({
+                    "gtm.start": new Date().getTime(),
+                    event: "gtm.js",
                 });
-        });
-    </script>
-    {% block scripts %}{% endblock %}
-</body>
+                var f = d.getElementsByTagName(s)[0],
+                    j = d.createElement(s),
+                    dl = l != "dataLayer" ? "&l=" + l : "";
+                j.async = true;
+                j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+                f.parentNode.insertBefore(j, f);
+            })(
+                window,
+                document,
+                "script",
+                "dataLayer",
+                "{{ request.app.state.gtm_container_id }}",
+            );
+        </script>
+        <!-- End Google Tag Manager -->
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() {
+                dataLayer.push(arguments);
+            }
+        </script>
+        {% endif %}
+    </head>
+    <body class="min-h-screen flex flex-col">
+        {% if request.app.state.gtm_container_id %}
+        <!-- Google Tag Manager (noscript) -->
+        <noscript
+            ><iframe
+                src="https://www.googletagmanager.com/ns.html?id={{ request.app.state.gtm_container_id }}"
+                height="0"
+                width="0"
+                style="display: none; visibility: hidden"
+            ></iframe
+        ></noscript>
+        <!-- End Google Tag Manager (noscript) -->
+        {% endif %}
+        <!-- Skip link for keyboard accessibility (WCAG 2.4.1) -->
+        <a
+            href="#main-content"
+            class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[200] focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:text-blue-600 focus:font-semibold"
+        >
+            Skip to main content
+        </a>
+        <!-- Global Announcement Bar -->
+        <div
+            class="bg-[#2563EB] px-4 py-2.5 text-center shadow-md relative z-[100]"
+        >
+            <p
+                class="text-xs sm:text-sm font-medium text-white flex flex-wrap items-center justify-center gap-2"
+            >
+                <span
+                    class="animate-pulse w-2 h-2 rounded-full bg-green-400 inline-block shadow-[0_0_8px_rgba(74,222,128,0.8)]"
+                ></span>
+                <span
+                    ><strong>New Feature:</strong> Access our live database of
+                    manually verified, 100% free Udemy coupons!</span
+                >
+                <a
+                    href="/udemycoupons"
+                    class="inline-flex items-center gap-1 font-bold text-white bg-white/20 hover:bg-white/30 border border-white/30 px-3 py-1 rounded-full transition-all ml-2 whitespace-nowrap"
+                >
+                    Browse Deals
+                    <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3"
+                        />
+                    </svg>
+                </a>
+            </p>
+        </div>
+
+        <!-- Navigation -->
+        <header
+            class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm"
+        >
+            <!-- Main nav row -->
+            <nav
+                class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3"
+                aria-label="Main navigation"
+            >
+                <!-- Logo -->
+                <a
+                    href="/"
+                    class="flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
+                >
+                    <img
+                        src="/static/images/icon-512.png"
+                        alt="Udemy Enroller Logo"
+                        class="w-6 h-6 rounded-md"
+                        width="24"
+                        height="24"
+                    />
+                    <span
+                        class="text-sm font-semibold text-gray-900 hidden sm:block"
+                        >Udemy Enroller</span
+                    >
+                </a>
+
+                <!-- Centre nav links - always visible -->
+                <div
+                    class="flex items-center gap-0.5 overflow-x-auto no-scrollbar min-w-0 px-2 mask-edges"
+                    id="nav-links"
+                >
+                    <a
+                        href="/guides"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/guides' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >Guides</a
+                    >
+                    <a
+                        href="/faq"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/faq' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >FAQ</a
+                    >
+                    <a
+                        href="/about"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/about' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >About</a
+                    >
+                    <a
+                        href="/udemycoupons"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/udemycoupons' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >Free Coupons</a
+                    >
+                    <!-- Authenticated Links -->
+                    <a
+                        href="/dashboard"
+                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/dashboard' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >Dashboard</a
+                    >
+                    <a
+                        href="/settings"
+                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/settings' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >Settings</a
+                    >
+                    <a
+                        href="/history"
+                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/history' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >History</a
+                    >
+                </div>
+
+                <!-- Right actions -->
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <a
+                        id="github-link"
+                        href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700 hover:border-gray-300 hover:bg-[#F9FAFB] transition-colors duration-150"
+                        aria-label="Star on GitHub"
+                    >
+                        <svg
+                            class="w-3.5 h-3.5 flex-shrink-0"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"
+                            />
+                        </svg>
+                        <span class="hidden sm:inline">★ Star</span>
+                    </a>
+
+                    <a
+                        id="get-started-btn"
+                        href="/#connect"
+                        class="inline-flex items-center bg-[#2563EB] text-white rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150 whitespace-nowrap"
+                    >
+                        Get Started
+                    </a>
+
+                    <!-- Stored User info (authenticated) -->
+                    <div
+                        id="profile-badge"
+                        class="hidden flex items-center gap-2 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full"
+                    >
+                        <div
+                            class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center"
+                        >
+                            <i
+                                data-lucide="user"
+                                class="text-white w-2.5 h-2.5"
+                            ></i>
+                        </div>
+                        <span
+                            id="user-info"
+                            class="text-xs font-medium text-gray-700"
+                        ></span>
+                    </div>
+
+                    <!-- Logout -->
+                    <button
+                        id="logout-btn"
+                        class="hidden flex items-center gap-1.5 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-200 transition-colors"
+                        onclick="logout()"
+                    >
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Logout</span>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-grow">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-gray-200 bg-white">
+            <div class="max-w-6xl mx-auto px-6 py-8">
+                <div
+                    class="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 sm:gap-4"
+                >
+                    <!-- Brand -->
+                    <div class="flex items-center gap-2 h-7">
+                        <img
+                            src="/static/images/icon-512.png"
+                            alt="Udemy Enroller Logo"
+                            class="w-5 h-5 rounded-md grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all"
+                            width="20"
+                            height="20"
+                        />
+                        <span class="text-xs font-semibold text-gray-700"
+                            >Udemy Enroller</span
+                        >
+                    </div>
+
+                    <!-- Links -->
+                    <nav
+                        class="flex items-center flex-wrap justify-center gap-x-6 gap-y-2 h-7"
+                        aria-label="Footer navigation"
+                    >
+                        <a
+                            href="/udemycoupons"
+                            class="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                            >Free Udemy Coupons</a
+                        >
+                        <a
+                            href="/guides"
+                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >Guides</a
+                        >
+                        <a
+                            href="/faq"
+                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >FAQ</a
+                        >
+                        <a
+                            href="/about"
+                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >About</a
+                        >
+                        <a
+                            href="/privacy"
+                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >Privacy</a
+                        >
+                        <a
+                            href="https://madhudadi.in/blog"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >Blog</a
+                        >
+                        <a
+                            href="https://madhudadi.in"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >Madhu Dadi</a
+                        >
+                        <a
+                            href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            >GitHub</a
+                        >
+                    </nav>
+
+                    <!-- Credits & Disclaimer -->
+                    <div
+                        class="flex flex-col items-center sm:items-end gap-1.5"
+                    >
+                        <a
+                            href="https://adticks.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="group flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors bg-blue-50/50 hover:bg-blue-50 px-2.5 h-7 rounded-md border border-blue-100/50 hover:border-blue-200"
+                        >
+                            <span>SEO & GEO improved by</span>
+                            <span
+                                class="font-bold text-[#2563EB] group-hover:text-blue-800"
+                                >Adticks</span
+                            >
+                            <svg
+                                class="w-3 h-3 text-blue-500 group-hover:translate-x-0.5 transition-transform"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                                />
+                            </svg>
+                        </a>
+                        <p class="text-[10px] text-gray-400">
+                            Not affiliated with Udemy, Inc.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        <script src="/static/js/app.js"></script>
+        <script>
+            // Global security sanitization helpers
+            function escapeHTML(str) {
+                if (str === null || str === undefined) return "";
+                return String(str)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#x27;")
+                    .replace(/\//g, "&#x2F;");
+            }
+
+            function escapeAttr(str) {
+                if (str === null || str === undefined) return "";
+                return String(str)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#x27;");
+            }
+
+            function sanitizeURL(url) {
+                if (!url) return "";
+                const clean = String(url).trim();
+                // Allow only http, https, mailto, tel protocols, or relative URLs
+                if (/^(https?|mailto|tel):/i.test(clean) || /^\//.test(clean)) {
+                    return clean;
+                }
+                return "about:blank";
+            }
+
+            // Initialize Lucide Icons globally
+            document.addEventListener("DOMContentLoaded", () => {
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+
+                // Check auth to render correct header state
+                fetch("/api/auth/status")
+                    .then((r) => r.json())
+                    .then((data) => {
+                        if (data.authenticated) {
+                            document
+                                .getElementById("status-badge")
+                                ?.classList.remove("hidden");
+                            document
+                                .getElementById("profile-badge")
+                                ?.classList.remove("hidden");
+                            const info = document.getElementById("user-info");
+                            if (info) info.textContent = data.display_name;
+                            document
+                                .getElementById("logout-btn")
+                                ?.classList.remove("hidden");
+
+                            // Hide github-link using style.display to override Tailwind responsive classes
+                            const githubLink =
+                                document.getElementById("github-link");
+                            if (githubLink) githubLink.style.display = "none";
+
+                            // Show all auth-only nav links
+                            document
+                                .querySelectorAll(".auth-only")
+                                .forEach((el) => {
+                                    el.classList.remove("hidden");
+                                });
+                            const getStartedBtn =
+                                document.getElementById("get-started-btn");
+                            if (getStartedBtn)
+                                getStartedBtn.style.display = "none";
+                        } else {
+                            const githubLink =
+                                document.getElementById("github-link");
+                            if (githubLink) githubLink.style.display = "";
+                            const getStartedBtn =
+                                document.getElementById("get-started-btn");
+                            if (getStartedBtn) getStartedBtn.style.display = "";
+
+                            // Hide all auth-only nav links
+                            document
+                                .querySelectorAll(".auth-only")
+                                .forEach((el) => {
+                                    el.classList.add("hidden");
+                                });
+                        }
+                    })
+                    .catch(() => {
+                        document
+                            .getElementById("github-link")
+                            ?.classList.remove("hidden");
+                    });
+            });
+        </script>
+        {% block scripts %}{% endblock %}
+    </body>
 </html>

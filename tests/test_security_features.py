@@ -2,9 +2,8 @@
 
 import asyncio
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from fastapi import HTTPException, Request
-from starlette.datastructures import State
 
 from app.security import (
     encrypt_cookies,
@@ -12,7 +11,6 @@ from app.security import (
     generate_csrf_token,
     verify_csrf_token,
     RateLimiter,
-    login_rate_limiter,
     _client_key,
 )
 from app.core.cache import SessionCache

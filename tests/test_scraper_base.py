@@ -1,9 +1,7 @@
 import pytest
-import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.services.scraper import Scraper
-from app.services.course import Course
 
 class FakeHTTPClient:
     def __init__(self):

@@ -74,7 +74,7 @@ def get_public_coupons(
                 "page": page,
                 "pages": (total + limit - 1) // limit
             }
-        except Exception as e:
+        except Exception:
             pass # Fallback to DB
             
     query = db.query(EnrolledCourse)

@@ -1,0 +1,107 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-06-29 11:00:00",
+  "containerVersion": {
+    "path": "accounts/6346521942/containers/256867091/versions/0",
+    "accountId": "6346521942",
+    "containerId": "256867091",
+    "containerVersionId": "0",
+    "container": {
+      "path": "accounts/6346521942/containers/256867091",
+      "accountId": "6346521942",
+      "containerId": "256867091",
+      "name": "www.udemyenroller.madhudadi.in",
+      "publicId": "GTM-5JHNVN6K",
+      "usageContext": ["WEB"],
+      "fingerprint": "1782726304947",
+      "tagManagerUrl": "https://tagmanager.google.com/#/container/accounts/6346521942/containers/256867091/workspaces?apiLink=container",
+      "features": {
+        "supportUserPermissions": true,
+        "supportEnvironments": true,
+        "supportWorkspaces": true,
+        "supportGtagConfigs": false,
+        "supportBuiltInVariables": true,
+        "supportClients": false,
+        "supportFolders": true,
+        "supportTags": true,
+        "supportTemplates": true,
+        "supportTriggers": true,
+        "supportVariables": true,
+        "supportVersions": true,
+        "supportZones": true,
+        "supportTransformations": false
+      },
+      "tagIds": ["GTM-5JHNVN6K"]
+    },
+    "tag": [
+      {
+        "accountId": "6346521942",
+        "containerId": "256867091",
+        "tagId": "5",
+        "name": "GA4 - Config",
+        "type": "googtag",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "tagId",
+            "value": "{{GA4 Measurement ID}}"
+          }
+        ],
+        "fingerprint": "1782726970552",
+        "firingTriggerId": ["2147479573"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": { "type": "MAP" },
+        "consentSettings": { "consentStatus": "NOT_SET" }
+      }
+    ],
+    "trigger": [],
+    "variable": [
+      {
+        "accountId": "6346521942",
+        "containerId": "256867091",
+        "variableId": "3",
+        "name": "GA4 Measurement ID",
+        "type": "c",
+        "parameter": [
+          { "type": "TEMPLATE", "key": "value", "value": "G-GT1FDTC7Y6" }
+        ],
+        "fingerprint": "1782726813009",
+        "formatValue": {}
+      }
+    ],
+    "builtInVariable": [
+      {
+        "accountId": "6346521942",
+        "containerId": "256867091",
+        "type": "PAGE_URL",
+        "name": "Page URL"
+      },
+      {
+        "accountId": "6346521942",
+        "containerId": "256867091",
+        "type": "PAGE_HOSTNAME",
+        "name": "Page Hostname"
+      },
+      {
+        "accountId": "6346521942",
+        "containerId": "256867091",
+        "type": "PAGE_PATH",
+        "name": "Page Path"
+      },
+      {
+        "accountId": "6346521942",
+        "containerId": "256867091",
+        "type": "REFERRER",
+        "name": "Referrer"
+      },
+      {
+        "accountId": "6346521942",
+        "containerId": "256867091",
+        "type": "EVENT",
+        "name": "Event"
+      }
+    ],
+    "fingerprint": "1782727000099",
+    "tagManagerUrl": "https://tagmanager.google.com/#/versions/accounts/6346521942/containers/256867091/versions/0?apiLink=version"
+  }
+}

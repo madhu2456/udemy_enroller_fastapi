@@ -1,6 +1,8 @@
 """Application configuration using Pydantic Settings."""
 
+import secrets
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +19,10 @@ class Settings(BaseSettings):
     # Cookie encryption key — must be 32 bytes base64-encoded for Fernet.
     # Falls back to SECRET_KEY if not set (not recommended for production).
     COOKIE_ENCRYPTION_KEY: str = ""
+    # Google Search Console verification code — set in .env after creating a GSC property
+    GOOGLE_SITE_VERIFICATION: str = ""
+    # Google Tag Manager container ID — set in .env (e.g. GTM-XXXXXXX)
+    GTM_CONTAINER_ID: str = ""
     # CORS origins - in production, set specific domains
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 
@@ -61,17 +67,17 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        # Generate a random SECRET_KEY if the default is detected
+        _insecure_keys = (
+            "change-me-in-production-use-a-strong-secret-key",
+            "change-me-in-production",
+            "change-me",
+            "",
+        )
+        if self.SECRET_KEY in _insecure_keys:
+            self.SECRET_KEY = secrets.token_hex(32)
+
         if self.DEPLOYMENT_ENV == "server":
-            if self.SECRET_KEY in (
-                "change-me-in-production-use-a-strong-secret-key",
-                "change-me-in-production",
-                "change-me",
-                "",
-            ):
-                raise ValueError(
-                    "Insecure SECRET_KEY is not allowed when DEPLOYMENT_ENV is set to 'server'. "
-                    "Please configure a strong unique SECRET_KEY environment variable."
-                )
             self.COOKIE_SECURE = True
         return self
 

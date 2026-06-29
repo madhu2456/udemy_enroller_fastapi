@@ -3,7 +3,7 @@
 import asyncio
 import random
 import re
-from typing import List, Optional, Dict
+from typing import Optional, Dict
 
 from sqlalchemy.orm import Session
 from loguru import logger

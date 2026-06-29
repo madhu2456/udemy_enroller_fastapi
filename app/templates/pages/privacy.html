@@ -1,0 +1,441 @@
+{% extends "components/base.html" %} {% block title %}Privacy Policy - Udemy
+Enroller{% endblock %} {% block meta_title %}Privacy Policy - Udemy Enroller{%
+{% block meta_description %}Learn how Udemy Enroller handles your data. We use
+encrypted local storage for session cookies. Passwords are never stored. No data
+is transmitted to third parties.{% endblock %} {% block og_title %}Privacy
+Policy - Udemy Enroller{% endblock %} {% block og_description %}Learn how Udemy
+Enroller handles your data. Encrypted local storage, no third-party data
+transmission.{% endblock %} {% block twitter_title %}Privacy Policy - Udemy
+Enroller{% endblock %} {% block twitter_description %}Learn how Udemy Enroller
+handles your data. Encrypted local storage, no third-party data transmission.{%
+endblock %} {% block content %}
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://udemyenroller.madhudadi.in/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Privacy Policy",
+                "item": "https://udemyenroller.madhudadi.in/privacy"
+            }
+        ]
+    }
+</script>
+<div class="min-h-screen bg-white text-gray-900">
+    <main>
+        <!-- Hero -->
+        <section
+            class="max-w-3xl mx-auto px-6 pt-14 pb-10"
+            aria-labelledby="privacy-heading"
+        >
+            <div>
+                <span
+                    class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1 text-xs font-medium mb-4"
+                >
+                    Legal
+                </span>
+                <h1
+                    id="privacy-heading"
+                    class="text-3xl font-semibold text-gray-900 tracking-tight mb-3"
+                >
+                    Privacy Policy
+                </h1>
+                <p class="text-sm text-gray-500 leading-relaxed">
+                    This page explains what data Udemy Enroller collects, how it
+                    is stored, and how you can delete it. Last updated: June
+                    2025.
+                </p>
+            </div>
+        </section>
+
+        <!-- Content -->
+        <section class="max-w-3xl mx-auto px-6 pb-20">
+            <div class="space-y-10">
+                <!-- What data is collected -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        What Data Is Collected
+                    </h2>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
+                    >
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            When you connect your Udemy account, the following
+                            data is collected and stored locally:
+                        </p>
+                        <ul
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    ><strong class="text-gray-700"
+                                        >Email address</strong
+                                    >
+                                    &mdash; used to identify your account
+                                    locally.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    ><strong class="text-gray-700"
+                                        >Password</strong
+                                    >
+                                    &mdash; if you use Email Login, your Udemy
+                                    password is sent directly to the Udemy API
+                                    for authentication and is never stored in
+                                    any form.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    ><strong class="text-gray-700"
+                                        >Session cookies</strong
+                                    >
+                                    &mdash; your Udemy session tokens
+                                    (access_token, client_id, csrftoken) are
+                                    encrypted with Fernet (AES-128-CBC) before
+                                    being stored in the local database.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    ><strong class="text-gray-700"
+                                        >Enrollment history</strong
+                                    >
+                                    &mdash; course titles, URLs, coupon codes,
+                                    and enrollment status are stored to track
+                                    your progress and display on the
+                                    dashboard.</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- How data is stored -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        How Data Is Stored
+                    </h2>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
+                    >
+                        <ul
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >All data is stored in a
+                                    <strong class="text-gray-700"
+                                        >local SQLite database</strong
+                                    >
+                                    on the server or machine where the
+                                    application is running.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Your Udemy password is
+                                    <strong class="text-gray-700"
+                                        >never stored</strong
+                                    >
+                                    - not even as a hash. It is sent directly to
+                                    the Udemy API for authentication and then
+                                    discarded.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Session cookies are
+                                    <strong class="text-gray-700"
+                                        >encrypted with Fernet</strong
+                                    >
+                                    symmetric encryption before storage.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >No data is transmitted to third-party
+                                    servers. Your credentials are used only to
+                                    communicate directly with Udemy's API.</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- What data is NOT collected -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        What Data Is Not Collected
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <ul
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >No analytics or tracking scripts are
+                                    used.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >No cookies are set for advertising or
+                                    cross-site tracking.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >No personal data is sold, shared, or
+                                    transmitted to any third party.</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- How to delete your data -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        How to Delete Your Data
+                    </h2>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
+                    >
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            You can delete all your stored data at any time:
+                        </p>
+                        <ol
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5"
+                                    >1</span
+                                >
+                                <span
+                                    >Log in to the application and navigate to
+                                    <strong class="text-gray-700"
+                                        >Settings</strong
+                                    >.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5"
+                                    >2</span
+                                >
+                                <span
+                                    >Click
+                                    <strong class="text-gray-700"
+                                        >Clear All Data</strong
+                                    >
+                                    to delete your enrollment history, settings,
+                                    and account.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5"
+                                    >3</span
+                                >
+                                <span
+                                    >If you are self-hosting, you can also
+                                    delete the SQLite database file directly
+                                    (<code
+                                        class="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-mono"
+                                        >udemy_enroller.db</code
+                                    >).</span
+                                >
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Cookies used by the application -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Browser Cookies
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            The application sets the following browser cookies
+                            for authentication:
+                        </p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th
+                                            class="py-2 pr-4 text-xs font-semibold text-gray-700"
+                                        >
+                                            Cookie
+                                        </th>
+                                        <th
+                                            class="py-2 pr-4 text-xs font-semibold text-gray-700"
+                                        >
+                                            Purpose
+                                        </th>
+                                        <th
+                                            class="py-2 text-xs font-semibold text-gray-700"
+                                        >
+                                            Flags
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-gray-500">
+                                    <tr class="border-b border-gray-100">
+                                        <td class="py-2 pr-4 font-mono text-xs">
+                                            session_id
+                                        </td>
+                                        <td class="py-2 pr-4">
+                                            Authentication session token
+                                        </td>
+                                        <td class="py-2 text-xs">
+                                            HttpOnly, SameSite=Lax
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 pr-4 font-mono text-xs">
+                                            csrf_token
+                                        </td>
+                                        <td class="py-2 pr-4">
+                                            Cross-site request forgery
+                                            protection
+                                        </td>
+                                        <td class="py-2 text-xs">
+                                            SameSite=Strict
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Affiliation disclaimer -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Affiliation
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            Udemy Enroller is
+                            <strong class="text-gray-700"
+                                >not affiliated with, endorsed by, or authorized
+                                by Udemy, Inc.</strong
+                            >
+                            It is an independent, open-source project. Use of
+                            this tool may be subject to Udemy's Terms of
+                            Service. Users are solely responsible for compliance
+                            with applicable terms and policies.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Source code -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Source Code
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            The full source code of Udemy Enroller is publicly
+                            available. You can audit every line of code to
+                            verify the privacy claims on this page.
+                        </p>
+                        <a
+                            href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-4 py-2 text-xs font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                        >
+                            <svg
+                                class="w-3.5 h-3.5"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"
+                                />
+                            </svg>
+                            View Source on GitHub
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div
+                class="mt-12 bg-[#F9FAFB] rounded-xl border border-gray-200 p-8 text-center"
+            >
+                <p class="text-sm font-semibold text-gray-900 mb-1">
+                    Questions about privacy?
+                </p>
+                <p class="text-sm text-gray-500 mb-5">
+                    Open an issue on GitHub or check the FAQ for more
+                    information.
+                </p>
+                <div
+                    class="flex flex-col sm:flex-row items-center justify-center gap-3"
+                >
+                    <a
+                        href="https://github.com/madhu2456/udemy_enroller_fastapi/issues"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-4 py-2 text-xs font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors duration-150"
+                        >Open a GitHub Issue</a
+                    >
+                    <a
+                        href="/faq"
+                        class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150"
+                        >Browse FAQ</a
+                    >
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}

@@ -1,20 +1,24 @@
 """Main FastAPI application entry point - v2 Asynchronous with security & monitoring."""
 
+import asyncio
 import os
 import sys
-import asyncio
 
 # Windows-specific event loop policy for reliable subprocess support
 # MUST be set before any other imports that might initialize a loop
 if sys.platform == "win32":
     try:
         from asyncio import WindowsProactorEventLoopPolicy
+
         asyncio.set_event_loop_policy(WindowsProactorEventLoopPolicy())
-        
+
         # Monkeypatch to silence ConnectionResetError [WinError 10054]
         # This is a known issue on Windows with ProactorEventLoop
         from asyncio import proactor_events
-        _original_call_connection_lost = proactor_events._ProactorBasePipeTransport._call_connection_lost
+
+        _original_call_connection_lost = (
+            proactor_events._ProactorBasePipeTransport._call_connection_lost
+        )
 
         def _patched_call_connection_lost(self, exc=None):
             try:
@@ -22,22 +26,25 @@ if sys.platform == "win32":
             except (ConnectionResetError, ConnectionAbortedError):
                 pass
 
-        proactor_events._ProactorBasePipeTransport._call_connection_lost = _patched_call_connection_lost
+        proactor_events._ProactorBasePipeTransport._call_connection_lost = (
+            _patched_call_connection_lost
+        )
     except ImportError:
-        pass # Fallback for older python versions if any
+        pass  # Fallback for older python versions if any
 
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from loguru import logger
 
-from config.settings import get_settings
 from app.logging_config import setup_logging
 from app.models.database import create_tables, engine
-from app.routers import auth, settings, enrollment, dashboard, seo, public_deals
+from app.routers import auth, dashboard, enrollment, public_deals, seo, settings
+from config.settings import get_settings
 
 # Configure logging with JSON support
 setup_logging()
@@ -56,14 +63,14 @@ async def lifespan(app: FastAPI):
     os.makedirs("logs", exist_ok=True)
     os.makedirs("Courses", exist_ok=True)
     os.makedirs("data", exist_ok=True)
-    
+
     if sys.platform == "win32":
         try:
             loop = asyncio.get_running_loop()
             logger.info(f"Active event loop: {type(loop).__name__}")
         except Exception as e:
             logger.error(f"Error checking event loop: {e}")
-    
+
     logger.info("Starting Udemy Course Enroller API v2 (Async)")
     logger.info(f"Log format: {get_settings().LOG_FORMAT}")
 
@@ -74,8 +81,10 @@ async def lifespan(app: FastAPI):
         logger.info("AUTO_CREATE_TABLES is disabled; expecting Alembic-managed schema.")
 
     # Clean up stale runs
-    from app.models.database import SessionLocal, EnrollmentRun
     from sqlalchemy import update
+
+    from app.models.database import EnrollmentRun, SessionLocal
+
     try:
         with SessionLocal() as db:
             db.execute(
@@ -90,31 +99,40 @@ async def lifespan(app: FastAPI):
 
     # Initialize app state
     from app.core.cache import SessionCache
+
     app.state.session_cache = SessionCache(max_size=100, default_ttl_seconds=3600)
     app.state.session_cache.start_cleanup_task()
-    
+
     # Legacy alias for backward compatibility with auth.py
     app.state.udemy_clients = app.state.session_cache
+
+    # Expose settings to templates via request.app.state
+    _settings = get_settings()
+    app.state.google_site_verification = _settings.GOOGLE_SITE_VERIFICATION
+    app.state.gtm_container_id = _settings.GTM_CONTAINER_ID
 
     yield
 
     # Shutdown
     from app.core.constants import shutdown_event
+
     shutdown_event.set()
-    
+
     logger.info("Server shutting down, cancelling active tasks...")
     try:
         from app.services.enrollment_manager import EnrollmentManager
-        
+
         tasks = list(EnrollmentManager.active_tasks.values())
         if tasks:
             logger.info(f"Found {len(tasks)} active enrollment tasks to cancel.")
             for task in tasks:
                 task.cancel()
-            
+
             try:
                 # Wait for tasks to handle cancellation (includes DB updates)
-                await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=5.0)
+                await asyncio.wait_for(
+                    asyncio.gather(*tasks, return_exceptions=True), timeout=5.0
+                )
                 logger.info("All enrollment tasks cancelled successfully.")
             except asyncio.TimeoutError:
                 logger.warning("Timed out waiting for enrollment tasks to cancel.")
@@ -141,7 +159,6 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Udemy Course Enroller API")
 
 
-
 app_settings = get_settings()
 
 app = FastAPI(
@@ -165,15 +182,36 @@ app.add_middleware(
 # GZip middleware to compress responses and lower TTFB / bandwidth
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+
 @app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
     """Add central cache control headers to satisfy proxy policies and optimize page speed."""
     response = await call_next(request)
     path = request.url.path
 
+    # Lightweight privacy-friendly page view logging (HTML pages only, no PII)
+    if (
+        not path.startswith("/static/")
+        and not path.startswith("/api/")
+        and request.method == "GET"
+        and response.status_code == 200
+        and "text/html" in response.headers.get("content-type", "")
+    ):
+        logger.info(f"[pageview] {path}")
+
     if path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    elif path in {"/", "/faq", "/about", "/guides", "/robots.txt", "/sitemap.xml", "/humans.txt", "/llms.txt", "/ai-profile.json"}:
+    elif path in {
+        "/",
+        "/faq",
+        "/about",
+        "/guides",
+        "/robots.txt",
+        "/sitemap.xml",
+        "/humans.txt",
+        "/llms.txt",
+        "/ai-profile.json",
+    }:
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Vary"] = "Cookie"
     elif path in {"/dashboard", "/settings", "/history"} or path.startswith("/api/"):
@@ -183,8 +221,27 @@ async def add_cache_headers(request: Request, call_next):
 
     return response
 
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+    return response
+
+
 # Static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Template renderer for error pages
+templates = Jinja2Templates(directory="app/templates")
 
 # Include routers
 app.include_router(seo.router)
@@ -201,6 +258,7 @@ async def health_check(request: Request):
     db_status = "healthy"
     try:
         from sqlalchemy import text
+
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
     except Exception as e:
@@ -211,3 +269,23 @@ async def health_check(request: Request):
         "database": db_status,
         "version": app_settings.APP_VERSION,
     }
+
+
+@app.post("/api/analytics/event")
+async def track_analytics_event(request: Request):
+    """Privacy-friendly analytics endpoint for tracking CTA clicks and outbound links.
+    No PII is stored. Events are logged to the application log file only."""
+    try:
+        body = await request.json()
+        event_type = body.get("type", "unknown")
+        event_target = body.get("target", "")[:200]  # Truncate for safety
+        logger.info(f"[analytics] {event_type}: {event_target}")
+    except Exception:
+        pass
+    return {"status": "ok"}
+
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    """Return an HTML 404 page instead of FastAPI's default JSON response."""
+    return templates.TemplateResponse(request, "pages/404.html", status_code=404)

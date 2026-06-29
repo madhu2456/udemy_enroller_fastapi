@@ -37,3 +37,6 @@ node_modules/
 
 # Application data
 Courses/*.txt
+
+# Test scripts
+test_nodriver.py

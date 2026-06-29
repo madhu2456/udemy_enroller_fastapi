@@ -2,7 +2,6 @@
 """Initialize Alembic migrations directory structure."""
 
 import os
-import sys
 
 # Ensure alembic directory structure exists
 os.makedirs("alembic/versions", exist_ok=True)

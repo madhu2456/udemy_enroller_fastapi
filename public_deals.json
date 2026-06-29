@@ -1,5 +1,226 @@
 [
   {
+    "id": 12904,
+    "title": "CISSP Practice Exams 2026 | 600+ Qs & Full Mock Tests",
+    "url": "https://www.udemy.com/course/cissp-practice-exams-2026-600-qs-full-mock-tests/?couponCode=1C5E32ED3A151044BB4B",
+    "coupon_code": "1C5E32ED3A151044BB4B",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:05:56.048383Z",
+    "last_checked_at": "2026-06-28T16:07:01.462645Z"
+  },
+  {
+    "id": 12900,
+    "title": "SC-100 Microsoft Cybersecurity Architect Practice Exams",
+    "url": "https://www.udemy.com/course/sc-100-microsoft-cybersecurity-architect-practice-exams-w/?couponCode=1FE008EB34CAA6000081",
+    "coupon_code": "1FE008EB34CAA6000081",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:05:14.068450Z",
+    "last_checked_at": "2026-06-28T16:07:08.932914Z"
+  },
+  {
+    "id": 12898,
+    "title": "PL-400 Microsoft Power Platform Developer Practice Tests",
+    "url": "https://www.udemy.com/course/pl-400-microsoft-power-platform-developer-practice-tests-p/?couponCode=9D744752DDE3C02EDA69",
+    "coupon_code": "9D744752DDE3C02EDA69",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:04:57.482626Z",
+    "last_checked_at": "2026-06-28T16:07:08.932932Z"
+  },
+  {
+    "id": 12897,
+    "title": "PL-200 Microsoft Power Platform Practice Tests 2026",
+    "url": "https://www.udemy.com/course/pl-200-microsoft-power-platform-practice-tests-2026/?couponCode=6C6441C7405295E6731F",
+    "coupon_code": "6C6441C7405295E6731F",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:04:48.966456Z",
+    "last_checked_at": "2026-06-28T16:07:08.932937Z"
+  },
+  {
+    "id": 12895,
+    "title": "MS-700 Microsoft Teams Admin Exam Prep | 600+ Questions",
+    "url": "https://www.udemy.com/course/ms-700-microsoft-teams-admin-exam-prep-600-questions/?couponCode=AD393E81669255A815A4",
+    "coupon_code": "AD393E81669255A815A4",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:04:11.959842Z",
+    "last_checked_at": "2026-06-28T16:07:16.321067Z"
+  },
+  {
+    "id": 12893,
+    "title": "Microsoft AB-100 Agentic AI Architect Practice Tests 2026",
+    "url": "https://www.udemy.com/course/microsoft-ab-100-agentic-ai-architect-practice-tests-2026/?couponCode=0E74418C39E0168C36BA",
+    "coupon_code": "0E74418C39E0168C36BA",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:03:50.550404Z",
+    "last_checked_at": "2026-06-28T16:07:16.321077Z"
+  },
+  {
+    "id": 12891,
+    "title": "Kubernetes CKA Certification Practice Exams (500 Questions –",
+    "url": "https://www.udemy.com/course/kubernetes-cka-certification-practice-exams-500-questions/?couponCode=60834DA71000604C6350",
+    "coupon_code": "60834DA71000604C6350",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:03:30.179116Z",
+    "last_checked_at": "2026-06-28T16:07:16.321082Z"
+  },
+  {
+    "id": 12888,
+    "title": "ISSAP Practice Tests 2026 | CISSP-ISSAP 600+ Qs Prep",
+    "url": "https://www.udemy.com/course/issap-practice-tests-2026-cissp-issap-600-qs-prep/?couponCode=B3CE833A5C95B50C31E5",
+    "coupon_code": "B3CE833A5C95B50C31E5",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:02:49.567887Z",
+    "last_checked_at": "2026-06-28T16:07:24.134725Z"
+  },
+  {
+    "id": 12885,
+    "title": "Google Cloud Professional Security Operations Engineer 2026",
+    "url": "https://www.udemy.com/course/google-cloud-professional-security-operations-engineer-2026/?couponCode=359719973B974B3350DD",
+    "coupon_code": "359719973B974B3350DD",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:02:18.957607Z",
+    "last_checked_at": "2026-06-28T16:07:31.748031Z"
+  },
+  {
+    "id": 12882,
+    "title": "Cisco Data Center AI Infrastructure Certification Practice T",
+    "url": "https://www.udemy.com/course/cisco-data-center-ai-infrastructure-certification-practice-t/?couponCode=50F9A15DFB4559939472",
+    "coupon_code": "50F9A15DFB4559939472",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:01:47.121808Z",
+    "last_checked_at": "2026-06-28T16:07:31.748044Z"
+  },
+  {
+    "id": 12881,
+    "title": "Google Cloud Generative AI Leader Exam 2026 | 600+ Practice",
+    "url": "https://www.udemy.com/course/google-cloud-generative-ai-leader-exam-2026-600-practice/?couponCode=F0A2C0A9FF4A4782D64C",
+    "coupon_code": "F0A2C0A9FF4A4782D64C",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 5.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:01:39.309516Z",
+    "last_checked_at": "2026-06-28T16:07:31.748046Z"
+  },
+  {
+    "id": 12878,
+    "title": "CompTIA A+ Core 1 (220-1201) Practice Exams – 6 Tests | 540",
+    "url": "https://www.udemy.com/course/comptia-a-core-1-220-1201-practice-exams-6-tests-540/?couponCode=B93C9E2D722AFF6877B7",
+    "coupon_code": "B93C9E2D722AFF6877B7",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:01:12.086506Z",
+    "last_checked_at": "2026-06-28T16:07:38.080765Z"
+  },
+  {
+    "id": 12876,
+    "title": "GCP Google Workspace Admin Practice Tests 400+ Qs",
+    "url": "https://www.udemy.com/course/gcp-google-workspace-admin-practice-tests-400-qs/?couponCode=F29139B4169E347C4869",
+    "coupon_code": "F29139B4169E347C4869",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:00:52.721839Z",
+    "last_checked_at": "2026-06-28T16:07:38.080772Z"
+  },
+  {
+    "id": 12875,
+    "title": "CompTIA Security+ SY0‑701 Practice Exams – 600 Questions",
+    "url": "https://www.udemy.com/course/comptia-security-sy0701-practice-exams-600-questions/?couponCode=55388CB8CBCD5090D3FD",
+    "coupon_code": "55388CB8CBCD5090D3FD",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:00:42.679432Z",
+    "last_checked_at": "2026-06-28T16:07:45.025777Z"
+  },
+  {
+    "id": 12873,
+    "title": "CompTIA Network+ N10-009 Practice Exams (2026) – 650 Realist",
+    "url": "https://www.udemy.com/course/comptia-network-n10-009-practice-exams-2026-650-realist/?couponCode=0884BE623B40CA1DA1D1",
+    "coupon_code": "0884BE623B40CA1DA1D1",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:00:24.030364Z",
+    "last_checked_at": "2026-06-28T16:07:45.025798Z"
+  },
+  {
+    "id": 12871,
+    "title": "Databricks Certified Machine Learning Associate Practice Tes",
+    "url": "https://www.udemy.com/course/databricks-certified-machine-learning-associate-practice-tes/?couponCode=69E6BF0E6BD0962912D1",
+    "coupon_code": "69E6BF0E6BD0962912D1",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T12:00:02.349979Z",
+    "last_checked_at": "2026-06-28T16:07:45.025806Z"
+  },
+  {
+    "id": 12815,
+    "title": "Salesforce Marketing Cloud Consultant Exam Prep 2026",
+    "url": "https://www.udemy.com/course/salesforce-marketing-cloud-consultant-exam-prep-2026/?couponCode=FREE734982DO77",
+    "coupon_code": "FREE734982DO77",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 1.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-06-28T04:54:19.478821Z",
+    "last_checked_at": "2026-06-28T16:09:17.912247Z"
+  },
+  {
     "id": 12772,
     "title": "JSP Mock Test: Boost Your Skills with JavaServer Pages Quiz",
     "url": "https://www.udemy.com/course/jsp-mock-test-boost-your-skills-with-javaserver-pages-quiz-s/?couponCode=230DEEA54F54AE02F22B",
@@ -10,7 +231,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T13:45:43.396811Z",
-    "last_checked_at": "2026-06-27T14:10:36.244693Z"
+    "last_checked_at": "2026-06-28T16:10:19.162739Z"
   },
   {
     "id": 12771,
@@ -23,7 +244,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T13:32:57.911569Z",
-    "last_checked_at": "2026-06-27T14:10:36.244705Z"
+    "last_checked_at": "2026-06-28T16:10:19.162743Z"
   },
   {
     "id": 12770,
@@ -36,20 +257,7 @@
     "rating": 2.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T13:32:48.578452Z",
-    "last_checked_at": "2026-06-27T14:10:36.244709Z"
-  },
-  {
-    "id": 12769,
-    "title": "Selenium Testing Mastery: Practice Questions 2025",
-    "url": "https://www.udemy.com/course/selenium-testing-mastery-practice-questions-2025/?couponCode=736E64B4101E91626ADC",
-    "coupon_code": "736E64B4101E91626ADC",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T13:32:39.969905Z",
-    "last_checked_at": "2026-06-27T14:10:36.244711Z"
+    "last_checked_at": "2026-06-28T16:10:25.409205Z"
   },
   {
     "id": 12768,
@@ -62,46 +270,7 @@
     "rating": 3.3,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T13:32:32.544678Z",
-    "last_checked_at": "2026-06-27T14:10:36.244713Z"
-  },
-  {
-    "id": 12766,
-    "title": "ISO 9001 - Quality Management System Internal Auditor",
-    "url": "https://www.udemy.com/course/iso-9001-quality-management-system-with-full-template/?couponCode=33AF8588781ED744C3E7",
-    "coupon_code": "33AF8588781ED744C3E7",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 4.47,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T13:32:14.309867Z",
-    "last_checked_at": "2026-06-27T14:10:48.551598Z"
-  },
-  {
-    "id": 12765,
-    "title": "ISO 45001 - Occupational Health & Safety management system",
-    "url": "https://www.udemy.com/course/iso-45001-2018-complete-course/?couponCode=7580F56D7F51357032CD",
-    "coupon_code": "7580F56D7F51357032CD",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 4.4505496,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T13:32:05.784555Z",
-    "last_checked_at": "2026-06-27T14:10:48.551604Z"
-  },
-  {
-    "id": 12764,
-    "title": "ISO 50001 - Energy management system",
-    "url": "https://www.udemy.com/course/iso-50001-energy-management-system-x/?couponCode=B3A8B9A3FB3069552A8E",
-    "coupon_code": "B3A8B9A3FB3069552A8E",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 4.43,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T13:31:55.768508Z",
-    "last_checked_at": "2026-06-27T14:10:48.551608Z"
+    "last_checked_at": "2026-06-28T16:10:25.409222Z"
   },
   {
     "id": 12763,
@@ -114,7 +283,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T13:31:22.018260Z",
-    "last_checked_at": "2026-06-27T14:10:48.551612Z"
+    "last_checked_at": "2026-06-28T16:10:32.360760Z"
   },
   {
     "id": 12721,
@@ -127,7 +296,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:50:03.480963Z",
-    "last_checked_at": "2026-06-27T14:12:09.992458Z"
+    "last_checked_at": "2026-06-28T16:11:32.501435Z"
   },
   {
     "id": 12720,
@@ -140,7 +309,7 @@
     "rating": 4.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:49:55.227415Z",
-    "last_checked_at": "2026-06-27T14:12:09.992461Z"
+    "last_checked_at": "2026-06-28T16:11:38.542735Z"
   },
   {
     "id": 12718,
@@ -153,7 +322,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:49:33.367720Z",
-    "last_checked_at": "2026-06-27T14:12:09.992465Z"
+    "last_checked_at": "2026-06-28T16:11:38.542749Z"
   },
   {
     "id": 12717,
@@ -166,7 +335,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:49:23.122481Z",
-    "last_checked_at": "2026-06-27T14:12:24.696765Z"
+    "last_checked_at": "2026-06-28T16:11:38.542752Z"
   },
   {
     "id": 12716,
@@ -179,7 +348,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:49:13.384179Z",
-    "last_checked_at": "2026-06-27T14:12:24.696774Z"
+    "last_checked_at": "2026-06-28T16:11:38.542755Z"
   },
   {
     "id": 12715,
@@ -192,20 +361,7 @@
     "rating": 4.1,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:49:04.032223Z",
-    "last_checked_at": "2026-06-27T14:12:24.696776Z"
-  },
-  {
-    "id": 12714,
-    "title": "CCNA 200-301 Mastery: Ultimate MCQ Practice Test & Exam Prep",
-    "url": "https://www.udemy.com/course/ccna-200-301-mastery-ultimate-mcq-practice-test-exam-prep/?couponCode=FA447005EC8498C92C67",
-    "coupon_code": "FA447005EC8498C92C67",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.25,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:48:55.129949Z",
-    "last_checked_at": "2026-06-27T14:12:24.696779Z"
+    "last_checked_at": "2026-06-28T16:11:45.570845Z"
   },
   {
     "id": 12713,
@@ -218,7 +374,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:48:47.246734Z",
-    "last_checked_at": "2026-06-27T14:12:24.696780Z"
+    "last_checked_at": "2026-06-28T16:11:45.570856Z"
   },
   {
     "id": 12712,
@@ -231,7 +387,7 @@
     "rating": 3.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:48:38.510600Z",
-    "last_checked_at": "2026-06-27T14:12:31.576110Z"
+    "last_checked_at": "2026-06-28T16:11:45.570858Z"
   },
   {
     "id": 12711,
@@ -244,7 +400,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:48:31.074954Z",
-    "last_checked_at": "2026-06-27T14:12:31.576122Z"
+    "last_checked_at": "2026-06-28T16:11:45.570861Z"
   },
   {
     "id": 12710,
@@ -257,7 +413,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:48:24.201126Z",
-    "last_checked_at": "2026-06-27T14:12:31.576128Z"
+    "last_checked_at": "2026-06-28T16:11:53.090373Z"
   },
   {
     "id": 12709,
@@ -270,7 +426,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:48:14.099505Z",
-    "last_checked_at": "2026-06-27T14:12:31.576131Z"
+    "last_checked_at": "2026-06-28T16:11:53.090385Z"
   },
   {
     "id": 12708,
@@ -283,7 +439,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:48:05.029664Z",
-    "last_checked_at": "2026-06-27T14:12:31.576134Z"
+    "last_checked_at": "2026-06-28T16:11:53.090391Z"
   },
   {
     "id": 12707,
@@ -296,7 +452,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:47:56.621506Z",
-    "last_checked_at": "2026-06-27T14:12:43.570808Z"
+    "last_checked_at": "2026-06-28T16:11:53.090395Z"
   },
   {
     "id": 12705,
@@ -309,7 +465,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:47:24.686166Z",
-    "last_checked_at": "2026-06-27T14:12:43.570820Z"
+    "last_checked_at": "2026-06-28T16:12:00.177507Z"
   },
   {
     "id": 12704,
@@ -322,7 +478,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:47:13.475977Z",
-    "last_checked_at": "2026-06-27T14:12:43.570823Z"
+    "last_checked_at": "2026-06-28T16:12:00.177520Z"
   },
   {
     "id": 12703,
@@ -335,7 +491,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:47:03.367380Z",
-    "last_checked_at": "2026-06-27T14:12:43.570825Z"
+    "last_checked_at": "2026-06-28T16:12:00.177527Z"
   },
   {
     "id": 12702,
@@ -348,7 +504,7 @@
     "rating": 4.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:46:55.854420Z",
-    "last_checked_at": "2026-06-27T14:13:11.048460Z"
+    "last_checked_at": "2026-06-28T16:12:00.177531Z"
   },
   {
     "id": 12701,
@@ -361,7 +517,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:46:47.185795Z",
-    "last_checked_at": "2026-06-27T14:13:11.048468Z"
+    "last_checked_at": "2026-06-28T16:12:00.177535Z"
   },
   {
     "id": 12700,
@@ -374,7 +530,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:46:39.804283Z",
-    "last_checked_at": "2026-06-27T14:13:11.048471Z"
+    "last_checked_at": "2026-06-28T16:12:06.861319Z"
   },
   {
     "id": 12699,
@@ -387,7 +543,7 @@
     "rating": 1.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:46:28.949640Z",
-    "last_checked_at": "2026-06-27T14:13:11.048473Z"
+    "last_checked_at": "2026-06-28T16:12:06.861338Z"
   },
   {
     "id": 12698,
@@ -400,7 +556,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:46:17.914391Z",
-    "last_checked_at": "2026-06-27T14:13:11.048475Z"
+    "last_checked_at": "2026-06-28T16:12:06.861347Z"
   },
   {
     "id": 12697,
@@ -413,7 +569,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:46:07.177735Z",
-    "last_checked_at": "2026-06-27T14:13:18.199836Z"
+    "last_checked_at": "2026-06-28T16:12:06.861352Z"
   },
   {
     "id": 12696,
@@ -426,20 +582,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:45:58.621093Z",
-    "last_checked_at": "2026-06-27T14:13:18.199844Z"
-  },
-  {
-    "id": 12694,
-    "title": "Pandas Data Analysis Quiz: Master Key Concepts with MCQs",
-    "url": "https://www.udemy.com/course/pandas-data-analysis-quiz-master-key-concepts-with-mcqs/?couponCode=346E44F48A04C75F9FC5",
-    "coupon_code": "346E44F48A04C75F9FC5",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:45:36.813671Z",
-    "last_checked_at": "2026-06-27T14:13:18.199849Z"
+    "last_checked_at": "2026-06-28T16:12:06.861359Z"
   },
   {
     "id": 12693,
@@ -452,7 +595,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:45:21.076004Z",
-    "last_checked_at": "2026-06-27T14:13:18.199851Z"
+    "last_checked_at": "2026-06-28T16:12:17.037148Z"
   },
   {
     "id": 12692,
@@ -465,7 +608,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:45:09.411269Z",
-    "last_checked_at": "2026-06-27T14:13:24.684768Z"
+    "last_checked_at": "2026-06-28T16:12:17.037150Z"
   },
   {
     "id": 12690,
@@ -478,7 +621,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:44:12.966326Z",
-    "last_checked_at": "2026-06-27T14:13:24.684778Z"
+    "last_checked_at": "2026-06-28T16:12:24.394973Z"
   },
   {
     "id": 12689,
@@ -491,7 +634,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:44:02.047394Z",
-    "last_checked_at": "2026-06-27T14:13:24.684780Z"
+    "last_checked_at": "2026-06-28T16:12:24.394985Z"
   },
   {
     "id": 12688,
@@ -504,7 +647,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:43:52.445728Z",
-    "last_checked_at": "2026-06-27T14:13:24.684782Z"
+    "last_checked_at": "2026-06-28T16:12:24.394990Z"
   },
   {
     "id": 12687,
@@ -517,7 +660,7 @@
     "rating": 3.2142856,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:43:43.840096Z",
-    "last_checked_at": "2026-06-27T14:13:32.317529Z"
+    "last_checked_at": "2026-06-28T16:12:24.394994Z"
   },
   {
     "id": 12686,
@@ -530,7 +673,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:43:32.975766Z",
-    "last_checked_at": "2026-06-27T14:13:32.317541Z"
+    "last_checked_at": "2026-06-28T16:12:24.394997Z"
   },
   {
     "id": 12685,
@@ -543,20 +686,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:43:22.958345Z",
-    "last_checked_at": "2026-06-27T14:13:32.317546Z"
-  },
-  {
-    "id": 12684,
-    "title": "Software Development Skills Assessment: Practice Exam",
-    "url": "https://www.udemy.com/course/software-development-skills-assessment-practice-exam/?couponCode=4D6312D9CC446ADD3EA1",
-    "coupon_code": "4D6312D9CC446ADD3EA1",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:43:10.707862Z",
-    "last_checked_at": "2026-06-27T14:13:32.317550Z"
+    "last_checked_at": "2026-06-28T16:12:31.082337Z"
   },
   {
     "id": 12683,
@@ -569,7 +699,7 @@
     "rating": 4.25,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:43:02.893569Z",
-    "last_checked_at": "2026-06-27T14:13:32.317553Z"
+    "last_checked_at": "2026-06-28T16:12:31.082355Z"
   },
   {
     "id": 12682,
@@ -582,20 +712,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:42:50.853043Z",
-    "last_checked_at": "2026-06-27T14:13:39.320369Z"
-  },
-  {
-    "id": 12681,
-    "title": "Web Designer Essentials: A Comprehensive Practice Test",
-    "url": "https://www.udemy.com/course/web-designer-essentials-a-comprehensive-practice-test/?couponCode=741CE0263CA80CAB0DCD",
-    "coupon_code": "741CE0263CA80CAB0DCD",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.5,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:42:37.186204Z",
-    "last_checked_at": "2026-06-27T14:13:39.320376Z"
+    "last_checked_at": "2026-06-28T16:12:31.082359Z"
   },
   {
     "id": 12680,
@@ -608,7 +725,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:42:28.181079Z",
-    "last_checked_at": "2026-06-27T14:13:39.320378Z"
+    "last_checked_at": "2026-06-28T16:12:38.464471Z"
   },
   {
     "id": 12679,
@@ -621,7 +738,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:42:15.591362Z",
-    "last_checked_at": "2026-06-27T14:13:39.320380Z"
+    "last_checked_at": "2026-06-28T16:12:38.464481Z"
   },
   {
     "id": 12678,
@@ -634,20 +751,7 @@
     "rating": 3.3333333,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:42:06.355158Z",
-    "last_checked_at": "2026-06-27T14:13:39.320382Z"
-  },
-  {
-    "id": 12677,
-    "title": "ReactJS Mastery Test: Challenge Your Programming Skills",
-    "url": "https://www.udemy.com/course/reactjs-mastery-test-challenge-your-programming-skills/?couponCode=B896EED2F4287688BF05",
-    "coupon_code": "B896EED2F4287688BF05",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:41:53.324336Z",
-    "last_checked_at": "2026-06-27T14:13:46.655269Z"
+    "last_checked_at": "2026-06-28T16:12:38.464485Z"
   },
   {
     "id": 12676,
@@ -660,7 +764,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:41:45.871758Z",
-    "last_checked_at": "2026-06-27T14:13:46.655277Z"
+    "last_checked_at": "2026-06-28T16:12:38.464491Z"
   },
   {
     "id": 12675,
@@ -673,7 +777,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:41:33.440475Z",
-    "last_checked_at": "2026-06-27T14:13:46.655279Z"
+    "last_checked_at": "2026-06-28T16:12:45.853609Z"
   },
   {
     "id": 12674,
@@ -686,7 +790,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:41:24.481548Z",
-    "last_checked_at": "2026-06-27T14:13:46.655281Z"
+    "last_checked_at": "2026-06-28T16:12:45.853618Z"
   },
   {
     "id": 12673,
@@ -699,7 +803,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:41:10.700343Z",
-    "last_checked_at": "2026-06-27T14:13:46.655283Z"
+    "last_checked_at": "2026-06-28T16:12:45.853621Z"
   },
   {
     "id": 12672,
@@ -712,7 +816,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:41:01.080491Z",
-    "last_checked_at": "2026-06-27T14:13:55.333916Z"
+    "last_checked_at": "2026-06-28T16:12:45.853624Z"
   },
   {
     "id": 12671,
@@ -725,7 +829,7 @@
     "rating": 1.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:40:47.913809Z",
-    "last_checked_at": "2026-06-27T14:13:55.333928Z"
+    "last_checked_at": "2026-06-28T16:12:45.853628Z"
   },
   {
     "id": 12670,
@@ -738,7 +842,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:40:38.761319Z",
-    "last_checked_at": "2026-06-27T14:13:55.333933Z"
+    "last_checked_at": "2026-06-28T16:12:53.469748Z"
   },
   {
     "id": 12669,
@@ -751,7 +855,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:40:29.630589Z",
-    "last_checked_at": "2026-06-27T14:13:55.333937Z"
+    "last_checked_at": "2026-06-28T16:12:53.469758Z"
   },
   {
     "id": 12668,
@@ -764,7 +868,7 @@
     "rating": 3.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:40:21.947526Z",
-    "last_checked_at": "2026-06-27T14:13:55.333940Z"
+    "last_checked_at": "2026-06-28T16:12:53.469762Z"
   },
   {
     "id": 12667,
@@ -777,7 +881,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:40:14.891498Z",
-    "last_checked_at": "2026-06-27T14:14:02.843829Z"
+    "last_checked_at": "2026-06-28T16:12:53.469766Z"
   },
   {
     "id": 12666,
@@ -790,7 +894,7 @@
     "rating": 1.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:40:07.371881Z",
-    "last_checked_at": "2026-06-27T14:14:02.843842Z"
+    "last_checked_at": "2026-06-28T16:12:53.469768Z"
   },
   {
     "id": 12665,
@@ -803,7 +907,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:39:48.010702Z",
-    "last_checked_at": "2026-06-27T14:14:02.843847Z"
+    "last_checked_at": "2026-06-28T16:13:00.770009Z"
   },
   {
     "id": 12664,
@@ -816,7 +920,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:39:35.747765Z",
-    "last_checked_at": "2026-06-27T14:14:02.843852Z"
+    "last_checked_at": "2026-06-28T16:13:00.770027Z"
   },
   {
     "id": 12663,
@@ -829,7 +933,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:39:23.624838Z",
-    "last_checked_at": "2026-06-27T14:14:02.843855Z"
+    "last_checked_at": "2026-06-28T16:13:00.770036Z"
   },
   {
     "id": 12662,
@@ -842,33 +946,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:39:14.243049Z",
-    "last_checked_at": "2026-06-27T14:14:08.946088Z"
-  },
-  {
-    "id": 12660,
-    "title": "DP-300 Practice Exam: Pass Your Azure Database Admin Test",
-    "url": "https://www.udemy.com/course/dp-300-practice-exam-pass-your-azure-database-admin-test/?couponCode=D543AA00DB47FB40B6A8",
-    "coupon_code": "D543AA00DB47FB40B6A8",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 5.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:38:53.811365Z",
-    "last_checked_at": "2026-06-27T14:14:08.946108Z"
-  },
-  {
-    "id": 12659,
-    "title": "ECBA Certification Test: Master Business Analysis Basics",
-    "url": "https://www.udemy.com/course/ecba-certification-test-master-business-analysis-basics/?couponCode=889A0FDBE860D3FE991C",
-    "coupon_code": "889A0FDBE860D3FE991C",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:38:42.798186Z",
-    "last_checked_at": "2026-06-27T14:14:08.946112Z"
+    "last_checked_at": "2026-06-28T16:13:00.770043Z"
   },
   {
     "id": 12658,
@@ -881,7 +959,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:38:31.975029Z",
-    "last_checked_at": "2026-06-27T14:14:08.946116Z"
+    "last_checked_at": "2026-06-28T16:13:08.408442Z"
   },
   {
     "id": 12657,
@@ -894,7 +972,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:38:23.154320Z",
-    "last_checked_at": "2026-06-27T14:14:16.908035Z"
+    "last_checked_at": "2026-06-28T16:13:08.408447Z"
   },
   {
     "id": 12656,
@@ -907,7 +985,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:38:12.936095Z",
-    "last_checked_at": "2026-06-27T14:14:16.908044Z"
+    "last_checked_at": "2026-06-28T16:13:08.408453Z"
   },
   {
     "id": 12655,
@@ -920,7 +998,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:37:59.335310Z",
-    "last_checked_at": "2026-06-27T14:14:16.908047Z"
+    "last_checked_at": "2026-06-28T16:13:14.389968Z"
   },
   {
     "id": 12654,
@@ -933,20 +1011,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:37:50.802720Z",
-    "last_checked_at": "2026-06-27T14:14:16.908050Z"
-  },
-  {
-    "id": 12652,
-    "title": "OOP Fundamentals Practice Quiz for Developers",
-    "url": "https://www.udemy.com/course/oop-fundamentals-practice-quiz-for-developers/?couponCode=88A4254526783401EE18",
-    "coupon_code": "88A4254526783401EE18",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.5,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:37:34.548006Z",
-    "last_checked_at": "2026-06-27T14:14:22.908867Z"
+    "last_checked_at": "2026-06-28T16:13:14.389976Z"
   },
   {
     "id": 12651,
@@ -959,7 +1024,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:37:24.415822Z",
-    "last_checked_at": "2026-06-27T14:14:22.908876Z"
+    "last_checked_at": "2026-06-28T16:13:14.389983Z"
   },
   {
     "id": 12650,
@@ -972,7 +1037,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:37:14.425564Z",
-    "last_checked_at": "2026-06-27T14:14:22.908879Z"
+    "last_checked_at": "2026-06-28T16:13:20.118340Z"
   },
   {
     "id": 12649,
@@ -985,7 +1050,7 @@
     "rating": 3.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:37:03.867491Z",
-    "last_checked_at": "2026-06-27T14:14:22.908880Z"
+    "last_checked_at": "2026-06-28T16:13:20.118358Z"
   },
   {
     "id": 12648,
@@ -998,7 +1063,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:36:55.359813Z",
-    "last_checked_at": "2026-06-27T14:14:22.908882Z"
+    "last_checked_at": "2026-06-28T16:13:20.118367Z"
   },
   {
     "id": 12647,
@@ -1011,7 +1076,7 @@
     "rating": 4.25,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:36:42.599916Z",
-    "last_checked_at": "2026-06-27T14:14:29.980289Z"
+    "last_checked_at": "2026-06-28T16:13:20.118373Z"
   },
   {
     "id": 12646,
@@ -1024,7 +1089,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:36:31.299554Z",
-    "last_checked_at": "2026-06-27T14:14:29.980298Z"
+    "last_checked_at": "2026-06-28T16:13:20.118378Z"
   },
   {
     "id": 12645,
@@ -1037,7 +1102,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:36:21.583975Z",
-    "last_checked_at": "2026-06-27T14:14:29.980301Z"
+    "last_checked_at": "2026-06-28T16:13:27.893884Z"
   },
   {
     "id": 12644,
@@ -1050,7 +1115,7 @@
     "rating": 1.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:36:09.898975Z",
-    "last_checked_at": "2026-06-27T14:14:29.980303Z"
+    "last_checked_at": "2026-06-28T16:13:27.893898Z"
   },
   {
     "id": 12643,
@@ -1063,20 +1128,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:36:00.912338Z",
-    "last_checked_at": "2026-06-27T14:14:29.980305Z"
-  },
-  {
-    "id": 12642,
-    "title": "HTML Practice Test: Sharpen Your Skill with SEO Optimization",
-    "url": "https://www.udemy.com/course/html-practice-test-sharpen-your-skill-with-seo-optimization/?couponCode=47A54D7D73B75C9EB0A7",
-    "coupon_code": "47A54D7D73B75C9EB0A7",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.2222223,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:35:48.765575Z",
-    "last_checked_at": "2026-06-27T14:14:48.208695Z"
+    "last_checked_at": "2026-06-28T16:13:27.893904Z"
   },
   {
     "id": 12641,
@@ -1089,7 +1141,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:35:38.932175Z",
-    "last_checked_at": "2026-06-27T14:14:48.208703Z"
+    "last_checked_at": "2026-06-28T16:13:27.893913Z"
   },
   {
     "id": 12640,
@@ -1102,7 +1154,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:35:28.302151Z",
-    "last_checked_at": "2026-06-27T14:14:48.208706Z"
+    "last_checked_at": "2026-06-28T16:13:35.696208Z"
   },
   {
     "id": 12639,
@@ -1115,7 +1167,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:35:17.536595Z",
-    "last_checked_at": "2026-06-27T14:14:48.208708Z"
+    "last_checked_at": "2026-06-28T16:13:35.696222Z"
   },
   {
     "id": 12638,
@@ -1128,20 +1180,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:35:08.134017Z",
-    "last_checked_at": "2026-06-27T14:14:48.208710Z"
-  },
-  {
-    "id": 12637,
-    "title": "Google Cloud Architect Practice Test – 2025 Exam Prep",
-    "url": "https://www.udemy.com/course/google-cloud-architect-practice-test-2025-exam-prep/?couponCode=201B4047F08E56918542",
-    "coupon_code": "201B4047F08E56918542",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.25,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:34:59.932216Z",
-    "last_checked_at": "2026-06-27T14:14:55.077737Z"
+    "last_checked_at": "2026-06-28T16:13:35.696228Z"
   },
   {
     "id": 12636,
@@ -1154,7 +1193,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:34:50.229124Z",
-    "last_checked_at": "2026-06-27T14:14:55.077746Z"
+    "last_checked_at": "2026-06-28T16:13:35.696236Z"
   },
   {
     "id": 12635,
@@ -1167,20 +1206,7 @@
     "rating": 3.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:34:40.875068Z",
-    "last_checked_at": "2026-06-27T14:14:55.077749Z"
-  },
-  {
-    "id": 12634,
-    "title": "Data Science with MATLAB: Essential Practice Questions",
-    "url": "https://www.udemy.com/course/data-science-with-matlab-essential-practice-questions/?couponCode=0C9AACEE63B001589DFB",
-    "coupon_code": "0C9AACEE63B001589DFB",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:34:27.687121Z",
-    "last_checked_at": "2026-06-27T14:14:55.077751Z"
+    "last_checked_at": "2026-06-28T16:13:42.661882Z"
   },
   {
     "id": 12633,
@@ -1193,7 +1219,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:34:16.872532Z",
-    "last_checked_at": "2026-06-27T14:14:55.077754Z"
+    "last_checked_at": "2026-06-28T16:13:42.661892Z"
   },
   {
     "id": 12632,
@@ -1206,7 +1232,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:34:05.584194Z",
-    "last_checked_at": "2026-06-27T14:15:02.803921Z"
+    "last_checked_at": "2026-06-28T16:13:42.661894Z"
   },
   {
     "id": 12631,
@@ -1219,7 +1245,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:33:58.422146Z",
-    "last_checked_at": "2026-06-27T14:15:02.803936Z"
+    "last_checked_at": "2026-06-28T16:13:42.661896Z"
   },
   {
     "id": 12629,
@@ -1232,7 +1258,7 @@
     "rating": 3.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:33:38.459019Z",
-    "last_checked_at": "2026-06-27T14:15:02.803945Z"
+    "last_checked_at": "2026-06-28T16:13:50.511317Z"
   },
   {
     "id": 12628,
@@ -1245,7 +1271,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:33:29.250309Z",
-    "last_checked_at": "2026-06-27T14:15:02.803949Z"
+    "last_checked_at": "2026-06-28T16:13:50.511322Z"
   },
   {
     "id": 12627,
@@ -1258,7 +1284,7 @@
     "rating": 3.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:33:17.098655Z",
-    "last_checked_at": "2026-06-27T14:15:10.364940Z"
+    "last_checked_at": "2026-06-28T16:13:50.511326Z"
   },
   {
     "id": 12626,
@@ -1271,7 +1297,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:33:06.836360Z",
-    "last_checked_at": "2026-06-27T14:15:10.364950Z"
+    "last_checked_at": "2026-06-28T16:13:50.511330Z"
   },
   {
     "id": 12625,
@@ -1284,7 +1310,7 @@
     "rating": 3.6666667,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:32:57.331106Z",
-    "last_checked_at": "2026-06-27T14:15:10.364953Z"
+    "last_checked_at": "2026-06-28T16:13:58.412010Z"
   },
   {
     "id": 12624,
@@ -1297,33 +1323,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:32:47.111422Z",
-    "last_checked_at": "2026-06-27T14:15:10.364956Z"
-  },
-  {
-    "id": 12623,
-    "title": "CRISC Practice Test: Master Risk and Control Management",
-    "url": "https://www.udemy.com/course/crisc-practice-test-master-risk-and-control-management-o/?couponCode=DFCEC9DC141F2C7C98D7",
-    "coupon_code": "DFCEC9DC141F2C7C98D7",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:32:32.914860Z",
-    "last_checked_at": "2026-06-27T14:15:10.364959Z"
-  },
-  {
-    "id": 12622,
-    "title": "CompTIA Security+ (SY0-701) Practice Test: Boost Your Exam",
-    "url": "https://www.udemy.com/course/comptia-security-sy0-701-practice-test-boost-your-exam/?couponCode=85339EA1E584E188771C",
-    "coupon_code": "85339EA1E584E188771C",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 5.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:32:21.000217Z",
-    "last_checked_at": "2026-06-27T14:15:17.850682Z"
+    "last_checked_at": "2026-06-28T16:13:58.412030Z"
   },
   {
     "id": 12621,
@@ -1336,7 +1336,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:32:09.358402Z",
-    "last_checked_at": "2026-06-27T14:15:17.850692Z"
+    "last_checked_at": "2026-06-28T16:13:58.412050Z"
   },
   {
     "id": 12620,
@@ -1349,7 +1349,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:31:37.757772Z",
-    "last_checked_at": "2026-06-27T14:15:17.850695Z"
+    "last_checked_at": "2026-06-28T16:14:05.145100Z"
   },
   {
     "id": 12619,
@@ -1362,33 +1362,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:31:26.754509Z",
-    "last_checked_at": "2026-06-27T14:15:17.850698Z"
-  },
-  {
-    "id": 12618,
-    "title": "Spring JDBC Interview Prep: Practice Test with Answers 2025",
-    "url": "https://www.udemy.com/course/spring-jdbc-interview-prep-practice-test-with-answers-2025/?couponCode=5C516FDF369B37D5EF5D",
-    "coupon_code": "5C516FDF369B37D5EF5D",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:31:19.039258Z",
-    "last_checked_at": "2026-06-27T14:15:17.850701Z"
-  },
-  {
-    "id": 12617,
-    "title": "Software Engineering Quiz: Test Your Knowledge Today",
-    "url": "https://www.udemy.com/course/software-engineering-quiz-test-your-knowledge-today/?couponCode=0A4380620999CA77B43B",
-    "coupon_code": "0A4380620999CA77B43B",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:31:08.026932Z",
-    "last_checked_at": "2026-06-27T14:15:25.173044Z"
+    "last_checked_at": "2026-06-28T16:14:05.145112Z"
   },
   {
     "id": 12616,
@@ -1401,7 +1375,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:30:54.146227Z",
-    "last_checked_at": "2026-06-27T14:15:25.173053Z"
+    "last_checked_at": "2026-06-28T16:14:05.145122Z"
   },
   {
     "id": 12615,
@@ -1414,20 +1388,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:30:44.167031Z",
-    "last_checked_at": "2026-06-27T14:15:25.173056Z"
-  },
-  {
-    "id": 12613,
-    "title": "Salesforce Lightning Experience Certification Practice Exam",
-    "url": "https://www.udemy.com/course/salesforce-lightning-experience-certification-practice-exam/?couponCode=9430700549867C52394B",
-    "coupon_code": "9430700549867C52394B",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 5.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:30:01.626516Z",
-    "last_checked_at": "2026-06-27T14:15:25.173060Z"
+    "last_checked_at": "2026-06-28T16:14:15.638888Z"
   },
   {
     "id": 12612,
@@ -1440,20 +1401,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:29:52.858405Z",
-    "last_checked_at": "2026-06-27T14:15:31.901943Z"
-  },
-  {
-    "id": 12611,
-    "title": "Platform as a Service (PaaS): Ultimate Practice Test",
-    "url": "https://www.udemy.com/course/platform-as-a-service-paas-ultimate-practice-test/?couponCode=DD90347F420FB7A9D970",
-    "coupon_code": "DD90347F420FB7A9D970",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:29:42.749584Z",
-    "last_checked_at": "2026-06-27T14:15:31.901955Z"
+    "last_checked_at": "2026-06-28T16:14:15.638911Z"
   },
   {
     "id": 12610,
@@ -1466,7 +1414,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:29:29.972146Z",
-    "last_checked_at": "2026-06-27T14:15:31.901959Z"
+    "last_checked_at": "2026-06-28T16:14:23.000490Z"
   },
   {
     "id": 12607,
@@ -1479,7 +1427,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:29:02.120823Z",
-    "last_checked_at": "2026-06-27T14:15:39.505435Z"
+    "last_checked_at": "2026-06-28T16:14:23.000503Z"
   },
   {
     "id": 12606,
@@ -1492,7 +1440,7 @@
     "rating": 2.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:28:53.879086Z",
-    "last_checked_at": "2026-06-27T14:15:39.505451Z"
+    "last_checked_at": "2026-06-28T16:14:23.000506Z"
   },
   {
     "id": 12605,
@@ -1505,7 +1453,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:28:46.468057Z",
-    "last_checked_at": "2026-06-27T14:15:39.505458Z"
+    "last_checked_at": "2026-06-28T16:14:30.656762Z"
   },
   {
     "id": 12604,
@@ -1518,7 +1466,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:28:35.122746Z",
-    "last_checked_at": "2026-06-27T14:15:39.505464Z"
+    "last_checked_at": "2026-06-28T16:14:30.656775Z"
   },
   {
     "id": 12603,
@@ -1531,7 +1479,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:28:22.401756Z",
-    "last_checked_at": "2026-06-27T14:15:39.505469Z"
+    "last_checked_at": "2026-06-28T16:14:30.656781Z"
   },
   {
     "id": 12602,
@@ -1544,7 +1492,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:28:14.008402Z",
-    "last_checked_at": "2026-06-27T14:15:46.572970Z"
+    "last_checked_at": "2026-06-28T16:14:30.656785Z"
   },
   {
     "id": 12601,
@@ -1557,20 +1505,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:28:02.257671Z",
-    "last_checked_at": "2026-06-27T14:15:46.572983Z"
-  },
-  {
-    "id": 12600,
-    "title": "IBM Maximo Fundamentals: Practice Questions & Exam Prep 2025",
-    "url": "https://www.udemy.com/course/ibm-maximo-fundamentals-practice-questions-exam-prep-2025/?couponCode=C4021649B4EF0064EFDD",
-    "coupon_code": "C4021649B4EF0064EFDD",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 5.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:27:49.476575Z",
-    "last_checked_at": "2026-06-27T14:15:46.572988Z"
+    "last_checked_at": "2026-06-28T16:14:30.656789Z"
   },
   {
     "id": 12599,
@@ -1583,7 +1518,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:27:37.648377Z",
-    "last_checked_at": "2026-06-27T14:15:46.572991Z"
+    "last_checked_at": "2026-06-28T16:14:37.834462Z"
   },
   {
     "id": 12598,
@@ -1596,7 +1531,7 @@
     "rating": 3.8333333,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:27:29.205245Z",
-    "last_checked_at": "2026-06-27T14:15:46.572995Z"
+    "last_checked_at": "2026-06-28T16:14:37.834468Z"
   },
   {
     "id": 12597,
@@ -1609,7 +1544,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:27:18.131429Z",
-    "last_checked_at": "2026-06-27T14:16:02.682087Z"
+    "last_checked_at": "2026-06-28T16:14:37.834471Z"
   },
   {
     "id": 12596,
@@ -1622,7 +1557,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:27:05.444411Z",
-    "last_checked_at": "2026-06-27T14:16:02.682096Z"
+    "last_checked_at": "2026-06-28T16:14:37.834474Z"
   },
   {
     "id": 12595,
@@ -1635,7 +1570,7 @@
     "rating": 3.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:26:56.665282Z",
-    "last_checked_at": "2026-06-27T14:16:02.682099Z"
+    "last_checked_at": "2026-06-28T16:14:45.226358Z"
   },
   {
     "id": 12594,
@@ -1648,7 +1583,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:26:49.983103Z",
-    "last_checked_at": "2026-06-27T14:16:02.682100Z"
+    "last_checked_at": "2026-06-28T16:14:45.226365Z"
   },
   {
     "id": 12593,
@@ -1661,7 +1596,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:26:35.232327Z",
-    "last_checked_at": "2026-06-27T14:16:02.682103Z"
+    "last_checked_at": "2026-06-28T16:14:45.226368Z"
   },
   {
     "id": 12592,
@@ -1674,7 +1609,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:26:27.992121Z",
-    "last_checked_at": "2026-06-27T14:16:09.202499Z"
+    "last_checked_at": "2026-06-28T16:14:45.226370Z"
   },
   {
     "id": 12591,
@@ -1687,7 +1622,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:26:18.441303Z",
-    "last_checked_at": "2026-06-27T14:16:09.202513Z"
+    "last_checked_at": "2026-06-28T16:14:45.226372Z"
   },
   {
     "id": 12590,
@@ -1700,7 +1635,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:26:04.460459Z",
-    "last_checked_at": "2026-06-27T14:16:09.202518Z"
+    "last_checked_at": "2026-06-28T16:14:52.815858Z"
   },
   {
     "id": 12589,
@@ -1713,7 +1648,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:25:56.692915Z",
-    "last_checked_at": "2026-06-27T14:16:09.202522Z"
+    "last_checked_at": "2026-06-28T16:14:52.815871Z"
   },
   {
     "id": 12588,
@@ -1726,7 +1661,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:25:46.588027Z",
-    "last_checked_at": "2026-06-27T14:16:09.202526Z"
+    "last_checked_at": "2026-06-28T16:14:52.815877Z"
   },
   {
     "id": 12585,
@@ -1739,7 +1674,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:25:14.548072Z",
-    "last_checked_at": "2026-06-27T14:16:16.765009Z"
+    "last_checked_at": "2026-06-28T16:14:59.256831Z"
   },
   {
     "id": 12584,
@@ -1752,7 +1687,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:25:01.086462Z",
-    "last_checked_at": "2026-06-27T14:16:16.765011Z"
+    "last_checked_at": "2026-06-28T16:14:59.256845Z"
   },
   {
     "id": 12582,
@@ -1765,7 +1700,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:24:42.670327Z",
-    "last_checked_at": "2026-06-27T14:16:23.952405Z"
+    "last_checked_at": "2026-06-28T16:14:59.256855Z"
   },
   {
     "id": 12581,
@@ -1778,20 +1713,7 @@
     "rating": 4.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:24:32.678900Z",
-    "last_checked_at": "2026-06-27T14:16:23.952415Z"
-  },
-  {
-    "id": 12580,
-    "title": "Apigee API Proxy and Policy Implementation Mock Test 2025",
-    "url": "https://www.udemy.com/course/apigee-api-proxy-and-policy-implementation-mock-test-2025/?couponCode=697614350DE4A4E4FDB1",
-    "coupon_code": "697614350DE4A4E4FDB1",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:24:22.868586Z",
-    "last_checked_at": "2026-06-27T14:16:23.952417Z"
+    "last_checked_at": "2026-06-28T16:14:59.256859Z"
   },
   {
     "id": 12579,
@@ -1804,20 +1726,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:24:12.978338Z",
-    "last_checked_at": "2026-06-27T14:16:23.952419Z"
-  },
-  {
-    "id": 12578,
-    "title": "PL-300 Power BI Data Analyst: Ultimate MCQ Practice Guide",
-    "url": "https://www.udemy.com/course/pl-300-microsoft-power-bi-data-analyst-practice-test-2024/?couponCode=D38724604AB186F5FE04",
-    "coupon_code": "D38724604AB186F5FE04",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.6,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:24:00.904980Z",
-    "last_checked_at": "2026-06-27T14:16:23.952421Z"
+    "last_checked_at": "2026-06-28T16:15:06.262951Z"
   },
   {
     "id": 12577,
@@ -1830,7 +1739,7 @@
     "rating": 4.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:23:52.681804Z",
-    "last_checked_at": "2026-06-27T14:16:38.904131Z"
+    "last_checked_at": "2026-06-28T16:15:06.262960Z"
   },
   {
     "id": 12576,
@@ -1843,7 +1752,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:23:40.695211Z",
-    "last_checked_at": "2026-06-27T14:16:38.904142Z"
+    "last_checked_at": "2026-06-28T16:15:06.262963Z"
   },
   {
     "id": 12575,
@@ -1856,7 +1765,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:22:48.181611Z",
-    "last_checked_at": "2026-06-27T14:16:38.904145Z"
+    "last_checked_at": "2026-06-28T16:15:13.758174Z"
   },
   {
     "id": 12572,
@@ -1869,7 +1778,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:22:15.831376Z",
-    "last_checked_at": "2026-06-27T14:16:46.515533Z"
+    "last_checked_at": "2026-06-28T16:15:13.758187Z"
   },
   {
     "id": 12570,
@@ -1882,7 +1791,7 @@
     "rating": 4.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:21:55.885276Z",
-    "last_checked_at": "2026-06-27T14:16:46.515550Z"
+    "last_checked_at": "2026-06-28T16:15:21.257330Z"
   },
   {
     "id": 12569,
@@ -1895,7 +1804,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:21:48.037815Z",
-    "last_checked_at": "2026-06-27T14:16:46.515555Z"
+    "last_checked_at": "2026-06-28T16:15:21.257343Z"
   },
   {
     "id": 12568,
@@ -1908,7 +1817,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:21:39.042149Z",
-    "last_checked_at": "2026-06-27T14:16:46.515559Z"
+    "last_checked_at": "2026-06-28T16:15:21.257349Z"
   },
   {
     "id": 12567,
@@ -1921,7 +1830,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:21:29.541773Z",
-    "last_checked_at": "2026-06-27T14:16:59.895632Z"
+    "last_checked_at": "2026-06-28T16:15:21.257353Z"
   },
   {
     "id": 12566,
@@ -1934,7 +1843,7 @@
     "rating": 4.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:21:16.960429Z",
-    "last_checked_at": "2026-06-27T14:16:59.895640Z"
+    "last_checked_at": "2026-06-28T16:15:21.257357Z"
   },
   {
     "id": 12565,
@@ -1947,7 +1856,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:21:06.272659Z",
-    "last_checked_at": "2026-06-27T14:16:59.895643Z"
+    "last_checked_at": "2026-06-28T16:15:29.067550Z"
   },
   {
     "id": 12564,
@@ -1960,20 +1869,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:20:56.854186Z",
-    "last_checked_at": "2026-06-27T14:16:59.895645Z"
-  },
-  {
-    "id": 12563,
-    "title": "MACHINE LEARNING INTERVIEW QUESTION AND ANSWER 2025",
-    "url": "https://www.udemy.com/course/machine-learning-interview-question-and-answer-2024/?couponCode=802AC252BCB38987BE79",
-    "coupon_code": "802AC252BCB38987BE79",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:20:46.928432Z",
-    "last_checked_at": "2026-06-27T14:16:59.895647Z"
+    "last_checked_at": "2026-06-28T16:15:29.067561Z"
   },
   {
     "id": 12562,
@@ -1986,7 +1882,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:20:39.773414Z",
-    "last_checked_at": "2026-06-27T14:17:07.206596Z"
+    "last_checked_at": "2026-06-28T16:15:29.067570Z"
   },
   {
     "id": 12561,
@@ -1999,7 +1895,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:20:30.378691Z",
-    "last_checked_at": "2026-06-27T14:17:07.206605Z"
+    "last_checked_at": "2026-06-28T16:15:29.067573Z"
   },
   {
     "id": 12560,
@@ -2012,7 +1908,7 @@
     "rating": 3.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:20:17.735427Z",
-    "last_checked_at": "2026-06-27T14:17:07.206608Z"
+    "last_checked_at": "2026-06-28T16:15:36.160525Z"
   },
   {
     "id": 12559,
@@ -2025,7 +1921,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:20:10.528943Z",
-    "last_checked_at": "2026-06-27T14:17:07.206612Z"
+    "last_checked_at": "2026-06-28T16:15:36.160538Z"
   },
   {
     "id": 12558,
@@ -2038,7 +1934,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:20:00.964545Z",
-    "last_checked_at": "2026-06-27T14:17:07.206613Z"
+    "last_checked_at": "2026-06-28T16:15:36.160544Z"
   },
   {
     "id": 12557,
@@ -2051,7 +1947,7 @@
     "rating": 2.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:19:48.438452Z",
-    "last_checked_at": "2026-06-27T14:17:41.502852Z"
+    "last_checked_at": "2026-06-28T16:15:36.160548Z"
   },
   {
     "id": 12556,
@@ -2064,7 +1960,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:19:40.410453Z",
-    "last_checked_at": "2026-06-27T14:17:41.502874Z"
+    "last_checked_at": "2026-06-28T16:15:36.160551Z"
   },
   {
     "id": 12555,
@@ -2077,7 +1973,7 @@
     "rating": 3.3333333,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:19:31.833258Z",
-    "last_checked_at": "2026-06-27T14:17:41.502879Z"
+    "last_checked_at": "2026-06-28T16:15:43.256437Z"
   },
   {
     "id": 12553,
@@ -2090,7 +1986,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:19:10.776700Z",
-    "last_checked_at": "2026-06-27T14:17:41.502885Z"
+    "last_checked_at": "2026-06-28T16:15:43.256457Z"
   },
   {
     "id": 12552,
@@ -2103,7 +1999,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:19:00.117512Z",
-    "last_checked_at": "2026-06-27T14:17:48.937842Z"
+    "last_checked_at": "2026-06-28T16:15:43.256463Z"
   },
   {
     "id": 12551,
@@ -2116,7 +2012,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:18:50.930944Z",
-    "last_checked_at": "2026-06-27T14:17:48.937856Z"
+    "last_checked_at": "2026-06-28T16:15:43.256468Z"
   },
   {
     "id": 12550,
@@ -2129,20 +2025,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:18:37.304412Z",
-    "last_checked_at": "2026-06-27T14:17:48.937860Z"
-  },
-  {
-    "id": 12549,
-    "title": "ServiceNow Certified System Administrator Practice Tests",
-    "url": "https://www.udemy.com/course/servicenow-certified-system-administrator-practice-tests-p/?couponCode=D0E33DDF997C32F761AD",
-    "coupon_code": "D0E33DDF997C32F761AD",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.5,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:18:27.100070Z",
-    "last_checked_at": "2026-06-27T14:17:48.937863Z"
+    "last_checked_at": "2026-06-28T16:15:50.096278Z"
   },
   {
     "id": 12548,
@@ -2155,7 +2038,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:18:16.866929Z",
-    "last_checked_at": "2026-06-27T14:17:48.937865Z"
+    "last_checked_at": "2026-06-28T16:15:50.096297Z"
   },
   {
     "id": 12547,
@@ -2168,7 +2051,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:18:07.382993Z",
-    "last_checked_at": "2026-06-27T14:17:55.779589Z"
+    "last_checked_at": "2026-06-28T16:15:50.096302Z"
   },
   {
     "id": 12546,
@@ -2181,7 +2064,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:17:59.570457Z",
-    "last_checked_at": "2026-06-27T14:17:55.779603Z"
+    "last_checked_at": "2026-06-28T16:15:50.096305Z"
   },
   {
     "id": 12545,
@@ -2194,33 +2077,7 @@
     "rating": 3.6,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:17:47.768694Z",
-    "last_checked_at": "2026-06-27T14:17:55.779608Z"
-  },
-  {
-    "id": 12543,
-    "title": "DESIGN OF ANALYSIS OF ALGORITHM INTERVIEW QUESTIONS 2025",
-    "url": "https://www.udemy.com/course/design-of-analysis-of-algorithm-interview-questions-2024/?couponCode=AA927E7086617877D091",
-    "coupon_code": "AA927E7086617877D091",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:16:58.610380Z",
-    "last_checked_at": "2026-06-27T14:17:55.779616Z"
-  },
-  {
-    "id": 12541,
-    "title": "JIRA for Beginners – Mock Tests to Validate Your Skills 2025",
-    "url": "https://www.udemy.com/course/jira-for-beginners-mock-tests-to-validate-your-skills-2025/?couponCode=0DD6BEE134FBF562607C",
-    "coupon_code": "0DD6BEE134FBF562607C",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:16:41.339281Z",
-    "last_checked_at": "2026-06-27T14:18:03.450516Z"
+    "last_checked_at": "2026-06-28T16:15:57.770816Z"
   },
   {
     "id": 12539,
@@ -2233,7 +2090,7 @@
     "rating": 1.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:16:25.084885Z",
-    "last_checked_at": "2026-06-27T14:18:03.450524Z"
+    "last_checked_at": "2026-06-28T16:16:05.380848Z"
   },
   {
     "id": 12537,
@@ -2246,20 +2103,7 @@
     "rating": 4.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:16:06.932413Z",
-    "last_checked_at": "2026-06-27T14:18:11.857342Z"
-  },
-  {
-    "id": 12536,
-    "title": "DATA MINING INTERVIEW QUESTIONS PRACTICE TEST 2025",
-    "url": "https://www.udemy.com/course/data-mining-interview-questions-practice-test-2024/?couponCode=7E9E4338BA38DB0637EB",
-    "coupon_code": "7E9E4338BA38DB0637EB",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:15:31.410189Z",
-    "last_checked_at": "2026-06-27T14:18:11.857353Z"
+    "last_checked_at": "2026-06-28T16:16:05.380853Z"
   },
   {
     "id": 12535,
@@ -2272,7 +2116,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:15:21.753243Z",
-    "last_checked_at": "2026-06-27T14:18:11.857356Z"
+    "last_checked_at": "2026-06-28T16:16:12.796858Z"
   },
   {
     "id": 12534,
@@ -2285,20 +2129,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:15:09.237977Z",
-    "last_checked_at": "2026-06-27T14:18:11.857359Z"
-  },
-  {
-    "id": 12531,
-    "title": "QuickBooks Mastery: Complete Practice Exams for All Levels",
-    "url": "https://www.udemy.com/course/quickbooks-mastery-complete-practice-exams-for-all-levels/?couponCode=E7D4326243D28B85981C",
-    "coupon_code": "E7D4326243D28B85981C",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.3333335,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:14:37.555815Z",
-    "last_checked_at": "2026-06-27T14:18:19.073273Z"
+    "last_checked_at": "2026-06-28T16:16:12.796871Z"
   },
   {
     "id": 12530,
@@ -2311,7 +2142,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:14:21.050267Z",
-    "last_checked_at": "2026-06-27T14:18:19.073276Z"
+    "last_checked_at": "2026-06-28T16:16:20.174370Z"
   },
   {
     "id": 12527,
@@ -2324,7 +2155,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:13:49.089509Z",
-    "last_checked_at": "2026-06-27T14:18:26.481694Z"
+    "last_checked_at": "2026-06-28T16:16:20.174393Z"
   },
   {
     "id": 12526,
@@ -2337,7 +2168,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:13:40.005454Z",
-    "last_checked_at": "2026-06-27T14:18:26.481711Z"
+    "last_checked_at": "2026-06-28T16:16:20.174396Z"
   },
   {
     "id": 12524,
@@ -2350,20 +2181,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:13:23.043269Z",
-    "last_checked_at": "2026-06-27T14:18:26.481717Z"
-  },
-  {
-    "id": 12523,
-    "title": "Microsoft Dynamics 365 SCM MB-335: Ultimate Practice Test",
-    "url": "https://www.udemy.com/course/microsoft-dynamics-365-scm-mb-335-ultimate-practice-test/?couponCode=C9BF2D2630E1828D8F5E",
-    "coupon_code": "C9BF2D2630E1828D8F5E",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:13:13.478378Z",
-    "last_checked_at": "2026-06-27T14:18:26.481719Z"
+    "last_checked_at": "2026-06-28T16:16:28.018823Z"
   },
   {
     "id": 12522,
@@ -2376,20 +2194,7 @@
     "rating": 3.75,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:13:06.076121Z",
-    "last_checked_at": "2026-06-27T14:18:33.986646Z"
-  },
-  {
-    "id": 12521,
-    "title": "GMAT Data Insights Practice Test 2025: Master Every Question",
-    "url": "https://www.udemy.com/course/gmat-data-insights-practice-test-2025-master-every-question/?couponCode=87577509D7DB3651BBAC",
-    "coupon_code": "87577509D7DB3651BBAC",
-    "price": 19.98,
-    "category": "Teaching & Academics",
-    "language": "English",
-    "rating": 1.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-27T05:12:53.371009Z",
-    "last_checked_at": "2026-06-27T14:18:33.986658Z"
+    "last_checked_at": "2026-06-28T16:16:28.018832Z"
   },
   {
     "id": 12520,
@@ -2402,7 +2207,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:12:42.067326Z",
-    "last_checked_at": "2026-06-27T14:18:33.986661Z"
+    "last_checked_at": "2026-06-28T16:16:39.609707Z"
   },
   {
     "id": 12519,
@@ -2415,7 +2220,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:11:57.151451Z",
-    "last_checked_at": "2026-06-27T14:18:33.986663Z"
+    "last_checked_at": "2026-06-28T16:16:39.609721Z"
   },
   {
     "id": 12518,
@@ -2428,7 +2233,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-27T05:11:45.419118Z",
-    "last_checked_at": "2026-06-27T14:18:33.986665Z"
+    "last_checked_at": "2026-06-28T16:16:39.609726Z"
   },
   {
     "id": 12441,
@@ -2441,20 +2246,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-26T05:40:48.792973Z",
-    "last_checked_at": "2026-06-27T14:20:42.462965Z"
-  },
-  {
-    "id": 12438,
-    "title": "Conflict Modes Simplified: A Manager's Toolkit",
-    "url": "https://www.udemy.com/course/conflict-modes-simplified-a-managers-toolkit/?couponCode=47A936B1D519BC40457F",
-    "coupon_code": "47A936B1D519BC40457F",
-    "price": 19.98,
-    "category": "Office Productivity",
-    "language": "English",
-    "rating": 4.6363635,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-26T05:39:59.947140Z",
-    "last_checked_at": "2026-06-27T14:20:42.462987Z"
+    "last_checked_at": "2026-06-28T16:18:33.696076Z"
   },
   {
     "id": 12382,
@@ -2467,7 +2259,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-25T14:44:50.609464Z",
-    "last_checked_at": "2026-06-27T14:22:04.509963Z"
+    "last_checked_at": "2026-06-28T16:20:05.291158Z"
   },
   {
     "id": 12361,
@@ -2480,20 +2272,7 @@
     "rating": 4.259259,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-25T12:33:34.466677Z",
-    "last_checked_at": "2026-06-27T14:22:38.345511Z"
-  },
-  {
-    "id": 12311,
-    "title": "ISTQB CTFL Practice Tests: Ace the Foundation Level Exam",
-    "url": "https://www.udemy.com/course/istqb-ctfl-practice-tests-ace-the-foundation-level-exam/?couponCode=D161C988B10EB54295C6",
-    "coupon_code": "D161C988B10EB54295C6",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-25T12:23:03.694242Z",
-    "last_checked_at": "2026-06-27T14:24:02.019003Z"
+    "last_checked_at": "2026-06-28T16:20:38.200579Z"
   },
   {
     "id": 11911,
@@ -2506,7 +2285,7 @@
     "rating": 4.28125,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-21T11:13:25.314816Z",
-    "last_checked_at": "2026-06-27T14:34:48.570268Z"
+    "last_checked_at": "2026-06-28T16:31:55.631956Z"
   },
   {
     "id": 11908,
@@ -2519,7 +2298,7 @@
     "rating": 4.6,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-21T10:56:19.988644Z",
-    "last_checked_at": "2026-06-27T14:34:56.230732Z"
+    "last_checked_at": "2026-06-28T16:31:55.631969Z"
   },
   {
     "id": 11837,
