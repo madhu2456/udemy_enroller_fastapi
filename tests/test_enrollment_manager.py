@@ -1,17 +1,16 @@
 """Tests for EnrollmentManager pipeline logic with mocked dependencies."""
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.models.database import Base, EnrollmentRun, User, get_db, _utcnow_naive
+from app.models.database import Base, EnrollmentRun, User
 from app.services import enrollment_manager as em_module
-from app.services.enrollment_manager import EnrollmentManager
 from app.services.course import Course
-
+from app.services.enrollment_manager import EnrollmentManager
 
 # File-based test DB so multiple SessionLocal() calls share the same DB
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_enrollment_manager.db"
@@ -165,12 +164,24 @@ class TestEnrollmentManagerHelpers:
 
 
 def _make_mock_scraper_service(courses):
-    """Factory for a mock ScraperService that returns given courses."""
+    """Factory for a mock ScraperService that returns given courses via stream_results."""
     mock_svc = MagicMock()
     mock_svc.scrape_all = AsyncMock(return_value=courses)
     mock_svc.get_progress = MagicMock(return_value=[])
     mock_svc.http = MagicMock()
     mock_svc.http.close = AsyncMock()
+
+    # Create a mock scraper with the courses in its .data attribute
+    mock_scraper = MagicMock()
+    mock_scraper.data = courses
+    mock_scraper.site_name = "Mock Scraper"
+
+    # Build an async generator that yields (scraper, state) tuples
+    async def _stream():
+        if courses:
+            yield mock_scraper, "completed"
+
+    mock_svc.stream_results = _stream
     return mock_svc
 
 
@@ -203,8 +214,10 @@ class TestEnrollmentManagerPipeline:
             task.cancel()
 
     @pytest.mark.asyncio
-    async def test_pipeline_with_no_courses(self, db_session, mock_udemy_client, default_settings):
-        """Pipeline should complete successfully when no courses are found."""
+    async def test_pipeline_with_no_courses(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """Pipeline should mark run as failed when no scrapers succeed and no courses are found."""
         user = User(email="empty@example.com", udemy_display_name="Empty")
         db_session.add(user)
         db_session.commit()
@@ -213,17 +226,22 @@ class TestEnrollmentManagerPipeline:
         db_session.add(run)
         db_session.commit()
 
-        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, default_settings
+        )
 
         with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
             MockScraper.return_value = _make_mock_scraper_service([])
             await manager.run_pipeline()
 
         db_session.refresh(run)
-        assert run.status == "completed"
+        # When all scrapers fail and no courses are found, the pipeline marks the run as "failed"
+        assert run.status == "failed"
 
     @pytest.mark.asyncio
-    async def test_pipeline_saves_enrolled_course(self, db_session, mock_udemy_client, default_settings):
+    async def test_pipeline_saves_enrolled_course(
+        self, db_session, mock_udemy_client, default_settings
+    ):
         """Pipeline should save successfully enrolled courses to DB."""
         user = User(email="enroll@example.com", udemy_display_name="Enroll")
         db_session.add(user)
@@ -233,12 +251,16 @@ class TestEnrollmentManagerPipeline:
         db_session.add(run)
         db_session.commit()
 
-        course = Course("Python Course", "https://udemy.com/course/python/", site="Test")
+        course = Course(
+            "Python Course", "https://udemy.com/course/python/", site="Test"
+        )
         course.slug = "python"
         course.is_valid = True
         course.is_coupon_valid = True
 
-        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, default_settings
+        )
 
         with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
             MockScraper.return_value = _make_mock_scraper_service([course])
@@ -249,7 +271,9 @@ class TestEnrollmentManagerPipeline:
         assert run.successfully_enrolled >= 0
 
     @pytest.mark.asyncio
-    async def test_pipeline_handles_already_enrolled(self, db_session, mock_udemy_client, default_settings):
+    async def test_pipeline_handles_already_enrolled(
+        self, db_session, mock_udemy_client, default_settings
+    ):
         """Pipeline should mark already enrolled courses correctly."""
         user = User(email="already@example.com", udemy_display_name="Already")
         db_session.add(user)
@@ -264,7 +288,9 @@ class TestEnrollmentManagerPipeline:
 
         mock_udemy_client.is_already_enrolled = AsyncMock(return_value=True)
 
-        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, default_settings
+        )
 
         with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
             MockScraper.return_value = _make_mock_scraper_service([course])
@@ -275,7 +301,9 @@ class TestEnrollmentManagerPipeline:
         assert run.already_enrolled >= 1
 
     @pytest.mark.asyncio
-    async def test_pipeline_cancellation_updates_run(self, db_session, mock_udemy_client, default_settings):
+    async def test_pipeline_cancellation_updates_run(
+        self, db_session, mock_udemy_client, default_settings
+    ):
         """Cancelled pipeline should update run status to cancelled."""
         user = User(email="cancel@example.com", udemy_display_name="Cancel")
         db_session.add(user)
@@ -285,17 +313,20 @@ class TestEnrollmentManagerPipeline:
         db_session.add(run)
         db_session.commit()
 
-        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, default_settings
+        )
 
         # Mock scraper to sleep so we can cancel mid-flight
         with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
             mock_svc = MagicMock()
 
-            async def slow_scrape():
+            async def slow_stream():
                 await asyncio.sleep(10)
-                return []
+                yield MagicMock(data=[]), "completed"
 
-            mock_svc.scrape_all = slow_scrape
+            mock_svc.stream_results = slow_stream
+            mock_svc.scrape_all = AsyncMock(return_value=[])
             mock_svc.get_progress = MagicMock(return_value=[])
             mock_svc.http = MagicMock()
             mock_svc.http.close = AsyncMock()
@@ -327,14 +358,18 @@ class TestEnrollmentManagerPipeline:
         db_session.add(run)
         db_session.commit()
 
-        course = Course("Live Check Course", "https://udemy.com/course/live-check/", site="Test")
+        course = Course(
+            "Live Check Course", "https://udemy.com/course/live-check/", site="Test"
+        )
         course.slug = "live-check"
 
         # DB cache misses, but live API hits
         mock_udemy_client.is_already_enrolled = AsyncMock(return_value=False)
         mock_udemy_client.check_already_enrolled_live = AsyncMock(return_value=True)
 
-        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, default_settings
+        )
 
         with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
             MockScraper.return_value = _make_mock_scraper_service([course])
@@ -347,7 +382,9 @@ class TestEnrollmentManagerPipeline:
         mock_udemy_client.checkout_single.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_pipeline_invalid_course_is_excluded(self, db_session, mock_udemy_client, default_settings):
+    async def test_pipeline_invalid_course_is_excluded(
+        self, db_session, mock_udemy_client, default_settings
+    ):
         """Invalid courses should be counted as excluded."""
         user = User(email="invalid@example.com", udemy_display_name="Invalid")
         db_session.add(user)
@@ -362,7 +399,9 @@ class TestEnrollmentManagerPipeline:
         course.is_valid = False
         course.error = "Course not found"
 
-        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, default_settings
+        )
 
         with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
             MockScraper.return_value = _make_mock_scraper_service([course])
@@ -373,7 +412,9 @@ class TestEnrollmentManagerPipeline:
         assert run.excluded >= 1
 
     @pytest.mark.asyncio
-    async def test_start_run_prevents_duplicate_tasks(self, db_session, mock_udemy_client, default_settings):
+    async def test_start_run_prevents_duplicate_tasks(
+        self, db_session, mock_udemy_client, default_settings
+    ):
         """Starting a run should track it in active_tasks."""
         user = User(email="dup@example.com", udemy_display_name="Dup")
         db_session.add(user)

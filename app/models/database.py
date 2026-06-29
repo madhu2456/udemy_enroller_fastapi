@@ -296,6 +296,6 @@ def create_tables():
                 conn.execute(text("SELECT is_coupon_valid FROM enrolled_courses LIMIT 1"))
             except Exception:
                 conn.execute(text("ALTER TABLE enrolled_courses ADD COLUMN is_coupon_valid BOOLEAN"))
-    except Exception as e:
+    except Exception:
         # Just pass if it's Postgres or another DB that handles this via Alembic
         pass

@@ -1,7 +1,6 @@
 """Tests for the ScraperService."""
 
 import pytest
-import asyncio
 from app.services.scraper import ScraperService
 
 

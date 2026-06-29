@@ -1,11 +1,12 @@
 """SEO, AEO, and GEO router - serves robots.txt, sitemap.xml, llms.txt, ai-profile.json, humans.txt, and public content pages."""
 
 import datetime
+
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-router = APIRouter(tags=["SEO"], redirect_slashes=False)
+router = APIRouter(tags=["SEO"])
 templates = Jinja2Templates(directory="app/templates")
 
 SITE_URL = "https://udemyenroller.madhudadi.in"
@@ -18,26 +19,44 @@ CASE_STUDY_URL = "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
 # Plain-text / machine-readable endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/robots.txt", response_class=Response)
 async def robots_txt():
-    content = f"""User-agent: *
+    content = f"""# Default rules for all crawlers
+User-agent: *
+Allow: /
+Disallow: /history
+Disallow: /settings
+Disallow: /api/
+Disallow: /dashboard
+Crawl-delay: 1
+
+# Search engine crawlers — allowed, follow default rules
+User-agent: Googlebot
+User-agent: Bingbot
 Allow: /
 Disallow: /history
 Disallow: /settings
 Disallow: /api/
 Disallow: /dashboard
 
-# AI crawlers and search engines
+# AI search and citation crawlers — allowed for discoverability
+User-agent: OAI-SearchBot
 User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: ClaudeBot
+Allow: /
+Disallow: /history
+Disallow: /settings
+Disallow: /api/
+Disallow: /dashboard
+
+# Training crawlers — blocked
 User-agent: GPTBot
 User-agent: Google-Extended
-User-agent: Bingbot
-User-agent: Googlebot
-Allow: /
-
-# Crawl-delay for aggressive bots
-User-agent: *
-Crawl-delay: 1
+User-agent: Applebot-Extended
+User-agent: CCBot
+Disallow: /
 
 Sitemap: {SITE_URL}/sitemap.xml
 """
@@ -53,9 +72,7 @@ async def sitemap_xml():
         ("/faq", "0.90", "weekly"),
         ("/about", "0.80", "monthly"),
         ("/guides", "0.80", "weekly"),
-        ("/llms.txt", "0.70", "weekly"),
-        ("/ai-profile.json", "0.80", "weekly"),
-        ("/humans.txt", "0.50", "monthly"),
+        ("/privacy", "0.30", "monthly"),
     ]
     urls = "\n".join(
         f"""<url>
@@ -88,7 +105,7 @@ Location: Visakhapatnam, India
 Last update: {datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
 Language: English
 Standards: HTML5, CSS3, JSON-LD, Schema.org
-Components: FastAPI, CloudScraper, TailwindCSS, SQLAlchemy, SQLite
+Components: FastAPI, CloudScraper, Playwright, TailwindCSS, SQLAlchemy, SQLite
 """
     return Response(content=content, media_type="text/plain")
 
@@ -122,7 +139,7 @@ async def llms_txt():
 ## Application Overview
 
 Udemy Course Enroller is a robust, asynchronous web application designed to automate the process of finding and enrolling in free, 100% off discounted Udemy courses.
-It aggregates coupons from multiple sources (such as Real Discount, Discudemy, Courson, etc.) and leverages headless browser automation (CloudScraper) and direct Udemy APIs to automate enrollments seamlessly for users without requiring manual intervention.
+It aggregates coupons from multiple sources (such as Real Discount, Discudemy, Courson, etc.) and uses CloudScraper and Playwright (with stealth patches as a fallback) to access coupon aggregator sites, then leverages direct Udemy APIs to automate enrollments for users.
 
 ## Why it Exists (Problem Solved)
 
@@ -132,16 +149,14 @@ Learning new skills on Udemy can be expensive. While authors frequently share 10
 
 - **Backend:** Python 3.13, FastAPI (Asynchronous)
 - **Database:** SQLite with SQLAlchemy ORM and Alembic for migrations
-- **Automation Engine:** CloudScraper (Headless Chromium pool)
+- **Automation Engine:** CloudScraper (primary HTTP client) + Playwright with playwright-stealth (fallback for Cloudflare-protected coupon sites)
 - **Frontend:** HTML5, Tailwind CSS, Vanilla JS
-- **Error Tracking:** Sentry
-- **Rate Limiting:** slowapi
 
 ## Features
 
 - **Session Persistence:** Securely stores Udemy login cookies (access_token, client_id) in the database and automatically reconstructs API clients.
 - **Smart Exclusions:** Users can filter courses by category, language, minimum rating, and instructor name.
-- **Bulk Enrollment:** Intelligently batches API requests to Udemy's checkout system to bypass rate limits.
+- **Bulk Enrollment:** Intelligently batches API requests with respectful delays to avoid overwhelming Udemy's systems.
 - **Analytics Dashboard:** Real-time progress tracking, total courses claimed, and lifetime USD savings calculations.
 
 ## Impact
@@ -199,13 +214,13 @@ If you do not want to automate your account, you can manually browse our continu
 Yes. The Udemy Course Enroller is completely free and open-source. It is hosted at {SITE_URL} and the source code is available on GitHub.
 
 ### Is the Udemy Course Enroller safe and secure?
-Yes. The tool uses direct Udemy API integration and stores only encrypted authentication cookies. No plaintext passwords are ever stored. All database interactions use SQLAlchemy ORM with parameterized queries to prevent injection attacks.
+Yes. The tool uses direct Udemy API integration and stores only encrypted authentication cookies. No passwords are stored in any form. All database interactions use SQLAlchemy ORM with parameterized queries to prevent injection attacks.
 
 ### Who built the Udemy Course Enroller?
 The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Developer & Marketing Analytics Leader from Visakhapatnam, India. You can learn more about Madhu at {PORTFOLIO_URL} and read technical articles at {BLOG_URL}.
 
 ### What technologies power the Udemy Course Enroller?
-The application is built with Python 3.13, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper for headless browser automation, and Tailwind CSS for the frontend. Comprehensive SEO, AEO, and GEO improvements are provided by Adticks (adticks.com).
+The application is built with Python 3.13, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper as the primary HTTP client, Playwright with playwright-stealth as a fallback for Cloudflare-protected sites, and Tailwind CSS for the frontend.
 
 ### Where can I find guides and tutorials about the Udemy Course Enroller?
 Detailed guides, case studies, and technical deep-dives are published on Madhu Dadi's blog at {BLOG_URL}. The case study for this project is available at {CASE_STUDY_URL}.
@@ -235,7 +250,11 @@ async def ai_profile_json():
             "jobTitle": "AI Developer & Marketing Analytics Leader",
             "subjectOf": [
                 {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
-                {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL}
+                {
+                    "@type": "CreativeWork",
+                    "name": "Professional Portfolio",
+                    "url": PORTFOLIO_URL,
+                },
             ],
             "sameAs": [
                 BLOG_URL,
@@ -249,14 +268,14 @@ async def ai_profile_json():
             "@type": "Organization",
             "name": "Adticks",
             "url": "https://adticks.com",
-            "description": "SEO, AEO, and GEO improvement platform."
+            "description": "SEO, AEO, and GEO improvement platform.",
         },
         "hasPart": [
             {
                 "@type": "WebPage",
                 "name": "100% Free Udemy Coupons Database",
                 "url": f"{SITE_URL}/udemycoupons",
-                "description": "A continuously updated, live database of verified 100% free Udemy coupons for manual discovery."
+                "description": "A continuously updated, live database of verified 100% free Udemy coupons for manual discovery.",
             }
         ],
         "technologyStack": [
@@ -264,13 +283,13 @@ async def ai_profile_json():
             "FastAPI",
             "SQLAlchemy",
             "CloudScraper",
+            "Playwright",
             "Tailwind CSS",
             "SQLite",
         ],
-        
         "relatedProfiles": [
             f"{PORTFOLIO_URL}/ai-profile.json",
-            f"{BLOG_URL}/ai-profile.json"
+            f"{BLOG_URL}/ai-profile.json",
         ],
         "endpoints": {
             "llmsFeed": f"{SITE_URL}/llms.txt",
@@ -296,6 +315,7 @@ async def ai_profile_json():
 # Public content pages (SEO landing pages that funnel to madhudadi.in/blog)
 # ---------------------------------------------------------------------------
 
+
 @router.get("/faq", response_class=HTMLResponse)
 async def faq_page(request: Request):
     return templates.TemplateResponse(request, "pages/faq.html")
@@ -309,3 +329,8 @@ async def about_page(request: Request):
 @router.get("/guides", response_class=HTMLResponse)
 async def guides_page(request: Request):
     return templates.TemplateResponse(request, "pages/guides.html")
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    return templates.TemplateResponse(request, "pages/privacy.html")

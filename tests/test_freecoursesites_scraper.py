@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, AsyncMock
 from app.services.scraper import FreeCourseSitesScraper
 from app.services.http_client import AsyncHTTPClient
 from app.services.course import Course

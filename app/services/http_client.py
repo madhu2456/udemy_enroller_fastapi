@@ -1,6 +1,6 @@
 import asyncio
 import random
-from typing import Optional, Dict, Union
+from typing import Dict, Optional, Union
 
 import httpx
 from loguru import logger
@@ -87,7 +87,10 @@ class AsyncHTTPClient:
                     }
                 )
                 if self.proxy:
-                    self._mobile_scraper.proxies = {"http": self.proxy, "https": self.proxy}
+                    self._mobile_scraper.proxies = {
+                        "http": self.proxy,
+                        "https": self.proxy,
+                    }
             return self._mobile_scraper
         else:
             if not self._scraper:
@@ -230,11 +233,16 @@ class AsyncHTTPClient:
             or req_type == "mobile"
         )
         if req_type == "mobile" and not is_mobile:
-            ua = random.choice(
-                [
-                    u for u in self._USER_AGENTS_SERVER if "UdemyAndroid" in u or "okhttp" in u
-                ]
-            ) or "okhttp/4.12.0 UdemyAndroid 9.116.0(2078) (phone)"
+            ua = (
+                random.choice(
+                    [
+                        u
+                        for u in self._USER_AGENTS_SERVER
+                        if "UdemyAndroid" in u or "okhttp" in u
+                    ]
+                )
+                or "okhttp/4.12.0 UdemyAndroid 9.116.0(2078) (phone)"
+            )
             is_mobile = True
 
         accept_lang = random.choice(self._ACCEPT_LANGUAGES_SERVER)
@@ -333,17 +341,19 @@ class AsyncHTTPClient:
     @staticmethod
     def _extract_chrome_major(ua: str) -> Optional[str]:
         import re
+
         m = re.search(r"Chrome/(\d+)", ua)
         return m.group(1) if m else None
 
     @staticmethod
     def _extract_udemy_version(ua: str) -> Optional[str]:
         import re
+
         m = re.search(r"UdemyAndroid\s+([\d.]+(?:\(\d+\))?)", ua)
         return m.group(1) if m else None
 
     async def _apply_human_like_delay(self):
-        """Apply a human-like delay between requests to avoid detection patterns.
+        """Apply a polite delay between requests to respect rate limits.
 
         On server deployments, uses much longer delays to avoid Udemy rate limits.
         Local runs keep the original fast settings.
@@ -392,15 +402,20 @@ class AsyncHTTPClient:
                 headers = kwargs.get("headers")
 
             is_mobile_request = (
-                "UdemyAndroid" in str(headers.get("User-Agent", "")) or req_type == "mobile"
+                "UdemyAndroid" in str(headers.get("User-Agent", ""))
+                or req_type == "mobile"
             )
 
             try:
                 if use_cloudscraper:
                     if self._is_server:
-                        scraper_headers = self._build_scraper_headers_server(headers, kwargs, is_mobile_request, req_type)
+                        scraper_headers = self._build_scraper_headers_server(
+                            headers, kwargs, is_mobile_request, req_type
+                        )
                     else:
-                        scraper_headers = self._build_scraper_headers_local(headers, kwargs, is_mobile_request)
+                        scraper_headers = self._build_scraper_headers_local(
+                            headers, kwargs, is_mobile_request
+                        )
 
                     def _do_scrape():
                         scraper = self._get_scraper(is_mobile=is_mobile_request)
@@ -433,7 +448,9 @@ class AsyncHTTPClient:
                     call_kwargs.pop("headers", None)
 
                     async with self._request_semaphore:
-                        response = await self.client.get(url, headers=headers, **call_kwargs)
+                        response = await self.client.get(
+                            url, headers=headers, **call_kwargs
+                        )
 
                     if custom_cookies is not None:
                         custom_cookies.update(dict(response.cookies))
@@ -465,7 +482,7 @@ class AsyncHTTPClient:
                     error_name = "DNSResolutionError"
                     if log_failures:
                         logger.warning(
-                            f"  DNS Resolution failed for {url} (Attempt {attempt+1}/{attempts})"
+                            f"  DNS Resolution failed for {url} (Attempt {attempt + 1}/{attempts})"
                         )
 
                 if log_failures:
@@ -489,7 +506,7 @@ class AsyncHTTPClient:
                         await asyncio.sleep(random.uniform(0.5, 1.5))
                         continue
 
-                    delay = (2 ** attempt) + random.uniform(1, 3)
+                    delay = (2**attempt) + random.uniform(1, 3)
                     if is_dns_error:
                         delay += 5
 
@@ -525,7 +542,9 @@ class AsyncHTTPClient:
                 call_kwargs.pop("headers", None)
 
                 async with self._request_semaphore:
-                    response = await self.client.head(url, headers=headers, **call_kwargs)
+                    response = await self.client.head(
+                        url, headers=headers, **call_kwargs
+                    )
 
                 if raise_for_status:
                     response.raise_for_status()
@@ -545,7 +564,7 @@ class AsyncHTTPClient:
                         should_retry = False
 
                 if should_retry:
-                    delay = (2 ** attempt) + random.uniform(1, 3)
+                    delay = (2**attempt) + random.uniform(1, 3)
                     await asyncio.sleep(delay)
                 else:
                     break
@@ -569,7 +588,9 @@ class AsyncHTTPClient:
         scraper_headers["Accept-Encoding"] = "identity"
         return scraper_headers
 
-    def _build_scraper_headers_server(self, headers, kwargs, is_mobile_request, req_type):
+    def _build_scraper_headers_server(
+        self, headers, kwargs, is_mobile_request, req_type
+    ):
         """Full header pass-through for CloudScraper (server)."""
         if is_mobile_request or req_type in ("api", "xhr", "mobile"):
             scraper_headers = dict(headers) if headers else {}
@@ -604,22 +625,25 @@ class AsyncHTTPClient:
 
         for attempt in range(attempts):
             if randomize:
-                headers = self._get_headers(
-                    url, custom_headers, req_type=req_type
-                )
+                headers = self._get_headers(url, custom_headers, req_type=req_type)
             else:
                 headers = custom_headers
 
             is_mobile_request = (
-                "UdemyAndroid" in str(headers.get("User-Agent", "")) or req_type == "mobile"
+                "UdemyAndroid" in str(headers.get("User-Agent", ""))
+                or req_type == "mobile"
             )
 
             try:
                 if use_cloudscraper:
                     if self._is_server:
-                        scraper_headers = self._build_scraper_headers_server(headers, kwargs, is_mobile_request, req_type)
+                        scraper_headers = self._build_scraper_headers_server(
+                            headers, kwargs, is_mobile_request, req_type
+                        )
                     else:
-                        scraper_headers = self._build_scraper_headers_local(headers, kwargs, is_mobile_request)
+                        scraper_headers = self._build_scraper_headers_local(
+                            headers, kwargs, is_mobile_request
+                        )
 
                     def _do_scrape():
                         scraper = self._get_scraper(is_mobile=is_mobile_request)
@@ -661,9 +685,13 @@ class AsyncHTTPClient:
 
                     async with self._request_semaphore:
                         if json_payload is not None:
-                            response = await self.client.post(url, headers=headers, json=json_payload, **kwargs)
+                            response = await self.client.post(
+                                url, headers=headers, json=json_payload, **kwargs
+                            )
                         else:
-                            response = await self.client.post(url, headers=headers, **kwargs)
+                            response = await self.client.post(
+                                url, headers=headers, **kwargs
+                            )
 
                     if custom_cookies is not None:
                         custom_cookies.update(dict(response.cookies))
@@ -695,7 +723,7 @@ class AsyncHTTPClient:
                     error_name = "DNSResolutionError"
                     if log_failures:
                         logger.warning(
-                            f"  DNS Resolution failed for {url} (Attempt {attempt+1}/{attempts})"
+                            f"  DNS Resolution failed for {url} (Attempt {attempt + 1}/{attempts})"
                         )
 
                 if log_failures:
@@ -719,7 +747,7 @@ class AsyncHTTPClient:
                         await asyncio.sleep(random.uniform(0.5, 1.5))
                         continue
 
-                    delay = (2 ** attempt) + random.uniform(1, 3)
+                    delay = (2**attempt) + random.uniform(1, 3)
                     if is_dns_error:
                         delay += 5
 

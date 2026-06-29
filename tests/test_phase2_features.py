@@ -3,16 +3,12 @@
 import pytest
 import datetime
 from unittest.mock import MagicMock, AsyncMock, patch
-from decimal import Decimal
-from pydantic import ValidationError
 
 from config.settings import Settings
 from app.services.course import Course
 from app.services.udemy_client import UdemyClient
-from app.routers.dashboard import stream_logs
 from app.routers.auth import login_with_cookies
-from app.models.database import User, UserSettings
-from fastapi import HTTPException
+from app.models.database import User
 
 # ==========================================
 # 1. Pydantic Settings Validation Tests

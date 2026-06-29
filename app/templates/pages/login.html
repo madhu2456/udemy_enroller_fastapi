@@ -1,428 +1,1334 @@
-{% extends "components/base.html" %}
-{% block title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}
-{% block meta_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}
-{% block meta_description %}Automate your learning with 100% off free Udemy courses. Our engine monitors coupon sites and enrolls you instantly. Stop hunting for codes.{% endblock %}
-
-{% block og_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}
-{% block og_description %}Automate your learning with 100% off free Udemy courses. Our engine monitors coupon sites and enrolls you instantly. Stop hunting for codes.{% endblock %}
-
-{% block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}
-{% block twitter_description %}Automate your learning with 100% off free Udemy courses. Our engine monitors coupon sites and enrolls you instantly. Stop hunting for codes.{% endblock %}
-
-{% block content %}
+{% extends "components/base.html" %} {% block title %}Free Udemy Courses
+Automation | Udemy Enroller by Madhu Dadi{% endblock %} {% block meta_title
+%}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %} {%
+block meta_description %}Automate your learning with 100% off free Udemy
+courses. Our engine monitors coupon sites and enrolls you instantly. Stop
+hunting for codes.{% endblock %} {% block og_title %}Free Udemy Courses
+Automation | Udemy Enroller by Madhu Dadi{% endblock %} {% block og_description
+%}Automate your learning with 100% off free Udemy courses. Our engine monitors
+coupon sites and enrolls you instantly. Stop hunting for codes.{% endblock %} {%
+block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu
+Dadi{% endblock %} {% block twitter_description %}Automate your learning with
+100% off free Udemy courses. Our engine monitors coupon sites and enrolls you
+instantly. Stop hunting for codes.{% endblock %} {% block content %}
 <div class="min-h-screen bg-white text-gray-900">
-  <main>
-    <!-- HERO -->
-    <section class="max-w-6xl mx-auto px-6 pt-16 pb-14 text-center" aria-labelledby="hero-heading">
-      <div class="animate-fade-in-up">
-        <span class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1.5 text-xs font-medium mb-6">
-          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
-          </svg>
-          Open-Source Automation Tool
-        </span>
-      </div>
-
-      <h1 id="hero-heading" class="animate-fade-in-up delay-100 text-4xl md:text-5xl font-semibold text-gray-900 tracking-tight max-w-3xl mx-auto leading-tight mb-5">
-        Claim Free Udemy Courses - <span class="text-[#2563EB]">Automatically</span>
-      </h1>
-
-      <p class="animate-fade-in-up delay-200 text-base text-gray-500 max-w-xl mx-auto leading-relaxed mb-8">
-        Stop hunting for expired coupons. Our engine monitors coupon aggregator sites and enrolls you in <strong class="font-semibold text-gray-700">100% off Udemy courses</strong> the moment they appear.
-      </p>
-
-      <div class="animate-fade-in-up delay-300 flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
-        <a href="#connect" class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150">
-          Start Automating Free
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-        </a>
-        <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-gray-300 hover:bg-[#F9FAFB] transition-colors duration-150">
-          View Source Code
-        </a>
-      </div>
-
-      <div class="inline-flex flex-wrap items-center justify-center gap-2">
-        <span class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Free & open source</span>
-        <span class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>100% off coupons only</span>
-        <span class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700"><span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>No credentials stored</span>
-      </div>
-    </section>
-
-    <!-- FACTS BAR -->
-    <section class="border-y border-gray-200 bg-[#F9FAFB] py-4" aria-label="Platform facts">
-      <div class="max-w-6xl mx-auto px-6">
-        <div class="flex flex-wrap items-center justify-center gap-8 md:gap-16">
-          <div class="text-center"><p class="text-lg font-semibold text-gray-900 tracking-tight">100% Off</p><p class="text-xs text-gray-500 mt-0.5">Udemy coupon rate targeted</p></div>
-          <div class="text-center"><p class="text-lg font-semibold text-gray-900 tracking-tight">Multiple</p><p class="text-xs text-gray-500 mt-0.5">Coupon sources monitored</p></div>
-          <div class="text-center"><p class="text-lg font-semibold text-gray-900 tracking-tight">Open Source</p><p class="text-xs text-gray-500 mt-0.5">Auditable on GitHub</p></div>
-          <div class="text-center"><p class="text-lg font-semibold text-gray-900 tracking-tight">₹0</p><p class="text-xs text-gray-500 mt-0.5">Cost to use</p></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- FEATURES -->
-    <section class="max-w-6xl mx-auto px-6 py-16" aria-labelledby="features-heading">
-      <div class="mb-10">
-        <h2 id="features-heading" class="text-2xl font-semibold text-gray-900 tracking-tight mb-2">Everything you need to learn for free</h2>
-        <p class="text-sm text-gray-500">A complete pipeline from coupon discovery to automatic Udemy enrollment.</p>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <article class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150">
-          <div class="mb-4"><div class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"><svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div></div>
-          <h3 class="text-base font-semibold text-gray-900 mb-1">Fully Automated Engine</h3>
-          <p class="text-sm text-gray-500 mb-4 leading-relaxed">Set your filters once and let the engine do the rest. No manual monitoring, no copy-pasting coupon codes.</p>
-          <ul class="space-y-1.5"><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Monitors coupon aggregator sites</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Applies valid coupons instantly</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Runs continuously in the background</li></ul>
-        </article>
-        <article class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150">
-          <div class="mb-4"><div class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"><svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div></div>
-          <h3 class="text-base font-semibold text-gray-900 mb-1">100% Secure Authentication</h3>
-          <p class="text-sm text-gray-500 mb-4 leading-relaxed">Your credentials are used only to generate a temporary API token. No data is ever stored on external servers.</p>
-          <ul class="space-y-1.5"><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Direct Udemy API integration</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Token-only, no credential storage</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Cookie-based login as alternative</li></ul>
-        </article>
-        <article class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150">
-          <div class="mb-4"><div class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"><svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"></path></svg></div></div>
-          <h3 class="text-base font-semibold text-gray-900 mb-1">Smart Course Filters</h3>
-          <p class="text-sm text-gray-500 mb-4 leading-relaxed">Target exactly the courses you want to learn. Skip low-quality or irrelevant content automatically.</p>
-          <ul class="space-y-1.5"><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Filter by minimum course rating</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Select preferred language</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Block specific instructors</li></ul>
-        </article>
-        <article class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150">
-          <div class="mb-4"><div class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"><svg class="w-4 h-4 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div></div>
-          <h3 class="text-base font-semibold text-gray-900 mb-1">Track Your Savings</h3>
-          <p class="text-sm text-gray-500 mb-4 leading-relaxed">Watch your lifetime educational savings grow as the engine silently works in the background.</p>
-          <ul class="space-y-1.5"><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Live enrollment counter</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Cumulative savings in USD</li><li class="flex items-start text-sm text-gray-600"><span class="text-gray-400 mr-2 mt-px select-none">-</span>Course history log</li></ul>
-        </article>
-      </div>
-    </section>
-
-    <!-- PUBLIC DEALS BANNER -->
-    <section class="max-w-6xl mx-auto px-6 pb-16" aria-labelledby="deals-heading">
-      <div class="bg-gradient-to-r from-[#2563EB] to-[#4338CA] rounded-2xl p-8 md:p-12 text-center text-white shadow-lg relative overflow-hidden group">
-        <!-- Decorative SVG background pattern -->
-        <div class="absolute inset-0 opacity-10 transition-transform duration-1000 group-hover:scale-110 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
-        <div class="relative z-10">
-          <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest mb-4">
-            <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-            No Account Required
-          </span>
-          <h2 id="deals-heading" class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Discover 100% Free Udemy Coupons</h2>
-          <p class="text-blue-100 max-w-2xl mx-auto text-base md:text-lg mb-8 leading-relaxed">
-            Not ready to use the automation tool? Browse our live, real-time database of manually verified 100% off Udemy courses and claim them yourself.
-          </p>
-          <a href="/udemycoupons" class="inline-flex items-center gap-2 bg-white text-blue-700 rounded-xl px-6 py-3 text-sm font-bold hover:bg-gray-50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
-            View Today's Free Courses
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <!-- HOW IT WORKS -->
-    <section class="border-y border-gray-200 bg-[#F9FAFB]" aria-labelledby="how-it-works-heading">
-      <div class="max-w-6xl mx-auto px-6 py-16">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 id="how-it-works-heading" class="text-2xl font-semibold text-gray-900 tracking-tight mb-2">Up and running in under 2 minutes</h2>
-            <p class="text-sm text-gray-500 mb-8 leading-relaxed">Connect once. The engine handles everything else - coupon discovery, validation, and enrollment.</p>
-            <ol class="space-y-6">
-              <div class="flex gap-4"><div class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900">1</div><div><p class="text-sm font-semibold text-gray-900 mb-1">Connect Your Udemy Account</p><p class="text-sm text-gray-500 leading-relaxed">Authenticate via Email Login or Cookie Login. Your credentials are used only to generate a temporary API token.</p></div></div>
-              <div class="flex gap-4"><div class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900">2</div><div><p class="text-sm font-semibold text-gray-900 mb-1">Configure Smart Filters</p><p class="text-sm text-gray-500 leading-relaxed">Set your minimum course rating, preferred language, and any instructors you want to exclude.</p></div></div>
-              <div class="flex gap-4"><div class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900">3</div><div><p class="text-sm font-semibold text-gray-900 mb-1">Activate the Engine</p><p class="text-sm text-gray-500 leading-relaxed">The engine monitors coupon aggregator sites and enrolls you in matching free courses instantly.</p></div></div>
-              <div class="flex gap-4"><div class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900">4</div><div><p class="text-sm font-semibold text-gray-900 mb-1">Track Your Savings</p><p class="text-sm text-gray-500 leading-relaxed">Watch your cumulative educational savings grow as courses are claimed automatically.</p></div></div>
-            </ol>
-          </div>
-          <div class="bg-white rounded-xl border border-gray-200 p-8">
-            <p class="text-sm font-semibold text-gray-900 mb-1">What the engine does</p>
-            <p class="text-xs text-gray-500 mb-6">A straightforward pipeline - no magic, just automation.</p>
-            <div class="space-y-0">
-              <div class="flex gap-4 py-4 border-b border-gray-100"><span class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5">01</span><div><p class="text-xs font-semibold text-gray-900 mb-0.5">Monitor coupon sites</p><p class="text-xs text-gray-500 leading-relaxed">Continuously polls coupon aggregator sites for new 100% off Udemy listings.</p></div></div>
-              <div class="flex gap-4 py-4 border-b border-gray-100"><span class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5">02</span><div><p class="text-xs font-semibold text-gray-900 mb-0.5">Validate the coupon</p><p class="text-xs text-gray-500 leading-relaxed">Checks that the coupon is still active before attempting enrollment.</p></div></div>
-              <div class="flex gap-4 py-4 border-b border-gray-100"><span class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5">03</span><div><p class="text-xs font-semibold text-gray-900 mb-0.5">Apply your filters</p><p class="text-xs text-gray-500 leading-relaxed">Skips courses that don't match your rating, language, or instructor preferences.</p></div></div>
-              <div class="flex gap-4 py-4"><span class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5">04</span><div><p class="text-xs font-semibold text-gray-900 mb-0.5">Enroll via Udemy API</p><p class="text-xs text-gray-500 leading-relaxed">Uses your session token to apply the coupon and enroll you directly.</p></div></div>
+    <main>
+        <!-- HERO -->
+        <section
+            class="max-w-6xl mx-auto px-6 pt-16 pb-14 text-center"
+            aria-labelledby="hero-heading"
+        >
+            <div class="animate-fade-in-up">
+                <span
+                    class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1.5 text-xs font-medium mb-6"
+                >
+                    <svg
+                        class="w-3 h-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    Open-Source Automation Tool
+                </span>
             </div>
-            <div class="mt-5 pt-5 border-t border-gray-200 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span><span class="text-xs text-gray-500">Engine runs continuously once connected</span></div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- CONNECT ACCOUNT -->
-    <section id="connect" class="max-w-6xl mx-auto px-6 py-16" aria-labelledby="connect-heading">
-      <div class="max-w-md mx-auto">
-        <div class="mb-8 text-center">
-          <h2 id="connect-heading" class="text-2xl font-semibold text-gray-900 tracking-tight mb-2">Connect Your Account</h2>
-          <p class="text-sm text-gray-500">Choose your preferred authentication method below to start claiming free courses.</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <style>
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-            .lf-spinner { animation: spin 0.8s linear infinite; }
-            </style>
-            
-            <div id="login-success" class="hidden text-center py-8">
-                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-50 border border-green-200 mb-4">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            <h1
+                id="hero-heading"
+                class="animate-fade-in-up delay-100 text-4xl md:text-5xl font-semibold text-gray-900 tracking-tight max-w-3xl mx-auto leading-tight mb-5"
+            >
+                Claim Free Udemy Courses -
+                <span class="text-[#2563EB]">Automatically</span>
+            </h1>
+
+            <p
+                class="animate-fade-in-up delay-200 text-base text-gray-500 max-w-xl mx-auto leading-relaxed mb-8"
+            >
+                Stop hunting for expired coupons. Our engine monitors coupon
+                aggregator sites and enrolls you in
+                <strong class="font-semibold text-gray-700"
+                    >100% off Udemy courses</strong
+                >
+                the moment they appear.
+            </p>
+
+            <div
+                class="animate-fade-in-up delay-300 flex flex-col sm:flex-row items-center justify-center gap-3 mb-10"
+            >
+                <a
+                    href="#connect"
+                    class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150"
+                >
+                    Start Automating Free
+                    <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M17 8l4 4m0 0l-4 4m4-4H3"
+                        />
+                    </svg>
+                </a>
+                <a
+                    href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-gray-300 hover:bg-[#F9FAFB] transition-colors duration-150"
+                >
+                    View Source Code
+                </a>
+            </div>
+
+            <div
+                class="inline-flex flex-wrap items-center justify-center gap-2"
+            >
+                <span
+                    class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700"
+                    ><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span
+                    >Free & open source</span
+                >
+                <span
+                    class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700"
+                    ><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span
+                    >100% off coupons only</span
+                >
+                <span
+                    class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700"
+                    ><span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span
+                    >Credentials encrypted locally</span
+                >
+            </div>
+        </section>
+
+        <!-- FACTS BAR -->
+        <section
+            class="border-y border-gray-200 bg-[#F9FAFB] py-4"
+            aria-label="Platform facts"
+        >
+            <div class="max-w-6xl mx-auto px-6">
+                <div
+                    class="flex flex-wrap items-center justify-center gap-8 md:gap-16"
+                >
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            100% Off
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Udemy coupon rate targeted
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            Multiple
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Coupon sources monitored
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            Open Source
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Auditable on GitHub
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            ₹0
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">Cost to use</p>
+                    </div>
                 </div>
-                <p class="text-sm font-semibold text-gray-900 mb-1">Account Connected</p>
-                <p class="text-xs text-gray-500" id="success-msg">The enroller is now running and will claim free courses automatically.</p>
-                <button onclick="window.location.reload()" class="mt-5 text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors">Connect another account</button>
             </div>
+        </section>
 
-            <div id="login-forms-container">
-                <!-- Tab Navigation -->
-                <div class="flex border-b border-gray-200 mb-6">
-                    <button id="tab-email" onclick="switchTab('email')" class="pb-3 text-sm font-medium mr-6 border-b-2 -mb-[1px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-900 border-blue-600">Email Login</button>
-                    <button id="tab-cookie" onclick="switchTab('cookie')" class="pb-3 text-sm font-medium mr-6 border-b-2 -mb-[1px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 border-transparent hover:text-gray-700">Cookie Login</button>
+        <!-- FEATURES -->
+        <section
+            class="max-w-6xl mx-auto px-6 py-16"
+            aria-labelledby="features-heading"
+        >
+            <div class="mb-10">
+                <h2
+                    id="features-heading"
+                    class="text-2xl font-semibold text-gray-900 tracking-tight mb-2"
+                >
+                    Everything you need to learn for free
+                </h2>
+                <p class="text-sm text-gray-500">
+                    A complete pipeline from coupon discovery to automatic Udemy
+                    enrollment.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <article
+                    class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150"
+                >
+                    <div class="mb-4">
+                        <div
+                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-900 mb-1">
+                        Fully Automated Engine
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-4 leading-relaxed">
+                        Set your filters once and let the engine do the rest. No
+                        manual monitoring, no copy-pasting coupon codes.
+                    </p>
+                    <ul class="space-y-1.5">
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Monitors coupon aggregator sites
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Applies valid coupons instantly
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Runs continuously in the background
+                        </li>
+                    </ul>
+                </article>
+                <article
+                    class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150"
+                >
+                    <div class="mb-4">
+                        <div
+                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-900 mb-1">
+                        100% Secure Authentication
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-4 leading-relaxed">
+                        Your credentials are used only to generate a temporary
+                        API token. No data is ever stored on external servers.
+                    </p>
+                    <ul class="space-y-1.5">
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Direct Udemy API integration
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Token-only, no credential storage
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Cookie-based login as alternative
+                        </li>
+                    </ul>
+                </article>
+                <article
+                    class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150"
+                >
+                    <div class="mb-4">
+                        <div
+                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-900 mb-1">
+                        Smart Course Filters
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-4 leading-relaxed">
+                        Target exactly the courses you want to learn. Skip
+                        low-quality or irrelevant content automatically.
+                    </p>
+                    <ul class="space-y-1.5">
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Filter by minimum course rating
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Select preferred language
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Block specific instructors
+                        </li>
+                    </ul>
+                </article>
+                <article
+                    class="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors duration-150"
+                >
+                    <div class="mb-4">
+                        <div
+                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#EFF6FF] border border-blue-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-900 mb-1">
+                        Track Your Savings
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-4 leading-relaxed">
+                        Watch your lifetime educational savings grow as the
+                        engine silently works in the background.
+                    </p>
+                    <ul class="space-y-1.5">
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Live enrollment counter
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Cumulative savings in USD
+                        </li>
+                        <li class="flex items-start text-sm text-gray-600">
+                            <span class="text-gray-400 mr-2 mt-px select-none"
+                                >-</span
+                            >Course history log
+                        </li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+
+        <!-- PUBLIC DEALS BANNER -->
+        <section
+            class="max-w-6xl mx-auto px-6 pb-16"
+            aria-labelledby="deals-heading"
+        >
+            <div
+                class="bg-gradient-to-r from-[#2563EB] to-[#4338CA] rounded-2xl p-8 md:p-12 text-center text-white shadow-lg relative overflow-hidden group"
+            >
+                <!-- Decorative SVG background pattern -->
+                <div
+                    class="absolute inset-0 opacity-10 transition-transform duration-1000 group-hover:scale-110 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"
+                ></div>
+                <div class="relative z-10">
+                    <span
+                        class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest mb-4"
+                    >
+                        <span
+                            class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"
+                        ></span>
+                        No Account Required
+                    </span>
+                    <h2
+                        id="deals-heading"
+                        class="text-3xl md:text-4xl font-bold tracking-tight mb-4"
+                    >
+                        Discover 100% Free Udemy Coupons
+                    </h2>
+                    <p
+                        class="text-blue-100 max-w-2xl mx-auto text-base md:text-lg mb-8 leading-relaxed"
+                    >
+                        Not ready to use the automation tool? Browse our live,
+                        real-time database of manually verified 100% off Udemy
+                        courses and claim them yourself.
+                    </p>
+                    <a
+                        href="/udemycoupons"
+                        class="inline-flex items-center gap-2 bg-white text-blue-700 rounded-xl px-6 py-3 text-sm font-bold hover:bg-gray-50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+                    >
+                        View Today's Free Courses
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2.5"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3"
+                            />
+                        </svg>
+                    </a>
                 </div>
+            </div>
+        </section>
 
-                <div id="email-info" class="mb-5 px-4 py-3 bg-[#F9FAFB] border border-gray-200 rounded-lg">
-                    <p class="text-xs text-gray-500 leading-relaxed">Email login may trigger a CAPTCHA on some servers. If you see a CSRF error, switch to <button onclick="switchTab('cookie')" class="text-blue-600 font-medium hover:underline">Cookie Login</button>.</p>
+        <!-- HOW IT WORKS -->
+        <section
+            class="border-y border-gray-200 bg-[#F9FAFB]"
+            aria-labelledby="how-it-works-heading"
+        >
+            <div class="max-w-6xl mx-auto px-6 py-16">
+                <div
+                    class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+                >
+                    <div>
+                        <h2
+                            id="how-it-works-heading"
+                            class="text-2xl font-semibold text-gray-900 tracking-tight mb-2"
+                        >
+                            Up and running in under 2 minutes
+                        </h2>
+                        <p class="text-sm text-gray-500 mb-8 leading-relaxed">
+                            Connect once. The engine handles everything else -
+                            coupon discovery, validation, and enrollment.
+                        </p>
+                        <ol class="space-y-6">
+                            <div class="flex gap-4">
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900"
+                                >
+                                    1
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-gray-900 mb-1"
+                                    >
+                                        Connect Your Udemy Account
+                                    </p>
+                                    <p
+                                        class="text-sm text-gray-500 leading-relaxed"
+                                    >
+                                        Authenticate via Email Login or Cookie
+                                        Login. Your credentials are used only to
+                                        generate a temporary API token.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900"
+                                >
+                                    2
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-gray-900 mb-1"
+                                    >
+                                        Configure Smart Filters
+                                    </p>
+                                    <p
+                                        class="text-sm text-gray-500 leading-relaxed"
+                                    >
+                                        Set your minimum course rating,
+                                        preferred language, and any instructors
+                                        you want to exclude.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900"
+                                >
+                                    3
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-gray-900 mb-1"
+                                    >
+                                        Activate the Engine
+                                    </p>
+                                    <p
+                                        class="text-sm text-gray-500 leading-relaxed"
+                                    >
+                                        The engine monitors coupon aggregator
+                                        sites and enrolls you in matching free
+                                        courses instantly.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-sm font-semibold text-gray-900"
+                                >
+                                    4
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-gray-900 mb-1"
+                                    >
+                                        Track Your Savings
+                                    </p>
+                                    <p
+                                        class="text-sm text-gray-500 leading-relaxed"
+                                    >
+                                        Watch your cumulative educational
+                                        savings grow as courses are claimed
+                                        automatically.
+                                    </p>
+                                </div>
+                            </div>
+                        </ol>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-8">
+                        <p class="text-sm font-semibold text-gray-900 mb-1">
+                            What the engine does
+                        </p>
+                        <p class="text-xs text-gray-500 mb-6">
+                            A straightforward pipeline - no magic, just
+                            automation.
+                        </p>
+                        <div class="space-y-0">
+                            <div
+                                class="flex gap-4 py-4 border-b border-gray-100"
+                            >
+                                <span
+                                    class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5"
+                                    >01</span
+                                >
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-gray-900 mb-0.5"
+                                    >
+                                        Monitor coupon sites
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-500 leading-relaxed"
+                                    >
+                                        Continuously polls coupon aggregator
+                                        sites for new 100% off Udemy listings.
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                class="flex gap-4 py-4 border-b border-gray-100"
+                            >
+                                <span
+                                    class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5"
+                                    >02</span
+                                >
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-gray-900 mb-0.5"
+                                    >
+                                        Validate the coupon
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-500 leading-relaxed"
+                                    >
+                                        Checks that the coupon is still active
+                                        before attempting enrollment.
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                class="flex gap-4 py-4 border-b border-gray-100"
+                            >
+                                <span
+                                    class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5"
+                                    >03</span
+                                >
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-gray-900 mb-0.5"
+                                    >
+                                        Apply your filters
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-500 leading-relaxed"
+                                    >
+                                        Skips courses that don't match your
+                                        rating, language, or instructor
+                                        preferences.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 py-4">
+                                <span
+                                    class="flex-shrink-0 text-xs font-mono font-semibold text-gray-300 mt-0.5 w-5"
+                                    >04</span
+                                >
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-gray-900 mb-0.5"
+                                    >
+                                        Enroll via Udemy API
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-500 leading-relaxed"
+                                    >
+                                        Uses your session token to apply the
+                                        coupon and enroll you directly.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="mt-5 pt-5 border-t border-gray-200 flex items-center gap-2"
+                        >
+                            <span
+                                class="w-2 h-2 rounded-full bg-green-500"
+                            ></span
+                            ><span class="text-xs text-gray-500"
+                                >Engine runs continuously once connected</span
+                            >
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </section>
 
-                <div id="cookie-info" class="hidden mb-5 px-4 py-3 bg-[#F9FAFB] border border-gray-200 rounded-lg">
-                    <p class="text-xs font-medium text-gray-700 mb-2">How to get your cookies:</p>
-                    <ol class="space-y-1">
-                        <li class="flex items-start gap-2"><span class="flex-shrink-0 w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5">1</span><span class="text-xs text-gray-500">Log in to <a href="https://www.udemy.com" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">udemy.com</a></span></li>
-                        <li class="flex items-start gap-2"><span class="flex-shrink-0 w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5">2</span><span class="text-xs text-gray-500">Press <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-gray-200 rounded text-gray-700">F12</kbd> → <strong class="font-medium text-gray-700">Application</strong> → <strong class="font-medium text-gray-700">Cookies</strong></span></li>
-                        <li class="flex items-start gap-2"><span class="flex-shrink-0 w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5">3</span><span class="text-xs text-gray-500">Copy the three values listed below</span></li>
-                    </ol>
+        <!-- CONNECT ACCOUNT -->
+        <section
+            id="connect"
+            class="max-w-6xl mx-auto px-6 py-16"
+            aria-labelledby="connect-heading"
+        >
+            <div class="max-w-md mx-auto">
+                <div class="mb-8 text-center">
+                    <h2
+                        id="connect-heading"
+                        class="text-2xl font-semibold text-gray-900 tracking-tight mb-2"
+                    >
+                        Connect Your Account
+                    </h2>
+                    <p class="text-sm text-gray-500">
+                        Choose your preferred authentication method below to
+                        start claiming free courses.
+                    </p>
                 </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <style>
+                        @keyframes spin {
+                            from {
+                                transform: rotate(0deg);
+                            }
+                            to {
+                                transform: rotate(360deg);
+                            }
+                        }
+                        .lf-spinner {
+                            animation: spin 0.8s linear infinite;
+                        }
+                    </style>
 
-                <form id="email-form" onsubmit="loginWithEmail(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1.5" for="email">Email Address</label>
-                        <input id="email" type="email" placeholder="you@example.com" required autocomplete="email" class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150" />
+                    <div id="login-success" class="hidden text-center py-8">
+                        <div
+                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-50 border border-green-200 mb-4"
+                        >
+                            <svg
+                                class="w-5 h-5 text-green-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M5 13l4 4L19 7"
+                                />
+                            </svg>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-900 mb-1">
+                            Account Connected
+                        </p>
+                        <p class="text-xs text-gray-500" id="success-msg">
+                            The enroller is now running and will claim free
+                            courses automatically.
+                        </p>
+                        <button
+                            onclick="window.location.reload()"
+                            class="mt-5 text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors"
+                        >
+                            Connect another account
+                        </button>
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1.5" for="password">Password</label>
-                        <input id="password" type="password" placeholder="Your Udemy password" required autocomplete="current-password" class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150" />
-                    </div>
-                    <div id="email-error" class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg"><p class="text-xs text-red-600"></p></div>
-                    <button id="login-btn-email" type="submit" class="w-full py-2.5 px-4 bg-[#2563EB] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
-                        Connect Account
-                    </button>
-                </form>
 
-                <form id="cookie-form" onsubmit="loginWithCookies(event)" class="hidden space-y-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1.5" for="access_token">access_token</label>
-                        <input id="access_token" type="text" placeholder="Paste your access_token cookie" required class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1.5" for="client_id">client_id</label>
-                        <input id="client_id" type="text" placeholder="Paste your client_id cookie" required class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1.5" for="csrftoken">csrftoken</label>
-                        <input id="csrftoken" type="text" placeholder="Paste your csrftoken cookie" required class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150" />
-                    </div>
-                    <div id="cookie-error" class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg"><p class="text-xs text-red-600"></p></div>
-                    <button id="login-btn-cookie" type="submit" class="w-full py-2.5 px-4 bg-[#2563EB] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
-                        Connect Account
-                    </button>
-                </form>
-            </div>
-        </div>
-        <p class="mt-4 text-center text-xs text-gray-400">
-          By connecting, you agree that your credentials are used solely to interact with the Udemy API on your behalf. <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Review the source code.</a>
-        </p>
-      </div>
-    </section>
+                    <div id="login-forms-container">
+                        <!-- Tab Navigation -->
+                        <div class="flex border-b border-gray-200 mb-6">
+                            <button
+                                id="tab-email"
+                                onclick="switchTab('email')"
+                                class="pb-3 text-sm font-medium mr-6 border-b-2 -mb-[1px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-900 border-blue-600"
+                            >
+                                Email Login
+                            </button>
+                            <button
+                                id="tab-cookie"
+                                onclick="switchTab('cookie')"
+                                class="pb-3 text-sm font-medium mr-6 border-b-2 -mb-[1px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 border-transparent hover:text-gray-700"
+                            >
+                                Cookie Login
+                            </button>
+                        </div>
 
-    <!-- FAQ -->
-    <section class="border-t border-gray-200 bg-[#F9FAFB]" aria-labelledby="faq-heading" itemscope itemtype="https://schema.org/FAQPage">
-      <div class="max-w-6xl mx-auto px-6 py-16">
-        <div class="max-w-2xl mx-auto">
-          <div class="mb-8">
-            <h2 id="faq-heading" class="text-2xl font-semibold text-gray-900 tracking-tight mb-2">Frequently Asked Questions</h2>
-            <p class="text-sm text-gray-500">Everything you need to know about the Udemy Enroller tool.</p>
-          </div>
-          <div class="bg-white rounded-xl border border-gray-200 px-6">
-            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How does the automated Udemy course enroller work?</h3>
-              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">The tool monitors popular coupon aggregator websites in real time. When a valid 100% off Udemy coupon is detected, it automatically applies it to your account and enrolls you in the course - no manual steps required.</p>
-              </div>
-            </div>
-            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Is it safe to connect my Udemy account?</h3>
-              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. The tool integrates directly with Udemy's API and only uses your credentials to generate a temporary authentication token. Your email and password are never stored on any server. Cookie Login is available as an alternative if you prefer not to share your password.</p>
-              </div>
-            </div>
-            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">What is the difference between Email Login and Cookie Login?</h3>
-              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Email Login uses your Udemy email and password to authenticate, but may trigger a CAPTCHA on server environments. Cookie Login uses three session cookies extracted from your browser (access_token, client_id, csrftoken), which bypasses CAPTCHA and is generally more reliable.</p>
-              </div>
-            </div>
-            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">How do I get free Udemy courses with 100% off coupons?</h3>
-              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Connect your Udemy account using Email or Cookie Login, configure your smart filters (minimum rating, language, excluded instructors), and start the engine. It will automatically find and apply 100% off coupons to enroll you in free courses.</p>
-              </div>
-            </div>
-            <div class="border-b border-gray-200 py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Is the Udemy Enroller free and open source?</h3>
-              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Yes. The Udemy Enroller is completely free and open source. The full source code is available on GitHub. Starring the repository helps support development and ensures you get new scraper updates.</p>
-              </div>
-            </div>
-            <div class="py-5" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <h3 class="text-sm font-semibold text-gray-900 mb-2" itemprop="name">Can I filter which Udemy courses are enrolled automatically?</h3>
-              <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p class="text-sm text-gray-500 leading-relaxed" itemprop="text">Absolutely. The smart filter system lets you set a minimum course rating, preferred language, and a blocklist of instructors to skip. Only courses matching your criteria will be enrolled.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+                        <div
+                            id="email-info"
+                            class="mb-5 px-4 py-3 bg-[#F9FAFB] border border-gray-200 rounded-lg"
+                        >
+                            <p class="text-xs text-gray-500 leading-relaxed">
+                                Email login may trigger a CAPTCHA on some
+                                servers. If you see a CSRF error, switch to
+                                <button
+                                    onclick="switchTab('cookie')"
+                                    class="text-blue-600 font-medium hover:underline"
+                                >
+                                    Cookie Login</button
+                                >.
+                            </p>
+                        </div>
 
-    <!-- OPEN SOURCE CTA -->
-    <section class="border-t border-gray-200 bg-white" aria-labelledby="oss-heading">
-      <div class="max-w-6xl mx-auto px-6 py-16 text-center">
-        <h2 id="oss-heading" class="text-xl font-semibold text-gray-900 tracking-tight mb-2">Open Source & Community Driven</h2>
-        <p class="text-sm text-gray-500 max-w-lg mx-auto mb-6 leading-relaxed">New coupon scrapers are added regularly. Star the GitHub repository to stay updated and help the project grow.</p>
-        <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-[#EFF6FF] text-[#2563EB] rounded-full px-5 py-2.5 text-sm font-semibold hover:bg-blue-100 transition-colors duration-150">
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" /></svg>
-          Star on GitHub
-        </a>
-      </div>
-    </section>
-  </main>
+                        <div
+                            id="cookie-info"
+                            class="hidden mb-5 px-4 py-3 bg-[#F9FAFB] border border-gray-200 rounded-lg"
+                        >
+                            <p class="text-xs font-medium text-gray-700 mb-2">
+                                How to get your cookies:
+                            </p>
+                            <ol class="space-y-1">
+                                <li class="flex items-start gap-2">
+                                    <span
+                                        class="flex-shrink-0 w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5"
+                                        >1</span
+                                    ><span class="text-xs text-gray-500"
+                                        >Log in to
+                                        <a
+                                            href="https://www.udemy.com"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="text-blue-600 hover:underline"
+                                            >udemy.com</a
+                                        ></span
+                                    >
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span
+                                        class="flex-shrink-0 w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5"
+                                        >2</span
+                                    ><span class="text-xs text-gray-500"
+                                        >Press
+                                        <kbd
+                                            class="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-gray-200 rounded text-gray-700"
+                                            >F12</kbd
+                                        >
+                                        →
+                                        <strong
+                                            class="font-medium text-gray-700"
+                                            >Application</strong
+                                        >
+                                        →
+                                        <strong
+                                            class="font-medium text-gray-700"
+                                            >Cookies</strong
+                                        ></span
+                                    >
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span
+                                        class="flex-shrink-0 w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold flex items-center justify-center mt-0.5"
+                                        >3</span
+                                    ><span class="text-xs text-gray-500"
+                                        >Copy the three values listed
+                                        below</span
+                                    >
+                                </li>
+                            </ol>
+                        </div>
+
+                        <form
+                            id="email-form"
+                            onsubmit="loginWithEmail(event)"
+                            class="space-y-4"
+                        >
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-gray-500 mb-1.5"
+                                    for="email"
+                                    >Email Address</label
+                                >
+                                <input
+                                    id="email"
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    required
+                                    autocomplete="email"
+                                    class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-gray-500 mb-1.5"
+                                    for="password"
+                                    >Password</label
+                                >
+                                <input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Your Udemy password"
+                                    required
+                                    autocomplete="current-password"
+                                    class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
+                                />
+                            </div>
+                            <div
+                                id="email-error"
+                                class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg"
+                            >
+                                <p class="text-xs text-red-600"></p>
+                            </div>
+                            <button
+                                id="login-btn-email"
+                                type="submit"
+                                class="w-full py-2.5 px-4 bg-[#2563EB] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                            >
+                                Connect Account
+                            </button>
+                        </form>
+
+                        <form
+                            id="cookie-form"
+                            onsubmit="loginWithCookies(event)"
+                            class="hidden space-y-4"
+                        >
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-gray-500 mb-1.5"
+                                    for="access_token"
+                                    >access_token</label
+                                >
+                                <input
+                                    id="access_token"
+                                    type="text"
+                                    placeholder="Paste your access_token cookie"
+                                    required
+                                    class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-gray-500 mb-1.5"
+                                    for="client_id"
+                                    >client_id</label
+                                >
+                                <input
+                                    id="client_id"
+                                    type="text"
+                                    placeholder="Paste your client_id cookie"
+                                    required
+                                    class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-gray-500 mb-1.5"
+                                    for="csrftoken"
+                                    >csrftoken</label
+                                >
+                                <input
+                                    id="csrftoken"
+                                    type="text"
+                                    placeholder="Paste your csrftoken cookie"
+                                    required
+                                    class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
+                                />
+                            </div>
+                            <div
+                                id="cookie-error"
+                                class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg"
+                            >
+                                <p class="text-xs text-red-600"></p>
+                            </div>
+                            <button
+                                id="login-btn-cookie"
+                                type="submit"
+                                class="w-full py-2.5 px-4 bg-[#2563EB] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                            >
+                                Connect Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <p class="mt-4 text-center text-xs text-gray-400">
+                    By connecting, you agree that your credentials are used
+                    solely to interact with the Udemy API on your behalf.
+                    <a
+                        href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-blue-600 hover:underline"
+                        >Review the source code.</a
+                    >
+                </p>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section
+            class="border-t border-gray-200 bg-[#F9FAFB]"
+            aria-labelledby="faq-heading"
+            itemscope
+            itemtype="https://schema.org/FAQPage"
+        >
+            <div class="max-w-6xl mx-auto px-6 py-16">
+                <div class="max-w-2xl mx-auto">
+                    <div class="mb-8">
+                        <h2
+                            id="faq-heading"
+                            class="text-2xl font-semibold text-gray-900 tracking-tight mb-2"
+                        >
+                            Frequently Asked Questions
+                        </h2>
+                        <p class="text-sm text-gray-500">
+                            Everything you need to know about the Udemy Enroller
+                            tool.
+                        </p>
+                    </div>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 px-6"
+                    >
+                        <div
+                            class="border-b border-gray-200 py-5"
+                            itemscope
+                            itemprop="mainEntity"
+                            itemtype="https://schema.org/Question"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                                itemprop="name"
+                            >
+                                How does the automated Udemy course enroller
+                                work?
+                            </h3>
+                            <div
+                                itemscope
+                                itemprop="acceptedAnswer"
+                                itemtype="https://schema.org/Answer"
+                            >
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                    itemprop="text"
+                                >
+                                    The tool monitors popular coupon aggregator
+                                    websites in real time. When a valid 100% off
+                                    Udemy coupon is detected, it automatically
+                                    applies it to your account and enrolls you
+                                    in the course - no manual steps required.
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="border-b border-gray-200 py-5"
+                            itemscope
+                            itemprop="mainEntity"
+                            itemtype="https://schema.org/Question"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                                itemprop="name"
+                            >
+                                Is it safe to connect my Udemy account?
+                            </h3>
+                            <div
+                                itemscope
+                                itemprop="acceptedAnswer"
+                                itemtype="https://schema.org/Answer"
+                            >
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                    itemprop="text"
+                                >
+                                    Yes. The tool integrates directly with
+                                    Udemy's API and only uses your credentials
+                                    to generate a temporary authentication
+                                    token. Your password is never stored in any
+                                    form. Session cookies are encrypted before
+                                    local storage. Cookie Login is available as
+                                    an alternative if you prefer not to share
+                                    your password.
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="border-b border-gray-200 py-5"
+                            itemscope
+                            itemprop="mainEntity"
+                            itemtype="https://schema.org/Question"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                                itemprop="name"
+                            >
+                                What is the difference between Email Login and
+                                Cookie Login?
+                            </h3>
+                            <div
+                                itemscope
+                                itemprop="acceptedAnswer"
+                                itemtype="https://schema.org/Answer"
+                            >
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                    itemprop="text"
+                                >
+                                    Email Login uses your Udemy email and
+                                    password to authenticate, but may trigger a
+                                    CAPTCHA on server environments. Cookie Login
+                                    uses three session cookies extracted from
+                                    your browser (access_token, client_id,
+                                    csrftoken), which typically avoids
+                                    triggering additional verification and is
+                                    generally more reliable.
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="border-b border-gray-200 py-5"
+                            itemscope
+                            itemprop="mainEntity"
+                            itemtype="https://schema.org/Question"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                                itemprop="name"
+                            >
+                                How do I get free Udemy courses with 100% off
+                                coupons?
+                            </h3>
+                            <div
+                                itemscope
+                                itemprop="acceptedAnswer"
+                                itemtype="https://schema.org/Answer"
+                            >
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                    itemprop="text"
+                                >
+                                    Connect your Udemy account using Email or
+                                    Cookie Login, configure your smart filters
+                                    (minimum rating, language, excluded
+                                    instructors), and start the engine. It will
+                                    automatically find and apply 100% off
+                                    coupons to enroll you in free courses.
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="border-b border-gray-200 py-5"
+                            itemscope
+                            itemprop="mainEntity"
+                            itemtype="https://schema.org/Question"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                                itemprop="name"
+                            >
+                                Is the Udemy Enroller free and open source?
+                            </h3>
+                            <div
+                                itemscope
+                                itemprop="acceptedAnswer"
+                                itemtype="https://schema.org/Answer"
+                            >
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                    itemprop="text"
+                                >
+                                    Yes. The Udemy Enroller is completely free
+                                    and open source. The full source code is
+                                    available on GitHub. Starring the repository
+                                    helps support development and ensures you
+                                    get new scraper updates.
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="py-5"
+                            itemscope
+                            itemprop="mainEntity"
+                            itemtype="https://schema.org/Question"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                                itemprop="name"
+                            >
+                                Can I filter which Udemy courses are enrolled
+                                automatically?
+                            </h3>
+                            <div
+                                itemscope
+                                itemprop="acceptedAnswer"
+                                itemtype="https://schema.org/Answer"
+                            >
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                    itemprop="text"
+                                >
+                                    Absolutely. The smart filter system lets you
+                                    set a minimum course rating, preferred
+                                    language, and a blocklist of instructors to
+                                    skip. Only courses matching your criteria
+                                    will be enrolled.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- OPEN SOURCE CTA -->
+        <section
+            class="border-t border-gray-200 bg-white"
+            aria-labelledby="oss-heading"
+        >
+            <div class="max-w-6xl mx-auto px-6 py-16 text-center">
+                <h2
+                    id="oss-heading"
+                    class="text-xl font-semibold text-gray-900 tracking-tight mb-2"
+                >
+                    Open Source & Community Driven
+                </h2>
+                <p
+                    class="text-sm text-gray-500 max-w-lg mx-auto mb-6 leading-relaxed"
+                >
+                    New coupon scrapers are added regularly. Star the GitHub
+                    repository to stay updated and help the project grow.
+                </p>
+                <a
+                    href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 bg-[#EFF6FF] text-[#2563EB] rounded-full px-5 py-2.5 text-sm font-semibold hover:bg-blue-100 transition-colors duration-150"
+                >
+                    <svg
+                        class="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"
+                        />
+                    </svg>
+                    Star on GitHub
+                </a>
+            </div>
+        </section>
+    </main>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-function switchTab(tab) {
-    const emailForm = document.getElementById('email-form');
-    const cookiesForm = document.getElementById('cookie-form');
-    const tabEmail = document.getElementById('tab-email');
-    const tabCookies = document.getElementById('tab-cookie');
-    const emailInfo = document.getElementById('email-info');
-    const cookieInfo = document.getElementById('cookie-info');
-    const errEmail = document.getElementById('email-error');
-    const errCookie = document.getElementById('cookie-error');
+    function switchTab(tab) {
+        const emailForm = document.getElementById("email-form");
+        const cookiesForm = document.getElementById("cookie-form");
+        const tabEmail = document.getElementById("tab-email");
+        const tabCookies = document.getElementById("tab-cookie");
+        const emailInfo = document.getElementById("email-info");
+        const cookieInfo = document.getElementById("cookie-info");
+        const errEmail = document.getElementById("email-error");
+        const errCookie = document.getElementById("cookie-error");
 
-    errEmail.classList.add('hidden');
-    errCookie.classList.add('hidden');
+        errEmail.classList.add("hidden");
+        errCookie.classList.add("hidden");
 
-    const activeClasses = 'text-gray-900 border-blue-600';
-    const inactiveClasses = 'text-gray-500 border-transparent hover:text-gray-700';
+        const activeClasses = "text-gray-900 border-blue-600";
+        const inactiveClasses =
+            "text-gray-500 border-transparent hover:text-gray-700";
 
-    if (tab === 'email') {
-        emailForm.classList.remove('hidden');
-        cookiesForm.classList.add('hidden');
-        emailInfo.classList.remove('hidden');
-        cookieInfo.classList.add('hidden');
-        
-        tabEmail.className = tabEmail.className.replace(inactiveClasses, activeClasses);
-        tabCookies.className = tabCookies.className.replace(activeClasses, inactiveClasses);
-    } else {
-        emailForm.classList.add('hidden');
-        cookiesForm.classList.remove('hidden');
-        emailInfo.classList.add('hidden');
-        cookieInfo.classList.remove('hidden');
-        
-        tabCookies.className = tabCookies.className.replace(inactiveClasses, activeClasses);
-        tabEmail.className = tabEmail.className.replace(activeClasses, inactiveClasses);
-    }
-}
+        if (tab === "email") {
+            emailForm.classList.remove("hidden");
+            cookiesForm.classList.add("hidden");
+            emailInfo.classList.remove("hidden");
+            cookieInfo.classList.add("hidden");
 
-window.addEventListener('DOMContentLoaded', () => {
-    switchTab('email');
-});
-
-function isLoginSuccess(data) {
-    return !!data && (data.success === true || data.status === 'success');
-}
-
-function showSuccess(displayName) {
-    document.getElementById('login-forms-container').classList.add('hidden');
-    document.getElementById('login-success').classList.remove('hidden');
-    document.getElementById('success-msg').textContent = `Welcome, ${displayName}! Redirecting...`;
-    setTimeout(() => window.location.href = '/dashboard', 1000);
-}
-
-function showError(tab, msg) {
-    const el = document.getElementById(tab + '-error');
-    el.querySelector('p').textContent = msg;
-    el.classList.remove('hidden');
-}
-
-const spinnerSvg = `<svg class="lf-spinner w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
-
-async function loginWithEmail(e) {
-    e.preventDefault();
-    const btn = document.getElementById('login-btn-email');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<span class="flex items-center justify-center gap-2">${spinnerSvg} Connecting...</span>`;
-    document.getElementById('email-error').classList.add('hidden');
-
-    try {
-        const resp = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value
-            })
-        });
-        const data = await resp.json();
-        if (isLoginSuccess(data)) {
-            window.csrfToken = data.csrf_token || null;
-            if (data.csrf_token) localStorage.setItem('csrf_token', data.csrf_token);
-            showSuccess(data.display_name);
+            tabEmail.className = tabEmail.className.replace(
+                inactiveClasses,
+                activeClasses,
+            );
+            tabCookies.className = tabCookies.className.replace(
+                activeClasses,
+                inactiveClasses,
+            );
         } else {
-            showError('email', data.message || data.detail || 'Connection failed');
+            emailForm.classList.add("hidden");
+            cookiesForm.classList.remove("hidden");
+            emailInfo.classList.add("hidden");
+            cookieInfo.classList.remove("hidden");
+
+            tabCookies.className = tabCookies.className.replace(
+                inactiveClasses,
+                activeClasses,
+            );
+            tabEmail.className = tabEmail.className.replace(
+                activeClasses,
+                inactiveClasses,
+            );
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        switchTab("email");
+    });
+
+    function isLoginSuccess(data) {
+        return !!data && (data.success === true || data.status === "success");
+    }
+
+    function showSuccess(displayName) {
+        document
+            .getElementById("login-forms-container")
+            .classList.add("hidden");
+        document.getElementById("login-success").classList.remove("hidden");
+        document.getElementById("success-msg").textContent =
+            `Welcome, ${displayName}! Redirecting...`;
+        setTimeout(() => (window.location.href = "/dashboard"), 1000);
+    }
+
+    function showError(tab, msg) {
+        const el = document.getElementById(tab + "-error");
+        el.querySelector("p").textContent = msg;
+        el.classList.remove("hidden");
+    }
+
+    const spinnerSvg = `<svg class="lf-spinner w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+
+    async function loginWithEmail(e) {
+        e.preventDefault();
+        const btn = document.getElementById("login-btn-email");
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="flex items-center justify-center gap-2">${spinnerSvg} Connecting...</span>`;
+        document.getElementById("email-error").classList.add("hidden");
+
+        try {
+            const resp = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: document.getElementById("email").value,
+                    password: document.getElementById("password").value,
+                }),
+            });
+            const data = await resp.json();
+            if (isLoginSuccess(data)) {
+                window.csrfToken = data.csrf_token || null;
+                trackEvent("login", { method: "email" });
+                showSuccess(data.display_name);
+            } else {
+                showError(
+                    "email",
+                    data.message || data.detail || "Connection failed",
+                );
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (err) {
+            showError("email", "Connection error. Please try again.");
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
-    } catch (err) {
-        showError('email', 'Connection error. Please try again.');
-        btn.disabled = false;
-        btn.innerHTML = originalText;
     }
-}
 
-async function loginWithCookies(e) {
-    e.preventDefault();
-    const btn = document.getElementById('login-btn-cookie');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<span class="flex items-center justify-center gap-2">${spinnerSvg} Validating...</span>`;
-    document.getElementById('cookie-error').classList.add('hidden');
+    async function loginWithCookies(e) {
+        e.preventDefault();
+        const btn = document.getElementById("login-btn-cookie");
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="flex items-center justify-center gap-2">${spinnerSvg} Validating...</span>`;
+        document.getElementById("cookie-error").classList.add("hidden");
 
-    try {
-        const resp = await fetch('/api/auth/login/cookies', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                access_token: document.getElementById('access_token').value,
-                client_id: document.getElementById('client_id').value,
-                csrf_token: document.getElementById('csrftoken').value
-            })
-        });
-        const data = await resp.json();
-        if (isLoginSuccess(data)) {
-            window.csrfToken = data.csrf_token || null;
-            if (data.csrf_token) localStorage.setItem('csrf_token', data.csrf_token);
-            showSuccess(data.display_name);
-        } else {
-            showError('cookie', data.message || data.detail || 'Session validation failed');
+        try {
+            const resp = await fetch("/api/auth/login/cookies", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    access_token: document.getElementById("access_token").value,
+                    client_id: document.getElementById("client_id").value,
+                    csrf_token: document.getElementById("csrftoken").value,
+                }),
+            });
+            const data = await resp.json();
+            if (isLoginSuccess(data)) {
+                window.csrfToken = data.csrf_token || null;
+                trackEvent("login", { method: "cookie" });
+                showSuccess(data.display_name);
+            } else {
+                showError(
+                    "cookie",
+                    data.message || data.detail || "Session validation failed",
+                );
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (err) {
+            showError("cookie", "Connection error. Please try again.");
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
-    } catch (err) {
-        showError('cookie', 'Connection error. Please try again.');
-        btn.disabled = false;
-        btn.innerHTML = originalText;
     }
-}
 </script>
 {% endblock %}

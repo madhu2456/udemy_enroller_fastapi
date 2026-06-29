@@ -61,9 +61,8 @@ This application is built on a modern, fully asynchronous Python stack:
 
 - **Backend:** Python 3.13 + [FastAPI](https://fastapi.tiangolo.com) (async)
 - **Database:** SQLite + [SQLAlchemy](https://www.sqlalchemy.org) ORM + Alembic migrations
-- **Automation:** [CloudScraper](https://github.com/VeNoMouS/cloudscraper) (headless Chromium pool)
+- **Automation:** [CloudScraper](https://github.com/VeNoMouS/cloudscraper) (primary HTTP client for coupon sites and Udemy API) + [Playwright](https://playwright.dev/python/) with [playwright-stealth](https://github.com/Mattwmaster58/playwright_stealth) (fallback for Cloudflare-protected coupon aggregator sites)
 - **Frontend:** HTML5 + [Tailwind CSS](https://tailwindcss.com) + vanilla JavaScript
-- **Monitoring:** Sentry error tracking + slowapi rate limiting
 - **Deployment:** Docker + docker-compose ready
 
 The frontend is intentionally lightweight to ensure sub-second load times. Server-Sent Events (SSE) power the live log stream and enrollment progress updates.

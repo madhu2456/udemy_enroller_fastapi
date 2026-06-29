@@ -1,0 +1,23 @@
+{% extends "components/base.html" %}
+{% block title %}Page Not Found - Udemy Enroller{% endblock %}
+{% block meta_title %}Page Not Found - Udemy Enroller{% endblock %}
+{% block meta_description %}The page you are looking for does not exist. Return to the Udemy Enroller homepage to get started.{% endblock %}
+{% block og_title %}Page Not Found - Udemy Enroller{% endblock %}
+{% block og_description %}The page you are looking for does not exist. Return to the Udemy Enroller homepage.{% endblock %}
+{% block twitter_title %}Page Not Found - Udemy Enroller{% endblock %}
+{% block twitter_description %}The page you are looking for does not exist. Return to the Udemy Enroller homepage.{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center px-6">
+  <div class="text-center max-w-md">
+    <p class="text-6xl font-bold text-gray-200 mb-4">404</p>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-3">Page not found</h1>
+    <p class="text-sm text-gray-500 mb-8">The page you are looking for does not exist or has been moved.</p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="/" class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Go to Homepage</a>
+      <a href="/udemycoupons" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Browse Free Coupons</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

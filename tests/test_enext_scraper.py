@@ -1,9 +1,8 @@
 import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 from app.services.scraper import ENextScraper
 from app.services.http_client import AsyncHTTPClient
-from app.services.course import Course
 
 @pytest.fixture
 def http_client():

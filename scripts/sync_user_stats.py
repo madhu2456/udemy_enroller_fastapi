@@ -4,9 +4,8 @@ import os
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models.database import SessionLocal, User, EnrollmentRun, EnrolledCourse
+from app.models.database import SessionLocal, User, EnrollmentRun
 
 def sync_stats():
     db = SessionLocal()

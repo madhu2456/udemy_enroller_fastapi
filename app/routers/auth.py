@@ -1,24 +1,23 @@
 """Authentication router for Udemy login."""
 
-import secrets
 import asyncio
+import secrets
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 from loguru import logger
+from sqlalchemy.orm import Session
 
-from app.models.database import get_db, User, UserSettings, UserSession, _utcnow_naive
-from app.schemas.schemas import LoginRequest, CookieLoginRequest, LoginResponse
-from app.services.udemy_client import UdemyClient, LoginException
+from app.models.database import User, UserSession, UserSettings, _utcnow_naive, get_db
+from app.schemas.schemas import CookieLoginRequest, LoginRequest, LoginResponse
 from app.security import (
-    hash_password,
-    encrypt_cookies,
-    decrypt_cookies,
-    login_rate_limiter,
     _client_key,
+    decrypt_cookies,
+    encrypt_cookies,
     generate_csrf_token,
-    verify_csrf_token,
+    login_rate_limiter,
 )
+from app.services.udemy_client import LoginException, UdemyClient
 from config.settings import get_settings
 
 settings = get_settings()
@@ -97,7 +96,6 @@ async def login_with_credentials(
         if not user:
             user = User(
                 email=login_req.email,
-                password_hash=hash_password(login_req.password),
                 udemy_display_name=client.display_name,
                 udemy_cookies=encrypt_cookies(client.cookie_dict),
                 currency=client.currency,
@@ -112,7 +110,6 @@ async def login_with_credentials(
             user.udemy_display_name = client.display_name
             user.udemy_cookies = encrypt_cookies(client.cookie_dict)
             user.currency = client.currency
-            user.password_hash = hash_password(login_req.password)
             db.commit()
             logger.info(f"User updated: {login_req.email}")
 
@@ -148,11 +145,7 @@ async def login_with_cookies(
         await client.get_session_info()
 
         udemy_email = f"udemy_{client.udemy_user_id}@udemy.local"
-        user = (
-            db.query(User)
-            .filter(User.email == udemy_email)
-            .first()
-        )
+        user = db.query(User).filter(User.email == udemy_email).first()
         if not user:
             # Backwards compatibility: fallback to display name check for legacy records
             user = (
@@ -161,7 +154,9 @@ async def login_with_cookies(
                 .first()
             )
             if user:
-                logger.warning(f"Migrating user display name '{client.display_name}' to stable ID email: {udemy_email}")
+                logger.warning(
+                    f"Migrating user display name '{client.display_name}' to stable ID email: {udemy_email}"
+                )
                 user.email = udemy_email
                 db.commit()
 
@@ -177,13 +172,17 @@ async def login_with_cookies(
             db.refresh(user)
             db.add(UserSettings(user_id=user.id))
             db.commit()
-            logger.info(f"New user via cookie: {client.display_name} (ID: {client.udemy_user_id})")
+            logger.info(
+                f"New user via cookie: {client.display_name} (ID: {client.udemy_user_id})"
+            )
         else:
             user.udemy_cookies = encrypt_cookies(client.cookie_dict)
             user.currency = client.currency
             user.udemy_display_name = client.display_name  # Keep display name in sync
             db.commit()
-            logger.info(f"User cookies updated: {client.display_name} (ID: {client.udemy_user_id})")
+            logger.info(
+                f"User cookies updated: {client.display_name} (ID: {client.udemy_user_id})"
+            )
 
         token = _create_session(user, client, request, db)
         logger.info(f"Cookie login successful: {client.display_name}")
@@ -225,7 +224,7 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
     # Check in-memory client from cache
     cache = getattr(request.app.state, "session_cache", None)
     client = cache.get(token) if cache else None
-    
+
     # Fallback to legacy dict
     if client is None:
         clients = getattr(request.app.state, "udemy_clients", {})
@@ -300,7 +299,7 @@ async def logout(
             # Close in-memory client
             cache = getattr(request.app.state, "session_cache", None)
             client = cache.pop(token) if cache else None
-            
+
             # Fallback to legacy dict
             if client is None and hasattr(request.app.state, "udemy_clients"):
                 client = request.app.state.udemy_clients.pop(token, None)
