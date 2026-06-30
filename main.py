@@ -239,15 +239,14 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    if request.url.scheme == "https":
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
-    # CSP report-only: identifies violations without breaking functionality.
-    # After validating no violations in production logs, promote to enforcing CSP.
-    response.headers["Content-Security-Policy-Report-Only"] = (
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
+    # CSP enforced. 'unsafe-inline' required for inline <script> blocks in templates.
+    # TODO: Refactor to external scripts + nonces to remove 'unsafe-inline' for stronger XSS protection.
+    response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://www.googletagmanager.com; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://www.googletagmanager.com; "
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https:; "
         "font-src 'self'; "

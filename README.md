@@ -167,8 +167,8 @@ docker compose exec web bash ./scripts/coupon_checker.sh
 ## Project Impact
 
 - **Designed to reduce** manual enrollment effort by up to ~90%
-- **20,000+ courses** enrolled collectively (estimate based on aggregate usage data)
-- **₹10,00,000+** estimated cost savings (based on list prices of enrolled courses)
+- **1,400+ courses** enrolled to date via automated enrollment
+- **₹8,44,000+** estimated cost savings (based on list prices of enrolled courses)
 - Scales to **hundreds of concurrent** coupon processing requests
 - **100% open-source** and self-hostable
 
