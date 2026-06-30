@@ -45,6 +45,7 @@ User-agent: OAI-SearchBot
 User-agent: ChatGPT-User
 User-agent: PerplexityBot
 User-agent: ClaudeBot
+User-agent: Applebot
 Allow: /
 Disallow: /history
 Disallow: /settings
@@ -65,25 +66,38 @@ Sitemap: {SITE_URL}/sitemap.xml
 
 @router.get("/sitemap.xml", response_class=Response)
 async def sitemap_xml():
-    # Use date only (no time) so lastmod is stable within a day.
-    # Google recommends lastmod reflects actual content changes.
-    today = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
+    import os
+    # Lastmod should reflect actual content changes (Google recommendation).
+    # Static pages: use the date of the last template/content update.
+    # Dynamic pages: use file modification time.
+    static_lastmod = "2026-06-30"  # Update this when static content changes
+
+    # For /udemycoupons, use public_deals.json modification time if available
+    deals_lastmod = static_lastmod
+    json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "public_deals.json")
+    if os.path.exists(json_path):
+        try:
+            mtime = os.path.getmtime(json_path)
+            deals_lastmod = datetime.datetime.fromtimestamp(mtime, tz=datetime.UTC).strftime("%Y-%m-%d")
+        except Exception:
+            pass
+
     pages = [
-        ("", "1.00", "daily"),
-        ("/udemycoupons", "0.95", "daily"),
-        ("/faq", "0.90", "weekly"),
-        ("/about", "0.80", "monthly"),
-        ("/guides", "0.80", "weekly"),
-        ("/privacy", "0.30", "monthly"),
+        ("", static_lastmod, "1.00", "daily"),
+        ("/udemycoupons", deals_lastmod, "0.95", "daily"),
+        ("/faq", static_lastmod, "0.90", "weekly"),
+        ("/about", static_lastmod, "0.80", "monthly"),
+        ("/guides", static_lastmod, "0.80", "weekly"),
+        ("/privacy", static_lastmod, "0.30", "monthly"),
     ]
     urls = "\n".join(
         f"""<url>
 <loc>{SITE_URL}{path}</loc>
-<lastmod>{today}</lastmod>
+<lastmod>{lastmod}</lastmod>
 <changefreq>{freq}</changefreq>
 <priority>{prio}</priority>
 </url>"""
-        for path, prio, freq in pages
+        for path, lastmod, prio, freq in pages
     )
     content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -115,6 +129,24 @@ Components: FastAPI, CloudScraper, Playwright, TailwindCSS, SQLAlchemy, SQLite
 @router.get("/llms.txt", response_class=Response)
 async def llms_txt():
     now = datetime.datetime.now(datetime.UTC)
+
+    # Query real impact stats from database
+    try:
+        from app.models.database import SessionLocal, User
+        db = SessionLocal()
+        try:
+            users = db.query(User).all()
+            total_enrolled = sum(u.total_enrolled or 0 for u in users)
+            total_saved = sum(u.total_amount_saved or 0 for u in users)
+        finally:
+            db.close()
+    except Exception:
+        total_enrolled = 0
+        total_saved = 0
+
+    # Format with commas for readability
+    enrolled_str = f"{total_enrolled:,}"
+    saved_str = f"₹{total_saved:,.0f}"
     content = f"""# Udemy Course Enroller — AI Profile
 
 > Authoritative, machine-readable profile for AI systems and search engines.
@@ -163,9 +195,9 @@ Learning new skills on Udemy can be expensive. While authors frequently share 10
 
 ## Impact
 
-- Reduced manual effort by around 90% for users.
-- Enabled users to enroll in 20,000+ courses within 6 months for free.
-- Estimated cost savings of ₹10,00,000+ for active users.
+- Designed to reduce manual enrollment effort by around 90% for users.
+- {enrolled_str} courses enrolled to date via automated enrollment.
+- Estimated cost savings of {saved_str} based on list prices of enrolled courses.
 - Scales seamlessly to handle hundreds of concurrent coupon processing requests.
 
 ## Machine-readable Endpoints
@@ -228,7 +260,7 @@ The application is built with Python 3.13, FastAPI for the async backend, SQLAlc
 Detailed guides, case studies, and technical deep-dives are published on Madhu Dadi's blog at {BLOG_URL}. The case study for this project is available at {CASE_STUDY_URL}.
 
 ### What is the impact of using the Udemy Course Enroller?
-The platform has reduced manual enrollment effort by around 90% and enabled users to enroll in 20,000+ courses within 6 months for free, with estimated cost savings exceeding ₹10,00,000.
+The platform is designed to reduce manual enrollment effort by around 90%. To date, {enrolled_str} courses have been enrolled automatically, with estimated cost savings of {saved_str} based on list prices.
 """
     return Response(content=content, media_type="text/plain")
 

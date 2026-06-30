@@ -10,7 +10,99 @@ coupon sites and enrolls you instantly. Stop hunting for codes.{% endblock %} {%
 block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu
 Dadi{% endblock %} {% block twitter_description %}Automate your learning with
 100% off free Udemy courses. Our engine monitors coupon sites and enrolls you
-instantly. Stop hunting for codes.{% endblock %} {% block content %}
+instantly. Stop hunting for codes.{% endblock %} {% block extra_head %}
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "SoftwareApplication",
+                "name": "Udemy Enroller",
+                "operatingSystem": "Web",
+                "applicationCategory": "EducationalApplication",
+                "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
+                "url": "https://udemyenroller.madhudadi.in",
+                "author": {
+                    "@type": "Person",
+                    "@id": "https://madhudadi.in/#person",
+                    "name": "Madhu Dadi",
+                    "url": "https://madhudadi.in",
+                    "jobTitle": "AI Developer & Marketing Analytics Leader",
+                    "sameAs": [
+                        "https://madhudadi.in/blog",
+                        "https://github.com/madhu2456/udemy_enroller_fastapi",
+                        "https://www.linkedin.com/in/madhu-dadi-54684531",
+                        "https://x.com/madhu245"
+                    ]
+                },
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "provider": {
+                    "@type": "Organization",
+                    "name": "Adticks",
+                    "url": "https://adticks.com",
+                    "description": "SEO, AEO, and GEO improvement platform."
+                },
+                "hasPart": [
+                    {
+                        "@type": "WebPage",
+                        "name": "100% Free Udemy Coupons Database",
+                        "url": "https://udemyenroller.madhudadi.in/udemycoupons"
+                    }
+                ],
+                "mainEntityOfPage": {
+                    "@type": "WebPage",
+                    "@id": "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
+                }
+            },
+            {
+                "@type": "Person",
+                "@id": "https://madhudadi.in/#person",
+                "name": "Madhu Dadi",
+                "url": "https://madhudadi.in",
+                "jobTitle": "AI Developer & Marketing Analytics Leader",
+                "description": "AI consultant and ML engineer with 9+ years of experience delivering generative AI consulting, LLM applications, and RAG systems that drive measurable business outcomes.",
+                "sameAs": [
+                    "https://madhudadi.in/blog",
+                    "https://github.com/madhu2456/udemy_enroller_fastapi",
+                    "https://www.linkedin.com/in/madhu-dadi-54684531",
+                    "https://x.com/madhu245"
+                ],
+                "knowsAbout": [
+                    "Python",
+                    "FastAPI",
+                    "SQL",
+                    "Machine Learning",
+                    "REST API Design",
+                    "CloudScraper",
+                    "Tailwind CSS"
+                ]
+            },
+            {
+                "@type": "SoftwareSourceCode",
+                "name": "Udemy Enroller",
+                "url": "https://github.com/madhu2456/udemy_enroller_fastapi",
+                "codeRepository": "https://github.com/madhu2456/udemy_enroller_fastapi",
+                "programmingLanguage": ["Python", "JavaScript"],
+                "license": "https://opensource.org/licenses/MIT",
+                "author": {
+                    "@type": "Person",
+                    "@id": "https://madhudadi.in/#person",
+                    "name": "Madhu Dadi"
+                },
+                "isPartOf": {
+                    "@type": "WebApplication",
+                    "url": "https://udemyenroller.madhudadi.in"
+                }
+            }
+        ]
+    }
+</script>
+{% endblock %}
+{% block content %}
 <div class="min-h-screen bg-white text-gray-900">
     <main>
         <!-- HERO -->
