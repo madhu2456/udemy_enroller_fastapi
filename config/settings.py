@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     DEPLOYMENT_ENV: str = "local"
 
     # Logging
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "WARNING"
     LOG_FILE: str = "logs/app.log"
     LOG_FORMAT: str = "json"  # "json" or "text"
 
