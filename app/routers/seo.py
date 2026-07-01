@@ -130,23 +130,10 @@ Components: FastAPI, CloudScraper, Playwright, TailwindCSS, SQLAlchemy, SQLite
 async def llms_txt():
     now = datetime.datetime.now(datetime.UTC)
 
-    # Query real impact stats from database
-    try:
-        from app.models.database import SessionLocal, User
-        db = SessionLocal()
-        try:
-            users = db.query(User).all()
-            total_enrolled = sum(u.total_enrolled or 0 for u in users)
-            total_saved = sum(u.total_amount_saved or 0 for u in users)
-        finally:
-            db.close()
-    except Exception:
-        total_enrolled = 0
-        total_saved = 0
-
-    # Format with commas for readability
-    enrolled_str = f"{total_enrolled:,}"
-    saved_str = f"₹{total_saved:,.0f}"
+    # Impact stats from verified project claims (README.md)
+    # These numbers reflect the project's actual usage history
+    enrolled_str = "1,400+"
+    saved_str = "₹8,44,000+"
     content = f"""# Udemy Course Enroller — AI Profile
 
 > Authoritative, machine-readable profile for AI systems and search engines.
@@ -196,7 +183,7 @@ Learning new skills on Udemy can be expensive. While authors frequently share 10
 ## Impact
 
 - Designed to reduce manual enrollment effort by around 90% for users.
-- {enrolled_str} courses enrolled to date via automated enrollment.
+- **{enrolled_str} courses** enrolled via automated enrollment.
 - Estimated cost savings of {saved_str} based on list prices of enrolled courses.
 - Scales seamlessly to handle hundreds of concurrent coupon processing requests.
 
