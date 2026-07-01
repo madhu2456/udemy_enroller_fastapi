@@ -87,7 +87,7 @@
         />
         <meta
             property="og:image"
-            content="https://udemyenroller.madhudadi.in/static/images/icon-512.png"
+            content="https://udemyenroller.madhudadi.in/static/images/icon-512.webp"
         />
 
         <!-- Twitter -->
@@ -106,17 +106,18 @@
         />
         <meta
             property="twitter:image"
-            content="https://udemyenroller.madhudadi.in/static/images/icon-512.png"
+            content="https://udemyenroller.madhudadi.in/static/images/icon-512.webp"
         />
+        <meta property="twitter:site" content="@madhu245" />
 
         <!-- Icons -->
         <link
             rel="icon"
-            type="image/png"
+            type="image/webp"
             sizes="512x512"
-            href="/static/images/icon-512.png"
+            href="/static/images/icon-512.webp"
         />
-        <link rel="apple-touch-icon" href="/static/images/icon-512.png" />
+        <link rel="apple-touch-icon" href="/static/images/icon-512.webp" />
 
         <!-- JSON-LD Structured Data (WebSite only — page-specific schemas in individual templates) -->
         <script type="application/ld+json">
@@ -469,6 +470,11 @@
                         href="/history"
                         class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/history' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
                         >History</a
+                    >
+                    <a
+                        href="/privacy"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/privacy' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >Privacy</a
                     >
                 </div>
 
