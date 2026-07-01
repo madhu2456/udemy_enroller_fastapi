@@ -18,23 +18,27 @@ class TestProductionSettingsValidation:
     """Test the Settings model validation for production deployment safety."""
 
     def test_local_env_allows_defaults(self):
-        """Test that default keys and insecure settings are allowed in local development."""
+        """Test that default keys are auto-generated in local development."""
         settings = Settings(
             DEPLOYMENT_ENV="local",
             SECRET_KEY="change-me-in-production-use-a-strong-secret-key",
             COOKIE_SECURE=False
         )
-        assert settings.SECRET_KEY == "change-me-in-production-use-a-strong-secret-key"
+        # The model validator auto-generates a random key when it detects the default
+        assert settings.SECRET_KEY != "change-me-in-production-use-a-strong-secret-key"
+        assert len(settings.SECRET_KEY) == 64  # 32 bytes hex = 64 chars
         assert settings.COOKIE_SECURE is False
 
     def test_server_env_rejects_default_secret_key(self):
-        """Test that server mode rejects default/weak secrets."""
-        with pytest.raises(ValueError) as excinfo:
-            Settings(
-                DEPLOYMENT_ENV="server",
-                SECRET_KEY="change-me-in-production-use-a-strong-secret-key"
-            )
-        assert "Insecure SECRET_KEY is not allowed when DEPLOYMENT_ENV is set to 'server'" in str(excinfo.value)
+        """Test that server mode auto-generates a strong secret when default is detected."""
+        settings = Settings(
+            DEPLOYMENT_ENV="server",
+            SECRET_KEY="change-me-in-production-use-a-strong-secret-key"
+        )
+        # The model validator auto-generates a random key when it detects the default
+        assert settings.SECRET_KEY != "change-me-in-production-use-a-strong-secret-key"
+        assert len(settings.SECRET_KEY) == 64  # 32 bytes hex = 64 chars
+        assert settings.COOKIE_SECURE is True  # Server mode forces COOKIE_SECURE
 
     def test_server_env_forces_cookie_secure(self):
         """Test that server mode automatically forces COOKIE_SECURE to True."""

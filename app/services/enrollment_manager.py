@@ -337,7 +337,6 @@ class EnrollmentManager:
                                         else:
                                             logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
                                             success, course_status = await process_single_course(course)
-                                            saved_already = True
                     except Exception as e:
                         logger.exception(f"[PIPELINE ERROR] Unexpected error processing {course.title}: {e}")
                         course_status = "failed"
