@@ -28,7 +28,7 @@ def public_deals_page(request: Request):
         except Exception:
             pass
             
-    return templates.TemplateResponse("pages/public_deals.html", {"request": request, "initial_courses": initial_courses})
+    return templates.TemplateResponse(request, "pages/public_deals.html", {"initial_courses": initial_courses})
 
 @router.get("/api/coupons")
 def get_public_coupons(
