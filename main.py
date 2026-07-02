@@ -253,10 +253,13 @@ async def add_security_headers(request: Request, call_next):
     # - 'strict-dynamic' propagates trust to scripts loaded by nonced scripts
     # - Domain allowlists are fallbacks for CSP level 2 browsers
     # - JSON-LD (application/ld+json) scripts are data, not governed by script-src
+    # - script-src-attr 'unsafe-inline' allows onclick/onload handlers without
+    #   compromising script-src nonce enforcement on <script> elements
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' "
         "https://unpkg.com https://cdnjs.cloudflare.com https://www.googletagmanager.com; "
+        "script-src-attr 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https:; "
         "font-src 'self' https://cdnjs.cloudflare.com; "

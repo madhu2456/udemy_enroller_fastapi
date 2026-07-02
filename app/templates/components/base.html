@@ -162,7 +162,7 @@
         {% endif %}
 
         <!-- Lucide Icons CDN -->
-        <script defer src="https://unpkg.com/lucide@0.469.0"></script>
+        <script defer src="https://unpkg.com/lucide@0.469.0" nonce="{{ request.state.nonce }}"></script>
 
         <style>
             /* Custom styles matching premium light mode */
@@ -367,13 +367,13 @@
         </a>
         <!-- Global Announcement Bar -->
         <div
-            class="bg-blue-700 px-4 py-2.5 text-center shadow-md relative z-[100]"
+            class="bg-blue-50 px-4 py-2.5 text-center shadow-sm relative z-[100] border-b border-blue-100"
         >
             <p
-                class="text-xs sm:text-sm font-medium text-white flex flex-wrap items-center justify-center gap-2"
+                class="text-xs sm:text-sm font-medium text-gray-900 flex flex-wrap items-center justify-center gap-2"
             >
                 <span
-                    class="animate-pulse w-2 h-2 rounded-full bg-green-400 inline-block shadow-[0_0_8px_rgba(74,222,128,0.8)]"
+                    class="animate-pulse w-2 h-2 rounded-full bg-green-500 inline-block shadow-[0_0_8px_rgba(34,197,94,0.6)]"
                 ></span>
                 <span
                     ><strong>New Feature:</strong> Access our live database of
@@ -381,7 +381,7 @@
                 >
                 <a
                     href="/udemycoupons"
-                    class="inline-flex items-center gap-1 font-bold text-white bg-[#1D4ED8] hover:bg-blue-800 border border-white/30 px-3 py-1 rounded-full transition-all ml-2 whitespace-nowrap"
+                    class="inline-flex items-center gap-1 font-semibold text-gray-900 bg-gray-200 hover:bg-gray-300 border border-gray-300 px-3 py-1 rounded-full transition-all ml-2 whitespace-nowrap"
                 >
                     Browse Deals
                     <svg
@@ -656,7 +656,7 @@
             </div>
         </footer>
 
-        <script src="/static/js/app.js"></script>
+        <script src="/static/js/app.js" nonce="{{ request.state.nonce }}"></script>
         <script nonce="{{ request.state.nonce }}">
             // Global security sanitization helpers
             function escapeHTML(str) {
