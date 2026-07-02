@@ -1280,7 +1280,7 @@ instantly. Stop hunting for codes.{% endblock %} {% block extra_head %}
     </main>
 </div>
 {% endblock %} {% block scripts %}
-<script>
+<script nonce="{{ request.state.nonce }}">
     function switchTab(tab) {
         const emailForm = document.getElementById("email-form");
         const cookiesForm = document.getElementById("cookie-form");

@@ -1,0 +1,349 @@
+meta:
+  plan_id: "20250702-034113-udemy-enroller-audit"
+  objective: "Comprehensive audit execution plan covering SEO, security, accessibility, product positioning, and technical correctness"
+  created_at: "2026-07-02T03:49:14Z"
+  confidence: 0.95
+  complexity: "complex"
+  risk_score: "high"
+  prd_update_recommended: true
+  prd_update_reason: "Security posture changes (credential redaction implementation), platform-policy disclosures (Udemy ToS compliance, undocumented API usage, affiliation disclaimer), and responsible-use guidance require PRD updates to reflect new constraints, compliance requirements, and user communication standards."
+
+metrics:
+  wave_1_task_count: 6
+  total_dependencies: 22
+  risk_score: "high"
+
+context_envelope_ref: "docs/plan/20250702-034113-udemy-enroller-audit/context_envelope.json"
+
+waves:
+  - wave_id: 1
+    name: "Security Audit & Remediation (P0)"
+    description: "Critical security vulnerabilities requiring immediate remediation before any downstream work"
+    dependencies: []
+    tasks:
+      - task_id: "SEC-001"
+        name: "Credential Leakage Audit"
+        agent: "weave-reviewer"
+        priority: "P0"
+        estimated_effort: "medium"
+        blocking: true
+      - task_id: "SEC-002"
+        name: "Credential Redaction Implementation"
+        agent: "weave-implementer"
+        priority: "P0"
+        estimated_effort: "medium"
+        depends_on: ["SEC-001"]
+      - task_id: "SEC-003"
+        name: "Git History Secrets Scan"
+        agent: "weave-reviewer"
+        priority: "P0"
+        estimated_effort: "low"
+        depends_on: ["SEC-002"]
+      - task_id: "SEC-004"
+        name: "Security Headers Validation"
+        agent: "weave-reviewer"
+        priority: "P0"
+        estimated_effort: "low"
+        depends_on: []
+      - task_id: "SEC-005"
+        name: "Cookie Encryption Audit"
+        agent: "weave-reviewer"
+        priority: "P0"
+        estimated_effort: "low"
+        depends_on: []
+      - task_id: "SEC-006"
+        name: "OWASP Top 10 Scan"
+        agent: "weave-reviewer"
+        priority: "P0"
+        estimated_effort: "medium"
+        depends_on: ["SEC-002", "SEC-004", "SEC-005"]
+
+  - wave_id: 2
+    name: "Product Positioning & Content Audit (P1)"
+    description: "README accuracy, platform policy compliance, claims validation"
+    dependencies: ["wave_1"]
+    tasks:
+      - task_id: "CONTENT-001"
+        name: "README Platform Policy Disclosure"
+        agent: "weave-docs"
+        priority: "P1"
+        estimated_effort: "medium"
+        depends_on: ["SEC-006"]
+      - task_id: "CONTENT-002"
+        name: "Undocumented API Disclosure"
+        agent: "weave-docs"
+        priority: "P1"
+        estimated_effort: "low"
+        depends_on: ["SEC-006"]
+      - task_id: "CONTENT-003"
+        name: "Affiliation Disclaimer"
+        agent: "weave-docs"
+        priority: "P1"
+        estimated_effort: "low"
+        depends_on: []
+      - task_id: "CONTENT-004"
+        name: "Claims Validation Audit"
+        agent: "weave-reviewer"
+        priority: "P1"
+        estimated_effort: "medium"
+        depends_on: []
+      - task_id: "CONTENT-005"
+        name: "FAQ Consistency Audit"
+        agent: "weave-reviewer"
+        priority: "P1"
+        estimated_effort: "low"
+        depends_on: ["CONTENT-001", "CONTENT-002"]
+      - task_id: "CONTENT-006"
+        name: "Responsible Use Guidance"
+        agent: "weave-docs"
+        priority: "P1"
+        estimated_effort: "medium"
+        depends_on: ["CONTENT-001", "CONTENT-002"]
+
+  - wave_id: 3
+    name: "SEO & Metadata Validation (P1)"
+    description: "Live site validation, structured data verification, metadata parity"
+    dependencies: ["wave_2"]
+    tasks:
+      - task_id: "SEO-001"
+        name: "Live Site Metadata Audit"
+        agent: "weave-reviewer"
+        priority: "P1"
+        estimated_effort: "medium"
+        depends_on: ["CONTENT-001", "CONTENT-002", "CONTENT-003", "CONTENT-006"]
+      - task_id: "SEO-002"
+        name: "Structured Data Validation"
+        agent: "weave-reviewer"
+        priority: "P1"
+        estimated_effort: "medium"
+        depends_on: []
+      - task_id: "SEO-003"
+        name: "Sitemap & Robots.txt Verification"
+        agent: "weave-reviewer"
+        priority: "P1"
+        estimated_effort: "low"
+        depends_on: []
+      - task_id: "SEO-004"
+        name: "llms.txt & ai-profile.json Audit"
+        agent: "weave-reviewer"
+        priority: "P1"
+        estimated_effort: "low"
+        depends_on: ["CONTENT-004"]
+      - task_id: "SEO-005"
+        name: "Open Graph & Social Metadata"
+        agent: "weave-reviewer"
+        priority: "P1"
+        estimated_effort: "low"
+        depends_on: ["SEO-001"]
+
+  - wave_id: 4
+    name: "Accessibility Compliance (P2)"
+    description: "WCAG 2.2 validation, keyboard navigation, ARIA labels, color contrast"
+    dependencies: ["wave_2"]
+    tasks:
+      - task_id: "A11Y-001"
+        name: "Lighthouse Accessibility Audit"
+        agent: "weave-browser-tester"
+        priority: "P2"
+        estimated_effort: "medium"
+        depends_on: []
+      - task_id: "A11Y-002"
+        name: "WCAG 2.2 Manual Review"
+        agent: "weave-reviewer"
+        priority: "P2"
+        estimated_effort: "high"
+        depends_on: ["A11Y-001"]
+      - task_id: "A11Y-003"
+        name: "Keyboard Navigation Test"
+        agent: "weave-browser-tester"
+        priority: "P2"
+        estimated_effort: "medium"
+        depends_on: []
+      - task_id: "A11Y-004"
+        name: "Screen Reader Compatibility"
+        agent: "weave-browser-tester"
+        priority: "P2"
+        estimated_effort: "high"
+        depends_on: []
+
+  - wave_id: 5
+    name: "Technical Correctness (P2)"
+    description: "Code-documentation parity, architecture validation, deployment verification"
+    dependencies: ["wave_2"]
+    tasks:
+      - task_id: "TECH-001"
+        name: "Code-Docs Parity Audit"
+        agent: "weave-docs"
+        priority: "P2"
+        estimated_effort: "medium"
+        depends_on: ["CONTENT-001", "CONTENT-002", "CONTENT-003", "CONTENT-006"]
+      - task_id: "TECH-002"
+        name: "Architecture Snapshot Validation"
+        agent: "weave-researcher"
+        priority: "P2"
+        estimated_effort: "medium"
+        depends_on: []
+      - task_id: "TECH-003"
+        name: "Docker Deployment Test"
+        agent: "weave-devops"
+        priority: "P2"
+        estimated_effort: "high"
+        depends_on: ["SEC-006"]
+      - task_id: "TECH-004"
+        name: "Environment Variable Audit"
+        agent: "weave-reviewer"
+        priority: "P2"
+        estimated_effort: "low"
+        depends_on: []
+
+  - wave_id: 6
+    name: "Final Review & Summary (P0)"
+    description: "Cross-wave integration, safe-to-push verdict, findings report"
+    dependencies: ["wave_1", "wave_2", "wave_3", "wave_4", "wave_5"]
+    tasks:
+      - task_id: "FINAL-001"
+        name: "Cross-Wave Integration Review"
+        agent: "weave-reviewer-pro"
+        priority: "P0"
+        estimated_effort: "high"
+        depends_on: ["SEC-006", "CONTENT-006", "SEO-005", "A11Y-004", "TECH-004"]
+      - task_id: "FINAL-002"
+        name: "Security Findings Report"
+        agent: "weave-docs"
+        priority: "P0"
+        estimated_effort: "medium"
+        depends_on: ["FINAL-001"]
+      - task_id: "FINAL-003"
+        name: "Safe-to-Push Verdict"
+        agent: "weave-reviewer"
+        priority: "P0"
+        estimated_effort: "low"
+        depends_on: ["FINAL-002"]
+
+learnings:
+  patterns:
+    - name: "credential_logging_antipattern"
+      description: "Sensitive credentials (access_token, client_id, csrftoken) logged at INFO level without redaction in app/services/udemy_client.py:880-885, 1078. Credentials written to logs/app.log when LOG_LEVEL=INFO/DEBUG."
+      confidence: 1.0
+    - name: "undocumented_api_usage"
+      description: "Uses Udemy undocumented endpoints (/payment/checkout-submit/, /course-landing-components/) despite README:25 claim of 'official API'. Violates Udemy ToS and risks user account bans."
+      confidence: 1.0
+    - name: "deployment_aware_rate_limiting"
+      description: "Circuit breakers and rate limiting adapt to DEPLOYMENT_ENV (6-15s server vs 3-8s local). 2-6 consecutive 403s trigger cooldowns."
+      confidence: 0.95
+    - name: "fernet_cookie_encryption"
+      description: "Cookie encryption correctly implemented via Fernet (app/security.py:67-98) with SECRET_KEY fallback. Credentials encrypted before database storage."
+      confidence: 1.0
+    - name: "cloudflare_bypass_stealth"
+      description: "Playwright-stealth used for Cloudflare-protected coupon aggregator bypass (legitimate use case: Real.Discount, Discudemy). No ethical-use disclaimer in README."
+      confidence: 0.95
+
+  gotchas:
+    - "README line 25 claims 'uses Udemy's official API' but app/services/udemy_client.py uses /payment/checkout-submit/ (undocumented) — misleading and violates platform ToS"
+    - "Cookie encryption (Fernet) implemented correctly but credentials leak via logging BEFORE encryption step (udemy_client.py:880-885)"
+    - "Playwright-stealth used for coupon aggregator access (legitimate) but no responsible-use guidance or ToS compliance warning"
+    - "Claims '1,400+ courses' (README:170, llms.txt:135) and '₹8,44,000+ savings' (README:171, llms.txt:136) without methodology disclosure"
+    - "FAQ line 82 claims 'official API' but implementation uses undocumented endpoints"
+    - "Security headers (CSP, HSTS, X-Frame-Options) correctly implemented (validated in research findings)"
+    - "SEO assets (sitemap.xml, robots.txt, llms.txt, ai-profile.json) present but need live endpoint validation"
+    - "LOG_LEVEL defaults to WARNING (.env.example:30) which prevents credential leakage in production, but INFO/DEBUG triggers vulnerability"
+    - "No Udemy affiliation disclaimer anywhere in README, FAQ, or About page"
+    - "humans.txt line 124 describes CloudScraper as 'primary HTTP client' and Playwright as 'fallback' — confirms architecture but needs ethical context"
+
+  facts:
+    - statement: "Live site: https://udemyenroller.madhudadi.in"
+      category: "deployment"
+    - statement: "Tech stack: Python 3.13+ FastAPI + SQLite + CloudScraper + Playwright + Tailwind CSS"
+      category: "architecture"
+    - statement: "Credential leakage locations: app/services/udemy_client.py:880-885 (DU_CHECKOUT STATE log with course.coupon_code), line 1078 (FREE_CHECKOUT log with full JSON response)"
+      category: "security"
+    - statement: "Cookie encryption: app/security.py:67-98 (Fernet with SECRET_KEY fallback, 32-byte key derivation)"
+      category: "security"
+    - statement: "Security headers implemented: CSP, HSTS, X-Frame-Options (validated in research findings)"
+      category: "security"
+    - statement: "SEO assets implemented: app/routers/seo.py serves /sitemap.xml (lines 67-106), /robots.txt (23-64), /llms.txt (129-357), /humans.txt (109-126)"
+      category: "seo"
+    - statement: "Default LOG_LEVEL=WARNING (.env.example:30) prevents credential leakage in default config"
+      category: "security"
+    - statement: "Undocumented Udemy endpoints: /payment/checkout-submit/ (udemy_client.py:900-922), /course-landing-components/ (grep results)"
+      category: "platform_policy"
+    - statement: "Claims validation sources: README:170-171 ('1,400+ courses', '₹8,44,000+'), llms.txt:135-136 (same claims)"
+      category: "content"
+    - statement: "FAQ structured data: app/templates/pages/faq.html:32-683 (JSON-LD FAQPage schema)"
+      category: "seo"
+    - statement: "About page structured data: app/templates/pages/about.html:13-31 (BreadcrumbList schema)"
+      category: "seo"
+
+  failure_modes:
+    - scenario: "Credential leakage exploitation"
+      symptoms:
+        - "logs/app.log contains access_token/client_id/csrftoken in plaintext"
+        - "Unauthorized Udemy account access if logs exposed"
+        - "User account bans if Udemy detects credential sharing"
+      mitigation: "Implement log redaction for sensitive fields (access_token, client_id, csrftoken, Authorization header) before wave 2 tasks execute. Update logging_config.py to filter patterns."
+    - scenario: "Platform policy violation enforcement"
+      symptoms:
+        - "Udemy API rate-limit escalation or IP bans"
+        - "User account suspensions for ToS violations"
+        - "Legal cease-and-desist for undocumented API usage"
+      mitigation: "Update README with ToS compliance disclaimer, undocumented API disclosure, and responsible-use guidance. Add affiliation disclaimer. Document risks to end users."
+    - scenario: "Accessibility compliance failure"
+      symptoms:
+        - "WCAG 2.2 violations (color contrast, keyboard navigation, ARIA)"
+        - "Screen reader incompatibility"
+        - "Lighthouse accessibility score < 90"
+      mitigation: "Run Lighthouse + manual WCAG audit (P2 priority). Verify semantic HTML, ARIA labels, keyboard navigation, and color contrast."
+    - scenario: "SEO metadata staleness"
+      symptoms:
+        - "Live site metadata differs from README claims"
+        - "Structured data validation errors"
+        - "Search engine indexing failures"
+      mitigation: "Live site validation after README updates (wave 2 dependency). Verify OG tags, JSON-LD schemas, and sitemap accuracy."
+    - scenario: "Claims validation failure"
+      symptoms:
+        - "Unable to verify '1,400+ courses' or '₹8,44,000+' from database"
+        - "Methodology undocumented or inconsistent"
+        - "False advertising risk"
+      mitigation: "Database query validation or methodology disclosure. If unverifiable, remove or qualify claims with 'estimated' or 'as of [date]'."
+
+  decisions:
+    - decision: "Prioritize credential leakage fix (P0) before all content/SEO audits"
+      rationale:
+        - "Active security vulnerability with user data at risk"
+        - "Prevents propagation of vulnerable logging patterns to future code"
+        - "Satisfies security-first mandate from safety_guardrails"
+        - "Blocking dependency for product positioning tasks (can't claim security without fixing leakage)"
+    - decision: "Separate product positioning (README) from live site validation (metadata audit)"
+      rationale:
+        - "README changes must complete before re-testing live site metadata"
+        - "Live site may cache outdated metadata — requires deployment validation"
+        - "Content accuracy depends on codebase-documentation parity"
+        - "Wave 2 (content fixes) must complete before wave 3 (live validation)"
+    - decision: "Block final summary until all P0/P1 tasks pass review"
+      rationale:
+        - "Security findings report requires remediation evidence"
+        - "Claims validation depends on code+docs parity"
+        - "'Safe to push' verdict cannot be issued with open P0 security items"
+        - "Product positioning changes affect legal/platform-policy risk"
+    - decision: "Use grep + manual verification for credential leakage audit (no secrets in repo history check)"
+      rationale:
+        - "Git history may contain historical credentials if LOG_LEVEL=INFO was used"
+        - "grep cannot detect encrypted credentials in commit history"
+        - "Manual git log inspection required for P0 security gate"
+        - "Constraint: 'Verify no secrets in repo history' from objective"
+    - decision: "Assign weave-reviewer for all security tasks, weave-implementer for fixes"
+      rationale:
+        - "Security auditing requires zero-hallucination filter (weave-reviewer)"
+        - "Code remediation requires TDD implementation (weave-implementer)"
+        - "Credential redaction is code change, not configuration change"
+        - "OWASP scanning + PRD compliance checks handled by weave-reviewer"
+
+  conventions:
+    - "Evidence-based findings: file paths + line numbers required for all claims"
+    - "Legal conclusions forbidden: use 'platform-policy verification needed' marker"
+    - "Live site testing: public pages only, no auth simulation, no enrollment attempts"
+    - "Parallel execution: waves 1-2 have independent tasks; wave 3 depends on wave 2 completion"
+    - "Security-first: P0 tasks block all downstream work until remediated"
+    - "Claims require methodology: '1,400+ courses' must show database query or remove"
+    - "README-code parity mandatory: documentation must match implementation"
+    - "Udemy API testing prohibited: no live enrollment, no coupon validation requests"

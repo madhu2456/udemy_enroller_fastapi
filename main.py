@@ -32,6 +32,7 @@ if sys.platform == "win32":
     except ImportError:
         pass  # Fallback for older python versions if any
 
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -233,23 +234,32 @@ async def add_cache_headers(request: Request, call_next):
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    """Add security headers to all responses."""
+    """Add security headers to all responses with per-request CSP nonce."""
+    nonce = secrets.token_urlsafe(16)
+    request.state.nonce = nonce
+
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Strict-Transport-Security"] = (
-        "max-age=31536000; includeSubDomains"
-    )
-    # CSP enforced. 'unsafe-inline' required for inline <script> blocks in templates.
-    # TODO: Refactor to external scripts + nonces to remove 'unsafe-inline' for stronger XSS protection.
+
+    settings = get_settings()
+    if settings.DEPLOYMENT_ENV == "server":
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+    # CSP with per-request nonce + strict-dynamic (modern XSS protection)
+    # - 'strict-dynamic' propagates trust to scripts loaded by nonced scripts
+    # - Domain allowlists are fallbacks for CSP level 2 browsers
+    # - JSON-LD (application/ld+json) scripts are data, not governed by script-src
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://www.googletagmanager.com; "
+        f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' "
+        "https://unpkg.com https://cdnjs.cloudflare.com https://www.googletagmanager.com; "
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https:; "
-        "font-src 'self'; "
+        "font-src 'self' https://cdnjs.cloudflare.com; "
         "connect-src 'self' https://www.google-analytics.com; "
         "frame-src https://www.googletagmanager.com; "
         "base-uri 'self'; "

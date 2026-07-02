@@ -24,3 +24,6 @@ UDEMY_COURSE_SUBSCRIBE_URL = f"{UDEMY_BASE_URL}/course/subscribe/"
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
 
 shutdown_event = asyncio.Event()
+
+# Known false-positive course IDs from Udemy (not actual courses)
+BLACKLIST_IDS = {"562413829"}

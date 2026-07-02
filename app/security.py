@@ -93,8 +93,8 @@ def decrypt_cookies(encrypted: Any) -> Optional[dict]:
         f = _get_fernet()
         decrypted = f.decrypt(encrypted.encode("utf-8"))
         return json.loads(decrypted.decode("utf-8"))
-    except Exception as e:
-        logger.warning(f"Failed to decrypt cookies: {e}")
+    except Exception:
+        logger.warning("Failed to decrypt cookies — possible key rotation or tampering")
         return None
 
 

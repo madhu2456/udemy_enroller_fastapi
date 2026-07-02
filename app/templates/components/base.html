@@ -315,7 +315,7 @@
         {% block extra_head %}{% endblock %} {% if
         request.app.state.gtm_container_id %}
         <!-- Google Tag Manager -->
-        <script>
+        <script nonce="{{ request.state.nonce }}">
             (function (w, d, s, l, i) {
                 w[l] = w[l] || [];
                 w[l].push({
@@ -337,7 +337,7 @@
             );
         </script>
         <!-- End Google Tag Manager -->
-        <script>
+        <script nonce="{{ request.state.nonce }}">
             window.dataLayer = window.dataLayer || [];
             function gtag() {
                 dataLayer.push(arguments);
@@ -367,7 +367,7 @@
         </a>
         <!-- Global Announcement Bar -->
         <div
-            class="bg-[#2563EB] px-4 py-2.5 text-center shadow-md relative z-[100]"
+            class="bg-blue-700 px-4 py-2.5 text-center shadow-md relative z-[100]"
         >
             <p
                 class="text-xs sm:text-sm font-medium text-white flex flex-wrap items-center justify-center gap-2"
@@ -381,7 +381,7 @@
                 >
                 <a
                     href="/udemycoupons"
-                    class="inline-flex items-center gap-1 font-bold text-white bg-white/20 hover:bg-white/30 border border-white/30 px-3 py-1 rounded-full transition-all ml-2 whitespace-nowrap"
+                    class="inline-flex items-center gap-1 font-bold text-white bg-[#1D4ED8] hover:bg-blue-800 border border-white/30 px-3 py-1 rounded-full transition-all ml-2 whitespace-nowrap"
                 >
                     Browse Deals
                     <svg
@@ -648,7 +648,7 @@
                                 />
                             </svg>
                         </a>
-                        <p class="text-[10px] text-gray-400">
+                        <p class="text-[10px] text-gray-500">
                             Not affiliated with Udemy, Inc.
                         </p>
                     </div>
@@ -657,7 +657,7 @@
         </footer>
 
         <script src="/static/js/app.js"></script>
-        <script>
+        <script nonce="{{ request.state.nonce }}">
             // Global security sanitization helpers
             function escapeHTML(str) {
                 if (str === null || str === undefined) return "";

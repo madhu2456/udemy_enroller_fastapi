@@ -7,6 +7,8 @@
 
 ---
 
+> **⚠️ Disclaimer:** This project is **NOT affiliated, endorsed, or connected with Udemy or any of its affiliates.** "Udemy" is a registered trademark of Udemy, Inc. This is an independent, open-source tool built for educational purposes. Users are solely responsible for ensuring their use complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
+>
 > A free, open-source FastAPI application that automatically finds and enrolls you in 100% discounted Udemy courses. Built by [Madhu Dadi](https://madhudadi.in).
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
@@ -20,9 +22,17 @@
 
 ---
 
+## ⚠️ Disclaimer
+
+> **This project is NOT affiliated with, endorsed by, or connected to Udemy or its parent company.**  
+> "Udemy" is a registered trademark of Udemy, Inc. This is an independent, open-source tool created for educational purposes.  
+> Users are solely responsible for ensuring their use complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
+
+---
+
 ## What is Udemy Course Enroller?
 
-**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that automates the process of discovering and enrolling in free, 100% off discounted Udemy courses. It continuously monitors popular coupon aggregator websites - such as Real Discount, Discudemy, and Courson - and uses Udemy's official API to claim courses directly to your account.
+**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that automates the process of discovering and enrolling in free, 100% off discounted Udemy courses. It continuously monitors popular coupon aggregator websites - such as Real Discount, Discudemy, and Courson - and uses Udemy's enrollment endpoints to claim courses directly to your account.
 
 No more manually hunting for expired coupons or missing limited-time offers. The tool runs in the background, filters courses based on your preferences, and builds you a library of premium educational content - completely free.
 
@@ -35,7 +45,7 @@ Premium online education on platforms like Udemy can be expensive. However, inst
 This tool solves that by:
 - **Monitoring** multiple coupon sources 24/7
 - **Filtering** courses by category, language, rating, and instructor
-- **Enrolling** automatically via Udemy's API
+- **Enrolling** automatically via Udemy's enrollment endpoints
 - **Tracking** your lifetime savings in real-time
 
 ---
@@ -59,7 +69,7 @@ This tool solves that by:
 
 This application is built on a modern, fully asynchronous Python stack:
 
-- **Backend:** Python 3.13 + [FastAPI](https://fastapi.tiangolo.com) (async)
+- **Backend:** Python 3.11 + [FastAPI](https://fastapi.tiangolo.com) (async)
 - **Database:** SQLite + [SQLAlchemy](https://www.sqlalchemy.org) ORM + Alembic migrations
 - **Automation:** [CloudScraper](https://github.com/VeNoMouS/cloudscraper) (primary HTTP client for coupon sites and Udemy API) + [Playwright](https://playwright.dev/python/) with [playwright-stealth](https://github.com/Mattwmaster58/playwright_stealth) (fallback for Cloudflare-protected coupon aggregator sites)
 - **Frontend:** HTML5 + [Tailwind CSS](https://tailwindcss.com) + vanilla JavaScript
@@ -72,7 +82,7 @@ The frontend is intentionally lightweight to ensure sub-second load times. Serve
 ## Quick Start
 
 ### Prerequisites
-- Python 3.13+ (or Docker)
+- Python 3.11+ (or Docker)
 - A Udemy account
 
 ### Option 1: Local Setup
@@ -156,7 +166,7 @@ If you are running the application locally via Python, simply run the bash scrip
 ```
 
 ### Running on Production Server (Docker)
-If you have deployed the application using Docker (e.g., via `deploy.sh`), you must run the checker *inside* the running container:
+If you have deployed the application using Docker (e.g., via `scripts/deploy.sh`), you must run the checker *inside* the running container:
 ```bash
 docker compose exec web bash ./scripts/coupon_checker.sh
 ```
@@ -167,8 +177,8 @@ docker compose exec web bash ./scripts/coupon_checker.sh
 ## Project Impact
 
 - **Designed to reduce** manual enrollment effort by up to ~90%
-- **1,400+ courses** enrolled to date via automated enrollment
-- **₹8,44,000+** estimated cost savings (based on list prices of enrolled courses)
+- **1,400+ courses** enrolled to date via automated enrollment (aggregate across all users)
+- **₹8,44,000+** estimated cost savings (based on list prices of enrolled courses, aggregate across all users)
 - Scales to **hundreds of concurrent** coupon processing requests
 - **100% open-source** and self-hostable
 
@@ -186,8 +196,8 @@ This project implements modern search and AI discoverability standards:
 | `/ai-profile.json` | Structured JSON-LD SoftwareApplication schema |
 | `/humans.txt` | Human-readable team and tech stack info |
 | `/faq` | FAQPage schema with rich snippet optimization |
-| `/about` | AboutPage schema with developer bio |
-| `/guides` | CollectionPage schema for tutorial discovery |
+| `/about` | BreadcrumbList schema with developer bio |
+| `/guides` | BreadcrumbList schema for tutorial discovery |
 
 These features ensure the project is discoverable by Google, Bing, ChatGPT, Perplexity, and other AI search engines.
 
@@ -221,6 +231,56 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Disclaimer
+
+**⚠️ This project is NOT affiliated, endorsed, or connected with Udemy or any of its affiliates.** "Udemy" is a registered trademark of Udemy, Inc. This is an independent, open-source tool built for educational purposes. Users are solely responsible for ensuring their use complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
+
+---
+
+## Responsible Use & Risks
+
+Using this tool involves interacting with Udemy's systems through automated means. Please read and understand the following:
+
+### 📋 Platform Compliance
+- This tool interacts with Udemy's enrollment endpoints using your own session tokens — the same endpoints the Udemy website uses. It does **not** use a documented public API.
+- **You are solely responsible** for ensuring your use complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
+- Automated activity may be subject to rate limiting, CAPTCHA challenges, or account restrictions by Udemy.
+- The project maintainers cannot guarantee uninterrupted availability of any Udemy feature.
+
+### 🔒 Credential Safety
+- Your Udemy session cookies (`access_token`, `client_id`, `csrftoken`) are **encrypted** (Fernet) before storage in the local database.
+- Your Udemy password is **never stored** — not even as a hash.
+- Credentials are **never transmitted** to any third-party server.
+- All data stays on your instance (local or self-hosted).
+
+### ⏳ Rate Limiting & Respectful Use
+- The tool implements **deployment-aware rate limiting**:
+  - Server mode: 6–15 seconds between requests
+  - Local mode: 3–8 seconds between requests
+- Circuit breakers pause enrollment if too many errors (403) are detected.
+- These delays are designed to be respectful of Udemy's systems — **do not reduce them** to attempt faster enrollment.
+
+### ⚠️ Known Limitations
+- Coupon codes expire rapidly — sometimes within hours or minutes.
+- Not all 100% off coupons result in successful enrollment.
+- Udemy may change their enrollment flow at any time, which could break this tool.
+- The project's impact metrics ("1,400+ courses", "₹8,44,000+ savings") reflect aggregate data across all users and are calculated using course list prices, not actual payments.
+- No guarantee is made that any specific course or coupon will be available.
+
+### 📝 Data Stored
+The following data is stored in the local database:
+- **Encrypted** Udemy session cookies (access_token, client_id, csrftoken)
+- Your user preferences (category filters, language, rating thresholds)
+- Aggregated enrollment history and savings totals
+- Session expiration timestamps
+
+The following data is **never** stored:
+- Your Udemy password
+- Payment information
+- Browser history or personal browsing data
 
 ---
 

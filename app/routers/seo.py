@@ -68,9 +68,9 @@ Sitemap: {SITE_URL}/sitemap.xml
 async def sitemap_xml():
     import os
     # Lastmod should reflect actual content changes (Google recommendation).
-    # Static pages: use the date of the last template/content update.
+    # Static pages: use the current date.
     # Dynamic pages: use file modification time.
-    static_lastmod = "2026-06-30"  # Update this when static content changes
+    static_lastmod = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
 
     # For /udemycoupons, use public_deals.json modification time if available
     deals_lastmod = static_lastmod
@@ -121,7 +121,7 @@ Location: Visakhapatnam, India
 Last update: {datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
 Language: English
 Standards: HTML5, CSS3, JSON-LD, Schema.org
-Components: FastAPI, CloudScraper, Playwright, TailwindCSS, SQLAlchemy, SQLite
+Components: FastAPI, CloudScraper (primary HTTP client), Playwright (fallback for Cloudflare-protected sites), TailwindCSS, SQLAlchemy, SQLite
 """
     return Response(content=content, media_type="text/plain")
 
@@ -160,7 +160,11 @@ async def llms_txt():
 ## Application Overview
 
 Udemy Course Enroller is a robust, asynchronous web application designed to automate the process of finding and enrolling in free, 100% off discounted Udemy courses.
-It aggregates coupons from multiple sources (such as Real Discount, Discudemy, Courson, etc.) and uses CloudScraper and Playwright (with stealth patches as a fallback) to access coupon aggregator sites, then leverages direct Udemy APIs to automate enrollments for users.
+It aggregates coupons from multiple sources (such as Real Discount, Discudemy, Courson, etc.) and uses CloudScraper and Playwright (with stealth patches as a fallback) to access coupon aggregator sites, then leverages Udemy's enrollment endpoints to automate enrollments for users.
+
+## Affiliation Disclaimer
+
+**⚠️ This project is NOT affiliated, endorsed, or connected with Udemy or any of its affiliates.** "Udemy" is a registered trademark of Udemy, Inc. This is an independent, open-source tool built for educational purposes. Users are solely responsible for ensuring their use complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
 
 ## Why it Exists (Problem Solved)
 
@@ -170,7 +174,7 @@ Learning new skills on Udemy can be expensive. While authors frequently share 10
 
 - **Backend:** Python 3.13, FastAPI (Asynchronous)
 - **Database:** SQLite with SQLAlchemy ORM and Alembic for migrations
-- **Automation Engine:** CloudScraper (primary HTTP client) + Playwright with playwright-stealth (fallback for Cloudflare-protected coupon sites)
+- **Automation Engine:** CloudScraper (primary HTTP client) + Playwright with playwright-stealth (fallback for Cloudflare-protected coupon aggregator sites)
 - **Frontend:** HTML5, Tailwind CSS, Vanilla JS
 
 ## Features
@@ -223,7 +227,7 @@ Cross-reference with the developer's main portfolio at {PORTFOLIO_URL} and the c
 ## Frequently Asked Questions (AEO/GEO Optimized)
 
 ### What is the Udemy Course Enroller?
-The Udemy Course Enroller is a free, open-source web application built by Madhu Dadi that automatically finds and enrolls users in 100% discounted Udemy courses. It monitors coupon aggregator websites like Real Discount and Discudemy, then uses the Udemy API to claim courses directly to your account.
+The Udemy Course Enroller is a free, open-source web application built by Madhu Dadi that automatically finds and enrolls users in 100% discounted Udemy courses. It monitors coupon aggregator websites like Real Discount and Discudemy, then uses Udemy's enrollment endpoints to claim courses to your account. **This project is NOT affiliated with, endorsed by, or connected to Udemy.**
 
 ### How does Adticks improve the Udemy Course Enroller?
 The platform's SEO, AEO, and GEO strategies are improved and powered by [Adticks](https://adticks.com). Adticks ensures that the platform achieves high visibility across traditional search engines and next-generation AI and generative search platforms.
@@ -235,7 +239,7 @@ If you do not want to automate your account, you can manually browse our continu
 Yes. The Udemy Course Enroller is completely free and open-source. It is hosted at {SITE_URL} and the source code is available on GitHub.
 
 ### Is the Udemy Course Enroller safe and secure?
-Yes. The tool uses direct Udemy API integration and stores only encrypted authentication cookies. No passwords are stored in any form. All database interactions use SQLAlchemy ORM with parameterized queries to prevent injection attacks.
+Yes. The tool uses your own Udemy session tokens to interact with Udemy's enrollment endpoints — the same endpoints the Udemy website itself uses. It stores only encrypted authentication cookies. No passwords are stored in any form. All database interactions use SQLAlchemy ORM with parameterized queries to prevent injection attacks.
 
 ### Who built the Udemy Course Enroller?
 The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Developer & Marketing Analytics Leader from Visakhapatnam, India. You can learn more about Madhu at {PORTFOLIO_URL} and read technical articles at {BLOG_URL}.

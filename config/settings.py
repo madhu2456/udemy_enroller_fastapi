@@ -34,9 +34,6 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./udemy_enroller.db"
     AUTO_CREATE_TABLES: bool = False  # Use Alembic migrations by default
 
-    # Redis (optional, for task queue)
-    REDIS_URL: str = "redis://localhost:6379/0"
-
     # Udemy
     UDEMY_EMAIL: str = ""
     UDEMY_PASSWORD: str = ""

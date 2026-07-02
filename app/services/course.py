@@ -136,7 +136,7 @@ class Course:
             self.coupon_code = coupon
 
     def set_metadata(self, dma):
-        from app.services.udemy_client import BLACKLIST_IDS
+        from app.core.constants import BLACKLIST_IDS
 
         try:
             if dma.get("view_restriction"):

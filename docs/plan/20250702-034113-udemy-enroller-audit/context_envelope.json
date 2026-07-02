@@ -1,0 +1,610 @@
+{
+  "meta": {
+    "plan_id": "20250702-034113-udemy-enroller-audit",
+    "created_at": "2026-07-02T03:49:14Z",
+    "last_updated": "2026-07-02T03:56:09Z",
+    "version": 1,
+    "previous_version_fields_changed": [],
+    "source": [
+      "user_objective",
+      "research_findings",
+      "codebase_analysis",
+      "README.md",
+      "app/services/udemy_client.py",
+      "app/logging_config.py",
+      "app/security.py",
+      "app/routers/seo.py",
+      ".env.example"
+    ]
+  },
+  "scope": {
+    "purpose": [
+      "Comprehensive audit execution plan covering SEO, security, accessibility, product positioning, and technical correctness",
+      "Evidence-based findings with file paths and line numbers",
+      "Safe-to-push verdict with remediation blockers",
+      "Reusable implementation context for future agents"
+    ],
+    "applies_to": [
+      "Udemy Enroller project (FastAPI automation tool)",
+      "Live site: https://udemyenroller.madhudadi.in",
+      "Repository: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller",
+      "GitHub: https://github.com/madhu2456/udemy_enroller_fastapi"
+    ],
+    "non_goals": [
+      "Udemy API testing or live enrollment attempts",
+      "Legal conclusions about ToS compliance (mark as 'platform-policy verification needed')",
+      "Authenticated live site testing",
+      "Performance optimization beyond Core Web Vitals measurement",
+      "Database schema changes or migrations",
+      "New feature development"
+    ]
+  },
+  "project_summary": {
+    "business_domain": "Educational automation (free Udemy course enrollment via 100% discount coupons)",
+    "primary_users": [
+      "Self-hosted users seeking automated course enrollment",
+      "Developers evaluating portfolio project",
+      "AI search engines indexing educational tools"
+    ],
+    "key_features": [
+      "Automated coupon monitoring from aggregator sites (Real.Discount, Discudemy, Courson)",
+      "Cookie-based Udemy authentication (no password storage)",
+      "Bulk enrollment with deployment-aware rate limiting",
+      "Real-time dashboard with Server-Sent Events (SSE)",
+      "Docker deployment support with SECRET_KEY validation",
+      "SEO/AEO optimization (sitemap, robots.txt, llms.txt, ai-profile.json)"
+    ],
+    "current_phase": "Production (live demo hosted at https://udemyenroller.madhudadi.in)"
+  },
+  "tech_stack": [
+    {
+      "name": "Python",
+      "version": "3.13",
+      "usage_context": "Backend runtime",
+      "config_files": [
+        "requirements.txt",
+        "run.py",
+        "main.py"
+      ]
+    },
+    {
+      "name": "FastAPI",
+      "version": "unspecified",
+      "usage_context": "Async web framework",
+      "config_files": [
+        "main.py",
+        "app/routers/*.py"
+      ]
+    },
+    {
+      "name": "SQLite",
+      "version": "unspecified",
+      "usage_context": "Database with SQLAlchemy ORM + Alembic migrations",
+      "config_files": [
+        "alembic.ini",
+        "alembic/",
+        "app/models/database.py"
+      ]
+    },
+    {
+      "name": "CloudScraper",
+      "version": "unspecified",
+      "usage_context": "Primary HTTP client for Udemy undocumented API + coupon sites",
+      "config_files": [
+        "app/services/udemy_client.py",
+        "app/services/http_client.py"
+      ]
+    },
+    {
+      "name": "Playwright",
+      "version": "unspecified",
+      "usage_context": "Fallback for Cloudflare-protected coupon aggregators (with playwright-stealth)",
+      "config_files": [
+        "app/services/scraper.py"
+      ]
+    },
+    {
+      "name": "Tailwind CSS",
+      "version": "unspecified",
+      "usage_context": "Frontend styling",
+      "config_files": [
+        "tailwind.config.js",
+        "tailwind.home.config.js"
+      ]
+    },
+    {
+      "name": "Loguru",
+      "version": "unspecified",
+      "usage_context": "Logging framework with file rotation",
+      "config_files": [
+        "app/logging_config.py"
+      ]
+    },
+    {
+      "name": "Cryptography (Fernet)",
+      "version": "unspecified",
+      "usage_context": "Cookie encryption for secure storage",
+      "config_files": [
+        "app/security.py"
+      ]
+    }
+  ],
+  "conventions": [
+    "Evidence-based findings: cite file paths + line numbers",
+    "No legal conclusions: use 'platform-policy verification needed' marker",
+    "Live site testing: public pages only, no auth",
+    "Security-first: P0 tasks block all downstream work",
+    "Async-first: FastAPI + async/await throughout codebase",
+    "Cookie-based auth: no password storage (encrypt_cookies in app/security.py:67-72)",
+    "Deployment-aware: DEPLOYMENT_ENV=server enforces strict rate limits",
+    "LOG_LEVEL defaults to WARNING to prevent credential leakage"
+  ],
+  "constraints": {
+    "hard": [
+      "No Udemy API testing or live enrollment attempts during audit",
+      "No secrets in repo history verification required (git log manual inspection)",
+      "Security fixes (credential redaction) must complete before documentation updates",
+      "All P0/P1 tasks must pass weave-reviewer before final summary",
+      "README changes must complete before live site metadata validation",
+      "No modification of Udemy API endpoints or request structures",
+      "Docker deployment requires SECRET_KEY validation (config/settings.py:77-78)"
+    ],
+    "soft": [
+      "Parallel execution preferred where dependencies allow",
+      "Claims validation should provide methodology, not just verify numbers",
+      "Accessibility audit (P2) can run in parallel with SEO validation"
+    ],
+    "compatibility": [
+      "Python 3.13+ required",
+      "Docker + docker-compose for production deployment",
+      "Alembic migrations required (AUTO_CREATE_TABLES=false default)"
+    ],
+    "security_requirements": [
+      "Credential redaction in logs mandatory (access_token, client_id, csrftoken, Authorization header)",
+      "Cookie encryption via Fernet (already implemented, app/security.py:67-98)",
+      "Security headers (CSP, HSTS, X-Frame-Options) present (validated)",
+      "LOG_LEVEL must default to WARNING or higher in production",
+      "No plaintext credentials in logs, database, or version control"
+    ]
+  },
+  "architecture_snapshot": {
+    "key_dirs": {
+      "app/": [
+        "Core application code (services, models, routes, templates)"
+      ],
+      "app/services/": [
+        "Business logic: udemy_client.py (credential leakage + undocumented API), http_client.py, scraper.py, enrollment_manager.py"
+      ],
+      "app/routers/": [
+        "FastAPI routes: seo.py (SEO endpoints), auth.py (cookie login), enrollment.py, dashboard.py, settings.py, public_deals.py"
+      ],
+      "app/templates/": [
+        "Jinja2 templates: pages/ (about, faq, guides, dashboard, login, privacy), components/base.html"
+      ],
+      "logs/": [
+        "Application logs (credential leakage sink if LOG_LEVEL=INFO/DEBUG): app.log (13MB+ total)"
+      ],
+      "docs/": [
+        "Plan artifacts and audit reports"
+      ],
+      "scripts/": [
+        "Utility scripts: coupon_checker.sh (validates expired coupons via Udemy pricing API)"
+      ],
+      "alembic/": [
+        "Database migrations"
+      ],
+      "config/": [
+        "settings.py (Pydantic settings with SECRET_KEY validation)"
+      ]
+    },
+    "patterns": [
+      "Async-first: FastAPI + async/await throughout (udemy_client.py, enrollment_manager.py)",
+      "Cookie-based auth: no password storage, Fernet encryption before DB write (app/security.py:67-72)",
+      "Circuit breakers: 2-6 consecutive 403s trigger cooldown (deployment-aware delays)",
+      "Deployment-aware rate limiting: DEPLOYMENT_ENV=server (6-15s delays) vs local (3-8s delays)",
+      "Server-Sent Events (SSE): real-time dashboard updates (app/routers/dashboard.py)",
+      "Credential logging antipattern: logger.info with sensitive fields (udemy_client.py:880-885, 1078)",
+      "Undocumented API usage: /payment/checkout-submit/ (line 900-922), /course-landing-components/ (grep results)",
+      "Cloudflare bypass: Playwright-stealth for coupon aggregator access (app/services/scraper.py)"
+    ],
+    "key_components": [
+      {
+        "name": "udemy_client.py",
+        "location": "app/services/udemy_client.py",
+        "responsibility": [
+          "Udemy API interaction via CloudScraper",
+          "Course enrollment via undocumented endpoints (/payment/checkout-submit/)",
+          "Credential logging (lines 880-885: DU_CHECKOUT STATE, line 1078: FREE_CHECKOUT)",
+          "Cookie-based authentication (cookie_login method line 331-348)",
+          "Rate limiting and circuit breakers"
+        ],
+        "confidence": 1.0
+      },
+      {
+        "name": "logging_config.py",
+        "location": "app/logging_config.py",
+        "responsibility": [
+          "Loguru configuration with file rotation (10MB, 7 days retention)",
+          "LOG_LEVEL enforcement from settings (default WARNING)",
+          "No credential redaction implemented (lines 1-78)"
+        ],
+        "confidence": 1.0
+      },
+      {
+        "name": "security.py",
+        "location": "app/security.py",
+        "responsibility": [
+          "Fernet cookie encryption/decryption (lines 67-98)",
+          "SECRET_KEY fallback for key derivation (lines 35-64)",
+          "Backward compatibility for plaintext legacy cookies (lines 82-91)",
+          "No log redaction utilities present"
+        ],
+        "confidence": 1.0
+      },
+      {
+        "name": "seo.py",
+        "location": "app/routers/seo.py",
+        "responsibility": [
+          "SEO endpoints: /robots.txt (23-64), /sitemap.xml (67-106), /llms.txt (129-357), /humans.txt (109-126)",
+          "Structured data generation (dynamic lastmod from public_deals.json)",
+          "AI crawler permissions (allows OAI-SearchBot, blocks GPTBot)",
+          "Claims propagation: '1,400+ courses' and '₹8,44,000+' in llms.txt (lines 135-136)"
+        ],
+        "confidence": 1.0
+      },
+      {
+        "name": "README.md",
+        "location": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/README.md",
+        "responsibility": [
+          "Product positioning and setup documentation",
+          "Misleading 'official API' claim (line 25)",
+          "Claims: '1,400+ courses' (line 170), '₹8,44,000+ savings' (line 171)",
+          "No Udemy affiliation disclaimer",
+          "No ToS compliance statement"
+        ],
+        "confidence": 1.0
+      },
+      {
+        "name": "faq.html",
+        "location": "app/templates/pages/faq.html",
+        "responsibility": [
+          "FAQPage structured data (JSON-LD schema lines 32-683)",
+          "Claims 'official API' (line 82) — inconsistent with implementation",
+          "Security claims: 'encrypted cookies', 'no password storage' (lines 82, 90)"
+        ],
+        "confidence": 1.0
+      }
+    ]
+  },
+  "quality_metrics": {
+    "test_coverage_overall": 0.0,
+    "test_coverage_by_component": [],
+    "known_test_gaps": [
+      "No test suite detected in initial scan",
+      "pytest.ini present but no tests/ directory evidence",
+      "No unit tests for credential redaction",
+      "No integration tests for Udemy API interaction"
+    ],
+    "cyclomatic_complexity_avg": 0,
+    "code_duplication_percent": 0
+  },
+  "operations": {
+    "environments": [
+      {
+        "name": "production",
+        "url": "https://udemyenroller.madhudadi.in",
+        "deployment_frequency": "manual",
+        "rollback_procedure": "unspecified",
+        "health_check_endpoint": "/"
+      },
+      {
+        "name": "local",
+        "url": "http://localhost:8000",
+        "deployment_frequency": "on-demand",
+        "rollback_procedure": "git reset",
+        "health_check_endpoint": "/"
+      }
+    ],
+    "ci_cd": {
+      "pipeline_path": ".github/ (likely)",
+      "approval_required": [],
+      "automated_tests": []
+    },
+    "monitoring": {
+      "tools": [
+        "application logs (logs/app.log)",
+        "loguru file rotation (10MB, 7 days retention)"
+      ],
+      "key_metrics": [
+        "enrollment success rate",
+        "API limit violations (403 responses)",
+        "coupon validation failures"
+      ],
+      "alert_channels": []
+    }
+  },
+  "data_model": {
+    "core_entities": [
+      {
+        "name": "Course",
+        "fields": [
+          {
+            "name": "course_id",
+            "type": "string",
+            "constraints": ["unique"]
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "constraints": []
+          },
+          {
+            "name": "slug",
+            "type": "string",
+            "constraints": []
+          },
+          {
+            "name": "coupon_code",
+            "type": "string",
+            "constraints": ["nullable"]
+          },
+          {
+            "name": "price",
+            "type": "float",
+            "constraints": []
+          },
+          {
+            "name": "list_price",
+            "type": "float",
+            "constraints": []
+          },
+          {
+            "name": "is_free",
+            "type": "boolean",
+            "constraints": []
+          },
+          {
+            "name": "is_coupon_valid",
+            "type": "boolean",
+            "constraints": []
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "constraints": []
+          },
+          {
+            "name": "status",
+            "type": "boolean",
+            "constraints": []
+          },
+          {
+            "name": "last_update",
+            "type": "string",
+            "constraints": ["date string"]
+          }
+        ],
+        "relationships": [
+          "enrolled by User (via Udemy cookies)",
+          "scraped from coupon aggregator sites"
+        ]
+      }
+    ],
+    "api_contracts": [
+      {
+        "endpoint": "/payment/checkout-submit/",
+        "method": "POST",
+        "auth": "Bearer access_token + X-CSRF-Token",
+        "request_schema": "undocumented (Udemy internal): checkout_environment, checkout_event, payment_info, shopping_info",
+        "response_schema": "undocumented (Udemy internal)",
+        "error_codes": [403, 429]
+      },
+      {
+        "endpoint": "/course-landing-components/",
+        "method": "GET",
+        "auth": "Bearer access_token",
+        "request_schema": "undocumented (Udemy internal)",
+        "response_schema": "undocumented (Udemy internal)",
+        "error_codes": [403, 404]
+      }
+    ]
+  },
+  "performance": {
+    "slas": {
+      "api_response_p95_ms": 0,
+      "api_throughput_rps": 0
+    },
+    "bottlenecks_known": [
+      "Udemy API rate limits (2-6 consecutive 403s trigger cooldown)",
+      "Cloudflare protection on coupon aggregator sites (requires Playwright-stealth fallback)",
+      "Sequential enrollment processing (bulk enrollment batches API requests)"
+    ],
+    "resource_usage": {
+      "memory_per_request_mb": 0,
+      "cpu_per_request_cores": 0
+    },
+    "scaling": "horizontal",
+    "caching_strategy": "session persistence (encrypted cookie storage in SQLite)"
+  },
+  "domain": {
+    "primary_users": [
+      {
+        "persona": "Self-hoster",
+        "goals": [
+          "Automate free course enrollment without manual coupon hunting",
+          "Filter courses by category, language, rating, instructor",
+          "Track lifetime savings in real-time"
+        ]
+      },
+      {
+        "persona": "Portfolio reviewer (developer/hiring manager)",
+        "goals": [
+          "Evaluate FastAPI/Python automation skills",
+          "Assess async architecture and rate-limiting strategies",
+          "Review security practices (cookie encryption, credential handling)"
+        ]
+      },
+      {
+        "persona": "AI search engine (ChatGPT, Perplexity, Claude)",
+        "goals": [
+          "Index educational automation tool via llms.txt and ai-profile.json",
+          "Surface tool in response to 'free Udemy courses' queries",
+          "Cite case study and live demo in search results"
+        ]
+      }
+    ],
+    "business_concepts": [
+      {
+        "term": "100% discount coupon",
+        "definition": "Limited-time Udemy coupon codes shared by instructors for free course access (expires in hours/minutes)",
+        "owner": "Udemy instructors"
+      },
+      {
+        "term": "Coupon aggregator",
+        "definition": "Third-party sites (Real.Discount, Discudemy, Courson) that collect and publish Udemy coupon codes",
+        "owner": "external aggregators (not Udemy)"
+      },
+      {
+        "term": "Undocumented API",
+        "definition": "Udemy internal endpoints (/payment/checkout-submit/, /course-landing-components/) not in official API docs. Usage violates ToS.",
+        "owner": "Udemy (internal)"
+      },
+      {
+        "term": "Cookie-based auth",
+        "definition": "Authentication using Udemy session cookies (access_token, client_id, csrftoken) extracted from browser. No password storage.",
+        "owner": "application pattern"
+      }
+    ],
+    "compliance": [
+      "Udemy Terms of Service (undocumented API usage = ToS violation — platform-policy verification needed)",
+      "GDPR (if user data collected for hosted demo — privacy policy required)",
+      "WCAG 2.2 (accessibility compliance for public pages — audit required)"
+    ],
+    "priority_weights": {
+      "security": "P0 (credential leakage blocks all downstream work)",
+      "product_positioning": "P1 (misleading claims, ToS disclosure)",
+      "seo": "P1 (live site metadata validation)",
+      "accessibility": "P2 (WCAG compliance)",
+      "performance": "P3 (Core Web Vitals measurement)"
+    }
+  },
+  "system_assertions": [
+    {
+      "description": "Credential leakage exists in udemy_client.py at INFO log level",
+      "predicate": "grep -n 'logger.info.*coupon=\\|logger.info.*access_token\\|logger.info.*client_id\\|logger.info.*csrftoken' app/services/udemy_client.py",
+      "expected_value": "lines 880-885 (DU_CHECKOUT STATE), 1078 (FREE_CHECKOUT), 1091 (CHECKOUT_SINGLE) contain sensitive logging",
+      "last_checked": "2026-07-02T03:49:14Z"
+    },
+    {
+      "description": "README claims 'official API' usage",
+      "predicate": "grep -n 'official API' README.md",
+      "expected_value": "line 25",
+      "last_checked": "2026-07-02T03:49:14Z"
+    },
+    {
+      "description": "Default LOG_LEVEL prevents credential leakage",
+      "predicate": "grep -n 'LOG_LEVEL' .env.example",
+      "expected_value": "line 30: LOG_LEVEL=WARNING",
+      "last_checked": "2026-07-02T03:49:14Z"
+    }
+  ],
+  "research_digest": {
+    "relevant_files": [
+      "app/services/udemy_client.py",
+      "app/logging_config.py",
+      "app/security.py",
+      "app/routers/seo.py",
+      "app/templates/pages/faq.html",
+      "app/templates/pages/about.html",
+      "README.md",
+      ".env.example",
+      "config/settings.py"
+    ],
+    "patterns_found": [
+      {
+        "name": "credential_logging_antipattern",
+        "description": "Sensitive credentials (access_token, client_id, csrftoken) logged at INFO level without redaction in app/services/udemy_client.py:880-885, 1078. Credentials written to logs/app.log when LOG_LEVEL=INFO/DEBUG.",
+        "confidence": 1.0
+      },
+      {
+        "name": "undocumented_api_usage",
+        "description": "Uses Udemy undocumented endpoints (/payment/checkout-submit/, /course-landing-components/) despite README:25 claim of 'official API'. Violates Udemy ToS and risks user account bans.",
+        "confidence": 1.0
+      },
+      {
+        "name": "deployment_aware_rate_limiting",
+        "description": "Circuit breakers and rate limiting adapt to DEPLOYMENT_ENV (6-15s server vs 3-8s local). 2-6 consecutive 403s trigger cooldowns.",
+        "confidence": 0.95
+      },
+      {
+        "name": "fernet_cookie_encryption",
+        "description": "Cookie encryption correctly implemented via Fernet (app/security.py:67-98) with SECRET_KEY fallback. Credentials encrypted before database storage.",
+        "confidence": 1.0
+      },
+      {
+        "name": "cloudflare_bypass_stealth",
+        "description": "Playwright-stealth used for Cloudflare-protected coupon aggregator bypass (legitimate use case: Real.Discount, Discudemy). No ethical-use disclaimer in README.",
+        "confidence": 0.95
+      }
+    ],
+    "gotchas": [
+      "README line 25 claims 'uses Udemy's official API' but app/services/udemy_client.py uses /payment/checkout-submit/ (undocumented) — misleading and violates platform ToS",
+      "Cookie encryption (Fernet) implemented correctly but credentials leak via logging BEFORE encryption step (udemy_client.py:880-885)",
+      "Playwright-stealth used for coupon aggregator access (legitimate) but no responsible-use guidance or ToS compliance warning",
+      "Claims '1,400+ courses' (README:170, llms.txt:135) and '₹8,44,000+ savings' (README:171, llms.txt:136) without methodology disclosure",
+      "FAQ line 82 claims 'official API' but implementation uses undocumented endpoints",
+      "Security headers (CSP, HSTS, X-Frame-Options) correctly implemented (validated in research findings)",
+      "SEO assets (sitemap.xml, robots.txt, llms.txt, ai-profile.json) present but need live endpoint validation",
+      "LOG_LEVEL defaults to WARNING (.env.example:30) which prevents credential leakage in production, but INFO/DEBUG triggers vulnerability",
+      "No Udemy affiliation disclaimer anywhere in README, FAQ, or About page",
+      "humans.txt line 124 describes CloudScraper as 'primary HTTP client' and Playwright as 'fallback' — confirms architecture but needs ethical context"
+    ]
+  },
+  "prior_decisions": [
+    {
+      "decision": "Prioritize credential leakage fix (P0) before all content/SEO audits",
+      "rationale": [
+        "Active security vulnerability with user data at risk",
+        "Prevents propagation of vulnerable logging patterns to future code",
+        "Satisfies security-first mandate from safety_guardrails",
+        "Blocking dependency for product positioning tasks (can't claim security without fixing leakage)"
+      ]
+    },
+    {
+      "decision": "Separate product positioning (README) from live site validation (metadata audit)",
+      "rationale": [
+        "README changes must complete before re-testing live site metadata",
+        "Live site may cache outdated metadata — requires deployment validation",
+        "Content accuracy depends on codebase-documentation parity",
+        "Wave 2 (content fixes) must complete before wave 3 (live validation)"
+      ]
+    },
+    {
+      "decision": "Block final summary until all P0/P1 tasks pass review",
+      "rationale": [
+        "Security findings report requires remediation evidence",
+        "Claims validation depends on code+docs parity",
+        "'Safe to push' verdict cannot be issued with open P0 security items",
+        "Product positioning changes affect legal/platform-policy risk"
+      ]
+    },
+    {
+      "decision": "Use grep + manual verification for credential leakage audit (no secrets in repo history check)",
+      "rationale": [
+        "Git history may contain historical credentials if LOG_LEVEL=INFO was used",
+        "grep cannot detect encrypted credentials in commit history",
+        "Manual git log inspection required for P0 security gate",
+        "Constraint: 'Verify no secrets in repo history' from objective"
+      ]
+    },
+    {
+      "decision": "Assign weave-reviewer for all security tasks, weave-implementer for fixes",
+      "rationale": [
+        "Security auditing requires zero-hallucination filter (weave-reviewer)",
+        "Code remediation requires TDD implementation (weave-implementer)",
+        "Credential redaction is code change, not configuration change",
+        "OWASP scanning + PRD compliance checks handled by weave-reviewer"
+      ]
+    }
+  ]
+}

@@ -36,6 +36,14 @@ filters, and authentication.{% endblock %} {% block content %}
         "mainEntity": [
             {
                 "@type": "Question",
+                "name": "Is this project affiliated with or endorsed by Udemy?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "No. This project is NOT affiliated with, endorsed by, or connected to Udemy or its parent company. 'Udemy' is a registered trademark of Udemy, Inc. This is an independent, open-source tool created for educational purposes. Users are solely responsible for ensuring their use complies with Udemy's Terms of Use."
+                }
+            },
+            {
+                "@type": "Question",
                 "name": "How does the automated Udemy course enroller work?",
                 "acceptedAnswer": {
                     "@type": "Answer",
@@ -79,7 +87,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "Is it safe to connect my Udemy account?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. The tool talks directly to Udemy's official API. Your credentials are used to obtain a session token - the same way the Udemy website itself works. Session cookies are encrypted before being stored in the local database. Your password is never stored in any form. No credentials are transmitted to any third-party server. Because the project is fully open source, you can audit every line of code on GitHub."
+                    "text": "Yes. The tool interacts directly with Udemy's enrollment endpoints using your session token - the same way the Udemy website itself works. Session cookies are encrypted before being stored in the local database. Your password is never stored in any form. No credentials are transmitted to any third-party server. Because the project is fully open source, you can audit every line of code on GitHub."
                 }
             },
             {
@@ -103,7 +111,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "What is the difference between Email Login and Cookie Login?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Email Login uses your Udemy email and password to authenticate via the Udemy API. It is the simplest option but may trigger a CAPTCHA challenge on server or cloud environments. Cookie Login uses pre-authenticated session tokens extracted from your browser - specifically access_token, client_id, and csrftoken - which typically avoids triggering additional verification challenges and is the recommended method for reliability."
+                    "text": "                                    Email Login uses your Udemy email and password to authenticate via Udemy's enrollment endpoints. It is the simplest option but may trigger a CAPTCHA challenge on server or cloud environments. Cookie Login uses pre-authenticated session tokens extracted from your browser - specifically access_token, client_id, and csrftoken - which typically avoids triggering additional verification challenges and is the recommended method for reliability."
                 }
             },
             {
@@ -235,7 +243,7 @@ filters, and authentication.{% endblock %} {% block content %}
                                     and others. The moment a new 100% off Udemy
                                     coupon is detected, the engine validates it
                                     against your smart filters and applies it to
-                                    your Udemy account via the Udemy API,
+                                    your Udemy account via Udemy's enrollment endpoints,
                                     enrolling you instantly without any manual
                                     action.
                                 </p>
@@ -333,6 +341,57 @@ filters, and authentication.{% endblock %} {% block content %}
                     </div>
                 </div>
 
+                <!-- Legal & Affiliation -->
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <div
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#EFF6FF] border border-blue-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                            </svg>
+                        </div>
+                        <h2 class="text-base font-semibold text-gray-900">
+                            Legal & Affiliation
+                        </h2>
+                    </div>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200"
+                    >
+                        <div
+                            class="px-6 py-5"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                            >
+                                Is this project affiliated with or endorsed by Udemy?
+                            </h3>
+                            <div>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed mb-3"
+                                >
+                                    <strong>No.</strong> This project is <strong>NOT affiliated with, endorsed by, or connected to Udemy or its parent company.</strong> "Udemy" is a registered trademark of Udemy, Inc. This is an independent, open-source tool created for educational purposes.
+                                </p>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                >
+                                    Users are solely responsible for ensuring their use complies with <a href="https://www.udemy.com/terms/" target="_blank" rel="noopener noreferrer" class="text-[#2563EB] hover:underline">Udemy's Terms of Use</a>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Security & Privacy -->
                 <div>
                     <div class="flex items-center gap-2 mb-4">
@@ -372,8 +431,8 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Yes. The tool talks directly to Udemy's
-                                    official API. Your credentials are used to
+                                    Yes. The tool interacts directly with Udemy's
+                                    enrollment endpoints using your session token
                                     obtain a session token - the same way the
                                     Udemy website itself works. Session cookies
                                     are encrypted before being stored in the
