@@ -17,6 +17,7 @@ from app.security import (
     generate_csrf_token,
     login_rate_limiter,
 )
+from app.logging_config import sanitize_log_message
 from app.services.udemy_client import LoginException, UdemyClient
 from config.settings import get_settings
 
@@ -105,16 +106,16 @@ async def login_with_credentials(
             db.refresh(user)
             db.add(UserSettings(user_id=user.id))
             db.commit()
-            logger.info(f"New user registered: {login_req.email}")
+            logger.info(f"New user registered (ID: {user.id})")
         else:
             user.udemy_display_name = client.display_name
             user.udemy_cookies = encrypt_cookies(client.cookie_dict)
             user.currency = client.currency
             db.commit()
-            logger.info(f"User updated: {login_req.email}")
+            logger.info(f"User updated (ID: {user.id})")
 
         token = _create_session(user, client, request, db)
-        logger.info(f"Login successful: {login_req.email}")
+        logger.info(f"Login successful (ID: {user.id})")
         return _login_response(client, token)
 
     except LoginException as e:
@@ -173,7 +174,7 @@ async def login_with_cookies(
             db.add(UserSettings(user_id=user.id))
             db.commit()
             logger.info(
-                f"New user via cookie: {client.display_name} (ID: {client.udemy_user_id})"
+                f"New user via cookie (ID: {user.id})"
             )
         else:
             user.udemy_cookies = encrypt_cookies(client.cookie_dict)
@@ -181,11 +182,11 @@ async def login_with_cookies(
             user.udemy_display_name = client.display_name  # Keep display name in sync
             db.commit()
             logger.info(
-                f"User cookies updated: {client.display_name} (ID: {client.udemy_user_id})"
+                f"User cookies updated (ID: {user.id})"
             )
 
         token = _create_session(user, client, request, db)
-        logger.info(f"Cookie login successful: {client.display_name}")
+        logger.info(f"Cookie login successful (ID: {user.id}, currency: {client.currency})")
         return _login_response(client, token)
 
     except LoginException as e:

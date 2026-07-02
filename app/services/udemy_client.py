@@ -13,9 +13,9 @@ from loguru import logger
 from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient
 from app.core import constants
+from app.logging_config import sanitize_log_message
 
-# Known false-positive IDs from Udemy
-BLACKLIST_IDS = {"562413829"}
+from app.core.constants import BLACKLIST_IDS
 
 
 class LoginException(Exception):
@@ -680,17 +680,17 @@ class UdemyClient:
         currency = pricing_result.get("price", {}).get("currency") or pricing_result.get("price", {}).get("currency_symbol") or ""
         course.currency = currency
 
-        logger.info(
+        log_msg = (
             f"[CHECK_COURSE PRICE] {course.title} | list_price={lp} | final_price={final_price} | "
             f"is_free={is_free_result} | currency={currency} | coupon={course.coupon_code or 'NONE'}"
         )
+        logger.info(sanitize_log_message(log_msg))
 
         redeem_data = r.get("redeem_coupon") or r.get("cacheable_redeem_coupon")
         if course.coupon_code and redeem_data:
             attempts = redeem_data.get("discount_attempts", [])
-            logger.info(
-                f"[CHECK_COURSE COUPON] {course.title} | attempts={attempts}"
-            )
+            log_msg = f"[CHECK_COURSE COUPON] {course.title} | attempts={attempts}"
+            logger.info(sanitize_log_message(log_msg))
             if attempts:
                 attempt_status = attempts[0].get("status", "failed")
                 # Prefer discount_percent == 100 (matches old working code)
@@ -876,13 +876,14 @@ class UdemyClient:
             course.status = False
             return
 
-        # Log course state at checkout time
-        logger.info(
+        # Log course state at checkout time (sanitize coupon_code)
+        log_msg = (
             f"[DU_CHECKOUT STATE] {course.title} | ID={course.course_id} | "
             f"coupon={course.coupon_code or 'NONE'} | price={course.price} | "
             f"list_price={course.list_price} | is_free={course.is_free} | "
             f"is_coupon_valid={course.is_coupon_valid}"
         )
+        logger.info(sanitize_log_message(log_msg))
 
         # Step 1: Preflight GET to checkout page to warm up the session
         checkout_page_url = "https://www.udemy.com/payment/checkout/"
@@ -958,7 +959,8 @@ class UdemyClient:
             # Always send amount=0 — check_course already validated the coupon.
             # Udemy validates the discount server-side; the amount must be the final price.
             payload = _build_payload(0.0)
-            logger.info(f"[DU_CHECKOUT PAYLOAD] {payload}")
+            # Log only metadata (not the full payload which contains coupon_code in discountInfo)
+            logger.info(f"[DU_CHECKOUT PAYLOAD] course_id={course.course_id} | currency={checkout_currency} | amount=0.0")
 
             r = await self._cs_post(
                 "https://www.udemy.com/payment/checkout-submit/",
@@ -1074,8 +1076,8 @@ class UdemyClient:
             course.status = False
             return
 
-        # Log the full verify response so we can diagnose why _class is missing
-        logger.info(f"[FREE_CHECKOUT] Verify JSON for {course.title}: {data}")
+        # Log only metadata (not the full JSON response which may contain sensitive data)
+        logger.info(f"[FREE_CHECKOUT] Verify response for {course.title}: status={r2.status_code} | _class={data.get('_class')} | has_error={bool(data.get('error'))}")
 
         course.status = data.get("_class") == "course"
         if course.status:
@@ -1088,7 +1090,7 @@ class UdemyClient:
 
     async def checkout_single(self, course: Course) -> bool:
         """DUCE-style single course enrollment."""
-        logger.info(f"[CHECKOUT_SINGLE] {course.title} | free={course.is_free} | coupon={course.coupon_code or 'NONE'}")
+        logger.info(f"[CHECKOUT_SINGLE] {course.title} | free={course.is_free} | has_coupon={bool(course.coupon_code)}")
 
         if course.is_free and not course.coupon_code:
             # Try subscribe endpoint first (fast path for truly free courses)

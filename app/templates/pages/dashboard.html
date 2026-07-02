@@ -178,7 +178,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 >
                     0
                 </p>
-                <p class="text-[10px] text-gray-400 mt-1">Claimed courses</p>
+                <p class="text-[10px] text-gray-500 mt-1">Claimed courses</p>
             </div>
             <!-- Stat card 2 -->
             <div
@@ -205,7 +205,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 >
                     $0.00
                 </p>
-                <p class="text-[10px] text-gray-400 mt-1">USD lifetime</p>
+                <p class="text-[10px] text-gray-500 mt-1">USD lifetime</p>
             </div>
             <!-- Stat card 3 -->
             <div
@@ -232,7 +232,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 >
                     0
                 </p>
-                <p class="text-[10px] text-gray-400 mt-1">Skipped duplicates</p>
+                <p class="text-[10px] text-gray-500 mt-1">Skipped duplicates</p>
             </div>
             <!-- Stat card 4 -->
             <div
@@ -259,7 +259,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 >
                     0
                 </p>
-                <p class="text-[10px] text-gray-400 mt-1">All time sessions</p>
+                <p class="text-[10px] text-gray-500 mt-1">All time sessions</p>
             </div>
         </div>
 
@@ -276,7 +276,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                         <h3 class="text-sm font-semibold text-gray-900">
                             Savings History
                         </h3>
-                        <p class="text-[10px] text-gray-400 mt-0.5">
+                        <p class="text-[10px] text-gray-500 mt-0.5">
                             Cumulative USD saved over time
                         </p>
                     </div>
@@ -298,7 +298,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
             </div>
             <div class="flex-1 text-center md:text-left">
                 <p
-                    class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1"
+                    class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1"
                 >
                     Built by
                 </p>
@@ -506,7 +506,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                         </h3>
                         <div class="flex items-center gap-2">
                             <span
-                                class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold"
+                                class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold"
                                 >Filter:</span
                             >
                             <select
@@ -606,7 +606,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 class="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
             >
                 <h3 class="text-sm font-semibold text-gray-900">Recent Runs</h3>
-                <span class="text-[10px] text-gray-400" id="runs-count-badge"
+                <span class="text-[10px] text-gray-500" id="runs-count-badge"
                     >Last 5 runs</span
                 >
             </div>
@@ -663,7 +663,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                         ></div>
                     </div>
                     <span
-                        class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5"
+                        class="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"
                     >
                         Live System Console
                         <span
@@ -858,7 +858,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
     </div>
 </div>
 {% endblock %} {% block scripts %}
-<script>
+<script nonce="{{ request.state.nonce }}">
     let progressInterval = null;
     let savingsChart = null;
     let chartJsPromise = null;

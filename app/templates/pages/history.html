@@ -143,7 +143,7 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
     </div>
 </div>
 {% endblock %} {% block scripts %}
-<script>
+<script nonce="{{ request.state.nonce }}">
     // Time Formatter
     const formatTime = (ts) => {
         if (!ts) return "N/A";

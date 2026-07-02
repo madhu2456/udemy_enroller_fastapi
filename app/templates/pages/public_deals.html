@@ -53,7 +53,7 @@ instant course enrollment.{% endblock %} {% block extra_head %}
                 "name": "Are these Udemy coupons really 100% free?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes, all coupons listed here provide a 100% discount, making the courses entirely free. Our background system automatically verifies the pricing via Udemy's API to ensure the coupon hasn't expired."
+                    "text": "Yes, all coupons listed here provide a 100% discount, making the courses entirely free. Our background system automatically verifies the pricing via Udemy's enrollment endpoints to ensure the coupon hasn't expired."
                 }
             },
             {
@@ -328,7 +328,7 @@ instant course enrollment.{% endblock %} {% block extra_head %}
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.state.nonce }}">
     document.addEventListener('DOMContentLoaded', () => {
         // Track coupon clicks (Enroll Now links to udemy.com)
         document.addEventListener('click', (e) => {

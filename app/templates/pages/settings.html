@@ -136,7 +136,7 @@ content %}
                         value="0"
                         class="w-full bg-gray-55 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
-                    <p class="text-[10px] text-gray-400">Range: 0.0 to 5.0</p>
+                    <p class="text-[10px] text-gray-500">Range: 0.0 to 5.0</p>
                 </div>
 
                 <div class="space-y-1.5">
@@ -152,7 +152,7 @@ content %}
                         value="24"
                         class="w-full bg-gray-55 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
-                    <p class="text-[10px] text-gray-400">
+                    <p class="text-[10px] text-gray-500">
                         Exclude courses not updated within this period
                     </p>
                 </div>
@@ -178,7 +178,7 @@ content %}
                             class="flex-grow min-w-[120px] bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
                         />
                     </div>
-                    <p class="text-[10px] text-gray-400">
+                    <p class="text-[10px] text-gray-500">
                         Press Enter after each instructor username
                     </p>
                 </div>
@@ -199,7 +199,7 @@ content %}
                             class="flex-grow min-w-[120px] bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
                         />
                     </div>
-                    <p class="text-[10px] text-gray-400">
+                    <p class="text-[10px] text-gray-500">
                         Press Enter after each keyword e.g. Exam, Quiz
                     </p>
                 </div>
@@ -219,7 +219,7 @@ content %}
                     placeholder="http://user:pass@host:port"
                     class="w-full bg-gray-55 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
-                <p class="text-[10px] text-gray-400">
+                <p class="text-[10px] text-gray-500">
                     Leave blank for direct connection
                 </p>
             </div>
@@ -317,7 +317,7 @@ content %}
     <div id="settings-message" class="text-center text-sm hidden"></div>
 </main>
 {% endblock %} {% block scripts %}
-<script>
+<script nonce="{{ request.state.nonce }}">
     let currentSettings = {};
 
     document.addEventListener("DOMContentLoaded", async () => {
