@@ -87,4 +87,4 @@ echo "------------------------------------------------"
 chown -R appuser:appuser /app/data /app/logs /app/Courses 2>/dev/null || true
 
 # Start the application as non-root user
-exec su -s /bin/sh appuser -c "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1"
+exec su appuser -c "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1"
