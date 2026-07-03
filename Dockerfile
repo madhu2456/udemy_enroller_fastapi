@@ -21,6 +21,7 @@ WORKDIR /app
 # Copy Python packages from builder
 COPY --from=builder /root/.local /home/appuser/.local
 ENV PATH=/home/appuser/.local/bin:$PATH
+ENV PYTHONPATH=/home/appuser/.local/lib/python3.11/site-packages:$PYTHONPATH
 ENV DEPLOYMENT_ENV=server
 
 # Copy application code
