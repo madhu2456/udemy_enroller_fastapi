@@ -859,16 +859,30 @@
                 var banner = document.getElementById('cookie-banner');
                 if (!banner) return;
                 var consent = localStorage.getItem('cookie_consent');
-                if (consent === 'accepted' || consent === 'declined') return;
+                var consentTime = localStorage.getItem('cookie_consent_time');
+                
+                // If accepted, never show again
+                if (consent === 'accepted') return;
+                
+                // If declined more than 30 days ago, show again
+                if (consent === 'declined' && consentTime) {
+                    var daysSinceDecline = (Date.now() - parseInt(consentTime, 10)) / 86400000;
+                    if (daysSinceDecline < 30) return;
+                }
+                
                 banner.classList.remove('hidden');
+                
                 document.getElementById('cookie-accept').addEventListener('click', function(){
                     localStorage.setItem('cookie_consent', 'accepted');
+                    localStorage.removeItem('cookie_consent_time');
                     banner.classList.add('hidden');
                     if (window._loadGTM) window._loadGTM();
                     if (window._loadGA4) window._loadGA4();
                 });
+                
                 document.getElementById('cookie-decline').addEventListener('click', function(){
                     localStorage.setItem('cookie_consent', 'declined');
+                    localStorage.setItem('cookie_consent_time', Date.now().toString());
                     banner.classList.add('hidden');
                 });
             })();
