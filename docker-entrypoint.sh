@@ -83,4 +83,8 @@ alembic upgrade head
 
 echo "Starting application with uvicorn..."
 echo "------------------------------------------------"
-exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+# Fix volume permissions for non-root user
+chown -R appuser:appuser /app/data /app/logs /app/Courses 2>/dev/null || true
+
+# Drop privileges and start the application
+exec su-exec appuser uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1

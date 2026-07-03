@@ -26,14 +26,15 @@ ENV DEPLOYMENT_ENV=server
 # Copy application code
 COPY . .
 
-# Create non-root user and set up directories
-RUN groupadd --system --gid 1001 appuser && \
+# Create non-root user and install su-exec for privilege dropping
+RUN apt-get update && apt-get install -y --no-install-recommends su-exec && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --system --gid 1001 appuser && \
     useradd --system --gid appuser --uid 1001 --create-home appuser && \
     mkdir -p logs Courses data && \
     chmod +x docker-entrypoint.sh && \
     chown -R appuser:appuser /app
 
-USER appuser
 
 # Expose port
 EXPOSE 8000
