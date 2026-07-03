@@ -42,15 +42,11 @@ async function logout() {
     clearTimeout(timeoutId);
 
     if (response.ok) {
-      console.log("Logout successful");
       handleSuccessfulLogout();
     } else {
       console.warn("Logout returned status:", response.status);
       // Handle cases where the session was already cleaned up on the server (401/403)
       if (response.status === 401 || response.status === 403) {
-        console.log(
-          "Session invalid on server, clearing frontend cookies anyway.",
-        );
         handleSuccessfulLogout();
       } else {
         showToast("Logout failed. Please try again.", "error");

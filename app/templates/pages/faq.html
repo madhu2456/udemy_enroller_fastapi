@@ -4,9 +4,9 @@
 common questions about the Udemy Enroller automation tool: how it works, security,
 privacy, filters, Cookie vs Email login, coupon accuracy, and free Udemy courses.{% endblock %} {% block og_type
 %}article{% endblock %} {% block og_title
-%}FAQ - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}Answers to
+%}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}Answers to
 common questions about the Udemy Enroller automation tool: how it works, security,
-filters, and authentication.{% endblock %} {% block twitter_title %}FAQ - Udemy
+filters, and authentication.{% endblock %} {% block twitter_title %}Frequently Asked Questions - Udemy
 Enroller Automation Tool{% endblock %} {% block twitter_description %}Answers to
 common questions about the Udemy Enroller automation tool: how it works, security,
 filters, and authentication.{% endblock %} {% block content %}
@@ -48,7 +48,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "How does the automated Udemy course enroller work?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "The tool continuously monitors a curated list of coupon aggregator websites - sites like Real.Discount, Discudemy, Tutorialbar, and others. The moment a new 100% off Udemy coupon is detected, the engine validates it against your smart filters and applies it to your Udemy account via the Udemy API, enrolling you instantly without any manual action."
+                    "text": "The tool continuously monitors a curated list of coupon aggregator websites - sites like Real.Discount, Discudemy, Tutorialbar, and others. The moment a new 100% off Udemy coupon is detected, the engine validates it against your smart filters and applies it to your Udemy account via Udemy's enrollment endpoints, enrolling you automatically without any manual action."
                 }
             },
             {
@@ -64,7 +64,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "How fast does enrollment happen after a coupon is posted?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Typically under 2 seconds from detection to enrollment. Because the engine polls continuously and applies coupons programmatically via the API, it beats manual methods by orders of magnitude - reducing the chance of a coupon expiring before you claim it."
+                    "text": "Enrollment typically completes within seconds of coupon detection. The engine polls continuously and applies coupons programmatically, reducing the chance of a coupon expiring before you claim it."
                 }
             },
             {
@@ -96,7 +96,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "Does the tool store my email or password anywhere?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "When you use Email Login, your password is sent directly to the Udemy API to obtain a session token. The password is never stored in any form - not even as a hash. Cookie Login avoids sending your password entirely, using pre-authenticated session tokens from your browser."
+                    "text": "When you use Email Login, your password is sent directly to Udemy's login endpoint to obtain a session token. The password is never stored in any form - not even as a hash. Cookie Login avoids sending your password entirely, using pre-authenticated session tokens from your browser."
                 }
             },
             {
@@ -112,7 +112,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "What is the difference between Email Login and Cookie Login?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "                                    Email Login uses your Udemy email and password to authenticate via Udemy's enrollment endpoints. It is the simplest option but may trigger a CAPTCHA challenge on server or cloud environments. Cookie Login uses pre-authenticated session tokens extracted from your browser - specifically access_token, client_id, and csrftoken - which typically avoids triggering additional verification challenges and is the recommended method for reliability."
+                    "text": "                                    Email Login uses your Udemy email and password to authenticate via Udemy's enrollment endpoints. It is the simplest option but may trigger additional login prompts on server or cloud environments. Cookie Login uses pre-authenticated session tokens extracted from your browser - specifically access_token, client_id, and csrftoken - which typically avoids triggering additional login prompts and is the recommended method for reliability."
                 }
             },
             {
@@ -245,7 +245,7 @@ filters, and authentication.{% endblock %} {% block content %}
                                     coupon is detected, the engine validates it
                                     against your smart filters and applies it to
                                     your Udemy account via Udemy's enrollment endpoints,
-                                    enrolling you instantly without any manual
+                                    enrolling you automatically without any manual
                                     action.
                                 </p>
                             </div>
@@ -284,13 +284,11 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Typically under 2 seconds from detection to
-                                    enrollment. Because the engine polls
+                                    Enrollment typically completes within seconds
+                                    of coupon detection. The engine polls
                                     continuously and applies coupons
-                                    programmatically via the API, it beats
-                                    manual methods by orders of magnitude -
-                                    reducing the chance of a coupon expiring
-                                    before you claim it.
+                                    programmatically, reducing the chance of a
+                                    coupon expiring before you claim it.
                                 </p>
                             </div>
                         </div>
@@ -459,7 +457,7 @@ filters, and authentication.{% endblock %} {% block content %}
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
                                     When you use Email Login, your password is
-                                    sent directly to the Udemy API to obtain a
+                                    sent directly to Udemy's login endpoint to obtain a
                                     session token. The password is never stored
                                     in any form - not even as a hash. Cookie
                                     Login avoids sending your password entirely,
@@ -534,15 +532,15 @@ filters, and authentication.{% endblock %} {% block content %}
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
                                     Email Login uses your Udemy email and
-                                    password to authenticate via the Udemy API.
-                                    It is the simplest option but may trigger a
-                                    CAPTCHA challenge on server or cloud
+                                    password to authenticate via Udemy's login endpoint.
+                                    It is the simplest option but may trigger
+                                    additional login prompts on server or cloud
                                     environments. Cookie Login uses
                                     pre-authenticated session tokens extracted
                                     from your browser - specifically
                                     access_token, client_id, and csrftoken -
                                     which typically avoids triggering additional
-                                    verification challenges and is the
+                                    login prompts and is the
                                     recommended method for reliability.
                                 </p>
                             </div>

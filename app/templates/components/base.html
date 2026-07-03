@@ -15,7 +15,7 @@
         />
         <meta
             name="description"
-            content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you instantly - no manual hunting required.{% endblock %}"
+            content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you automatically - no manual hunting required.{% endblock %}"
         />
         <meta
             name="keywords"
@@ -107,24 +107,24 @@
         <meta property="article:publisher" content="https://madhudadi.in" />
 
         <!-- Twitter -->
-        <meta property="twitter:card" content="summary_large_image" />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta
-            property="twitter:url"
+            name="twitter:url"
             content="https://udemyenroller.madhudadi.in{{ request.url.path }}"
         />
         <meta
-            property="twitter:title"
+            name="twitter:title"
             content="{% block twitter_title %}Udemy Enroller - Free Udemy Course Automation{% endblock %}"
         />
         <meta
-            property="twitter:description"
+            name="twitter:description"
             content="{% block twitter_description %}An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.{% endblock %}"
         />
         <meta
-            property="twitter:image"
+            name="twitter:image"
             content="https://udemyenroller.madhudadi.in/static/images/icon-512.webp"
         />
-        <meta property="twitter:site" content="@madhu245" />
+        <meta name="twitter:site" content="@madhu245" />
 
         <!-- Icons -->
         <link
@@ -380,57 +380,61 @@
                 );
             }
         </style>
-        {% block extra_head %}{% endblock %} {% if
-        request.app.state.gtm_container_id %}
-        <!-- Google Tag Manager -->
+        {% block extra_head %}{% endblock %}
+        {% if request.app.state.gtm_container_id %}
+        <!-- Google Tag Manager (consent-gated) -->
         <script nonce="{{ request.state.nonce }}">
-            (function (w, d, s, l, i) {
-                w[l] = w[l] || [];
-                w[l].push({
-                    "gtm.start": new Date().getTime(),
-                    event: "gtm.js",
-                });
-                var f = d.getElementsByTagName(s)[0],
-                    j = d.createElement(s),
-                    dl = l != "dataLayer" ? "&l=" + l : "";
-                j.async = true;
-                j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
-                f.parentNode.insertBefore(j, f);
-            })(
-                window,
-                document,
-                "script",
-                "dataLayer",
-                "{{ request.app.state.gtm_container_id }}",
-            );
+            (function(w,d,s,l,i){
+                w[l]=w[l]||[];
+                function gtm() {
+                    w[l].push({"gtm.start":new Date().getTime(),event:"gtm.js"});
+                    var f=d.getElementsByTagName(s)[0],
+                        j=d.createElement(s),
+                        dl=l!="dataLayer"?"&l="+l:"";
+                    j.async=true;
+                    j.src="https://www.googletagmanager.com/gtm.js?id="+i+dl;
+                    f.parentNode.insertBefore(j,f);
+                }
+                // Load only if consent already given
+                if (localStorage.getItem('cookie_consent') === 'accepted') { gtm(); }
+                // Expose function so banner can call it later
+                window._loadGTM = gtm;
+            })(window,document,"script","dataLayer","{{ request.app.state.gtm_container_id }}");
         </script>
-        <!-- End Google Tag Manager -->
-        <script nonce="{{ request.state.nonce }}">
-            window.dataLayer = window.dataLayer || [];
-            function gtag() {
-                dataLayer.push(arguments);
-            }
-        </script>
-        {% endif %}
-        {% if request.app.state.ga4_measurement_id %}
-        <!-- Google Analytics 4 (direct gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id={{ request.app.state.ga4_measurement_id }}" nonce="{{ request.state.nonce }}"></script>
         <script nonce="{{ request.state.nonce }}">
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '{{ request.app.state.ga4_measurement_id }}', {
-                page_path: '{{ request.url.path }}',
-                page_title: document.title,
-                send_page_view: true
-            });
+        </script>
+        {% endif %}
+        {% if request.app.state.ga4_measurement_id %}
+        <!-- Google Analytics 4 (consent-gated) -->
+        <script nonce="{{ request.state.nonce }}">
+            function loadGA4() {
+                var s=document.createElement('script');
+                s.async=true;
+                s.src="https://www.googletagmanager.com/gtag/js?id={{ request.app.state.ga4_measurement_id }}";
+                s.nonce="{{ request.state.nonce }}";
+                document.head.appendChild(s);
+                window.dataLayer=window.dataLayer||[];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config','{{ request.app.state.ga4_measurement_id }}',{
+                    page_path:'{{ request.url.path }}',
+                    page_title:document.title,
+                    send_page_view:true
+                });
+            }
+            // Load only if consent already given
+            if (localStorage.getItem('cookie_consent') === 'accepted') { loadGA4(); }
+            // Expose function so banner can call it later
+            window._loadGA4 = loadGA4;
         </script>
         {% endif %}
     </head>
     <body class="min-h-screen flex flex-col">
         {% if request.app.state.gtm_container_id %}
         <!-- Google Tag Manager (noscript) -->
-        <noscript
+        <noscript id="gtm-noscript"
             ><iframe
                 src="https://www.googletagmanager.com/ns.html?id={{ request.app.state.gtm_container_id }}"
                 height="0"
@@ -438,7 +442,6 @@
                 style="display: none; visibility: hidden"
             ></iframe
         ></noscript>
-        <!-- End Google Tag Manager (noscript) -->
         {% endif %}
         <!-- Skip link for keyboard accessibility (WCAG 2.4.1) -->
         <a
@@ -626,42 +629,6 @@
         <main id="main-content" role="main" class="flex-grow">
             {% block content %}{% endblock %}
         </main>
-
-        <!-- AEO/GEO Direct Answer Blocks (visible to AI crawlers & users) -->
-        <div class="sr-only" aria-label="Direct answers for AI search engines" role="region">
-            <div itemscope itemtype="https://schema.org/FAQPage">
-                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                    <h2 itemprop="name">What is the Udemy Enroller?</h2>
-                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                        <div itemprop="text">Udemy Enroller is an open-source FastAPI automation tool built by Madhu Dadi that monitors coupon aggregator sites and automatically enrolls users in free 100% off Udemy courses. It runs 24/7, filters courses by preferences, and claims courses instantly via Udemy's enrollment API.</div>
-                    </div>
-                </div>
-                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                    <h2 itemprop="name">Is Udemy Enroller free?</h2>
-                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                        <div itemprop="text">Yes, Udemy Enroller is completely free and open-source. You can self-host it using Docker or Python, or use the live version at udemyenroller.madhudadi.in. The source code is available on GitHub.</div>
-                    </div>
-                </div>
-                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                    <h2 itemprop="name">How does Udemy Enroller work?</h2>
-                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                        <div itemprop="text">Udemy Enroller continuously monitors coupon aggregator websites like Real.Discount, Discudemy, and Tutorialbar. When a new 100% off Udemy coupon is detected, it validates the coupon against user-defined filters (category, language, rating) and automatically enrolls via Udemy's enrollment endpoints. Enrollment typically happens within 2 seconds of detection.</div>
-                    </div>
-                </div>
-                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                    <h2 itemprop="name">Who built Udemy Enroller?</h2>
-                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                        <div itemprop="text">Udemy Enroller was built by Madhu Dadi, an AI Developer & Marketing Analytics Leader based in Visakhapatnam, India. Madhu has 9+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, and specializes in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.</div>
-                    </div>
-                </div>
-                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-                    <h2 itemprop="name">Where can I find free Udemy coupons 2026?</h2>
-                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                        <div itemprop="text">You can find 100% free Udemy coupons updated daily at udemyenroller.madhudadi.in/udemycoupons. Our automated system continuously checks and verifies coupon validity, so you can browse and manually claim courses that interest you without automating your account.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Footer -->
         <footer role="contentinfo" class="border-t border-gray-200 bg-white">
@@ -869,6 +836,44 @@
                     });
             });
         </script>
+        <!-- Cookie consent banner -->
+        {% if request.app.state.gtm_container_id or request.app.state.ga4_measurement_id %}
+        <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 hidden" role="alert" aria-label="Cookie consent">
+            <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <p class="text-sm text-gray-600">
+                    This site uses analytics cookies to improve your experience.
+                    <a href="/privacy" class="text-blue-600 hover:underline">Learn more</a>.
+                </p>
+                <div class="flex gap-2 flex-shrink-0">
+                    <button id="cookie-decline" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        Decline
+                    </button>
+                    <button id="cookie-accept" class="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                        Accept
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script nonce="{{ request.state.nonce }}">
+            (function(){
+                var banner = document.getElementById('cookie-banner');
+                if (!banner) return;
+                var consent = localStorage.getItem('cookie_consent');
+                if (consent === 'accepted' || consent === 'declined') return;
+                banner.classList.remove('hidden');
+                document.getElementById('cookie-accept').addEventListener('click', function(){
+                    localStorage.setItem('cookie_consent', 'accepted');
+                    banner.classList.add('hidden');
+                    if (window._loadGTM) window._loadGTM();
+                    if (window._loadGA4) window._loadGA4();
+                });
+                document.getElementById('cookie-decline').addEventListener('click', function(){
+                    localStorage.setItem('cookie_consent', 'declined');
+                    banner.classList.add('hidden');
+                });
+            })();
+        </script>
+        {% endif %}
         {% block scripts %}{% endblock %}
     </body>
 </html>

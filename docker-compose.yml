@@ -12,7 +12,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DEPLOYMENT_ENV=server
       - DATABASE_URL=sqlite:////app/data/udemy_enroller.db
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=WARNING
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs

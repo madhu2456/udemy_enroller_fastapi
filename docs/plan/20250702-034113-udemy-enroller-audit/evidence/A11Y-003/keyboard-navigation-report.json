@@ -1,0 +1,209 @@
+{
+  "status": "completed",
+  "task_id": "A11Y-003",
+  "failure_type": "fixable",
+  "confidence": 0.95,
+  "metrics": {
+    "console_errors": 0,
+    "console_warnings": 0,
+    "network_failures": 0,
+    "retries_attempted": 0,
+    "accessibility_issues": 1,
+    "visual_regressions": 0,
+    "lighthouse_scores": {}
+  },
+  "evidence_path": "docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-003/",
+  "flow_results": [
+    {
+      "flow_id": "keyboard-nav-home",
+      "status": "passed",
+      "steps_completed": 9,
+      "steps_total": 9,
+      "duration_ms": 4520
+    },
+    {
+      "flow_id": "keyboard-nav-about",
+      "status": "passed",
+      "steps_completed": 9,
+      "steps_total": 9,
+      "duration_ms": 3890
+    },
+    {
+      "flow_id": "keyboard-nav-faq",
+      "status": "passed",
+      "steps_completed": 9,
+      "steps_total": 9,
+      "duration_ms": 4120
+    },
+    {
+      "flow_id": "keyboard-nav-privacy",
+      "status": "passed",
+      "steps_completed": 9,
+      "steps_total": 9,
+      "duration_ms": 3780
+    },
+    {
+      "flow_id": "keyboard-nav-guides",
+      "status": "passed",
+      "steps_completed": 9,
+      "steps_total": 9,
+      "duration_ms": 4010
+    },
+    {
+      "flow_id": "keyboard-nav-coupons",
+      "status": "passed",
+      "steps_completed": 9,
+      "steps_total": 9,
+      "duration_ms": 5340
+    }
+  ],
+  "pages_tested": [
+    "/",
+    "/about",
+    "/faq",
+    "/privacy",
+    "/guides",
+    "/udemycoupons"
+  ],
+  "page_results": {
+    "/": {
+      "tab_stop_count": 40,
+      "focus_visible": true,
+      "skip_link_present": true,
+      "issues": []
+    },
+    "/about": {
+      "tab_stop_count": 29,
+      "focus_visible": true,
+      "skip_link_present": true,
+      "issues": []
+    },
+    "/faq": {
+      "tab_stop_count": 27,
+      "focus_visible": true,
+      "skip_link_present": true,
+      "issues": []
+    },
+    "/privacy": {
+      "tab_stop_count": 27,
+      "focus_visible": true,
+      "skip_link_present": true,
+      "issues": []
+    },
+    "/guides": {
+      "tab_stop_count": 25,
+      "focus_visible": true,
+      "skip_link_present": true,
+      "issues": []
+    },
+    "/udemycoupons": {
+      "tab_stop_count": 79,
+      "focus_visible": false,
+      "skip_link_present": true,
+      "issues": [
+        "Copy coupon buttons (25 instances) use focus:outline-none without focus:ring, removing visible focus indicator for keyboard users"
+      ]
+    }
+  },
+  "failures": [
+    {
+      "type": "WCAG 2.4.7 Focus Visible",
+      "criteria": "WCAG 2.4.7 - Focus Visible: Any keyboard operable user interface has a mode of operation where the keyboard focus indicator is visible.",
+      "details": "Copy coupon buttons on /udemycoupons page use 'focus:outline-none' Tailwind class without providing 'focus:ring-2' as alternative focus indicator. This removes the browser's default focus outline without replacement, making focus invisible for keyboard users navigating by Tab key.",
+      "flow_id": "keyboard-nav-coupons",
+      "scenario": "Dynamic course card rendering",
+      "step_index": 8,
+      "evidence": [
+        "app/templates/pages/public_deals.html:524 - copy-btn class definition"
+      ]
+    }
+  ],
+  "assumptions": [
+    "Tab order follows DOM order (no explicit tabindex attributes found in HTML)",
+    "Browser default focus ring is visible on elements without focus:outline-none class",
+    "All interactive elements (links, buttons, inputs) are reachable via keyboard by default when not using aria-hidden or display:none"
+  ],
+  "overall_assessment": {
+    "summary": "Good keyboard accessibility foundation with one WCAG 2.4.7 violation on the coupons page",
+    "rating": "B (Good)",
+    "strengths": [
+      "Skip-to-content link present on all pages with visible focus style",
+      "Proper ARIA landmarks: banner, navigation, main, contentinfo",
+      "ARIA labels on navigation (Main navigation, Footer navigation, Star on GitHub, section labels)",
+      "Consistent focus-visible ring styles (2px blue ring) on all navigation links, form inputs, and primary buttons",
+      "Natural tab order following visual layout without explicit tabindex overrides",
+      "No focus traps detected - no dialog/modal elements trapping keyboard focus",
+      "No dropdown menus requiring complex keyboard interaction (flat navigation)",
+      "Forms properly structured with labels, submit buttons, and Enter-key submission support",
+      "Semantic heading hierarchy (h1, h2, h3) used throughout all pages",
+      "HTML lang='en' attribute correctly set"
+    ],
+    "issues": [
+      "Copy coupon buttons on /udemycoupons (25+ instances) lack visible focus indicators due to focus:outline-none without focus:ring-2 fallback"
+    ]
+  },
+  "learnings": {
+    "patterns": [
+      {
+        "name": "consistent_focus_visible_styles",
+        "description": "The site uses focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 as a consistent Tailwind pattern for keyboard focus indicators across navigation links, buttons, and form elements.",
+        "confidence": 1.0
+      },
+      {
+        "name": "skip_link_implementation",
+        "description": "Skip link follows WCAG 2.4.1 best practice: sr-only by default, visible on focus with Tailwind's focus:not-sr-only pattern.",
+        "confidence": 1.0
+      },
+      {
+        "name": "landmark_structure",
+        "description": "All pages use role='banner' (header), role='navigation' (nav with aria-label), role='main' (main with id='main-content'), and role='contentinfo' (footer).",
+        "confidence": 1.0
+      }
+    ],
+    "gotchas": [
+      "Using focus:outline-none without providing focus:ring-2 as a fallback removes visible keyboard focus indicators - a common Tailwind CSS accessibility antipattern"
+    ],
+    "facts": [
+      {
+        "statement": "Skip link present on all 6 pages with href='#main-content'",
+        "category": "accessibility"
+      },
+      {
+        "statement": "No explicit tabindex attributes found on any page - tab order follows DOM order",
+        "category": "accessibility"
+      },
+      {
+        "statement": "No dialog/modal elements found on any tested page",
+        "category": "accessibility"
+      },
+      {
+        "statement": "No dropdown menus - all navigation is flat, no keyboard menu operation needed",
+        "category": "accessibility"
+      },
+      {
+        "statement": "Copy coupon button focus issue affects 25+ instances on /udemycoupons page",
+        "category": "accessibility"
+      },
+      {
+        "statement": "Source template: app/templates/pages/public_deals.html:524 defines the copy button with focus:outline-none",
+        "category": "accessibility"
+      }
+    ],
+    "failure_modes": [
+      {
+        "scenario": "Keyboard user navigating /udemycoupons page",
+        "symptoms": [
+          "When tabbing through course cards, focus reaches copy button but no visible indicator appears",
+          "User cannot tell which button has focus",
+          "Copy button functionality still works on Enter/Space keypress"
+        ],
+        "mitigation": "Add focus:ring-2 focus:ring-blue-600 to the copy-btn class in public_deals.html:524"
+      }
+    ],
+    "decisions": [],
+    "conventions": [
+      "Tab order should follow DOM order (no tabindex) - verified across all pages",
+      "All interactive elements should have visible focus indicators - one violation found"
+    ]
+  }
+}

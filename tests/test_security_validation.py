@@ -16,6 +16,8 @@ from app.security import (
     generate_csrf_token,
 )
 
+import json
+
 
 # Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_udemy_enroller.db"
@@ -208,11 +210,11 @@ class TestEnrollmentSessionRestore:
             email="restore@example.com",
             password_hash=hash_password("RestorePassword123!"),
             udemy_display_name="Restore User",
-            udemy_cookies={
+            udemy_cookies=json.dumps({
                 "access_token": "access-token",
                 "client_id": "client-id",
                 "csrf_token": "csrf-token",
-            },
+            }),
             currency="USD",
         )
         db.add(user)

@@ -1,0 +1,355 @@
+{
+  "status": "completed",
+  "task_id": "A11Y-001",
+  "confidence": 0.98,
+  "metrics": {
+    "console_errors": 0,
+    "console_warnings": 0,
+    "network_failures": 0,
+    "retries_attempted": 0,
+    "accessibility_issues": 12,
+    "visual_regressions": 0
+  },
+  "evidence_path": "docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/",
+  "flow_results": [
+    {
+      "flow_id": "a11y-home",
+      "status": "failed",
+      "steps_completed": 2,
+      "steps_total": 2,
+      "duration_ms": 0
+    },
+    {
+      "flow_id": "a11y-about",
+      "status": "passed",
+      "steps_completed": 2,
+      "steps_total": 2,
+      "duration_ms": 0
+    },
+    {
+      "flow_id": "a11y-faq",
+      "status": "failed",
+      "steps_completed": 2,
+      "steps_total": 2,
+      "duration_ms": 0
+    },
+    {
+      "flow_id": "a11y-privacy",
+      "status": "failed",
+      "steps_completed": 2,
+      "steps_total": 2,
+      "duration_ms": 0
+    },
+    {
+      "flow_id": "a11y-guides",
+      "status": "failed",
+      "steps_completed": 2,
+      "steps_total": 2,
+      "duration_ms": 0
+    },
+    {
+      "flow_id": "a11y-udemycoupons",
+      "status": "failed",
+      "steps_completed": 2,
+      "steps_total": 2,
+      "duration_ms": 0
+    }
+  ],
+  "failures": [
+    {
+      "type": "contrast",
+      "criteria": "1.4.3",
+      "details": "[/] Background and foreground colors do not have a sufficient contrast ratio.: Step number indicators (#d1d5db on #ffffff, ratio 1.47:1, needs 4.5:1)",
+      "flow_id": "a11y-home",
+      "scenario": "/",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/home-desktop.report.html"
+      ]
+    },
+    {
+      "type": "contrast",
+      "criteria": "1.4.3",
+      "details": "[/] Background and foreground colors do not have a sufficient contrast ratio.: Connect section text (#9ca3af on #ffffff, ratio 2.53:1, needs 4.5:1)",
+      "flow_id": "a11y-home",
+      "scenario": "/",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/home-desktop.report.html"
+      ]
+    },
+    {
+      "type": "contrast",
+      "criteria": "1.4.3",
+      "details": "[/privacy] Background and foreground colors do not have a sufficient contrast ratio.: Code elements in privacy page (#6b7280 on #f3f4f6, ratio 4.39:1, needs 4.5:1 \u2014 borderline fail)",
+      "flow_id": "a11y-privacy",
+      "scenario": "/privacy",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_privacy-desktop.report.html"
+      ]
+    },
+    {
+      "type": "contrast",
+      "criteria": "1.4.3",
+      "details": "[/guides] Background and foreground colors do not have a sufficient contrast ratio.: Step labels across all guide articles (#9ca3af on #ffffff, ratio 2.53:1, needs 4.5:1)",
+      "flow_id": "a11y-guides",
+      "scenario": "/guides",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_guides-desktop.report.html"
+      ]
+    },
+    {
+      "type": "contrast",
+      "criteria": "1.4.3",
+      "details": "[/udemycoupons] Background and foreground colors do not have a sufficient contrast ratio.: Original price strikethrough (#979ca6 on #ffffff, ratio 2.75:1, needs 4.5:1)",
+      "flow_id": "a11y-udemycoupons",
+      "scenario": "/udemycoupons",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_udemycoupons-desktop.report.html"
+      ]
+    },
+    {
+      "type": "contrast",
+      "criteria": "1.4.3",
+      "details": "[/udemycoupons] Background and foreground colors do not have a sufficient contrast ratio.: Discounted price in green (#16a34a on #ffffff, ratio 3.29:1, needs 4.5:1)",
+      "flow_id": "a11y-udemycoupons",
+      "scenario": "/udemycoupons",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_udemycoupons-desktop.report.html"
+      ]
+    },
+    {
+      "type": "link-contrast",
+      "criteria": "1.4.1",
+      "details": "[/] Links rely on color to be distinguishable.: Link in 'Connect with GitHub' section is only distinguishable by color (blue text in gray paragraph)",
+      "flow_id": "a11y-home",
+      "scenario": "/",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/home-desktop.report.html"
+      ]
+    },
+    {
+      "type": "link-contrast",
+      "criteria": "1.4.1",
+      "details": "[/faq] Links rely on color to be distinguishable.: Email and resource links in FAQ footer rely solely on color for distinction",
+      "flow_id": "a11y-faq",
+      "scenario": "/faq",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_faq-desktop.report.html"
+      ]
+    },
+    {
+      "type": "link-contrast",
+      "criteria": "1.4.1",
+      "details": "[/privacy] Links rely on color to be distinguishable.: Data retention detail links in privacy page rely solely on blue color for identification",
+      "flow_id": "a11y-privacy",
+      "scenario": "/privacy",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_privacy-desktop.report.html"
+      ]
+    },
+    {
+      "type": "semantic-html",
+      "criteria": "1.3.1",
+      "details": "[/] Lists do not contain only `<li>` elements and script supporting elements.: An ordered list (<ol>) contains <div> elements as direct children instead of <li> elements",
+      "flow_id": "a11y-home",
+      "scenario": "/",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/home-desktop.report.html"
+      ]
+    },
+    {
+      "type": "form-labels",
+      "criteria": "4.1.2",
+      "details": "[/udemycoupons] Select elements do not have associated label elements.: Category filter and status filter dropdowns lack associated <label> elements. Screen readers cannot identify their purpose.",
+      "flow_id": "a11y-udemycoupons",
+      "scenario": "/udemycoupons",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_udemycoupons-desktop.report.html"
+      ]
+    },
+    {
+      "type": "heading-structure",
+      "criteria": "1.3.1",
+      "details": "[/udemycoupons] Heading elements are not in a sequentially-descending order.: Course card titles use <h3> which may skip heading levels. Page structure jumps from h1/h2 to h3 without clear hierarchy",
+      "flow_id": "a11y-udemycoupons",
+      "scenario": "/udemycoupons",
+      "step_index": 0,
+      "evidence": [
+        "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docs/plan/20250702-034113-udemy-enroller-audit/evidence/A11Y-001/_udemycoupons-desktop.report.html"
+      ]
+    }
+  ],
+  "assumptions": [
+    "All pages are public and unauthenticated",
+    "Lighthouse version 13.4.0 with axe-core 4.12 was used",
+    "Both mobile and desktop emulation were tested",
+    "Only accessibility category was audited (not performance, SEO, or best-practices)",
+    "Audits were run in headless Chrome on Linux",
+    "No form submission or login was attempted"
+  ],
+  "learnings": {
+    "patterns": [
+      {
+        "name": "gray_text_on_white_bg",
+        "description": "Multiple pages use text-gray-300 (#d1d5db), text-gray-400 (#9ca3af), or text-gray-500 (#6b7280) on white backgrounds which fails WCAG 1.4.3 contrast requirements",
+        "confidence": 1.0
+      },
+      {
+        "name": "green_on_white_contrast",
+        "description": "Tailwind's text-green-600 (#16a34a) on white background fails WCAG AA contrast (3.29:1, needs 4.5:1)",
+        "confidence": 1.0
+      },
+      {
+        "name": "links_without_underline",
+        "description": "Links in text blocks across multiple pages rely solely on color (text-blue-600) for distinction, failing WCAG 1.4.1",
+        "confidence": 1.0
+      },
+      {
+        "name": "unlabelled_form_controls",
+        "description": "Filter dropdowns on /udemycoupons page lack associated labels, failing WCAG 4.1.2",
+        "confidence": 1.0
+      }
+    ],
+    "gotchas": [
+      "text-gray-300 (#d1d5db) on white has only 1.47:1 contrast ratio \u2014 one of the worst offenders",
+      "text-gray-400 (#9ca3af) on white has 2.53:1 \u2014 fails for all text sizes",
+      "text-green-600 (#16a34a) on white has 3.29:1 \u2014 common Tailwind green fails contrast",
+      "text-gray-500 (#6b7280) on gray-100 (#f3f4f6) barely fails at 4.39:1 (needs 4.5:1)",
+      "The /about page scored 100/100 \u2014 serves as a good accessibility baseline for other pages"
+    ],
+    "facts": [
+      {
+        "statement": "All 6 pages have proper viewport meta tags without disabled zoom",
+        "category": "accessibility"
+      },
+      {
+        "statement": "All images across all pages have alt text",
+        "category": "accessibility"
+      },
+      {
+        "statement": "All pages have proper document titles",
+        "category": "accessibility"
+      },
+      {
+        "statement": "All pages have proper html lang attributes",
+        "category": "accessibility"
+      },
+      {
+        "statement": "No ARIA attribute violations were detected on any page",
+        "category": "accessibility"
+      },
+      {
+        "statement": "No keyboard tabindex or focus order issues detected",
+        "category": "accessibility"
+      },
+      {
+        "statement": "No touch target size violations detected",
+        "category": "accessibility"
+      },
+      {
+        "statement": "/about page scored 100/100 on both mobile and desktop \u2014 fully accessible",
+        "category": "accessibility"
+      },
+      {
+        "statement": "/udemycoupons page has the most accessibility issues (3 audit failures with 51 total violations)",
+        "category": "accessibility"
+      },
+      {
+        "statement": "Total of 8 unique accessibility issues across 5 of 6 pages, with 44 total occurrences",
+        "category": "accessibility"
+      }
+    ],
+    "failure_modes": [
+      {
+        "scenario": "Color contrast failure on light text",
+        "symptoms": [
+          "Gray text on white background below 4.5:1 ratio",
+          "Green text on white below 3:1 ratio"
+        ],
+        "mitigation": "Use text-gray-600 (#4b5563) or darker for body text on white. Use text-green-700 (#15803d) for green text."
+      },
+      {
+        "scenario": "Unlabelled form controls",
+        "symptoms": [
+          "Screen readers cannot identify filter dropdown purpose"
+        ],
+        "mitigation": "Add <label> elements with for attributes or use aria-label on select elements"
+      },
+      {
+        "scenario": "Link differentiation without color",
+        "symptoms": [
+          "Colorblind users cannot distinguish links in text"
+        ],
+        "mitigation": "Add underline decoration, bold weight, or icon indicators to links in text blocks"
+      }
+    ],
+    "decisions": [
+      {
+        "decision": "Focus remediation on /udemycoupons first (most issues + critical severity)",
+        "rationale": [
+          "Most severe issues (unlabelled selects = critical)",
+          "51 total violations",
+          "Also has heading structure issues"
+        ]
+      },
+      {
+        "decision": "Fix Tailwind color tokens globally rather than per-instance",
+        "rationale": [
+          "text-gray-300/400/500 failures appear on 4 different pages",
+          "Single CSS change can fix multiple violations",
+          "Consider adding custom color tokens for accessibility"
+        ]
+      }
+    ],
+    "conventions": [
+      "All gray text on white backgrounds must use text-gray-500 (#6b7280) or darker for WCAG AA compliance at 12px+",
+      "All links in text blocks must include underline decoration or other non-color indicators",
+      "All form controls must have associated labels (either visible <label> or aria-label)",
+      "Heading levels must not skip levels (h1 \u2192 h2 \u2192 h3, never h1 \u2192 h3)"
+    ]
+  },
+  "pages_tested": [
+    "/",
+    "/about",
+    "/faq",
+    "/privacy",
+    "/guides",
+    "/udemycoupons"
+  ],
+  "accessibility_scores": {
+    "/": {
+      "mobile": 89,
+      "desktop": 89
+    },
+    "/about": {
+      "mobile": 100,
+      "desktop": 100
+    },
+    "/faq": {
+      "mobile": 95,
+      "desktop": 95
+    },
+    "/privacy": {
+      "mobile": 92,
+      "desktop": 92
+    },
+    "/guides": {
+      "mobile": 96,
+      "desktop": 96
+    },
+    "/udemycoupons": {
+      "mobile": 89,
+      "desktop": 89
+    }
+  }
+}

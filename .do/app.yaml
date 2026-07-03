@@ -34,4 +34,4 @@ services:
         value: "false"
       - key: LOG_LEVEL
         scope: RUN_TIME
-        value: "INFO"
+        value: "WARNING"

@@ -1,0 +1,265 @@
+{
+  "sections_audited": [
+    {
+      "section": "Badges & Header - Python Version",
+      "readme_claim": "Python 3.11+ (badge line 14), Dockerfile uses python:3.11-slim",
+      "actual_implementation": "Host Python 3.13.14; humans.txt (seo.py:149) says 'Python 3.13'; ai-profile.json (seo.py:441) says 'Python 3.13'; llms.txt (seo.py:229) says 'Python 3.13'",
+      "status": "inconsistent",
+      "details": "README badge claims 3.11+, Dockerfile uses 3.11-slim, but SEO endpoints and host system run 3.13. Three different versions cited across docs/code. Recommend aligning all to actual minimum (3.11 Docker) or updating SEO files to 3.11."
+    },
+    {
+      "section": "Key Features - Fully Automated",
+      "readme_claim": "Set filters once, let the engine handle everything else (line 57)",
+      "actual_implementation": "enrollment_manager.py implements full pipeline: scrape → filter → enroll. Runs as async background task. Filters persisted via UserSettings.",
+      "status": "verified",
+      "details": "EnrollmentManager.run_pipeline() at enrollment_manager.py:147 automates the entire flow. User sets filters via Settings router. No manual intervention needed per run."
+    },
+    {
+      "section": "Key Features - Smart Filtering",
+      "readme_claim": "Exclude categories, languages, low-rated courses, or specific instructors (line 58)",
+      "actual_implementation": "udemy_client.py:786-870 is_course_excluded() checks: min_rating, languages, categories, instructor_exclude, title_exclude, course_update_threshold_months",
+      "status": "verified",
+      "details": "Filtering implementation is more comprehensive than claimed — also supports title keyword exclusion and last-update threshold. Verified."
+    },
+    {
+      "section": "Key Features - Cookie-Based Auth",
+      "readme_claim": "Secure login using Udemy session cookies - no passwords stored (line 59)",
+      "actual_implementation": "auth.py:131-199 login_with_cookies() handles cookie auth; security.py:67-72 encrypt_cookies() uses Fernet encryption before DB storage; security.py:75-98 decrypt_cookies() with backward compatibility",
+      "status": "verified",
+      "details": "Cookie auth implemented correctly. Passwords never stored. Fernet encryption (32-byte key derived via SHA-256 from SECRET_KEY/COOKIE_ENCRYPTION_KEY). Backward compatibility for legacy plaintext cookies."
+    },
+    {
+      "section": "Key Features - Bulk Enrollment",
+      "readme_claim": "Intelligently batches API requests to respect rate limits (line 60)",
+      "actual_implementation": "Enrollment is sequential per-course with deployment-aware delays: server 6-15s (udemy_client.py:139), local 3-8s (line 141); circuit breakers on 403s (lines 165-217). No parallel batching.",
+      "status": "inconsistent",
+      "details": "Term 'batches' is misleading. Implementation processes courses one-by-one in sequence with rate-limiting delays and cooldowns. There is no batch parallelism. Should say 'rate-limited sequential enrollment' rather than 'batches API requests'."
+    },
+    {
+      "section": "Key Features - Real-Time Dashboard",
+      "readme_claim": "Live progress tracking, savings analytics, and enrollment history (line 61)",
+      "actual_implementation": "dashboard.py:171-236 SSE endpoint /api/dashboard/logs/stream; dashboard.py:79-130 /api/dashboard/stats; dashboard.py:133-168 /api/dashboard/analytics; HTML templates for dashboard, history pages",
+      "status": "verified",
+      "details": "Full SSE implementation for live log streaming. Stats and analytics endpoints with caching. Dashboard, settings, history HTML pages all present."
+    },
+    {
+      "section": "Key Features - Session Persistence",
+      "readme_claim": "Encrypted cookie storage with automatic session reconstruction (line 62)",
+      "actual_implementation": "security.py:67-72 Fernet encrypt; auth.py:235-256 reconstructs UdemyClient from DB cookies; auth.py:28-50 _create_session() persists to UserSession table",
+      "status": "verified",
+      "details": "Session persistence with automatic reconstruction from encrypted DB cookies. Server restart survives via DB-persisted sessions."
+    },
+    {
+      "section": "Key Features - Self-Hostable",
+      "readme_claim": "Docker + docker-compose support for private deployments (line 63)",
+      "actual_implementation": "Dockerfile (python:3.11-slim multi-stage); docker-compose.yml with volumes for data, logs, Courses; docker-entrypoint.sh with alembic migrations",
+      "status": "verified",
+      "details": "Full Docker deployment with health checks, volume mounts, environment configuration, SECRET_KEY validation, and automated migrations."
+    },
+    {
+      "section": "Key Features - SEO & AEO Optimized",
+      "readme_claim": "Built-in sitemap, structured data, LLMs.txt, and AI-profile.json (line 64)",
+      "actual_implementation": "seo.py:86-122 sitemap.xml; seo.py:23-83 robots.txt; seo.py:160-363 llms.txt; seo.py:366-553 ai-profile.json; seo.py:125-157 humans.txt; seo.py:561-577 FAQ, About, Guides, Privacy pages",
+      "status": "verified",
+      "details": "All 8 SEO endpoints listed in README + more (privacy page, ai-profile.json). Complete implementation."
+    },
+    {
+      "section": "Technical Architecture - Backend Stack",
+      "readme_claim": "Python 3.11 + FastAPI (async), SQLite + SQLAlchemy ORM + Alembic migrations (lines 72-73)",
+      "actual_implementation": "requirements.txt: fastapi>=0.115.6, sqlalchemy>=2.0.36, alembic>=1.13.1; config/settings.py DATABASE_URL=sqlite:///./udemy_enroller.db; alembic.ini present; app/models/database.py uses SQLAlchemy",
+      "status": "verified",
+      "details": "Tech stack confirmed. Python version is 3.11 in Docker, 3.13 in SEO files (inconsistent)."
+    },
+    {
+      "section": "Technical Architecture - Automation",
+      "readme_claim": "CloudScraper (primary HTTP client) + Playwright with playwright-stealth (fallback for Cloudflare) (line 74)",
+      "actual_implementation": "requirements.txt: cloudscraper>=1.2.71, playwright>=1.49.1, playwright-stealth>=1.0.6; udemy_client.py uses CloudScraper for enrollment (cs via cloudscraper.create_scraper()); scraper.py:204-310 playwright_get() uses Playwright for coupon aggregator fallback",
+      "status": "verified",
+      "details": "Architecture correct: CloudScraper for enrollment API, Playwright+stealth for Cloudflare bypass on coupon aggregator sites."
+    },
+    {
+      "section": "Technical Architecture - Frontend",
+      "readme_claim": "HTML5 + Tailwind CSS + vanilla JavaScript (line 75)",
+      "actual_implementation": "package.json: tailwindcss ^3.4.17; tailwind.config.js scans app/templates/**/*.html; templates use Jinja2 HTML5; no frontend framework detected (vanilla JS)",
+      "status": "verified",
+      "details": "Tailwind 3.4.17 for CSS, HTML5 templates via Jinja2, vanilla JavaScript. Verified."
+    },
+    {
+      "section": "Technical Architecture - SSE claim",
+      "readme_claim": "Server-Sent Events (SSE) power the live log stream and enrollment progress updates (line 78)",
+      "actual_implementation": "dashboard.py:171-236 /api/dashboard/logs/stream uses StreamingResponse with text/event-stream; async log_generator() tails app.log file",
+      "status": "verified",
+      "details": "SSE implemented for live log streaming. File-tail approach with per-user filtering via [user:X] markers."
+    },
+    {
+      "section": "Technical Architecture - Sub-second load times",
+      "readme_claim": "Frontend is intentionally lightweight to ensure sub-second load times (line 78)",
+      "actual_implementation": "No performance testing infrastructure or benchmarks in codebase",
+      "status": "unverifiable",
+      "details": "Cannot verify without load testing. GZip middleware (main.py:185) and immutable static cache headers (main.py:214) present for optimization, but no actual performance data in repo."
+    },
+    {
+      "section": "Quick Start - Prerequisites",
+      "readme_claim": "Python 3.11+ (or Docker) (line 85)",
+      "actual_implementation": "Dockerfile uses python:3.11-slim; requirements.txt no version cap; system Python is 3.13.14",
+      "status": "verified",
+      "details": "Docker meets 3.11 requirement. System Python 3.13+ also meets '3.11+'. OK."
+    },
+    {
+      "section": "Quick Start - Local Setup port claim",
+      "readme_claim": "Available at http://localhost:8000 (line 112)",
+      "actual_implementation": "run.py:39 port = int(os.getenv('PORT', 8005)) — defaults to 8005, not 8000; config/settings.py:34 PORT: int = 8000 (not used by run.py)",
+      "status": "inconsistent",
+      "details": "run.py defaults to PORT=8005 when env var not set. README says 8000. config/settings.py also says 8000 but is not read by run.py. Running `python run.py` without .env will serve on 8005, not 8000."
+    },
+    {
+      "section": "Docker Setup - DEPLOYMENT_ENV=server",
+      "readme_claim": "Containerized deployments run in DEPLOYMENT_ENV=server mode (line 116)",
+      "actual_implementation": "Dockerfile:24 ENV DEPLOYMENT_ENV=server; docker-compose.yml:13 DEPLOYMENT_ENV=server",
+      "status": "verified",
+      "details": "Both Dockerfile and docker-compose.yml set DEPLOYMENT_ENV=server. Verified."
+    },
+    {
+      "section": "Docker Setup - SECRET_KEY required",
+      "readme_claim": "Container will fail to start if you do not configure a strong, unique SECRET_KEY (line 116)",
+      "actual_implementation": "config/settings.py:68-82 validate_production_settings auto-generates a random SECRET_KEY if the default insecure key is detected; does NOT fail — it silently replaces the key",
+      "status": "inconsistent",
+      "details": "The app does NOT fail if SECRET_KEY is not set. settings.py auto-generates a random key if the default insecure value is detected (lines 71-78). The claim is overstated — the container starts fine, it just auto-generates a key."
+    },
+    {
+      "section": "How to Use - Cookie extraction",
+      "readme_claim": "Extract cookies via Developer Tools: access_token, client_id, csrftoken (lines 146-148)",
+      "actual_implementation": "auth.py:131-199 login_with_cookies() expects access_token, client_id, csrf_token in payload; CookieLoginRequest schema accepts these three fields",
+      "status": "verified",
+      "details": "Instructions match the API contract. Verified."
+    },
+    {
+      "section": "Project Impact - Course count",
+      "readme_claim": "1,400+ courses enrolled to date (aggregate across all users) (line 180)",
+      "actual_implementation": "seo.py:164 hardcoded str '1,400+'; seo.py:543 ai-profile.json hardcoded '1400'; llms.txt (seo.py:197) hardcoded '1,400+'; README line 270 acknowledges 'aggregate data across all users'",
+      "status": "unverifiable",
+      "details": "Hardcoded values in seo.py and ai-profile.json. No database query backing. README correctly qualifies as 'aggregate across all users' (line 270). Methodology disclosure present (line 270)."
+    },
+    {
+      "section": "Project Impact - Cost savings",
+      "readme_claim": "₹8,44,000+ estimated cost savings (based on list prices of enrolled courses, aggregate across all users) (line 181)",
+      "actual_implementation": "seo.py:165 hardcoded '₹8,44,000+'; ai-profile.json (seo.py:548) hardcoded '₹8,44,000+'; README line 270 methodology: 'calculated using course list prices, not actual payments'",
+      "status": "unverifiable",
+      "details": "Same hardcoded pattern as course count. README correctly provides methodology disclosure."
+    },
+    {
+      "section": "Project Impact - Concurrent processing",
+      "readme_claim": "Scales to hundreds of concurrent coupon processing requests (line 182)",
+      "actual_implementation": "AsyncHTTPClient max_concurrency=20 (http_client.py:51); enrollment_manager sequential per user with lock (line 31-35); EnrollmentManager.active_tasks prevents duplicate user runs",
+      "status": "unverifiable",
+      "details": "No load testing evidence. Concurrency limited by semaphore (20) and per-user locks. 'Hundreds' is unsubstantiated."
+    },
+    {
+      "section": "SEO Features Table",
+      "readme_claim": "8 endpoints listed: /sitemap.xml, /robots.txt, /llms.txt, /ai-profile.json, /humans.txt, /faq, /about, /guides (lines 191-200)",
+      "actual_implementation": "seo.py has all 8 endpoints; additionally /privacy is also served. All confirmed.",
+      "status": "verified",
+      "details": "All 8 SEO endpoints implemented. Plus /privacy page. Complete."
+    },
+    {
+      "section": "Responsible Use - Platform Compliance",
+      "readme_claim": "This tool interacts with Udemy's enrollment endpoints using your own session tokens — does not use a documented public API (lines 247-249)",
+      "actual_implementation": "udemy_client.py uses /payment/checkout-submit/ (line 966, undocumented), /course-landing-components/ (line 642, undocumented), /api-2.0/courses/ (documented API, line 557). Mix of documented and undocumented endpoints.",
+      "status": "verified",
+      "details": "README correctly discloses undocumented API usage. No false 'official API' claim present. Mix of documented (api-2.0) and undocumented endpoints."
+    },
+    {
+      "section": "Responsible Use - Fernet Encryption",
+      "readme_claim": "Udemy session cookies are encrypted (Fernet) before storage in the local database (line 254)",
+      "actual_implementation": "security.py:67-72 encrypt_cookies() - Fernet(json.dumps(cookie_dict)). key via SHA-256 derived from SECRET_KEY or COOKIE_ENCRYPTION_KEY",
+      "status": "verified",
+      "details": "Correct Fernet implementation with key derivation. Verified."
+    },
+    {
+      "section": "Responsible Use - No password storage",
+      "readme_claim": "Udemy password is never stored — not even as a hash (line 255)",
+      "actual_implementation": "auth.py cookie_login flow stores only encrypted cookie_dict. No password fields in User model. Config settings.py has UDEMY_EMAIL/UDEMY_PASSWORD fields (lines 41-42) but not used in cookie auth flow",
+      "status": "verified",
+      "details": "Cookie auth path never touches passwords. Note: settings.py defines UDEMY_PASSWORD field (line 42) for optional credential-based login, but the auth.py login_with_credentials also exists. Password is stored in-memory during login attempt only."
+    },
+    {
+      "section": "Responsible Use - Data transmission",
+      "readme_claim": "Credentials are never transmitted to any third-party server. All data stays on your instance (lines 256-257)",
+      "actual_implementation": "No code sends credentials to third parties. All API calls go to udemy.com directly.",
+      "status": "verified",
+      "details": "No third-party data transmission. Correct."
+    },
+    {
+      "section": "Responsible Use - Rate limiting values",
+      "readme_claim": "Server mode: 6–15 seconds between requests; Local mode: 3–8 seconds between requests (lines 260-262)",
+      "actual_implementation": "udemy_client.py:139 random.uniform(6.0, 15.0) for server; line 141 random.uniform(3.0, 8.0) for local. enrollment_manager.py lines 354-362 additional delays (server: 1.5-3.5s per course + batch cooldowns at 25-course intervals)",
+      "status": "verified",
+      "details": "Core delays match. Additional pipeline-level delays (1.5-3.5s per course + 20-40s every 25 courses on server) supplement these. Total effective delay is higher than claimed minimum."
+    },
+    {
+      "section": "Responsible Use - Circuit breakers",
+      "readme_claim": "Circuit breakers pause enrollment if too many errors (403) are detected (line 263)",
+      "actual_implementation": "udemy_client.py:165-217 _activate_account_block() with progressive cooldown (10min→20min→40min→60min server, 5min→10min→20min→30min local). Threshold: 2 403s server, 4 local (lines 70-75)",
+      "status": "verified",
+      "details": "Circuit breaker with deployment-aware thresholds and exponential backoff cooldowns. Verified."
+    },
+    {
+      "section": "Cross-Cutting: Docker LOG_LEVEL security",
+      "readme_claim": "No explicit LOG_LEVEL claim in README. .env.example defaults LOG_LEVEL=WARNING (line 35) with security warning (lines 33-34)",
+      "actual_implementation": "docker-compose.yml:15 sets LOG_LEVEL=INFO; .env.example:35 defaults to WARNING; credential leakage exists at INFO level in udemy_client.py (lines 880-885, 1078)",
+      "status": "inconsistent",
+      "details": ".env.example security-best-practice is LOG_LEVEL=WARNING, but Docker Compose overrides to INFO. Since credential leakage exists at INFO level (udemy_client.py:880-885 DU_CHECKOUT STATE logs coupon_code), Docker deployments are vulnerable to credential exposure."
+    },
+    {
+      "section": "Cross-Cutting: Disclaimer presence",
+      "readme_claim": "Multiple affiliation disclaimers at lines 10-12, 25-29, 237-239",
+      "actual_implementation": "Three disclaimers present, plus llms.txt line 221 disclaimer. Affiliate disclaimer present throughout.",
+      "status": "verified",
+      "details": "Non-affiliation disclaimers present in README (3 locations) and llms.txt. Earlier plan gotcha about missing disclaimer is now outdated."
+    },
+    {
+      "section": "Cross-Cutting: run.py entry point",
+      "readme_claim": "python run.py starts the server (line 109)",
+      "actual_implementation": "run.py exists and imports uvicorn. Default PORT=8005 (line 39) not 8000 as claimed in README (line 112).",
+      "status": "partial",
+      "details": "Entry point works but default port 8005 vs claimed 8000. See Quick Start port inconsistency."
+    },
+    {
+      "section": "Validating Expired Coupons - Background script",
+      "readme_claim": "Background script to validate coupons via Udemy pricing API (line 160)",
+      "actual_implementation": "scripts/coupon_checker.sh (shell wrapper); scripts/coupon_checker.py:54 uses /api-2.0/course-landing-components/{id}/me/?components=purchase,redeem_coupon&discountCode={coupon}",
+      "status": "verified",
+      "details": "Script exists and uses course-landing-components (undocumented) API for validation. Runs as standalone script, not a persistent background service."
+    },
+    {
+      "section": "SEO: humans.txt Python version claim",
+      "readme_claim": "No specific claim about humans.txt in README",
+      "actual_implementation": "seo.py:149 humans.txt says 'Backend: Python 3.13, FastAPI (async)'. Dockerfile uses python:3.11-slim. README badge says 3.11+.",
+      "status": "inconsistent",
+      "details": "humans.txt claims Python 3.13 but Docker deploys on 3.11. This is a version discrepancy across documentation files."
+    }
+  ],
+  "summary": {
+    "total_sections": 30,
+    "verified": 20,
+    "inconsistent": 6,
+    "missing": 0,
+    "unverifiable": 4
+  },
+  "cross_cutting_issues": [
+    "Python version inconsistency: README badge (3.11+), Docker (3.11-slim), humans.txt/ai-profile/llms.txt (3.13). All three must be aligned.",
+    "run.py default port 8005 contradicts README claim of localhost:8000",
+    "Docker Compose LOG_LEVEL=INFO overrides the .env.example WARNING default, creating credential leakage risk in Docker deployments (INFO-level logging leaks coupon_code in udemy_client.py:880-885)",
+    "Docker SECRET_KEY claim overstated: settings.py auto-generates key if default detected, container does NOT fail to start",
+    "Bulk Enrollment claim 'batches API requests' is misleading — actual implementation is sequential rate-limited enrollment",
+    "Impact metrics (1,400+/₹8,44,000+) are hardcoded in seo.py, not database-derived, making them potentially stale"
+  ],
+  "recommendations": [
+    "Align Python version across README (3.11+), SEO files (change 3.13→3.11), or update Dockerfile to 3.13",
+    "Fix run.py default port to 8000 to match README, or update README to document default 8005",
+    "Change docker-compose.yml LOG_LEVEL from INFO to WARNING to prevent credential leakage",
+    "Update README Bulk Enrollment claim from 'batches API requests' to 'rate-limited sequential enrollment'",
+    "Add methodology footnote to hardcoded metrics with last-verified date",
+    "Update SECRET_KEY Docker claim to reflect auto-generation behavior"
+  ]
+}

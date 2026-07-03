@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Query
+from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -10,7 +11,6 @@ router = APIRouter(prefix="/udemycoupons", tags=["Public Deals"])
 templates = Jinja2Templates(directory="app/templates")
 
 @router.get("", response_class=HTMLResponse)
-@router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def public_deals_page(request: Request):
     """Render the public deals dashboard page."""
     import os
@@ -29,6 +29,11 @@ def public_deals_page(request: Request):
             pass
             
     return templates.TemplateResponse(request, "pages/public_deals.html", {"initial_courses": initial_courses})
+
+@router.get("/", include_in_schema=False)
+async def public_deals_page_redirect():
+    from starlette.datastructures import URL
+    return RedirectResponse(url="/udemycoupons", status_code=307)
 
 @router.get("/api/coupons")
 def get_public_coupons(

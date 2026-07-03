@@ -3,14 +3,14 @@
 Udemy Coupons 2026 - 100% Off Discount Codes [Updated Daily]{% endblock %} {% block
 meta_description %}Get 100% free Udemy coupons and discount codes 2026 updated daily.
 Our automated system checks and verifies working free Udemy courses so you can enroll
-instantly without paying. Browse the latest valid deals now.{% endblock %} {% block meta_keywords %}free udemy
+automatically without paying. Browse the latest valid deals now.{% endblock %} {% block meta_keywords %}free udemy
 coupons 2026, 100% off udemy discount codes, valid udemy coupons, free udemy courses
 today, working udemy promo codes, udemy free coupons, free udemy courses 2026, udemy 100 off coupon{% endblock %} {% block og_type
 %}article{% endblock %} {% block
-og_title %}Free Udemy Coupons 2026 - 100% Off Discount Codes{% endblock %} {% block
+og_title %}Free Udemy Coupons 2026 - 100% Off Discount Codes [Updated Daily]{% endblock %} {% block
 og_description %}Browse 100% free Udemy coupons 2026 updated daily. Verified discount
-codes for instant course enrollment. Our system checks coupon validity continuously.{% endblock %} {% block twitter_title %}Free
-Udemy Coupons 2026 - Udemy Enroller{% endblock %} {% block twitter_description
+codes for automatic course enrollment. Our system checks coupon validity continuously.{% endblock %} {% block twitter_title %}Free
+Udemy Coupons 2026 - 100% Off Discount Codes [Updated Daily]{% endblock %} {% block twitter_description
 %}Browse 100% free Udemy coupons 2026 updated daily. Verified discount codes for
 instant course enrollment.{% endblock %} {% block extra_head %}
 <script type="application/ld+json">
@@ -104,14 +104,14 @@ instant course enrollment.{% endblock %} {% block extra_head %}
                 </div>
                 <input
                     type="text"
-                    id="searchInput"
+                    id="searchInput" aria-label="Search courses"
                     class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
                     placeholder="Search courses..."
                 />
             </div>
             <div class="w-full sm:w-48 relative">
                 <select
-                    id="categorySelect"
+                    id="categorySelect" aria-label="Category"
                     class="block w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 transition-colors appearance-none cursor-pointer"
                 >
                     <option value="">All Categories</option>
@@ -127,7 +127,7 @@ instant course enrollment.{% endblock %} {% block extra_head %}
             </div>
             <div class="w-full sm:w-48 relative">
                 <select
-                    id="statusSelect"
+                    id="statusSelect" aria-label="Status"
                     class="block w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 transition-colors appearance-none cursor-pointer"
                 >
                     <option value="all">All Statuses</option>
@@ -241,8 +241,9 @@ instant course enrollment.{% endblock %} {% block extra_head %}
                         </div>
                         <button
                             data-coupon="{{ course.coupon_code or 'N/A' }}"
-                            class="copy-btn flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none"
+                            class="copy-btn flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                             title="Copy Coupon"
+                            aria-label="Copy coupon code"
                         >
                             <i data-lucide="copy" class="w-4 h-4"></i>
                         </button>

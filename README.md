@@ -11,7 +11,7 @@
 >
 > A free, open-source FastAPI application that automatically finds and enrolls you in 100% discounted Udemy courses. Built by [Madhu Dadi](https://madhudadi.in).
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.13+-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://udemyenroller.madhudadi.in)
@@ -69,7 +69,7 @@ This tool solves that by:
 
 This application is built on a modern, fully asynchronous Python stack:
 
-- **Backend:** Python 3.11 + [FastAPI](https://fastapi.tiangolo.com) (async)
+- **Backend:** Python 3.13 + [FastAPI](https://fastapi.tiangolo.com) (async)
 - **Database:** SQLite + [SQLAlchemy](https://www.sqlalchemy.org) ORM + Alembic migrations
 - **Automation:** [CloudScraper](https://github.com/VeNoMouS/cloudscraper) (primary HTTP client for coupon sites and Udemy API) + [Playwright](https://playwright.dev/python/) with [playwright-stealth](https://github.com/Mattwmaster58/playwright_stealth) (fallback for Cloudflare-protected coupon aggregator sites)
 - **Frontend:** HTML5 + [Tailwind CSS](https://tailwindcss.com) + vanilla JavaScript
@@ -82,7 +82,7 @@ The frontend is intentionally lightweight to ensure sub-second load times. Serve
 ## Quick Start
 
 ### Prerequisites
-- Python 3.11+ (or Docker)
+- Python 3.13+ (or Docker)
 - A Udemy account
 
 ### Option 1: Local Setup

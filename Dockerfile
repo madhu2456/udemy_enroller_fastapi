@@ -19,16 +19,21 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+COPY --from=builder /root/.local /home/appuser/.local
+ENV PATH=/home/appuser/.local/bin:$PATH
 ENV DEPLOYMENT_ENV=server
 
 # Copy application code
 COPY . .
 
-# Create necessary directories and set permissions for entrypoint
-RUN mkdir -p logs Courses data && \
-    chmod +x docker-entrypoint.sh
+# Create non-root user and set up directories
+RUN groupadd --system --gid 1001 appuser && \
+    useradd --system --gid appuser --uid 1001 --create-home appuser && \
+    mkdir -p logs Courses data && \
+    chmod +x docker-entrypoint.sh && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 # Expose port
 EXPOSE 8000

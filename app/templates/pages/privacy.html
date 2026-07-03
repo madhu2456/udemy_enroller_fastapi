@@ -2,8 +2,8 @@
 Enroller Automation Tool{% endblock %} {% block meta_title %}Privacy Policy - Udemy
 Enroller Automation Tool{% endblock %} {% block meta_description %}Udemy Enroller privacy policy: encrypted local storage for session cookies (Fernet), no password storage, no third-party data transmission, transparent open-source data handling.{% endblock %} {% block og_type
 %}article{% endblock %} {% block og_title %}Privacy
-Policy - Udemy Enroller{% endblock %} {% block og_description %}Udemy Enroller privacy policy: encrypted local storage, no password storage, no third-party data transmission.{% endblock %} {% block twitter_title %}Privacy Policy - Udemy
-Enroller{% endblock %} {% block twitter_description %}Udemy Enroller privacy policy: encrypted local storage, no password storage, no third-party data transmission.{%
+Policy - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}Udemy Enroller privacy policy: encrypted local storage, no password storage, no third-party data transmission.{% endblock %} {% block twitter_title %}Privacy Policy - Udemy
+Enroller Automation Tool{% endblock %} {% block twitter_description %}Udemy Enroller privacy policy: encrypted local storage, no password storage, no third-party data transmission.{%
 endblock %} {% block content %}
 <script type="application/ld+json">
     {
@@ -64,8 +64,8 @@ endblock %} {% block content %}
                 </h1>
                 <p class="text-sm text-gray-500 leading-relaxed">
                     This page explains what data Udemy Enroller collects, how it
-                    is stored, and how you can delete it. Last updated: June
-                    2026.
+                     is stored, and how you can delete it. Last updated: July
+                     2026.
                 </p>
             </div>
         </section>
@@ -109,7 +109,7 @@ endblock %} {% block content %}
                                         >Password</strong
                                     >
                                     &mdash; if you use Email Login, your Udemy
-                                    password is sent directly to the Udemy API
+                                     password is sent directly to Udemy's login endpoint
                                     for authentication and is never stored in
                                     any form.</span
                                 >
@@ -180,7 +180,7 @@ endblock %} {% block content %}
                                         >never stored</strong
                                     >
                                     - not even as a hash. It is sent directly to
-                                    the Udemy API for authentication and then
+                                     Udemy's enrollment endpoints for authentication and then
                                     discarded.</span
                                 >
                             </li>
@@ -201,9 +201,12 @@ endblock %} {% block content %}
                                     class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
                                 ></span>
                                 <span
-                                    >No data is transmitted to third-party
-                                    servers. Your credentials are used only to
-                                    communicate directly with Udemy's API.</span
+                             >When self-hosting, no data leaves your
+                                     instance. On the hosted demo at
+                                     udemyenroller.madhudadi.in, encrypted
+                                     cookies are stored on the demo server.
+                                     Your credentials are used only to
+                                     communicate directly with Udemy's enrollment endpoints.</span
                                 >
                             </li>
                         </ul>
@@ -224,19 +227,20 @@ endblock %} {% block content %}
                                     class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
                                 ></span>
                                 <span
-                                    >Google Tag Manager (GTM) is used for
-                                    privacy-friendly page view analytics and
-                                    event tracking (e.g., CTA clicks, outbound
-                                    links). No personal data is collected or
-                                    sold. See the
-                                    <a
-                                        href="https://policies.google.com/privacy"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="text-blue-600 hover:underline"
-                                        >Google Privacy Policy</a
-                                    >
-                                    for details.</span
+                             >Google Tag Manager (GTM) and Google Analytics 4
+                                     (GA4) are used for page view analytics and
+                                     event tracking (e.g., CTA clicks, outbound
+                                     links). These load only after you accept
+                                     the cookie consent banner. No personal data
+                                     is collected or sold. See the
+                                     <a
+                                         href="https://policies.google.com/privacy"
+                                         target="_blank"
+                                         rel="noopener noreferrer"
+                                         class="text-blue-600 hover:underline"
+                                         >Google Privacy Policy</a
+                                     >
+                                     for details.</span
                                 >
                             </li>
                             <li class="flex items-start gap-2">

@@ -36,7 +36,7 @@ if __name__ == "__main__":
     import uvicorn
     
     # Get port from env or default
-    port = int(os.getenv("PORT", 8005))
+    port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
     
     # CRITICAL: On Windows with Python 3.8+, Uvicorn's reload mechanism often 

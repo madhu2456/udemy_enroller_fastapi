@@ -77,7 +77,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=True)  # Bcrypt hashed password
     udemy_display_name = Column(String(255), nullable=True)
-    udemy_cookies = Column(JSON, nullable=True)
+    udemy_cookies = Column(Text, nullable=True)
     currency = Column(String(10), default="usd")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utcnow_naive)

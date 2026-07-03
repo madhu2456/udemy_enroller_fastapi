@@ -41,7 +41,7 @@ if [ ! -f .env ]; then
 SECRET_KEY=$(openssl rand -hex 32)
 DATABASE_URL=sqlite:////app/data/udemy_enroller.db
 DEBUG=false
-LOG_LEVEL=INFO
+LOG_LEVEL=WARNING
 HOST=0.0.0.0
 PORT=8000
 EOF

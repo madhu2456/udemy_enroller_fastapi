@@ -246,7 +246,7 @@ class UdemyClient:
 
     async def manual_login(self, email: str, password: str):
         """Standard emulated login using CloudScraper and Mobile Emulation."""
-        logger.info(f"Attempting login for {email} (standard emulated)")
+        logger.info("Attempting login (standard emulated)")
         try:
             # 1. Fetch login page via CloudScraper
             resp = await self.http.get(
@@ -988,7 +988,7 @@ class UdemyClient:
             try:
                 result = r.json()
             except Exception as e:
-                logger.warning(f"[DU_CHECKOUT] JSON parse error: {e} | text={r.text[:200]}")
+                logger.warning(f"[DU_CHECKOUT] JSON parse error: {e}")
                 continue
 
             if result.get("status") == "succeeded":
@@ -1004,10 +1004,10 @@ class UdemyClient:
                 course.status = True
                 return
 
-            # Log full failure details at WARNING so they show up in production logs
+            # Log failure at WARNING with safe fields only (no payload/result which contain sensitive data)
             logger.warning(
                 f"[DU_CHECKOUT] Failed (attempt {attempt + 1}/{max_attempts}) for {course.title}: "
-                f"status={r.status_code} | payload={payload} | result={result}"
+                f"status={r.status_code} | course_id={course.course_id}"
             )
 
         course.status = False
@@ -1036,7 +1036,7 @@ class UdemyClient:
         else:
             logger.info(f"[FREE_CHECKOUT] Subscribe status={r1.status_code} for {course.title}")
             if r1.status_code not in (200, 302):
-                logger.warning(f"[FREE_CHECKOUT] Subscribe body snippet: {r1.text[:300]}")
+                logger.warning(f"[FREE_CHECKOUT] Subscribe response: status={r1.status_code}")
 
         # Step 2: Verify enrollment via API
         verify_url = (

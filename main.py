@@ -32,10 +32,11 @@ if sys.platform == "win32":
     except ImportError:
         pass  # Fallback for older python versions if any
 
+import json
 import secrets
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -81,22 +82,26 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("AUTO_CREATE_TABLES is disabled; expecting Alembic-managed schema.")
 
-    # Clean up stale runs
-    from sqlalchemy import update
-
-    from app.models.database import EnrollmentRun, SessionLocal
-
+    # Clean up stale runs — gracefully handle fresh database (table may not exist yet)
     try:
+        from sqlalchemy import inspect, update
+
+        from app.models.database import EnrollmentRun, SessionLocal
+
         with SessionLocal() as db:
-            db.execute(
-                update(EnrollmentRun)
-                .where(EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]))
-                .values(status="failed", error_message="Server restarted")
-            )
-            db.commit()
-            logger.info("Cleaned up stale enrollment runs.")
+            inspector = inspect(db.bind)
+            if not inspector.has_table(EnrollmentRun.__tablename__):
+                logger.info("No enrollment_runs table found — skipping stale run cleanup (fresh database).")
+            else:
+                db.execute(
+                    update(EnrollmentRun)
+                    .where(EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]))
+                    .values(status="failed", error_message="Server restarted")
+                )
+                db.commit()
+                logger.info("Cleaned up stale enrollment runs.")
     except Exception as e:
-        logger.error(f"Failed to clean up stale runs: {e}")
+        logger.warning(f"Skipped stale run cleanup: {e}")
 
     # Initialize app state
     from app.core.cache import SessionCache
@@ -163,11 +168,17 @@ async def lifespan(app: FastAPI):
 
 app_settings = get_settings()
 
+# Disable auto-generated OpenAPI docs in production (server mode) for security
+_docs_enabled = app_settings.DEPLOYMENT_ENV != "server"
+
 app = FastAPI(
     title=app_settings.APP_NAME,
     version=app_settings.APP_VERSION,
     description="Automatically enroll in free/discounted Udemy courses (Async v2)",
     lifespan=lifespan,
+    openapi_url=f"/openapi.json" if _docs_enabled else None,
+    docs_url=f"/docs" if _docs_enabled else None,
+    redoc_url=f"/redoc" if _docs_enabled else None,
 )
 
 # CORS middleware - Restricted to specific origins with enhanced security
@@ -180,6 +191,20 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],  # For file downloads
     max_age=3600,  # Cache preflight for 1 hour
 )
+
+# Middleware to rewrite redirect Location headers to HTTPS in production
+@app.middleware("http")
+async def https_redirect_fix(request: Request, call_next):
+    """Ensure redirect responses use HTTPS scheme in server mode."""
+    response = await call_next(request)
+    if (
+        app_settings.DEPLOYMENT_ENV == "server"
+        and response.status_code in (301, 302, 307, 308)
+    ):
+        location = response.headers.get("location", "")
+        if location.startswith("http://"):
+            response.headers["location"] = location.replace("http://", "https://", 1)
+    return response
 
 # GZip middleware to compress responses and lower TTFB / bandwidth
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -269,7 +294,8 @@ async def add_security_headers(request: Request, call_next):
         "connect-src 'self' https://www.google-analytics.com; "
         "frame-src https://www.googletagmanager.com; "
         "base-uri 'self'; "
-        "form-action 'self'"
+        "form-action 'self'; "
+        f"report-uri /api/csp-violation"
     )
     return response
 
@@ -320,6 +346,17 @@ async def track_analytics_event(request: Request):
     except Exception:
         pass
     return {"status": "ok"}
+
+
+@app.post("/api/csp-violation")
+async def csp_violation(request: Request):
+    """Receive and log CSP violation reports."""
+    try:
+        report = await request.json()
+        logger.warning(f"CSP violation: {json.dumps(report, indent=2)}")
+    except Exception as e:
+        logger.warning(f"CSP violation (parse error): {e}")
+    return Response(status_code=204)
 
 
 @app.exception_handler(404)

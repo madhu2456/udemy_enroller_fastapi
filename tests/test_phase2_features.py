@@ -30,21 +30,31 @@ class TestProductionSettingsValidation:
         assert settings.COOKIE_SECURE is False
 
     def test_server_env_rejects_default_secret_key(self):
-        """Test that server mode auto-generates a strong secret when default is detected."""
+        """Test that server mode rejects short/insecure secret keys."""
+        # Key shorter than 32 characters should raise ValueError
+        with pytest.raises(ValueError, match="SECRET_KEY must be at least 32"):
+            Settings(
+                DEPLOYMENT_ENV="server",
+                SECRET_KEY="short-key"
+            )
+        # A key >= 32 chars with encryption key present should succeed
+        from cryptography.fernet import Fernet
+        valid_fernet_key = Fernet.generate_key().decode()
         settings = Settings(
             DEPLOYMENT_ENV="server",
-            SECRET_KEY="change-me-in-production-use-a-strong-secret-key"
+            SECRET_KEY="a-valid-strong-secure-random-key-1234567890",
+            COOKIE_ENCRYPTION_KEY=valid_fernet_key,
         )
-        # The model validator auto-generates a random key when it detects the default
-        assert settings.SECRET_KEY != "change-me-in-production-use-a-strong-secret-key"
-        assert len(settings.SECRET_KEY) == 64  # 32 bytes hex = 64 chars
-        assert settings.COOKIE_SECURE is True  # Server mode forces COOKIE_SECURE
+        assert settings.COOKIE_SECURE is True
 
     def test_server_env_forces_cookie_secure(self):
         """Test that server mode automatically forces COOKIE_SECURE to True."""
+        from cryptography.fernet import Fernet
+        valid_fernet_key = Fernet.generate_key().decode()
         settings = Settings(
             DEPLOYMENT_ENV="server",
-            SECRET_KEY="a-very-strong-secure-random-key-12345!",
+            SECRET_KEY="a-valid-strong-secure-random-key-1234567890",
+            COOKIE_ENCRYPTION_KEY=valid_fernet_key,
             COOKIE_SECURE=False  # Try setting it to False
         )
         assert settings.COOKIE_SECURE is True
