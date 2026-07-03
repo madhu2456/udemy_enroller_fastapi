@@ -10,6 +10,7 @@ services:
       - APP_NAME=Udemy Course Enroller
       - DEBUG=false
       - SECRET_KEY=${SECRET_KEY}
+      - COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
       - DEPLOYMENT_ENV=server
       - DATABASE_URL=sqlite:////app/data/udemy_enroller.db
       - LOG_LEVEL=WARNING
