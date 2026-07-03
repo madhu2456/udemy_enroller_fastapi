@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     GOOGLE_SITE_VERIFICATION: str = ""
     # Google Tag Manager container ID — set in .env (e.g. GTM-XXXXXXX)
     GTM_CONTAINER_ID: str = ""
+    # Google Analytics 4 Measurement ID — set in .env (e.g. G-XXXXXXXXXX)
+    # Used for direct GA4 gtag.js tracking (works independently of GTM)
+    GA4_MEASUREMENT_ID: str = "G-GT1FDTC7Y6"
     # CORS origins - in production, set specific domains
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 

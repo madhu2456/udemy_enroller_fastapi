@@ -412,6 +412,20 @@
             }
         </script>
         {% endif %}
+        {% if request.app.state.ga4_measurement_id %}
+        <!-- Google Analytics 4 (direct gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ request.app.state.ga4_measurement_id }}" nonce="{{ request.state.nonce }}"></script>
+        <script nonce="{{ request.state.nonce }}">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '{{ request.app.state.ga4_measurement_id }}', {
+                page_path: '{{ request.url.path }}',
+                page_title: document.title,
+                send_page_view: true
+            });
+        </script>
+        {% endif %}
     </head>
     <body class="min-h-screen flex flex-col">
         {% if request.app.state.gtm_container_id %}
