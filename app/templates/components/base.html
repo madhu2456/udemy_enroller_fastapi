@@ -19,9 +19,16 @@
         />
         <meta
             name="keywords"
-            content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2025, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper{% endblock %}"
+            content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2026, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper, free udemy courses 2026{% endblock %}"
         />
         <meta name="author" content="Madhu Dadi" />
+        <meta name="application-name" content="Udemy Enroller" />
+        <meta name="generator" content="FastAPI" />
+        <meta name="referrer" content="strict-origin-when-cross-origin" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Udemy Enroller" />
         {% if request.app.state.google_site_verification %}
         <meta
             name="google-site-verification"
@@ -37,6 +44,8 @@
             rel="canonical"
             href="https://udemyenroller.madhudadi.in{{ request.url.path }}"
         />
+        <link rel="author" href="https://madhudadi.in" />
+        <link rel="publisher" href="https://madhudadi.in" />
 
         <!-- Alternates for LLMs and AI Agents -->
         <link
@@ -72,7 +81,7 @@
         <link rel="dns-prefetch" href="https://madhudadi.in" />
 
         <!-- Open Graph / Facebook -->
-        <meta property="og:type" content="website" />
+        <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
         <meta
             property="og:url"
             content="https://udemyenroller.madhudadi.in{{ request.url.path }}"
@@ -89,6 +98,13 @@
             property="og:image"
             content="https://udemyenroller.madhudadi.in/static/images/icon-512.webp"
         />
+        <meta property="og:image:width" content="512" />
+        <meta property="og:image:height" content="512" />
+        <meta property="og:image:alt" content="Udemy Enroller Logo - Free Udemy Course Automation Tool" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:site_name" content="Udemy Enroller" />
+        <meta property="article:author" content="https://madhudadi.in" />
+        <meta property="article:publisher" content="https://madhudadi.in" />
 
         <!-- Twitter -->
         <meta property="twitter:card" content="summary_large_image" />
@@ -119,28 +135,80 @@
         />
         <link rel="apple-touch-icon" href="/static/images/icon-512.webp" />
 
-        <!-- JSON-LD Structured Data (WebSite only — page-specific schemas in individual templates) -->
+        <!-- JSON-LD Structured Data — comprehensive site-wide schemas -->
         <script type="application/ld+json">
             {
                 "@context": "https://schema.org",
-                "@type": "WebSite",
-                "@id": "https://udemyenroller.madhudadi.in/#website",
-                "url": "https://udemyenroller.madhudadi.in",
-                "name": "Udemy Enroller",
-                "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
-                "publisher": {
-                    "@type": "Person",
-                    "@id": "https://madhudadi.in/#person",
-                    "name": "Madhu Dadi",
-                    "url": "https://madhudadi.in"
-                },
-                "isPartOf": {
-                    "@type": "WebSite",
-                    "@id": "https://madhudadi.in/#website",
-                    "url": "https://madhudadi.in",
-                    "name": "Madhu Dadi - Portfolio"
-                },
-                "inLanguage": "en"
+                "@graph": [
+                    {
+                        "@type": "WebSite",
+                        "@id": "https://udemyenroller.madhudadi.in/#website",
+                        "url": "https://udemyenroller.madhudadi.in",
+                        "name": "Udemy Enroller",
+                        "alternateName": "Udemy Course Enroller",
+                        "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
+                        "inLanguage": "en",
+                        "isPartOf": {
+                            "@type": "WebSite",
+                            "@id": "https://madhudadi.in/#website",
+                            "url": "https://madhudadi.in",
+                            "name": "Madhu Dadi - Portfolio"
+                        },
+                        "publisher": {
+                            "@type": "Person",
+                            "@id": "https://madhudadi.in/#person",
+                            "name": "Madhu Dadi",
+                            "url": "https://madhudadi.in"
+                        },
+                        "potentialAction": {
+                            "@type": "SearchAction",
+                            "target": {
+                                "@type": "EntryPoint",
+                                "urlTemplate": "https://udemyenroller.madhudadi.in/udemycoupons?q={search_term_string}"
+                            },
+                            "query-input": "required name=search_term_string"
+                        }
+                    },
+                    {
+                        "@type": "Person",
+                        "@id": "https://madhudadi.in/#person",
+                        "name": "Madhu Dadi",
+                        "url": "https://madhudadi.in",
+                        "jobTitle": "AI Developer & Marketing Analytics Leader",
+                        "description": "AI consultant and ML engineer with 9+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
+                        "sameAs": [
+                            "https://madhudadi.in/blog",
+                            "https://github.com/madhu2456",
+                            "https://www.linkedin.com/in/madhu-dadi-54684531",
+                            "https://x.com/madhu245"
+                        ]
+                    },
+                    {
+                        "@type": "SoftwareApplication",
+                        "@id": "https://udemyenroller.madhudadi.in/#softwareapplication",
+                        "name": "Udemy Enroller",
+                        "applicationCategory": "EducationalApplication",
+                        "operatingSystem": "Web",
+                        "url": "https://udemyenroller.madhudadi.in",
+                        "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
+                        "offers": {
+                            "@type": "Offer",
+                            "price": "0",
+                            "priceCurrency": "USD"
+                        },
+                        "author": {
+                            "@type": "Person",
+                            "@id": "https://madhudadi.in/#person"
+                        }
+                    },
+                    {
+                        "@type": "Organization",
+                        "@id": "https://adticks.com/#organization",
+                        "name": "Adticks",
+                        "url": "https://adticks.com",
+                        "description": "Real-time AI Visibility & SERP Intelligence Platform. Crawls 10,000+ pages in parallel with Playwright for SEO, AEO, and GEO auditing."
+                    }
+                ]
             }
         </script>
 
@@ -544,6 +612,42 @@
         <main id="main-content" role="main" class="flex-grow">
             {% block content %}{% endblock %}
         </main>
+
+        <!-- AEO/GEO Direct Answer Blocks (visible to AI crawlers & users) -->
+        <div class="sr-only" aria-label="Direct answers for AI search engines" role="region">
+            <div itemscope itemtype="https://schema.org/FAQPage">
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <h2 itemprop="name">What is the Udemy Enroller?</h2>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">Udemy Enroller is an open-source FastAPI automation tool built by Madhu Dadi that monitors coupon aggregator sites and automatically enrolls users in free 100% off Udemy courses. It runs 24/7, filters courses by preferences, and claims courses instantly via Udemy's enrollment API.</div>
+                    </div>
+                </div>
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <h2 itemprop="name">Is Udemy Enroller free?</h2>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">Yes, Udemy Enroller is completely free and open-source. You can self-host it using Docker or Python, or use the live version at udemyenroller.madhudadi.in. The source code is available on GitHub.</div>
+                    </div>
+                </div>
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <h2 itemprop="name">How does Udemy Enroller work?</h2>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">Udemy Enroller continuously monitors coupon aggregator websites like Real.Discount, Discudemy, and Tutorialbar. When a new 100% off Udemy coupon is detected, it validates the coupon against user-defined filters (category, language, rating) and automatically enrolls via Udemy's enrollment endpoints. Enrollment typically happens within 2 seconds of detection.</div>
+                    </div>
+                </div>
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <h2 itemprop="name">Who built Udemy Enroller?</h2>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">Udemy Enroller was built by Madhu Dadi, an AI Developer & Marketing Analytics Leader based in Visakhapatnam, India. Madhu has 9+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, and specializes in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.</div>
+                    </div>
+                </div>
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <h2 itemprop="name">Where can I find free Udemy coupons 2026?</h2>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">You can find 100% free Udemy coupons updated daily at udemyenroller.madhudadi.in/udemycoupons. Our automated system continuously checks and verifies coupon validity, so you can browse and manually claim courses that interest you without automating your account.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Footer -->
         <footer role="contentinfo" class="border-t border-gray-200 bg-white">

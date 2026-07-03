@@ -216,6 +216,8 @@ async def add_cache_headers(request: Request, call_next):
         "/faq",
         "/about",
         "/guides",
+        "/privacy",
+        "/udemycoupons",
         "/robots.txt",
         "/sitemap.xml",
         "/humans.txt",

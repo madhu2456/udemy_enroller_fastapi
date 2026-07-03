@@ -1,31 +1,79 @@
-{% extends "components/base.html" %} {% block title %}Step-by-Step Guides -
-Udemy Enroller Automation{% endblock %} {% block meta_title %}Step-by-Step
-Guides - Udemy Enroller Automation{% endblock %} {% block meta_description
-%}Step-by-step guides for the Udemy Enroller: learn how to connect your account,
-extract cookies, configure smart filters, and run on a server.{% endblock %} {%
-block og_title %}Guides - Udemy Enroller{% endblock %} {% block og_description
-%}Step-by-step guides for the Udemy Enroller: connect your account, extract
-cookies, configure smart filters, and deploy on a server.{% endblock %} {% block
-twitter_title %}Guides - Udemy Enroller{% endblock %} {% block
-twitter_description %}Step-by-step guides for the Udemy Enroller: connect your
+{% extends "components/base.html" %} {% block title %}How to Get Free Udemy
+Courses: Step-by-Step Guides{% endblock %} {% block meta_title %}How to Get Free
+Udemy Courses: Step-by-Step Guides{% endblock %} {% block meta_description
+%}Step-by-step guides for the Udemy Enroller automation tool: learn how to
+connect your Udemy account, extract cookies, configure smart filters, deploy
+on a server, and automatically enroll in 100% off courses.{% endblock %} {% block og_type
+%}article{% endblock %} {% block og_title %}Free Udemy Course Guides -
+Udemy Enroller{% endblock %} {% block og_description
+%}Step-by-step guides for the Udemy Enroller automation tool: connect your account, extract
+cookies, configure smart filters, and deploy on a server to automatically claim
+free Udemy courses.{% endblock %} {% block
+twitter_title %}Free Udemy Course Guides -
+Udemy Enroller{% endblock %} {% block
+twitter_description %}Step-by-step guides for the Udemy Enroller automation tool: connect your
 account, extract cookies, configure smart filters, and deploy on a server.{%
 endblock %} {% block content %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
+        "@graph": [
             {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Home",
-                "item": "https://udemyenroller.madhudadi.in/"
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://udemyenroller.madhudadi.in/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Guides",
+                        "item": "https://udemyenroller.madhudadi.in/guides"
+                    }
+                ]
             },
             {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "Guides",
-                "item": "https://udemyenroller.madhudadi.in/guides"
+                "@type": "ItemList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Quick Start Guide",
+                        "url": "https://udemyenroller.madhudadi.in/guides#quickstart",
+                        "description": "Set up the Udemy Enroller in minutes and start claiming free courses automatically."
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Extract Cookies Guide",
+                        "url": "https://udemyenroller.madhudadi.in/guides#cookies",
+                        "description": "Learn how to extract your Udemy session cookies for secure login."
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": "Configure Filters Guide",
+                        "url": "https://udemyenroller.madhudadi.in/guides#filters",
+                        "description": "Set up smart course filters by category, language, rating, and instructor exclusions."
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 4,
+                        "name": "Server Deployment Guide",
+                        "url": "https://udemyenroller.madhudadi.in/guides#deploy",
+                        "description": "Deploy the Udemy Enroller on a server using Docker for 24/7 automated enrollment."
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 5,
+                        "name": "Browsing Manual Coupons Guide",
+                        "url": "https://udemyenroller.madhudadi.in/guides#manual",
+                        "description": "Browse our live database of manually verified free Udemy coupons."
+                    }
+                ]
             }
         ]
     }

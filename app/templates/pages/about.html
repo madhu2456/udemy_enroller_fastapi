@@ -1,31 +1,51 @@
 {% extends "components/base.html" %} {% block title %}About the Automated Udemy
-Enroller Tool{% endblock %} {% block meta_title %}About the Automated Udemy
-Enroller Tool{% endblock %} {% block meta_description %}Learn about the Udemy
-Enroller project - an open-source automation tool built by Madhu Dadi to help
-learners automatically claim 100% off Udemy courses.{% endblock %} {% block
-og_title %}About - Udemy Enroller{% endblock %} {% block og_description %}Learn
-about the Udemy Enroller project - an open-source automation tool built by Madhu
-Dadi to help learners claim 100% off Udemy courses.{% endblock %} {% block
-twitter_title %}About - Udemy Enroller{% endblock %} {% block
-twitter_description %}Learn about the Udemy Enroller project - an open-source
+Enroller Tool by Madhu Dadi{% endblock %} {% block meta_title %}About the Automated Udemy
+Enroller Tool by Madhu Dadi{% endblock %} {% block meta_description %}Learn about the Udemy
+Enroller project - an open-source FastAPI automation tool built by Madhu Dadi to help
+learners automatically discover and claim 100% off Udemy courses.{% endblock %} {% block
+og_type %}article{% endblock %} {% block
+og_title %}About - Udemy Enroller by Madhu Dadi{% endblock %} {% block og_description %}Learn
+about the Udemy Enroller project - an open-source FastAPI automation tool built by Madhu
+Dadi to help learners automatically claim 100% off Udemy courses.{% endblock %} {% block
+twitter_title %}About - Udemy Enroller by Madhu Dadi{% endblock %} {% block
+twitter_description %}Learn about the Udemy Enroller project - an open-source FastAPI
 automation tool built by Madhu Dadi to help learners claim 100% off Udemy
 courses.{% endblock %} {% block content %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
+        "@graph": [
             {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Home",
-                "item": "https://udemyenroller.madhudadi.in/"
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://udemyenroller.madhudadi.in/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "About",
+                        "item": "https://udemyenroller.madhudadi.in/about"
+                    }
+                ]
             },
             {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "About",
-                "item": "https://udemyenroller.madhudadi.in/about"
+                "@type": "AboutPage",
+                "@id": "https://udemyenroller.madhudadi.in/about",
+                "name": "About the Automated Udemy Enroller Tool",
+                "description": "Learn about the Udemy Enroller project - an open-source FastAPI automation tool built by Madhu Dadi.",
+                "significantLink": [
+                    "https://github.com/madhu2456/udemy_enroller_fastapi",
+                    "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
+                ],
+                "mainEntity": {
+                    "@type": "SoftwareApplication",
+                    "@id": "https://udemyenroller.madhudadi.in/#softwareapplication",
+                    "name": "Udemy Enroller"
+                }
             }
         ]
     }
