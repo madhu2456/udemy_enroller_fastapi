@@ -780,7 +780,187 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
             class="max-w-6xl mx-auto px-6 py-16"
             aria-labelledby="connect-heading"
         >
-            <div class="max-w-md mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <div class="lg:sticky lg:top-24">
+                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                    <!-- Header -->
+                    <div class="px-6 py-5 border-b border-gray-100">
+                        <div class="flex items-center gap-3 mb-1">
+                            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-base font-semibold text-gray-900">How It Works</h3>
+                        </div>
+                        <p class="text-sm text-gray-500">Respectful automation with built-in safeguards</p>
+                    </div>
+                    
+                    <!-- Steps -->
+                    <div class="px-6 py-5 space-y-4">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-xs font-semibold text-blue-600">1</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Rate Limited</p>
+                                <p class="text-xs text-gray-500">3–15 second delays between requests</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-xs font-semibold text-blue-600">2</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">No CAPTCHA Bypass</p>
+                                <p class="text-xs text-gray-500">Engine pauses if challenged</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-xs font-semibold text-blue-600">3</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">No Evasion</p>
+                                <p class="text-xs text-gray-500">No proxies, no IP rotation</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Divider -->
+                    <div class="px-6">
+                        <div class="border-t border-gray-100"></div>
+                    </div>
+                    
+                    <!-- FAQ -->
+                    <div class="px-6 py-5">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">FAQ</p>
+                        <div class="space-y-3">
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">How does it work?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">Monitors coupon sites 24/7 and automatically applies valid 100% off coupons to your account.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-100"></div>
+                            
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Is my account safe?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">Yes. Passwords are never stored. Cookies are encrypted. Uses Udemy's own endpoints.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-100"></div>
+                            
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Email or Cookie login?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">Cookie Login is more reliable. Email may trigger CSRF errors on servers.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-100"></div>
+                            
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Really free?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">100% free and open source on GitHub.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-100"></div>
+                            
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Can I filter which courses get enrolled?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">Yes. Set minimum rating, preferred language, and exclude specific instructors.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-100"></div>
+                            
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">How do I get started?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">Log into Udemy, extract your cookies using the Chrome extension, and paste them into the Cookie Login form.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-100"></div>
+                            
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Will Udemy ban my account?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">The tool uses respectful rate limiting and the same endpoints as the Udemy website. However, automated access may violate Udemy's Terms of Service. Users are responsible for compliance.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-100"></div>
+                            
+                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Does it still work in 2026?</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                                <div class="faq-content hidden pb-2">
+                                    <p class="text-sm text-gray-500">Yes. The tool is actively maintained with regular updates to coupon scrapers and enrollment logic. Check the GitHub repository for the latest version.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
+                            <p class="text-xs text-gray-600">You are responsible for compliance with Udemy's Terms</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="max-w-md lg:mx-0">
                 <div class="mb-8 text-center">
                     <h2
                         id="connect-heading"
@@ -1064,231 +1244,8 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                         >Review the source code.</a
                     >
                 </p>
-            </div>
-        </section>
-
-                    <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Responsible Use</h3>
-                        <ul class="text-xs text-gray-500 space-y-1">
-                            <li>• The tool implements respectful rate limiting (3–15 seconds between requests)</li>
-                            <li>• No CAPTCHAs are bypassed — if Udemy presents one, the engine pauses</li>
-                            <li>• No proxies or IP rotation are used for evasion</li>
-                            <li>• You are responsible for ensuring your use complies with Udemy's Terms of Use</li>
-                        </ul>
-                    </div>
-
-        <!-- FAQ -->
-        <section
-            class="border-t border-gray-200 bg-[#F9FAFB]"
-            aria-labelledby="faq-heading"
-            itemscope
-            itemtype="https://schema.org/FAQPage"
-        >
-            <div class="max-w-6xl mx-auto px-6 py-16">
-                <div class="max-w-2xl mx-auto">
-                    <div class="mb-8">
-                        <h2
-                            id="faq-heading"
-                            class="text-2xl font-semibold text-gray-900 tracking-tight mb-2"
-                        >
-                            Frequently Asked Questions
-                        </h2>
-                        <p class="text-sm text-gray-500">
-                            Everything you need to know about the Udemy Enroller
-                            tool.
-                        </p>
-                    </div>
-                    <div
-                        class="bg-white rounded-xl border border-gray-200 px-6"
-                    >
-                        <div
-                            class="border-b border-gray-200 py-5"
-                            itemscope
-                            itemprop="mainEntity"
-                            itemtype="https://schema.org/Question"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-900 mb-2"
-                                itemprop="name"
-                            >
-                                How does the automated Udemy course enroller
-                                work?
-                            </h3>
-                            <div
-                                itemscope
-                                itemprop="acceptedAnswer"
-                                itemtype="https://schema.org/Answer"
-                            >
-                                <p
-                                    class="text-sm text-gray-500 leading-relaxed"
-                                    itemprop="text"
-                                >
-                                    The tool monitors popular coupon aggregator
-                                    websites in real time. When a valid 100% off
-                                    Udemy coupon is detected, it automatically
-                                    applies it to your account and enrolls you
-                                    in the course - no manual steps required.
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            class="border-b border-gray-200 py-5"
-                            itemscope
-                            itemprop="mainEntity"
-                            itemtype="https://schema.org/Question"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-900 mb-2"
-                                itemprop="name"
-                            >
-                                Is it safe to connect my Udemy account?
-                            </h3>
-                            <div
-                                itemscope
-                                itemprop="acceptedAnswer"
-                                itemtype="https://schema.org/Answer"
-                            >
-                                <p
-                                    class="text-sm text-gray-500 leading-relaxed"
-                                    itemprop="text"
-                                >
-                                     Yes. The tool integrates directly with
-                                     Udemy's enrollment endpoints and only uses your credentials
-                                    to generate a temporary authentication
-                                    token. Your password is never stored in any
-                                    form. Session cookies are encrypted before
-                                    local storage. Cookie Login is available as
-                                    an alternative if you prefer not to share
-                                    your password.
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            class="border-b border-gray-200 py-5"
-                            itemscope
-                            itemprop="mainEntity"
-                            itemtype="https://schema.org/Question"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-900 mb-2"
-                                itemprop="name"
-                            >
-                                What is the difference between Email Login and
-                                Cookie Login?
-                            </h3>
-                            <div
-                                itemscope
-                                itemprop="acceptedAnswer"
-                                itemtype="https://schema.org/Answer"
-                            >
-                                <p
-                                    class="text-sm text-gray-500 leading-relaxed"
-                                    itemprop="text"
-                                >
-                                     Email Login uses your Udemy email and
-                                     password to authenticate, but may trigger
-                                     additional login prompts on server environments. Cookie Login
-                                     uses three session cookies extracted from
-                                     your browser (access_token, client_id,
-                                     csrftoken), which typically avoids
-                                     triggering additional prompts and is
-                                    generally more reliable.
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            class="border-b border-gray-200 py-5"
-                            itemscope
-                            itemprop="mainEntity"
-                            itemtype="https://schema.org/Question"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-900 mb-2"
-                                itemprop="name"
-                            >
-                                How do I get free Udemy courses with 100% off
-                                coupons?
-                            </h3>
-                            <div
-                                itemscope
-                                itemprop="acceptedAnswer"
-                                itemtype="https://schema.org/Answer"
-                            >
-                                <p
-                                    class="text-sm text-gray-500 leading-relaxed"
-                                    itemprop="text"
-                                >
-                                    Connect your Udemy account using Email or
-                                    Cookie Login, configure your smart filters
-                                    (minimum rating, language, excluded
-                                    instructors), and start the engine. It will
-                                    automatically find and apply 100% off
-                                    coupons to enroll you in free courses.
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            class="border-b border-gray-200 py-5"
-                            itemscope
-                            itemprop="mainEntity"
-                            itemtype="https://schema.org/Question"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-900 mb-2"
-                                itemprop="name"
-                            >
-                                Is the Udemy Enroller free and open source?
-                            </h3>
-                            <div
-                                itemscope
-                                itemprop="acceptedAnswer"
-                                itemtype="https://schema.org/Answer"
-                            >
-                                <p
-                                    class="text-sm text-gray-500 leading-relaxed"
-                                    itemprop="text"
-                                >
-                                    Yes. The Udemy Enroller is completely free
-                                    and open source. The full source code is
-                                    available on GitHub. Starring the repository
-                                    helps support development and ensures you
-                                    get new scraper updates.
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            class="py-5"
-                            itemscope
-                            itemprop="mainEntity"
-                            itemtype="https://schema.org/Question"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-900 mb-2"
-                                itemprop="name"
-                            >
-                                Can I filter which Udemy courses are enrolled
-                                automatically?
-                            </h3>
-                            <div
-                                itemscope
-                                itemprop="acceptedAnswer"
-                                itemtype="https://schema.org/Answer"
-                            >
-                                <p
-                                    class="text-sm text-gray-500 leading-relaxed"
-                                    itemprop="text"
-                                >
-                                    Absolutely. The smart filter system lets you
-                                    set a minimum course rating, preferred
-                                    language, and a blocklist of instructors to
-                                    skip. Only courses matching your criteria
-                                    will be enrolled.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </div><!-- end right column -->
+            </div><!-- end grid -->
         </section>
 
         <!-- OPEN SOURCE CTA -->
@@ -1478,6 +1435,19 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
             showError("cookie", "Connection error. Please try again.");
             btn.disabled = false;
             btn.innerHTML = originalText;
+        }
+    }
+
+    function toggleFaq(button) {
+        const content = button.querySelector('.faq-content');
+        const icon = button.querySelector('svg');
+        
+        if (content) {
+            content.classList.toggle('hidden');
+        }
+        
+        if (icon) {
+            icon.classList.toggle('rotate-180');
         }
     }
 </script>
