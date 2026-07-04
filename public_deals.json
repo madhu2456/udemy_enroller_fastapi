@@ -1,55 +1,198 @@
 [
   {
-    "id": 13381,
-    "title": "Employee Retention Strategies",
-    "url": "https://www.udemy.com/course/employee-retention-strategies-k/?couponCode=323335154B4F7C6C8A11",
-    "coupon_code": "323335154B4F7C6C8A11",
+    "id": 13954,
+    "title": "Introduction to Seawater Desalination",
+    "url": "https://www.udemy.com/course/introduction-to-reverse-osmosis-desalination/?couponCode=90B2BDA5D98A17674EA4",
+    "coupon_code": "90B2BDA5D98A17674EA4",
     "price": 19.98,
     "category": "Business",
     "language": "English",
-    "rating": 5.0,
+    "rating": 4.35,
     "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:30:15.446321Z",
-    "last_checked_at": "2026-07-01T15:29:29.989151Z"
+    "enrolled_at": "2026-07-04T12:48:11.989037Z",
+    "last_checked_at": "2026-07-04T15:14:08.857383Z"
   },
   {
-    "id": 13380,
-    "title": "Employee Advocacy",
-    "url": "https://www.udemy.com/course/employee-advocacy-a/?couponCode=197DBDBD5030E1355600",
-    "coupon_code": "197DBDBD5030E1355600",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 5.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:29:42.352710Z",
-    "last_checked_at": "2026-07-01T15:29:37.087748Z"
-  },
-  {
-    "id": 13377,
-    "title": "Cybersécurité au Travail : RGPD & Protection des Données",
-    "url": "https://www.udemy.com/course/cybersecurite-au-travail-rgpd-protection-des-donnees/?couponCode=878FE97E9A40B43DCF28",
-    "coupon_code": "878FE97E9A40B43DCF28",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "French",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:29:01.634420Z",
-    "last_checked_at": "2026-07-01T15:29:37.087768Z"
-  },
-  {
-    "id": 13376,
-    "title": "AWS CERTIFIED AI PRACTITIONER CERTIFICATION EXAM (AIF-C01)",
-    "url": "https://www.udemy.com/course/aws-certified-ai-practitioner-certification-exam-aif-c01/?couponCode=8BA97F0BE5E8F719C744",
-    "coupon_code": "8BA97F0BE5E8F719C744",
-    "price": 19.98,
-    "category": "IT & Software",
+    "id": 13951,
+    "title": "Principles of Sustainable Architecture & Green Buildings",
+    "url": "https://www.udemy.com/course/sustainable-architecture-and-green-buildings/?couponCode=47E940FCD48B1728D060",
+    "coupon_code": "47E940FCD48B1728D060",
+    "price": 0.0,
+    "category": "Design",
     "language": "English",
     "rating": 0.0,
     "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:28:46.968782Z",
-    "last_checked_at": "2026-07-01T15:29:37.087770Z"
+    "enrolled_at": "2026-07-04T12:44:35.515950Z",
+    "last_checked_at": "2026-07-04T15:14:16.026230Z"
+  },
+  {
+    "id": 13948,
+    "title": "Microsoft Outlook Associate (MO-400): Practice Exams",
+    "url": "https://www.udemy.com/course/microsoft-outlook-associate-mo-400-practice-exams/?couponCode=426294DA387A1F3010F6",
+    "coupon_code": "426294DA387A1F3010F6",
+    "price": 19.98,
+    "category": "Office Productivity",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-04T12:43:44.510061Z",
+    "last_checked_at": "2026-07-04T15:14:23.652151Z"
+  },
+  {
+    "id": 13947,
+    "title": "Microsoft Publisher (MO-400): Practice Exams",
+    "url": "https://www.udemy.com/course/microsoft-publisher-mo-400-practice-exams/?couponCode=0A8CC37A06092B818DCB",
+    "coupon_code": "0A8CC37A06092B818DCB",
+    "price": 19.98,
+    "category": "Office Productivity",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-04T12:43:26.027264Z",
+    "last_checked_at": "2026-07-04T15:14:23.652162Z"
+  },
+  {
+    "id": 13946,
+    "title": "Microsoft Access Expert (MO-500): Practice Exams",
+    "url": "https://www.udemy.com/course/microsoft-access-expert-mo-500-practice-exams/?couponCode=3AAC9E3756AF3453509B",
+    "coupon_code": "3AAC9E3756AF3453509B",
+    "price": 19.98,
+    "category": "Office Productivity",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-04T12:43:01.299148Z",
+    "last_checked_at": "2026-07-04T15:14:23.652166Z"
+  },
+  {
+    "id": 13945,
+    "title": "Microsoft PowerPoint Associate (MO-300): Practice Exams",
+    "url": "https://www.udemy.com/course/microsoft-powerpoint-associate-mo-300-practice-exams/?couponCode=5DBB2F3D23A36B3FE6B3",
+    "coupon_code": "5DBB2F3D23A36B3FE6B3",
+    "price": 19.98,
+    "category": "Office Productivity",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-04T12:42:40.901416Z",
+    "last_checked_at": "2026-07-04T15:14:23.652170Z"
+  },
+  {
+    "id": 13780,
+    "title": "CompTIA A+ 220-1202 Core 2 V15: 900 Practice Questions 2026",
+    "url": "https://www.udemy.com/course/comptia-a-220-1202-core-2-v15-900-practice-questions-2026/?couponCode=TECHSERKSOFF",
+    "coupon_code": "TECHSERKSOFF",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 4.409091,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-03T06:49:24.270464Z",
+    "last_checked_at": "2026-07-04T15:18:27.529479Z"
+  },
+  {
+    "id": 13680,
+    "title": "Fundamental Question on Industrial Electronics",
+    "url": "https://www.udemy.com/course/fundamental-question-on-industrial-electronics/?couponCode=FAF9EE83E76CBBEF0CEF",
+    "coupon_code": "FAF9EE83E76CBBEF0CEF",
+    "price": 19.98,
+    "category": "Teaching & Academics",
+    "language": "English",
+    "rating": 4.464286,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T16:07:53.686839Z",
+    "last_checked_at": "2026-07-04T15:20:58.497096Z"
+  },
+  {
+    "id": 13677,
+    "title": "Fundamental Questions on Electrical Cables",
+    "url": "https://www.udemy.com/course/fundamental-question-on-electrical-cables/?couponCode=0BE8253A8B8800706F08",
+    "coupon_code": "0BE8253A8B8800706F08",
+    "price": 19.98,
+    "category": "IT & Software",
+    "language": "English",
+    "rating": 4.5,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T16:07:20.724447Z",
+    "last_checked_at": "2026-07-04T15:21:10.201226Z"
+  },
+  {
+    "id": 13537,
+    "title": "More Free Courses in Teaching & Academics",
+    "url": "https://www.udemy.com/course/ibps-clerk-hindi-mock-test-exam-series-government-job/?couponCode=E2F4D574331B4A4CB5A3",
+    "coupon_code": "E2F4D574331B4A4CB5A3",
+    "price": 19.98,
+    "category": "Teaching & Academics",
+    "language": "Hindi",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T04:13:05.284131Z",
+    "last_checked_at": "2026-07-04T15:24:40.368427Z"
+  },
+  {
+    "id": 13535,
+    "title": "More Free Courses in Teaching & Academics",
+    "url": "https://www.udemy.com/course/ibps-po-mock-test-exam-series-government-job/?couponCode=A959173B805CF80D9A84",
+    "coupon_code": "A959173B805CF80D9A84",
+    "price": 19.98,
+    "category": "Teaching & Academics",
+    "language": "Hindi",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T04:12:21.814504Z",
+    "last_checked_at": "2026-07-04T15:24:50.360560Z"
+  },
+  {
+    "id": 13534,
+    "title": "More Free Courses in Teaching & Academics",
+    "url": "https://www.udemy.com/course/ssc-cpo-mock-test-exam-series-hindi-government-job/?couponCode=E677A221C053DA7B42C4",
+    "coupon_code": "E677A221C053DA7B42C4",
+    "price": 19.98,
+    "category": "Teaching & Academics",
+    "language": "Hindi",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T04:11:56.485007Z",
+    "last_checked_at": "2026-07-04T15:24:50.360571Z"
+  },
+  {
+    "id": 13533,
+    "title": "More Free Courses in Teaching & Academics",
+    "url": "https://www.udemy.com/course/rrb-group-d-exam-mock-test-exam-series-hindi-government-job/?couponCode=47512504A1C77F63DDB9",
+    "coupon_code": "47512504A1C77F63DDB9",
+    "price": 19.98,
+    "category": "Teaching & Academics",
+    "language": "Hindi",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T04:11:36.728892Z",
+    "last_checked_at": "2026-07-04T15:24:50.360573Z"
+  },
+  {
+    "id": 13400,
+    "title": "Cómo Crear una Academia Online con WordPress y LearnPress",
+    "url": "https://www.udemy.com/course/como-crear-una-academia-online-con-wordpress-y-learnpress/?couponCode=JULIO0701",
+    "coupon_code": "JULIO0701",
+    "price": 19.98,
+    "category": "Development",
+    "language": "Spanish",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T03:42:36.905862Z",
+    "last_checked_at": "2026-07-04T15:28:03.990095Z"
+  },
+  {
+    "id": 13398,
+    "title": "Principles of Sustainable Architecture & Green Buildings",
+    "url": "https://www.udemy.com/course/sustainable-architecture-and-green-buildings/?couponCode=25F3AC31C2190C3A709B",
+    "coupon_code": "25F3AC31C2190C3A709B",
+    "price": 0.0,
+    "category": "Design",
+    "language": "English",
+    "rating": 0.0,
+    "is_coupon_valid": true,
+    "enrolled_at": "2026-07-02T03:42:15.454471Z",
+    "last_checked_at": "2026-07-04T15:28:03.990098Z"
   },
   {
     "id": 13367,
@@ -62,20 +205,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:25:53.723222Z",
-    "last_checked_at": "2026-07-01T15:29:53.776985Z"
-  },
-  {
-    "id": 13366,
-    "title": "Claude AI for C&B · Total Rewards: Job Grades, Salaries [EN]",
-    "url": "https://www.udemy.com/course/claude-ai-for-cb-total-rewards-job-grades-salaries-en/?couponCode=PAPAHR_JUL_015466",
-    "coupon_code": "PAPAHR_JUL_015466",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 4.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:25:43.463530Z",
-    "last_checked_at": "2026-07-01T15:29:53.776991Z"
+    "last_checked_at": "2026-07-04T15:28:47.193198Z"
   },
   {
     "id": 13365,
@@ -88,7 +218,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:25:20.965992Z",
-    "last_checked_at": "2026-07-01T15:30:00.447288Z"
+    "last_checked_at": "2026-07-04T15:28:54.949158Z"
   },
   {
     "id": 13364,
@@ -101,7 +231,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:25:01.270075Z",
-    "last_checked_at": "2026-07-01T15:30:00.447296Z"
+    "last_checked_at": "2026-07-04T15:28:54.949163Z"
   },
   {
     "id": 13363,
@@ -114,7 +244,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:24:48.137238Z",
-    "last_checked_at": "2026-07-01T15:30:00.447298Z"
+    "last_checked_at": "2026-07-04T15:28:54.949166Z"
   },
   {
     "id": 13362,
@@ -127,7 +257,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:24:38.288824Z",
-    "last_checked_at": "2026-07-01T15:30:00.447300Z"
+    "last_checked_at": "2026-07-04T15:28:54.949168Z"
   },
   {
     "id": 13361,
@@ -140,7 +270,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:24:28.364337Z",
-    "last_checked_at": "2026-07-01T15:30:00.447302Z"
+    "last_checked_at": "2026-07-04T15:29:02.551399Z"
   },
   {
     "id": 13360,
@@ -153,46 +283,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:24:05.243164Z",
-    "last_checked_at": "2026-07-01T15:30:07.620612Z"
-  },
-  {
-    "id": 13359,
-    "title": "Exit Interview Analysis: Survey and Turnover Metrics [EN]",
-    "url": "https://www.udemy.com/course/exit-interview-analysis-survey-and-turnover-metrics-en/?couponCode=PAPAHR_JUL_637781",
-    "coupon_code": "PAPAHR_JUL_637781",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:23:41.634385Z",
-    "last_checked_at": "2026-07-01T15:30:07.620624Z"
-  },
-  {
-    "id": 13358,
-    "title": "Performance Review Playbook: Evaluation Forms [EN]",
-    "url": "https://www.udemy.com/course/performance-review-playbook-evaluation-forms-en/?couponCode=PAPAHR_JUL_518281",
-    "coupon_code": "PAPAHR_JUL_518281",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:23:23.469837Z",
-    "last_checked_at": "2026-07-01T15:30:07.620628Z"
-  },
-  {
-    "id": 13357,
-    "title": "Job Grading Playbook: Grades and Salary Ranges [EN]",
-    "url": "https://www.udemy.com/course/job-grading-playbook-grades-and-salary-ranges-en/?couponCode=PAPAHR_JUL_559348",
-    "coupon_code": "PAPAHR_JUL_559348",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:23:02.394630Z",
-    "last_checked_at": "2026-07-01T15:30:07.620631Z"
+    "last_checked_at": "2026-07-04T15:29:02.551406Z"
   },
   {
     "id": 13356,
@@ -205,7 +296,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:22:42.676524Z",
-    "last_checked_at": "2026-07-01T15:30:07.620634Z"
+    "last_checked_at": "2026-07-04T15:29:11.431539Z"
   },
   {
     "id": 13355,
@@ -218,7 +309,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:22:17.024387Z",
-    "last_checked_at": "2026-07-01T15:30:15.071598Z"
+    "last_checked_at": "2026-07-04T15:29:11.431547Z"
   },
   {
     "id": 13354,
@@ -231,7 +322,7 @@
     "rating": 0.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:21:56.058937Z",
-    "last_checked_at": "2026-07-01T15:30:15.071607Z"
+    "last_checked_at": "2026-07-04T15:29:11.431548Z"
   },
   {
     "id": 13353,
@@ -244,7 +335,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:21:36.760371Z",
-    "last_checked_at": "2026-07-01T15:30:15.071610Z"
+    "last_checked_at": "2026-07-04T15:29:11.431550Z"
   },
   {
     "id": 13352,
@@ -257,33 +348,7 @@
     "rating": 4.25,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:21:13.944572Z",
-    "last_checked_at": "2026-07-01T15:30:15.071612Z"
-  },
-  {
-    "id": 13351,
-    "title": "CAIO Academy: Chief AI Officer, Implementation Strategy [EN]",
-    "url": "https://www.udemy.com/course/caio-academy-chief-ai-officer-implementation-strategy-en/?couponCode=PAPAHR_JUL_444135",
-    "coupon_code": "PAPAHR_JUL_444135",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 4.5,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:21:03.589819Z",
-    "last_checked_at": "2026-07-01T15:30:15.071613Z"
-  },
-  {
-    "id": 13350,
-    "title": "Certified Gemini HR Pro: AI Recruiting & Analytics [EN]",
-    "url": "https://www.udemy.com/course/google-gemini-for-hr-ai-recruiting-analytics-en/?couponCode=PAPAHR_JUL_566370",
-    "coupon_code": "PAPAHR_JUL_566370",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 4.6666665,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:20:33.181491Z",
-    "last_checked_at": "2026-07-01T15:30:22.570402Z"
+    "last_checked_at": "2026-07-04T15:29:11.431551Z"
   },
   {
     "id": 13349,
@@ -296,72 +361,7 @@
     "rating": 4.5,
     "is_coupon_valid": true,
     "enrolled_at": "2026-07-01T13:20:16.779623Z",
-    "last_checked_at": "2026-07-01T15:30:22.570412Z"
-  },
-  {
-    "id": 13348,
-    "title": "[Practice Exams] AWS Certified AI Practitioner AIF-C01",
-    "url": "https://www.udemy.com/course/practice-exams-aws-certified-ai-practitioner-aif-c01-t/?couponCode=LINKDINFREE",
-    "coupon_code": "LINKDINFREE",
-    "price": 19.98,
-    "category": "IT & Software",
-    "language": "English",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:20:06.337160Z",
-    "last_checked_at": "2026-07-01T15:30:22.570416Z"
-  },
-  {
-    "id": 13347,
-    "title": "Advance Numerology Course in Hindi",
-    "url": "https://www.udemy.com/course/advance-numerology-course-in-hindi/?couponCode=JULY2026",
-    "coupon_code": "JULY2026",
-    "price": 19.98,
-    "category": "Personal Development",
-    "language": "Hindi",
-    "rating": 5.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T13:19:45.074122Z",
-    "last_checked_at": "2026-07-01T15:30:22.570419Z"
-  },
-  {
-    "id": 13261,
-    "title": "SSC GD कांस्टेबल मॉक टेस्ट सीरीज़ हिंदी",
-    "url": "https://www.udemy.com/course/ssc-gd-constable-hindi-mock-test-exam-government-job/?couponCode=01086B4FCF68C17094B7",
-    "coupon_code": "01086B4FCF68C17094B7",
-    "price": 19.98,
-    "category": "Teaching & Academics",
-    "language": "Hindi",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T03:46:17.669018Z",
-    "last_checked_at": "2026-07-01T15:32:34.268591Z"
-  },
-  {
-    "id": 13251,
-    "title": "SSC CGL हिंदी मॉक टेस्ट सीरीज़",
-    "url": "https://www.udemy.com/course/ssc-cgl-hindi-mock-test-government-job-exam-series/?couponCode=408AD11015C7B15E96AE",
-    "coupon_code": "408AD11015C7B15E96AE",
-    "price": 19.98,
-    "category": "Teaching & Academics",
-    "language": "Hindi",
-    "rating": 0.0,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T03:44:17.786540Z",
-    "last_checked_at": "2026-07-01T15:32:46.619814Z"
-  },
-  {
-    "id": 13246,
-    "title": "١- ٢ - مباديء واستراتیجیات التسویق",
-    "url": "https://www.udemy.com/course/marketing_fundmentals_strategies/?couponCode=9D2D9B873BD6FE3294B6",
-    "coupon_code": "9D2D9B873BD6FE3294B6",
-    "price": 19.98,
-    "category": "Marketing",
-    "language": "Arabic",
-    "rating": 4.638889,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-07-01T03:42:57.801536Z",
-    "last_checked_at": "2026-07-01T15:32:53.802862Z"
+    "last_checked_at": "2026-07-04T15:29:20.074607Z"
   },
   {
     "id": 13063,
@@ -374,33 +374,7 @@
     "rating": 5.0,
     "is_coupon_valid": true,
     "enrolled_at": "2026-06-29T13:40:15.189360Z",
-    "last_checked_at": "2026-07-01T15:37:37.847708Z"
-  },
-  {
-    "id": 13053,
-    "title": "Certificate Course in Diversity, Equity, and Inclusion (DEI)",
-    "url": "https://www.udemy.com/course/dei-concepts-strategies-for-the-modern-workplace-aakaro-training/?couponCode=5549904427BB1FAB8642",
-    "coupon_code": "5549904427BB1FAB8642",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 4.4444447,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-29T13:37:51.311882Z",
-    "last_checked_at": "2026-07-01T15:37:52.684925Z"
-  },
-  {
-    "id": 13047,
-    "title": "Certificate Course in Talent Management Across Borders",
-    "url": "https://www.udemy.com/course/international-hrm-managing-talent-across-borders-aakaro/?couponCode=00CE2E9B5AA005DBABF8",
-    "coupon_code": "00CE2E9B5AA005DBABF8",
-    "price": 19.98,
-    "category": "Business",
-    "language": "English",
-    "rating": 4.7777777,
-    "is_coupon_valid": true,
-    "enrolled_at": "2026-06-29T13:36:46.195999Z",
-    "last_checked_at": "2026-07-01T15:37:59.484902Z"
+    "last_checked_at": "2026-07-04T15:36:40.730650Z"
   },
   {
     "id": 12815,

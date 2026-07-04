@@ -1,0 +1,558 @@
+plan_id: "20250704-120000-chrome-extension"
+objective: "Build a focused Chrome extension that extracts Udemy cookies (access_token, client_id, csrftoken) with one click, copies them to clipboard, and optionally shows coupon count from the web app"
+created_at: "2025-07-04T12:00:00Z"
+created_by: "weave-planner"
+status: "pending"
+
+plan_metrics:
+  wave_1_task_count: 3
+  total_dependencies: 4
+  risk_score: "low"
+
+tldr: |
+  A minimal Chrome extension (Manifest V3) that runs on udemy.com pages, extracts
+  three session cookies via chrome.cookies API, displays them in a clean popup UI,
+  and copies a pre-formatted string to the clipboard for pasting into the web app's
+  Cookie Login form. Optionally fetches coupon count from the web app's public API.
+  No automation, no scraping, no ToS violation — just clipboard convenience.
+
+open_questions: []
+
+gaps: []
+
+pre_mortem:
+  overall_risk_level: "low"
+  critical_failure_modes:
+    - scenario: "Udemy changes cookie names or session structure"
+      likelihood: "low"
+      impact: "low"
+      mitigation: "Extension validates cookie presence and shows clear error if missing. Cookie names are configurable constants."
+    - scenario: "Chrome Web Store review rejects extension"
+      likelihood: "low"
+      impact: "medium"
+      mitigation: "Extension only reads cookies on udemy.com — narrow host permission. No remote code execution, no data exfiltration. Full source available for review."
+    - scenario: "CORS blocks coupon count fetch from extension popup"
+      likelihood: "low"
+      impact: "low"
+      mitigation: "Use background service worker with fetch (no CORS restrictions). Fallback: show count as optional, degrade gracefully."
+    - scenario: "Users confuse extension with automation tool"
+      likelihood: "medium"
+      impact: "low"
+      mitigation: "Clear UI text: 'Cookie Extractor — copies cookies to clipboard only'. No enrollment actions in extension."
+
+  assumptions:
+    - "User has a Udemy account and is logged into udemy.com in their browser"
+    - "Udemy session cookies (access_token, client_id, csrftoken) are accessible via chrome.cookies API on *.udemy.com"
+    - "Web app at udemyenroller.madhudadi.in remains available for coupon count API"
+    - "Chrome Manifest V3 is the target (Manifest V2 is deprecated)"
+    - "Extension will be distributed via Chrome Web Store or sideloaded (.crx)"
+
+implementation_specification:
+  code_structure: |
+    chrome-extension/
+    ├── manifest.json          # Manifest V3 configuration
+    ├── popup.html             # Extension popup UI
+    ├── popup.css              # Popup styles (Tailwind-inspired utility classes)
+    ├── popup.js               # Popup logic: cookie extraction, clipboard, coupon count
+    ├── background.js          # Service worker: coupon count fetch, message passing
+    ├── icons/                 # Extension icons (16, 48, 128 px)
+    │   ├── icon16.png
+    │   ├── icon48.png
+    │   └── icon128.png
+    └── README.md              # Extension-specific documentation
+  affected_areas:
+    - "New directory: chrome-extension/ (isolated from existing codebase)"
+    - "No changes to existing FastAPI backend required"
+    - "Optional: add CORS header for chrome-extension:// origin in main.py"
+  component_details:
+    - component: "manifest.json"
+      responsibility: "Declare permissions, content scripts, service worker, popup, and icons"
+      interfaces: ["chrome.cookies API", "chrome.scripting API"]
+      dependencies: []
+      integration_points: ["udemy.com domain cookies", "web app API"]
+    - component: "popup.html + popup.css"
+      responsibility: "Render cookie display, copy button, coupon count badge"
+      interfaces: ["DOM", "chrome.runtime messaging"]
+      dependencies: ["popup.js"]
+      integration_points: ["Clipboard API", "background.js message channel"]
+    - component: "popup.js"
+      responsibility: "Extract cookies, format for clipboard, trigger copy, request coupon count"
+      interfaces: ["chrome.cookies.get()", "navigator.clipboard.writeText()", "chrome.runtime.sendMessage()"]
+      dependencies: ["manifest.json permissions"]
+      integration_points: ["popup.html DOM", "background.js"]
+    - component: "background.js"
+      responsibility: "Service worker: fetch coupon count from web app API, handle messages from popup"
+      interfaces: ["fetch() API", "chrome.runtime.onMessage"]
+      dependencies: []
+      integration_points: ["popup.js", "udemyenroller.madhudadi.in/api/health"]
+
+contracts:
+  - from_task: "EXT-002"
+    to_task: "EXT-003"
+    interface: "Cookie extraction → Clipboard copy"
+    format: "JSON { access_token, client_id, csrftoken } → formatted string"
+  - from_task: "EXT-003"
+    to_task: "EXT-001"
+    interface: "Background service worker → Popup"
+    format: "chrome.runtime.sendMessage({ type: 'GET_COUPON_COUNT' }) → { count: number }"
+
+tasks:
+  - id: "EXT-001"
+    title: "Project scaffolding and manifest.json"
+    description: |
+      Create the chrome-extension/ directory structure with manifest.json (Manifest V3),
+      placeholder icons, and empty popup/background files. Configure permissions:
+      - cookies: read Udemy session cookies
+      - activeTab: access current tab context
+      - Host permission: https://*.udemy.com/*
+      - CSP: default-src 'self'; script-src 'self'
+    wave: 1
+    agent: "weave-implementer"
+    prototype: false
+    covers: ["DELIVERABLES 1, 2"]
+    priority: "high"
+    status: "pending"
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: "docs/plan/20250704-120000-chrome-extension/plan.yaml"
+        description: "This plan — extension architecture and requirements"
+    diagnosis:
+      root_cause: ""
+      fix_recommendations: ""
+      injected_at: ""
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: "Initial plan creation"
+        timestamp: "2025-07-04T12:00:00Z"
+    estimated_effort: "small"
+    estimated_files: 6
+    estimated_lines: 120
+    focus_area: "chrome_extension_scaffolding"
+    verification:
+      - "manifest.json is valid Manifest V3"
+      - "Directory structure matches spec"
+      - "Icons exist at 16, 48, 128 px"
+    acceptance_criteria:
+      - "manifest.json parses without errors in Chrome extension management page"
+      - "All required fields present: manifest_version, name, version, permissions, action, icons"
+    success_criteria:
+      - "manifest.json validates against Manifest V3 schema"
+      - "Extension can be loaded via chrome://extensions in developer mode"
+    failure_modes:
+      - scenario: "Invalid manifest.json syntax"
+        likelihood: "low"
+        impact: "low"
+        mitigation: "Validate JSON schema before delivery; include trailing comma checks"
+    tech_stack: ["HTML", "CSS", "JavaScript", "Chrome Extensions API"]
+    test_coverage: null
+    debugger_diagnosis: null
+    implementation_handoff:
+      do_not_reinvestigate:
+        - "Do not assume Manifest V2 patterns (background.scripts → service_worker)"
+        - "Do not use eval() or remote code — violates CSP"
+      required_test_first: "manifest.json schema validation"
+      target_files:
+        - "chrome-extension/manifest.json"
+        - "chrome-extension/popup.html"
+        - "chrome-extension/popup.css"
+        - "chrome-extension/popup.js"
+        - "chrome-extension/background.js"
+        - "chrome-extension/icons/ (3 files)"
+      minimal_change: "Create new directory tree, no modifications to existing codebase"
+      acceptance_checks:
+        - "Chrome can load extension in developer mode without errors"
+        - "Extension icon appears in toolbar"
+        - "Popup opens when icon is clicked"
+    requires_review: true
+    review_depth: "standard"
+    review_security_sensitive: false
+
+  - id: "EXT-002"
+    title: "Cookie extraction and popup UI"
+    description: |
+      Implement the core cookie extraction logic in popup.js and the popup UI in popup.html/popup.css.
+      popup.js uses chrome.cookies.getAll({ domain: 'udemy.com' }) to extract:
+      - access_token
+      - client_id
+      - csrftoken
+
+      Popup UI shows:
+      - Three read-only text fields with cookie values (masked by default, click to reveal)
+      - "Copy All" button that copies formatted string to clipboard
+      - Status indicator (green checkmark when cookies found, red warning when not on udemy.com or not logged in)
+      - Copy format matches Cookie Login form: "access_token=...|client_id=...|csrf_token=..."
+        OR individual fields for direct paste into the web app's login form
+
+      Design constraints:
+      - Popup width: 360px (standard Chrome extension popup)
+      - No external dependencies (no Tailwind CDN, no React)
+      - Inline CSS or popup.css with utility classes
+      - Dark/light mode support via prefers-color-scheme
+      - Accessible: proper labels, aria-live regions for status, keyboard navigation
+    wave: 2
+    agent: "weave-implementer"
+    prototype: false
+    covers: ["DELIVERABLES 3, 4"]
+    priority: "high"
+    status: "pending"
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: ["EXT-001"]
+    conflicts_with: []
+    context_files:
+      - path: "app/routers/auth.py"
+        description: "Cookie login endpoint — shows expected field names (access_token, client_id, csrf_token)"
+      - path: "app/templates/pages/login.html"
+        description: "Cookie login form — shows how users currently paste cookies manually"
+      - path: "app/schemas/schemas.py"
+        description: "CookieLoginRequest schema — field names and validation"
+    diagnosis:
+      root_cause: ""
+      fix_recommendations: ""
+      injected_at: ""
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: "Initial plan creation"
+        timestamp: "2025-07-04T12:00:00Z"
+    estimated_effort: "medium"
+    estimated_files: 3
+    estimated_lines: 250
+    focus_area: "cookie_extraction_ui"
+    verification:
+      - "Cookies are extracted correctly from udemy.com"
+      - "Clipboard copy works in all browsers"
+      - "UI shows error state when not on udemy.com"
+      - "UI shows error state when cookies are missing"
+      - "Copy format matches CookieLoginRequest schema fields"
+    acceptance_criteria:
+      - "Clicking extension icon on udemy.com shows three cookie values"
+      - "Clicking 'Copy All' copies formatted string to clipboard"
+      - "Pasting into web app Cookie Login form auto-fills correctly"
+      - "Extension shows clear error when not logged into Udemy"
+      - "UI is responsive and accessible"
+    success_criteria:
+      - "cookie extraction returns all 3 required cookies on udemy.com"
+      - "clipboard.copy() succeeds without user gesture issues"
+      - "paste into web app /api/auth/login/cookies results in successful login"
+    failure_modes:
+      - scenario: "chrome.cookies.getAll returns empty array"
+        likelihood: "medium"
+        impact: "medium"
+        mitigation: "Show 'Not logged into Udemy' message. Verify Host permissions in manifest. Check if cookies are httpOnly (they should be accessible to extension with cookies permission)."
+      - scenario: "navigator.clipboard.writeText fails (permissions)"
+        likelihood: "low"
+        impact: "medium"
+        mitigation: "Fallback: use document.execCommand('copy') with hidden textarea. Show manual copy option."
+      - scenario: "Cookie values change format after Udemy update"
+        likelihood: "low"
+        impact: "low"
+        mitigation: "Extension validates presence of all 3 cookies and shows warning if any are missing. Cookie names are constants that can be updated."
+    tech_stack: ["HTML", "CSS", "JavaScript", "Chrome Cookies API", "Clipboard API"]
+    test_coverage: null
+    debugger_diagnosis: null
+    implementation_handoff:
+      do_not_reinvestigate:
+        - "Cookie names are: access_token, client_id, csrftoken (NOT csrf_token — note the naming difference in schema vs cookie)"
+        - "The web app schema field is csrf_token but the cookie name is csrftoken"
+        - "Do not attempt to decrypt cookies — extension only copies them"
+      required_test_first: "chrome.cookies.getAll mock on udemy.com"
+      target_files:
+        - "chrome-extension/popup.html"
+        - "chrome-extension/popup.css"
+        - "chrome-extension/popup.js"
+      minimal_change: "Implement popup logic, no backend changes"
+      acceptance_checks:
+        - "Test on live udemy.com with active session"
+        - "Verify all 3 cookies are extracted"
+        - "Verify copy-paste into web app works end-to-end"
+    requires_review: true
+    review_depth: "full"
+    review_security_sensitive: true
+
+  - id: "EXT-003"
+    title: "Background service worker and coupon count integration"
+    description: |
+      Implement background.js as a Manifest V3 service worker that:
+      1. Listens for messages from popup.js
+      2. Fetches coupon count from web app: GET https://udemyenroller.madhudadi.in/udemycoupons/api/coupons?limit=1
+      3. Returns { count: total } to popup for display
+      4. Caches count for 5 minutes to avoid excessive API calls
+
+      Popup integration:
+      - Show optional "X active coupons" badge in popup header
+      - Link to /udemycoupons page
+      - Graceful degradation if API is unreachable
+
+      Also implement:
+      - Extension version display in popup footer
+      - "Open Web App" link to https://udemyenroller.madhudadi.in
+      - GitHub link for support/issues
+    wave: 2
+    agent: "weave-implementer"
+    prototype: false
+    covers: ["DELIVERABLES 5, 6"]
+    priority: "medium"
+    status: "pending"
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: ["EXT-001"]
+    conflicts_with: []
+    context_files:
+      - path: "app/routers/public_deals.py"
+        description: "Public deals API endpoint — response structure with total count"
+      - path: "main.py"
+        description: "App entry point — health check endpoint for connectivity test"
+      - path: "config/settings.py"
+        description: "CORS origins configuration — may need chrome-extension:// origin"
+    diagnosis:
+      root_cause: ""
+      fix_recommendations: ""
+      injected_at: ""
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: "Initial plan creation"
+        timestamp: "2025-07-04T12:00:00Z"
+    estimated_effort: "small"
+    estimated_files: 2
+    estimated_lines: 100
+    focus_area: "background_service_worker"
+    verification:
+      - "Service worker activates on extension install"
+      - "Coupon count fetch succeeds from web app API"
+      - "Count is cached and displayed in popup"
+      - "Graceful degradation when API is unreachable"
+    acceptance_criteria:
+      - "Popup shows coupon count badge when API is reachable"
+      - "Popup shows fallback text when API is unreachable"
+      - "Count refreshes every 5 minutes"
+      - "No console errors in service worker"
+    success_criteria:
+      - "fetch('https://udemyenroller.madhudadi.in/udemycoupons/api/coupons?limit=1') returns { total: N }"
+      - "Background service worker registers and handles messages"
+      - "Coupon count displays in popup within 2 seconds"
+    failure_modes:
+      - scenario: "CORS blocks fetch from extension"
+        likelihood: "medium"
+        impact: "low"
+        mitigation: "Service worker fetch is not subject to CORS (like background fetch in extensions). If issue occurs, use chrome.proxy or add extension origin to CORS_ORIGINS."
+      - scenario: "Web app is down or unreachable"
+        likelihood: "low"
+        impact: "low"
+        mitigation: "Show 'Coupons unavailable' fallback text. Cache last known count. Retry on next popup open."
+    tech_stack: ["JavaScript", "Chrome Service Worker API", "Fetch API"]
+    test_coverage: null
+    debugger_diagnosis: null
+    implementation_handoff:
+      do_not_reinvestigate:
+        - "Service worker in Manifest V3 replaces background scripts"
+        - "Service worker does not persist — use chrome.storage for caching"
+        - "Fetch from service worker is NOT subject to CORS restrictions"
+      required_test_first: "Service worker message passing mock"
+      target_files:
+        - "chrome-extension/background.js"
+        - "chrome-extension/popup.js"
+      minimal_change: "Add background.js, modify popup.js to request count"
+      acceptance_checks:
+        - "Test with web app running locally"
+        - "Test with web app unreachable (network offline)"
+        - "Verify count updates in popup"
+    requires_review: true
+    review_depth: "standard"
+    review_security_sensitive: false
+
+  - id: "EXT-004"
+    title: "Testing, documentation, and deployment prep"
+    description: |
+      1. Testing:
+         - Manual E2E test on udemy.com (logged in and logged out states)
+         - Verify cookie extraction accuracy
+         - Verify clipboard copy-paste into web app
+         - Verify coupon count display
+         - Test on Chrome, Edge, Brave (Chromium-based)
+
+      2. Documentation:
+         - Extension README.md with:
+           - Installation instructions (Chrome Web Store + sideload)
+           - Usage guide with screenshots
+           - Troubleshooting (common issues)
+           - Privacy policy (what data is accessed, what is NOT stored/transmitted)
+           - Link to main project
+
+      3. Deployment:
+         - Package as .crx for sideloading
+         - Prepare Chrome Web Store submission assets:
+           - Store listing (description, screenshots, category)
+           - Privacy policy URL
+           - Single purpose description
+         - Update main README.md to mention Chrome extension
+         - Optional: add CORS header for chrome-extension:// origin in main.py
+    wave: 3
+    agent: "weave-implementer"
+    prototype: false
+    covers: ["DELIVERABLES 7, 8"]
+    priority: "medium"
+    status: "pending"
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: ["EXT-002", "EXT-003"]
+    conflicts_with: []
+    context_files:
+      - path: "README.md"
+        description: "Main project README — will need extension mention added"
+      - path: "main.py"
+        description: "FastAPI app — may need CORS update for chrome-extension:// origin"
+      - path: "app/static/js/app.js"
+        description: "Frontend patterns — reference for extension UI consistency"
+    diagnosis:
+      root_cause: ""
+      fix_recommendations: ""
+      injected_at: ""
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: "Initial plan creation"
+        timestamp: "2025-07-04T12:00:00Z"
+    estimated_effort: "medium"
+    estimated_files: 4
+    estimated_lines: 200
+    focus_area: "testing_deployment"
+    verification:
+      - "Extension works on Chrome, Edge, Brave"
+      - "README is complete with screenshots"
+      - "Chrome Web Store assets are ready"
+      - "No security issues in final review"
+    acceptance_criteria:
+      - "Extension loads and functions on all Chromium browsers"
+      - "README includes installation, usage, troubleshooting, privacy"
+      - "Chrome Web Store listing is ready for submission"
+      - "Main README mentions Chrome extension"
+    success_criteria:
+      - "All E2E test scenarios pass"
+      - "Documentation is complete and accurate"
+      - "Extension is packaged and ready for distribution"
+    failure_modes:
+      - scenario: "Chrome Web Store review rejection"
+        likelihood: "low"
+        impact: "medium"
+        mitigation: "Ensure single purpose is clear ('Extracts cookies for clipboard'). Include privacy policy. No remote code execution."
+      - scenario: "Extension breaks after Udemy UI update"
+        likelihood: "medium"
+        impact: "low"
+        mitigation: "Extension does NOT depend on Udemy DOM — only uses chrome.cookies API. Cookie names are stable."
+    tech_stack: ["JavaScript", "Chrome Extensions API", "Markdown"]
+    test_coverage: null
+    debugger_diagnosis: null
+    implementation_handoff:
+      do_not_reinvestigate:
+        - "Extension is independent of web app backend code"
+        - "No npm build step needed — plain JS/CSS/HTML"
+        - "Icons can be generated from a single 128px source"
+      required_test_first: "Manual E2E test checklist"
+      target_files:
+        - "chrome-extension/README.md"
+        - "README.md (update)"
+        - "main.py (optional CORS update)"
+      minimal_change: "Add extension docs, optional CORS header"
+      acceptance_checks:
+        - "Extension passes manual E2E test on live udemy.com"
+        - "README is complete and reviewed"
+        - "Chrome Web Store assets are prepared"
+    requires_review: true
+    review_depth: "lightweight"
+    review_security_sensitive: false
+
+learnings:
+  patterns:
+    - name: "cookie_extraction_via_chrome_api"
+      description: "Chrome extensions can access httpOnly cookies via chrome.cookies API with 'cookies' permission. No need for content scripts or DOM scraping."
+      confidence: 1.0
+    - name: "manifest_v3_service_worker"
+      description: "Manifest V3 replaces background.scripts with a service_worker. Service workers are ephemeral — use chrome.storage for persistence."
+      confidence: 1.0
+    - name: "clipboard_api_security"
+      description: "navigator.clipboard.writeText() requires user gesture (button click) in extension popup. Works reliably in popup context."
+      confidence: 0.95
+    - name: "cors_bypass_service_worker"
+      description: "Fetch from Chrome extension service worker is NOT subject to CORS restrictions, unlike content scripts."
+      confidence: 0.9
+
+  gotchas:
+    - "Cookie name mismatch: schema field is 'csrf_token' but Udemy cookie name is 'csrftoken' — extension must use the cookie name, not the schema field name"
+    - "Manifest V3 service workers do not persist state — use chrome.storage.local for caching coupon count"
+    - "navigator.clipboard.writeText() may fail in some contexts — implement document.execCommand('copy') fallback"
+    - "Chrome Web Store requires single-purpose description — extension must clearly state it only extracts cookies for clipboard"
+    - "Extension icons must be provided at 16, 48, and 128 px sizes"
+
+  facts:
+    - statement: "Web app Cookie Login endpoint: POST /api/auth/login/cookies with { access_token, client_id, csrf_token }"
+      category: "integration"
+    - statement: "Udemy cookie names: access_token, client_id, csrftoken (note: csrftoken not csrf_token)"
+      category: "integration"
+    - statement: "Public deals API: GET /udemycoupons/api/coupons?limit=1 returns { total: N }"
+      category: "integration"
+    - statement: "Web app health endpoint: GET /api/health returns { status, database, version }"
+      category: "integration"
+    - statement: "Extension popup standard width: 360px"
+      category: "chrome_extension_convention"
+    - statement: "Manifest V3 service workers are ephemeral — max 30s lifetime, no persistent state"
+      category: "chrome_extension_convention"
+
+  failure_modes:
+    - scenario: "Cookies not accessible"
+      symptoms:
+        - "chrome.cookies.getAll returns empty array on udemy.com"
+        - "Extension shows 'Not logged into Udemy' error"
+      mitigation: "Verify manifest permissions include cookies and https://*.udemy.com/* host. Check if user is actually logged into Udemy. Verify cookie names match."
+    - scenario: "Clipboard copy fails silently"
+      symptoms:
+        - "Copy button click does not update clipboard"
+        - "Paste into web app shows empty fields"
+      mitigation: "Implement fallback with document.execCommand('copy'). Show explicit success/error message after copy attempt."
+    - scenario: "Coupon count API unreachable"
+      symptoms:
+        - "Background fetch throws NetworkError"
+        - "Popup shows 'Coupons unavailable'"
+      mitigation: "Graceful degradation — count is optional. Cache last known value in chrome.storage. Retry on next popup open."
+
+  decisions:
+    - decision: "Use chrome.cookies API instead of content script DOM scraping"
+      rationale:
+        - "Content scripts cannot access httpOnly cookies (which access_token likely is)"
+        - "chrome.cookies API is the canonical way to access cookies in extensions"
+        - "No DOM dependency means extension survives Udemy UI changes"
+        - "Simpler implementation, fewer failure modes"
+    - decision: "Manifest V3 with service worker (not background page)"
+      rationale:
+        - "Manifest V2 is deprecated and will be removed from Chrome"
+        - "Service workers are required for Manifest V3"
+        - "Service worker enables efficient background fetch for coupon count"
+    - decision: "No build step or bundler (plain JS/CSS/HTML)"
+      rationale:
+        - "Extension is small enough that bundling adds complexity without benefit"
+        - "Easier for users to audit source code (trust/transparency)"
+        - "No node_modules dependency for extension"
+        - "Chrome Web Store submission is simpler"
+    - decision: "Optional coupon count (graceful degradation)"
+      rationale:
+        - "Core value is cookie extraction — count is a nice-to-have"
+        - "Web app may be unreachable (self-hosted, network issues)"
+        - "Extension should work fully without web app connectivity"
+
+  conventions:
+    - "Extension popup width: 360px (Chrome standard)"
+    - "Extension icons: 16px (favicon), 48px (extension page), 128px (Chrome Web Store)"
+    - "Cookie access: chrome.cookies.getAll({ domain: 'udemy.com' }) — NOT DOM scraping"
+    - "Clipboard: navigator.clipboard.writeText() with document.execCommand fallback"
+    - "Service worker caching: chrome.storage.local with TTL (5 minutes for coupon count)"
+    - "UI error states: red warning banner, clear user-facing message"
+    - "UI success states: green checkmark, cookie values revealed"

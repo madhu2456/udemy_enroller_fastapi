@@ -1,0 +1,438 @@
+{
+  "meta": {
+    "plan_id": "20250704-120000-chrome-extension",
+    "created_at": "2025-07-04T12:00:00Z",
+    "last_updated": "2025-07-04T12:00:00Z",
+    "version": 1,
+    "previous_version_fields_changed": [],
+    "source": ["codebase_analysis", "docs/PRD.yaml", "AGENTS.md"]
+  },
+  "scope": {
+    "purpose": ["Reusable implementation context for Chrome extension development", "Helps agents avoid re-discovery and implement with better quality"],
+    "applies_to": ["chrome-extension/ directory", "main.py (optional CORS update)", "README.md (extension mention)"],
+    "non_goals": ["No automation of Udemy enrollment", "No scraping of Udemy pages", "No modification of web app authentication flow", "No new backend API endpoints required"]
+  },
+  "project_summary": {
+    "business_domain": "Education automation — free Udemy course enrollment via coupon aggregation",
+    "primary_users": ["Self-hosters running the FastAPI backend", "Users of the hosted demo at udemyenroller.madhudadi.in"],
+    "key_features": ["Automated coupon discovery from aggregator sites", "Auto-enrollment in 100% off Udemy courses", "Dashboard with real-time progress", "Public deals page", "Chrome extension for cookie extraction (planned)"],
+    "current_phase": "Chrome extension implementation planning"
+  },
+  "tech_stack": [
+    {
+      "name": "Python",
+      "version": "3.13+",
+      "usage_context": "Backend FastAPI application",
+      "config_files": ["requirements.txt", "pyproject.toml"]
+    },
+    {
+      "name": "FastAPI",
+      "version": "latest",
+      "usage_context": "Web framework with async support",
+      "config_files": ["main.py", "config/settings.py"]
+    },
+    {
+      "name": "SQLite",
+      "version": "latest",
+      "usage_context": "Primary database with SQLAlchemy ORM",
+      "config_files": ["alembic.ini"]
+    },
+    {
+      "name": "Chrome Extensions API",
+      "version": "Manifest V3",
+      "usage_context": "Chrome extension for cookie extraction",
+      "config_files": ["chrome-extension/manifest.json"]
+    }
+  ],
+  "conventions": [
+    "No external JS dependencies in extension (plain vanilla JS)",
+    "Extension popup width: 360px",
+    "Cookie names: access_token, client_id, csrftoken (NOT csrf_token)",
+    "Manifest V3 with service worker (not background page)",
+    "Clipboard API with execCommand fallback",
+    "Graceful degradation for optional features (coupon count)"
+  ],
+  "constraints": {
+    "hard": [
+      "Must NOT automate Udemy enrollment",
+      "Must NOT scrape Udemy directly",
+      "Must NOT violate Udemy Terms of Use",
+      "Must be simple, focused, and safe",
+      "Must complement the existing web app"
+    ],
+    "soft": [
+      "Extension should work without web app connectivity",
+      "Extension should be distributable via Chrome Web Store",
+      "Extension should support Chrome, Edge, Brave (Chromium-based)"
+    ],
+    "compatibility": [
+      "Chrome Manifest V3 (Manifest V2 deprecated)",
+      "Chromium-based browsers only",
+      "Web app at https://udemyenroller.madhudadi.in must remain unchanged"
+    ],
+    "security_requirements": [
+      "No remote code execution in extension",
+      "No data exfiltration — cookies are only copied to clipboard",
+      "No storage of cookies in extension (clipboard only)",
+      "Host permissions restricted to https://*.udemy.com/*"
+    ]
+  },
+  "architecture_snapshot": {
+    "key_dirs": {
+      "app/": ["FastAPI application code"],
+      "app/routers/": ["API endpoints (auth, dashboard, enrollment, public_deals, seo, settings)"],
+      "app/services/": ["Business logic (udemy_client, scraper, enrollment_manager)"],
+      "app/templates/": ["Jinja2 HTML templates"],
+      "app/static/": ["CSS, JS, fonts, images"],
+      "config/": ["Settings and configuration"],
+      "chrome-extension/": ["New Chrome extension directory"]
+    },
+    "patterns": [
+      "FastAPI async with lifespan management",
+      "SQLAlchemy ORM with Alembic migrations",
+      "Cookie-based session authentication with Fernet encryption",
+      "CSRF protection via HMAC tokens",
+      "Rate limiting per client IP",
+      "Static file serving via FastAPI StaticFiles",
+      "Template rendering via Jinja2Templates"
+    ],
+    "key_components": [
+      {
+        "name": "auth router",
+        "location": "app/routers/auth.py",
+        "responsibility": ["Login with email/password", "Login with cookies (CookieLoginRequest)", "Session management", "Logout"],
+        "confidence": 1.0
+      },
+      {
+        "name": "UdemyClient",
+        "location": "app/services/udemy_client.py",
+        "responsibility": ["Udemy API interaction", "Cookie-based authentication", "Enrollment automation"],
+        "confidence": 1.0
+      },
+      {
+        "name": "public_deals router",
+        "location": "app/routers/public_deals.py",
+        "responsibility": ["Public deals page", "Coupon count API endpoint"],
+        "confidence": 1.0
+      },
+      {
+        "name": "security module",
+        "location": "app/security.py",
+        "responsibility": ["Password hashing", "Cookie encryption", "CSRF protection", "Rate limiting"],
+        "confidence": 1.0
+      }
+    ]
+  },
+  "quality_metrics": {
+    "test_coverage_overall": 0.0,
+    "test_coverage_by_component": [],
+    "known_test_gaps": ["No existing tests for auth router", "No existing tests for public_deals router"],
+    "cyclomatic_complexity_avg": 0,
+    "code_duplication_percent": 0
+  },
+  "operations": {
+    "environments": [
+      {
+        "name": "development",
+        "url": "http://localhost:8000",
+        "deployment_frequency": "on-demand",
+        "rollback_procedure": "restart server",
+        "health_check_endpoint": "/api/health"
+      },
+      {
+        "name": "production",
+        "url": "https://udemyenroller.madhudadi.in",
+        "deployment_frequency": "manual via Docker",
+        "rollback_procedure": "docker-compose down && up with previous image",
+        "health_check_endpoint": "/api/health"
+      }
+    ],
+    "ci_cd": {
+      "pipeline_path": ".github/workflows/",
+      "approval_required": [],
+      "automated_tests": []
+    },
+    "monitoring": {
+      "tools": ["Loguru logging", "Google Analytics 4"],
+      "key_metrics": ["page views", "login attempts", "enrollment success rate"],
+      "alert_channels": []
+    }
+  },
+  "data_model": {
+    "core_entities": [
+      {
+        "name": "User",
+        "fields": [
+          {"name": "id", "type": "int", "constraints": ["primary_key"]},
+          {"name": "email", "type": "str", "constraints": ["unique"]},
+          {"name": "udemy_display_name", "type": "str", "constraints": []},
+          {"name": "udemy_cookies", "type": "str", "constraints": ["encrypted"]},
+          {"name": "currency", "type": "str", "constraints": []}
+        ],
+        "relationships": ["has_many UserSettings", "has_many UserSessions", "has_many EnrollmentRuns"]
+      },
+      {
+        "name": "CookieLoginRequest",
+        "fields": [
+          {"name": "access_token", "type": "str", "constraints": ["required"]},
+          {"name": "client_id", "type": "str", "constraints": ["required"]},
+          {"name": "csrf_token", "type": "str", "constraints": ["required"]}
+        ],
+        "relationships": []
+      }
+    ],
+    "api_contracts": [
+      {
+        "endpoint": "/api/auth/login/cookies",
+        "method": "POST",
+        "auth": "none",
+        "request_schema": "CookieLoginRequest { access_token, client_id, csrf_token }",
+        "response_schema": "LoginResponse { success, status, message, display_name, currency }",
+        "error_codes": [401, 403, 429]
+      },
+      {
+        "endpoint": "/udemycoupons/api/coupons",
+        "method": "GET",
+        "auth": "none",
+        "request_schema": "Query params: page, limit, search, category, status",
+        "response_schema": "{ items: [...], total: int, page: int, pages: int }",
+        "error_codes": [500]
+      },
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "auth": "none",
+        "request_schema": "none",
+        "response_schema": "{ status: str, database: str, version: str }",
+        "error_codes": []
+      }
+    ]
+  },
+  "performance": {
+    "slas": {
+      "api_response_p95_ms": 500,
+      "api_throughput_rps": 10
+    },
+    "bottlenecks_known": [
+      "Udemy enrollment API rate limiting",
+      "Coupon aggregator site scraping timeouts",
+      "SQLite write contention under concurrent enrollment"
+    ],
+    "resource_usage": {
+      "memory_per_request_mb": 10,
+      "cpu_per_request_cores": 0.1
+    },
+    "scaling": "horizontal",
+    "caching_strategy": "In-memory LRU for sessions, static JSON for public deals"
+  },
+  "domain": {
+    "primary_users": [
+      {
+        "persona": "Self-hoster",
+        "goals": ["Automate free Udemy course enrollment", "Track savings over time", "Customize enrollment filters"]
+      },
+      {
+        "persona": "Casual user",
+        "goals": ["Browse free Udemy coupons", "Manually claim courses", "See what's available"]
+      }
+    ],
+    "business_concepts": [
+      {
+        "term": "Cookie Login",
+        "definition": "Authentication method using browser session cookies (access_token, client_id, csrftoken) instead of email/password",
+        "owner": "auth router"
+      },
+      {
+        "term": "Coupon Aggregator",
+        "definition": "Third-party websites (Real.Discount, Discudemy, Courson) that list 100% off Udemy course coupons",
+        "owner": "scraper service"
+      },
+      {
+        "term": "Enrollment Manager",
+        "definition": "Background task that orchestrates coupon discovery, validation, and course enrollment",
+        "owner": "enrollment_manager service"
+      }
+    ],
+    "compliance": ["Udemy Terms of Use awareness", "No affiliation disclaimer required", "Privacy-friendly analytics"],
+    "priority_weights": {
+      "security": "highest",
+      "reliability": "high",
+      "usability": "medium",
+      "performance": "medium"
+    }
+  },
+  "system_assertions": [
+    {
+      "description": "Extension only reads cookies on udemy.com",
+      "predicate": "extension.permissions.includes('cookies') && extension.host_permissions.includes('https://*.udemy.com/*')",
+      "expected_value": true
+    },
+    {
+      "description": "Extension does not store cookies persistently",
+      "predicate": "extension does not use chrome.storage for cookie values",
+      "expected_value": true
+    },
+    {
+      "description": "Web app Cookie Login accepts extension-formatted cookies",
+      "predicate": "POST /api/auth/login/cookies with { access_token, client_id, csrf_token } returns success",
+      "expected_value": true
+    }
+  ],
+  "research_digest": {
+    "relevant_files": [
+      {
+        "path": "app/routers/auth.py",
+        "purpose": ["Cookie login endpoint implementation", "Session management", "CSRF token generation"],
+        "why_relevant": "Defines the CookieLoginRequest schema and /api/auth/login/cookies endpoint that the extension targets",
+        "security_sensitivity": "confidential",
+        "contains_secrets": false,
+        "reliability": "codebase",
+        "confidence": 1.0
+      },
+      {
+        "path": "app/schemas/schemas.py",
+        "purpose": ["Request/response validation schemas", "CookieLoginRequest definition"],
+        "why_relevant": "Shows exact field names and validation for cookie login",
+        "security_sensitivity": "none",
+        "contains_secrets": false,
+        "reliability": "codebase",
+        "confidence": 1.0
+      },
+      {
+        "path": "app/routers/public_deals.py",
+        "purpose": ["Public deals page", "Coupon count API endpoint"],
+        "why_relevant": "Extension fetches coupon count from this API",
+        "security_sensitivity": "none",
+        "contains_secrets": false,
+        "reliability": "codebase",
+        "confidence": 1.0
+      },
+      {
+        "path": "app/templates/pages/login.html",
+        "purpose": ["Cookie login form UI", "Manual cookie extraction instructions"],
+        "why_relevant": "Shows how users currently extract cookies manually (F12 → Application → Cookies)",
+        "security_sensitivity": "none",
+        "contains_secrets": false,
+        "reliability": "codebase",
+        "confidence": 1.0
+      },
+      {
+        "path": "main.py",
+        "purpose": ["FastAPI app entry point", "CORS configuration", "Health check endpoint"],
+        "why_relevant": "May need CORS update for chrome-extension:// origin",
+        "security_sensitivity": "internal",
+        "contains_secrets": false,
+        "reliability": "codebase",
+        "confidence": 1.0
+      },
+      {
+        "path": "config/settings.py",
+        "purpose": ["Application settings", "CORS origins", "Security configuration"],
+        "why_relevant": "CORS_ORIGINS list may need chrome-extension:// origin added",
+        "security_sensitivity": "internal",
+        "contains_secrets": false,
+        "reliability": "codebase",
+        "confidence": 1.0
+      }
+    ],
+    "patterns_found": [
+      {
+        "name": "cookie_login_schema",
+        "category": "api_contract",
+        "confidence": 1.0,
+        "source": "codebase_analysis",
+        "example_location": ["app/schemas/schemas.py:33-36", "app/routers/auth.py:131-199"]
+      },
+      {
+        "name": "cors_configuration",
+        "category": "security",
+        "confidence": 1.0,
+        "source": "codebase_analysis",
+        "example_location": ["main.py:184-193", "config/settings.py:29"]
+      },
+      {
+        "name": "public_deals_api",
+        "category": "api_contract",
+        "confidence": 1.0,
+        "source": "codebase_analysis",
+        "example_location": ["app/routers/public_deals.py:38-123"]
+      }
+    ],
+    "dependencies": {
+      "internal": ["FastAPI", "SQLAlchemy", "Pydantic", "Loguru"],
+      "external": ["Udemy API (undocumented)", "Coupon aggregator sites"]
+    },
+    "gotchas": [
+      {
+        "text": "Cookie name mismatch: schema field is 'csrf_token' but Udemy cookie name is 'csrftoken'",
+        "confidence": 1.0
+      },
+      {
+        "text": "Manifest V3 service workers are ephemeral — no persistent state without chrome.storage",
+        "confidence": 1.0
+      },
+      {
+        "text": "navigator.clipboard.writeText() may fail in some contexts — implement execCommand fallback",
+        "confidence": 0.9
+      }
+    ],
+    "open_questions": []
+  },
+  "prior_decisions": [
+    {
+      "decision": "Use chrome.cookies API instead of content script DOM scraping",
+      "rationale": [
+        "Content scripts cannot access httpOnly cookies",
+        "chrome.cookies API is the canonical way to access cookies in extensions",
+        "No DOM dependency means extension survives Udemy UI changes"
+      ],
+      "evidence": ["Chrome Extensions documentation", "Stack Overflow patterns"],
+      "confidence": 1.0,
+      "linked_constraints": ["Must NOT scrape Udemy directly"],
+      "linked_patterns": ["cookie_extraction_via_chrome_api"]
+    },
+    {
+      "decision": "Manifest V3 with service worker",
+      "rationale": [
+        "Manifest V2 is deprecated and will be removed from Chrome",
+        "Service workers are required for Manifest V3",
+        "Enables efficient background fetch for coupon count"
+      ],
+      "evidence": ["Chrome Extensions documentation", "Manifest V3 migration guide"],
+      "confidence": 1.0,
+      "linked_constraints": ["Chrome Web Store requires Manifest V3"],
+      "linked_patterns": ["manifest_v3_service_worker"]
+    },
+    {
+      "decision": "No build step or bundler",
+      "rationale": [
+        "Extension is small enough that bundling adds complexity without benefit",
+        "Easier for users to audit source code (trust/transparency)",
+        "No node_modules dependency for extension"
+      ],
+      "evidence": ["Chrome extension best practices", "Security audit requirements"],
+      "confidence": 0.95,
+      "linked_constraints": ["Must be simple, focused, and safe"],
+      "linked_patterns": []
+    }
+  ],
+  "evidence_map": [
+    {
+      "claim": "Cookie login endpoint accepts access_token, client_id, csrf_token",
+      "evidence_paths": ["app/schemas/schemas.py:33-36", "app/routers/auth.py:131-199"]
+    },
+    {
+      "claim": "Public deals API returns total count",
+      "evidence_paths": ["app/routers/public_deals.py:38-123"]
+    },
+    {
+      "claim": "CORS configuration in main.py",
+      "evidence_paths": ["main.py:184-193", "config/settings.py:29"]
+    }
+  ],
+  "reuse_notes": {
+    "do_not_re_read": ["app/services/udemy_client.py (not relevant to extension)", "app/services/scraper.py (not relevant to extension)"],
+    "safe_to_assume": ["Web app remains unchanged", "Cookie names are stable", "API endpoints remain available"],
+    "verify_before_use": ["CORS origins list may need update", "Cookie names may change if Udemy updates session structure"]
+  }
+}
