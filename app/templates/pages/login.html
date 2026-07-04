@@ -385,7 +385,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                     </h3>
                     <p class="text-sm text-gray-500 mb-4 leading-relaxed">
                         Your credentials are used only to generate a temporary
-                        API token. No data is ever stored on external servers.
+                         API token. When self-hosted, no data leaves your instance. On the hosted demo, encrypted cookies are stored on the demo server.
                     </p>
                     <ul class="space-y-1.5">
                         <li class="flex items-start text-sm text-gray-600">
@@ -1066,6 +1066,16 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                 </p>
             </div>
         </section>
+
+                    <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Responsible Use</h3>
+                        <ul class="text-xs text-gray-500 space-y-1">
+                            <li>• The tool implements respectful rate limiting (3–15 seconds between requests)</li>
+                            <li>• No CAPTCHAs are bypassed — if Udemy presents one, the engine pauses</li>
+                            <li>• No proxies or IP rotation are used for evasion</li>
+                            <li>• You are responsible for ensuring your use complies with Udemy's Terms of Use</li>
+                        </ul>
+                    </div>
 
         <!-- FAQ -->
         <section

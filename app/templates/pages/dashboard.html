@@ -94,6 +94,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 <p
                     class="text-sm font-medium text-blue-800"
                     id="banner-status-text"
+                    aria-live="polite" aria-atomic="true"
                 >
                     Enrollment engine running…
                 </p>
@@ -394,6 +395,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 <div
                     id="scraping-sites"
                     class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
+                    aria-live="polite" aria-relevant="additions"
                 ></div>
 
                 <!-- Current Course Card -->
@@ -554,6 +556,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                             <tbody
                                 id="courses-body"
                                 class="divide-y divide-gray-100 bg-white"
+                                aria-live="polite"
                             >
                                 <tr id="no-courses-row">
                                     <td
@@ -682,6 +685,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
             <div
                 id="log-window"
                 class="h-96 p-4 font-mono text-[11px] leading-relaxed overflow-y-auto bg-gray-900 text-green-400 space-y-1 select-text"
+                aria-live="polite" aria-relevant="additions"
             >
                 <div class="text-gray-500 font-light italic">
                     Waiting for log stream connection...
@@ -993,10 +997,10 @@ session status, active runs, and track learning progress easily.{% endblock %}
                     <td class="px-6 py-4">${statusBadge}</td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-2">
-                            <a href="/api/enrollment/run/${run.run_id}/export" class="p-1 text-gray-400 hover:text-gray-900 transition-colors" title="Export CSV">
+                            <a href="/api/enrollment/run/${escapeAttr(String(run.run_id))}/export" class="p-1 text-gray-400 hover:text-gray-900 transition-colors" title="Export CSV">
                                 <i data-lucide="file-output" class="w-4 h-4"></i>
                             </a>
-                            <button onclick="deleteRun(${run.run_id})" class="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Delete Run" ${["pending", "scraping", "enrolling"].includes(run.status) ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ""}>
+                            <button onclick="deleteRun(${escapeAttr(String(run.run_id))})" class="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Delete Run" ${["pending", "scraping", "enrolling"].includes(run.status) ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ""}>
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -1361,12 +1365,19 @@ session status, active runs, and track learning progress easily.{% endblock %}
             bannerTitle = "Finished";
         }
 
-        statusEl.innerHTML = baseStatusText;
+        statusEl.textContent = baseStatusText;
         statusEl.className = `px-3 py-1 rounded-full text-xs font-semibold ${baseStatusClass} uppercase tracking-wide`;
 
         const bannerStatusText = document.getElementById("banner-status-text");
         if (bannerStatusText) {
-            bannerStatusText.innerHTML = `${bannerTitle} <a href="#" onclick="switchDashboardSection('logs'); event.preventDefault();" class="ml-2 inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-850 underline transition-all">check logs ↗</a>`;
+            bannerStatusText.textContent = '';
+            bannerStatusText.appendChild(document.createTextNode(bannerTitle + ' '));
+            const checkLogsLink = document.createElement('a');
+            checkLogsLink.href = '#';
+            checkLogsLink.textContent = 'check logs ↗';
+            checkLogsLink.className = 'ml-2 inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-850 underline transition-all';
+            checkLogsLink.addEventListener('click', (e) => { e.preventDefault(); switchDashboardSection('logs'); });
+            bannerStatusText.appendChild(checkLogsLink);
         }
 
         const pct =

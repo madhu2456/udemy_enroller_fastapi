@@ -174,11 +174,35 @@ docker compose exec web bash ./scripts/coupon_checker.sh
 
 ---
 
+## Backup & Recovery
+
+Your enrollment history and settings are stored in a local SQLite database (`udemy_enroller.db`). To back up your data:
+
+### Manual Backup
+```bash
+# Stop the application first, then copy the database
+cp udemy_enroller.db udemy_enroller.db.backup
+```
+
+### Docker Backup
+```bash
+# Copy the database from the running container
+docker compose cp web:/app/data/udemy_enroller.db ./udemy_enroller.db.backup
+```
+
+### Restore
+```bash
+# Stop the application, replace the database, restart
+cp udemy_enroller.db.backup udemy_enroller.db
+```
+
+---
+
 ## Project Impact
 
-- **Designed to reduce** manual enrollment effort by up to ~90%
-- **1,400+ courses** enrolled to date via automated enrollment (aggregate across all users)
-- **₹8,44,000+** estimated cost savings (based on list prices of enrolled courses, aggregate across all users)
+- **Designed to automate** the manual process of finding and claiming free coupons
+- **1,400+ courses** enrolled to date via automated enrollment
+- **₹8,44,000+** estimated cost savings (based on list prices of enrolled courses)
 - Scales to **hundreds of concurrent** coupon processing requests
 - **100% open-source** and self-hostable
 
@@ -281,6 +305,16 @@ The following data is **never** stored:
 - Your Udemy password
 - Payment information
 - Browser history or personal browsing data
+
+### 🤖 Browser Automation & Scraping
+
+This tool uses CloudScraper and Playwright (with optional stealth patches) to access coupon aggregator sites. These are used for legitimate purposes — discovering publicly available coupon codes. The tool:
+
+- Implements respectful rate limiting (3–15 seconds between requests)
+- Does not bypass CAPTCHAs
+- Does not rotate proxies for evasion
+- Does not perform mass scraping
+- Blocks itself after consecutive errors (circuit breaker pattern)
 
 ---
 

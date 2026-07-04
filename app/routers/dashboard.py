@@ -64,7 +64,7 @@ def login_page(request: Request):
 def settings_page(request: Request, user_id: int = Depends(get_current_user_id)):
     """Render settings configuration page."""
     return templates.TemplateResponse(
-        "pages/settings.html", {"request": request, "user_id": user_id}
+        request, "pages/settings.html", {"user_id": user_id}
     )
 
 
@@ -72,7 +72,7 @@ def settings_page(request: Request, user_id: int = Depends(get_current_user_id))
 def history_page(request: Request, user_id: int = Depends(get_current_user_id)):
     """Render history logs page."""
     return templates.TemplateResponse(
-        "pages/history.html", {"request": request, "user_id": user_id}
+        request, "pages/history.html", {"user_id": user_id}
     )
 
 

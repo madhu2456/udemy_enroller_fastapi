@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.models.database import get_db, UserSettings, EnrollmentRun, EnrolledCourse, _utcnow_naive
 from app.deps import get_current_user_id, get_udemy_client
 from app.schemas.schemas import EnrollmentStatus, CourseInfo, RunDetail
-from app.security import verify_csrf_token
+from app.security import RateLimiter, _client_key, verify_csrf_token
 from app.services.enrollment_manager import EnrollmentManager
 from config.settings import get_settings as get_app_settings
 from app.core.cache import clear_user_caches, _history_cache, get_cached_or_compute
@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/enrollment", tags=["Enrollment"])
 app_settings = get_app_settings()
+
+# Allow 3 enrollment starts per 60 seconds per user (IP-based)
+enrollment_start_limiter = RateLimiter(max_requests=3, window_seconds=60)
 
 
 @router.post("/start")
@@ -33,6 +36,8 @@ async def start_enrollment(
     _csrf: None = Depends(verify_csrf_token),
 ):
     """Start a new enrollment run."""
+    enrollment_start_limiter.raise_if_limited(_client_key(request))
+
     active = (
         db.query(EnrollmentRun)
         .filter(

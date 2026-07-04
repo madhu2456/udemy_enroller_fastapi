@@ -275,7 +275,7 @@ async def add_security_headers(request: Request, call_next):
     settings = get_settings()
     if settings.DEPLOYMENT_ENV == "server":
         response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
+            "max-age=31536000; includeSubDomains; preload"
         )
     # CSP with per-request nonce + strict-dynamic (modern XSS protection)
     # - 'strict-dynamic' propagates trust to scripts loaded by nonced scripts
