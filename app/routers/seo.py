@@ -212,7 +212,7 @@ Udemy Course Enroller is an open-source FastAPI tool that monitors coupon aggreg
 
 - **Courses enrolled via automation:** 1,400+
 - **Estimated cost savings (aggregate):** ₹8,44,000+
-- **Coupon sources monitored:** 10+ (Real.Discount, FreeCourseSites, FreeWebCart, Enext, CourseJoiner + more)
+- **Coupon sources monitored:** 13 (Real.Discount, FreeCourseSites, FreeWebCart, E-next, Interview Gig, UdemyXpert, Coursesity, Course Folder, Couponami, Korshub, UdemyFreebies, iDownloadCoupon, Course Joiner)
 - **Coupon update frequency:** Multiple times per day
 - **Active coupon database:** Continuously verified 100% off coupons at {SITE_URL}/udemycoupons
 - **Open-source license:** MIT
