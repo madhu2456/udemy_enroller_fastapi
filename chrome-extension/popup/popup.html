@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Udemy Enroller</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <img src="../icons/icon48.png" alt="Udemy Enroller" width="24" height="24">
+        <h1>Udemy Enroller</h1>
+      </div>
+      <p class="subtitle">Cookie Extractor</p>
+    </div>
+
+    <!-- Status -->
+    <div id="status" class="status hidden">
+      <span id="status-icon"></span>
+      <span id="status-text"></span>
+    </div>
+
+    <!-- Main Content -->
+    <div id="content">
+      <!-- Not Logged In -->
+      <div id="not-logged-in" class="section hidden">
+        <div class="icon-large">🔒</div>
+        <p class="message">Not logged into Udemy</p>
+        <p class="hint">Please log in to udemy.com first</p>
+        <a href="https://www.udemy.com" target="_blank" class="btn btn-secondary">Open Udemy</a>
+      </div>
+
+      <!-- Logged In -->
+      <div id="logged-in" class="section hidden">
+        <div class="icon-large">✅</div>
+        <p class="message">Logged into Udemy</p>
+        <p class="hint" id="user-email"></p>
+
+        <!-- Coupon Count -->
+        <div id="coupon-count" class="coupon-badge hidden">
+          <span id="coupon-number">-</span>
+          <span>free coupons available</span>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+          <button id="copy-btn" class="btn btn-primary">
+            <span class="btn-icon">📋</span>
+            Copy Cookies
+          </button>
+          <button id="login-btn" class="btn btn-secondary hidden">
+            <span class="btn-icon">🚀</span>
+            Login to Enroller
+          </button>
+        </div>
+
+        <!-- Copy Format -->
+        <div class="format-info">
+          <p class="format-label">Copies as:</p>
+          <code id="preview" class="format-preview">access_token=...&client_id=...&csrftoken=...</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <a href="https://udemyenroller.madhudadi.in" target="_blank">Web App</a>
+      <span class="separator">•</span>
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank">GitHub</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

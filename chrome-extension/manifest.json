@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Udemy Enroller - Cookie Extractor",
+  "version": "1.0.0",
+  "description": "Extract Udemy session cookies for use with Udemy Enroller. One-click copy to clipboard.",
+  "permissions": [
+    "cookies",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://*.udemy.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
