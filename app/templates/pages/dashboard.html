@@ -697,6 +697,9 @@ session status, active runs, and track learning progress easily.{% endblock %}
     <!-- Stats Modal Popup -->
     <div
         id="stats-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stats-modal-title"
         class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4"
     >
         <!-- Backdrop -->
@@ -724,6 +727,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                         ></i>
                     </div>
                     <h3
+                        id="stats-modal-title"
                         class="font-semibold text-gray-900 text-sm md:text-base"
                     >
                         Session Summary
@@ -731,6 +735,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
                 </div>
                 <button
                     onclick="closeStatsModal()"
+                    aria-label="Close dialog"
                     class="text-gray-400 hover:text-gray-950 transition-colors p-1 rounded-full hover:bg-gray-100"
                 >
                     <i data-lucide="x" class="w-4 h-4"></i>

@@ -18,7 +18,7 @@ class AsyncHTTPClient:
         "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
     ]
 
-    # Expanded server user-agent pool (17 agents) for datacenter IP evasion
+    # Expanded server user-agent pool (17 agents) for diverse browser representation
     _USER_AGENTS_SERVER = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
@@ -74,7 +74,15 @@ class AsyncHTTPClient:
         self._mobile_scraper = None
 
     def _get_scraper(self, is_mobile: bool = False):
-        """Get or create a persistent CloudScraper instance."""
+        """Get or create a persistent CloudScraper instance.
+        
+        CloudScraper is used to access coupon aggregator sites that may use
+        Cloudflare protection. This is necessary because these sites are the
+        primary source of course coupon data.
+        
+        Note: Users are responsible for ensuring their use complies with
+        the terms of service of coupon aggregator sites.
+        """
         import cloudscraper
 
         if is_mobile:
