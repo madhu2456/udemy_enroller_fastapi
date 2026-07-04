@@ -18,7 +18,7 @@
     </div>
 
     <!-- Status -->
-    <div id="status" class="status hidden">
+    <div id="status" class="status hidden" aria-live="polite" role="status">
       <span id="status-icon"></span>
       <span id="status-text"></span>
     </div>
@@ -30,7 +30,7 @@
         <div class="icon-large">🔒</div>
         <p class="message">Not logged into Udemy</p>
         <p class="hint">Please log in to udemy.com first</p>
-        <a href="https://www.udemy.com" target="_blank" class="btn btn-secondary">Open Udemy</a>
+        <a href="https://www.udemy.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Open Udemy</a>
       </div>
 
       <!-- Logged In -->
@@ -53,23 +53,23 @@
           </button>
           <button id="login-btn" class="btn btn-secondary hidden">
             <span class="btn-icon">🚀</span>
-            Login to Enroller
+            Open Enroller Dashboard
           </button>
         </div>
 
         <!-- Copy Format -->
         <div class="format-info">
           <p class="format-label">Copies as:</p>
-          <code id="preview" class="format-preview">access_token=...&client_id=...&csrftoken=...</code>
+          <code id="preview" class="format-preview">access_token=...&client_id=...&csrf_token=...</code>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-      <a href="https://udemyenroller.madhudadi.in" target="_blank">Web App</a>
+      <a href="https://udemyenroller.madhudadi.in" target="_blank" rel="noopener noreferrer">Web App</a>
       <span class="separator">•</span>
-      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank">GitHub</a>
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" target="_blank" rel="noopener noreferrer">GitHub</a>
     </div>
   </div>
 

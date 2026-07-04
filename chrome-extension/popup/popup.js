@@ -46,11 +46,31 @@ async function getUdemyCookies() {
 async function checkLoginStatus() {
   const cookies = await getUdemyCookies();
   const cookieMap = {};
-  cookies.forEach(c => cookieMap[c.name] = c.value);
+  const cookieDetails = {};
+  cookies.forEach(c => {
+    cookieMap[c.name] = c.value;
+    cookieDetails[c.name] = c;
+  });
 
   const hasAllCookies = REQUIRED_COOKIES.every(name => cookieMap[name]);
 
   if (hasAllCookies) {
+    // Check if any required cookie is expired
+    const now = Date.now() / 1000;
+    const expiredCookies = REQUIRED_COOKIES.filter(name => {
+      const cookie = cookieDetails[name];
+      return cookie && cookie.expirationDate && cookie.expirationDate < now;
+    });
+
+    if (expiredCookies.length > 0) {
+      return {
+        loggedIn: false,
+        cookies: null,
+        email: null,
+        error: 'Session expired. Please refresh udemy.com and try again.'
+      };
+    }
+
     // Extract user info from cookies if available
     const userEmail = cookieMap['user_email'] || 'Logged in';
     return {
@@ -63,10 +83,19 @@ async function checkLoginStatus() {
   return { loggedIn: false, cookies: null, email: null };
 }
 
-// Format cookies for clipboard
+// Map cookie names to web app field names
+const COOKIE_NAME_MAP = {
+  'access_token': 'access_token',
+  'client_id': 'client_id',
+  'csrftoken': 'csrf_token'
+};
+
 function formatCookies(cookies) {
   return REQUIRED_COOKIES
-    .map(name => `${name}=${cookies[name]}`)
+    .map(name => {
+      const fieldName = COOKIE_NAME_MAP[name] || name;
+      return `${fieldName}=${encodeURIComponent(cookies[name])}`;
+    })
     .join('&');
 }
 
@@ -97,7 +126,18 @@ async function copyToClipboard(text) {
 // Fetch coupon count from background service worker
 async function fetchCouponCount() {
   return new Promise((resolve) => {
+    // Set timeout in case service worker is slow
+    const timeout = setTimeout(() => resolve(null), 3000);
+    
     chrome.runtime.sendMessage({ action: 'getCouponCount' }, (response) => {
+      clearTimeout(timeout);
+      
+      // Check for extension errors
+      if (chrome.runtime.lastError) {
+        resolve(null);
+        return;
+      }
+      
       if (response && response.count !== undefined) {
         resolve(response.count);
       } else {
@@ -130,6 +170,11 @@ async function updateUI() {
   } else {
     notLoggedInEl.classList.remove('hidden');
     loggedInEl.classList.add('hidden');
+    
+    // Show specific error message if available
+    if (status.error) {
+      showStatus('error', status.error);
+    }
   }
 }
 
@@ -149,26 +194,15 @@ copyBtn.addEventListener('click', async () => {
 
   if (success) {
     showStatus('success', 'Cookies copied to clipboard!');
-    setTimeout(hideStatus, 2000);
+    setTimeout(hideStatus, 4000);
   } else {
     showStatus('error', 'Failed to copy. Try again.');
   }
 });
 
-// Login to enroller handler
+// Open enroller dashboard handler
 loginBtn.addEventListener('click', async () => {
-  const status = await checkLoginStatus();
-
-  if (!status.loggedIn) {
-    showStatus('error', 'Not logged into Udemy');
-    return;
-  }
-
-  showStatus('loading', 'Opening Enroller...');
-
-  const formatted = formatCookies(status.cookies);
-
-  // Open enroller with cookies in URL (for manual paste)
+  // Open enroller web app - user will paste cookies manually
   chrome.tabs.create({ url: `${ENROLLER_URL}/#connect` });
   window.close();
 });

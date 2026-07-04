@@ -37,7 +37,8 @@ A simple Chrome extension to extract Udemy session cookies for use with the [Ude
 
 ## Security
 
-- **No data exfiltration** - Cookies are only copied to your clipboard
+- **Cookies never leave your device** - Only copied to your clipboard
+- **One optional network request** - Fetches public coupon count from web app (no personal data transmitted)
 - **No remote code** - All code is bundled with the extension
 - **Minimal permissions** - Only accesses Udemy cookies
 
