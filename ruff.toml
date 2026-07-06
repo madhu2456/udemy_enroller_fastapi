@@ -1,0 +1,11 @@
+target-version = "py311"
+line-length = 120
+
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "node_modules",
+    "__pycache__",
+    "*.egg-info",
+]

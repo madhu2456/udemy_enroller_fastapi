@@ -224,7 +224,7 @@ class TestCookieLoginIdentityMigration:
         with patch("app.routers.auth.UdemyClient", return_value=mock_client_inst):
             with patch("app.routers.auth.encrypt_cookies", return_value=b"encrypted"):
                 with patch("app.routers.auth._create_session", return_value="session123"):
-                    with patch("app.routers.auth._login_response") as mock_response:
+                    with patch("app.routers.auth._login_response"):
                         await login_with_cookies(mock_cookie_req, mock_request, mock_db)
 
         # Assert that the user's email was successfully migrated to stable Udemy ID email
@@ -243,13 +243,13 @@ class TestLogIsolationFiltering:
         """Test process_log_line to verify log leakage prevention between users."""
         
         # Setup mock stream handler logic matching app/routers/dashboard.py
-        def process_log_line(l: str, user_id: int) -> str | None:
+        def process_log_line(line: str, user_id: int) -> str | None:
             import re
-            match = re.search(r" \[user:(\d+)\]", l)
+            match = re.search(r" \[user:(\d+)\]", line)
             if match:
                 line_user_id = int(match.group(1))
                 if line_user_id == user_id:
-                    return l.replace(match.group(0), "")
+                    return line.replace(match.group(0), "")
             return None
 
         user_1_line = "2026-05-31 14:00:00 | INFO | starting scraping [user:1]\n"

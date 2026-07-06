@@ -1,6 +1,5 @@
 """Test credential sanitization in logging."""
 
-import pytest
 from app.logging_config import sanitize_log_message
 
 

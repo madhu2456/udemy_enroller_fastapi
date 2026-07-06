@@ -118,6 +118,7 @@ async def lifespan(app: FastAPI):
     app.state.bing_site_verification = _settings.BING_SITE_VERIFICATION
     app.state.gtm_container_id = _settings.GTM_CONTAINER_ID
     app.state.ga4_measurement_id = _settings.GA4_MEASUREMENT_ID
+    app.state.deployment_env = _settings.DEPLOYMENT_ENV
 
     yield
 
@@ -177,9 +178,9 @@ app = FastAPI(
     version=app_settings.APP_VERSION,
     description="Automatically enroll in free/discounted Udemy courses (Async v2)",
     lifespan=lifespan,
-    openapi_url=f"/openapi.json" if _docs_enabled else None,
-    docs_url=f"/docs" if _docs_enabled else None,
-    redoc_url=f"/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
 )
 
 # CORS middleware - Restricted to specific origins with enhanced security

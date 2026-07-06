@@ -1,9 +1,9 @@
 {% extends "components/base.html" %} {% block title %}Privacy Policy - Udemy
 Enroller Automation Tool{% endblock %} {% block meta_title %}Privacy Policy - Udemy
-Enroller Automation Tool{% endblock %} {% block meta_description %}Udemy Enroller privacy policy: encrypted session cookies (Fernet), no password storage, no third-party data transmission. Fully open-source and transparent.{% endblock %} {% block og_type
+Enroller Automation Tool{% endblock %} {% block meta_description %}Udemy Enroller privacy: Fernet-encrypted session cookies, no password storage. Udemy credentials not sold. Anonymous GTM/GA4 analytics after cookie consent.{% endblock %} {% block og_type
 %}article{% endblock %} {% block og_title %}Privacy
-Policy - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}Udemy Enroller privacy policy: encrypted local storage, no password storage, no third-party data transmission.{% endblock %} {% block twitter_title %}Privacy Policy - Udemy
-Enroller Automation Tool{% endblock %} {% block twitter_description %}Udemy Enroller privacy policy: encrypted local storage, no password storage, no third-party data transmission.{%
+Policy - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}Udemy Enroller privacy: encrypted session storage on your instance or hosted demo. No password storage. Anonymous GTM/GA4 analytics after consent.{% endblock %} {% block twitter_title %}Privacy Policy - Udemy
+Enroller Automation Tool{% endblock %} {% block twitter_description %}Udemy Enroller privacy: encrypted session storage on your instance or hosted demo. No password storage. Anonymous GTM/GA4 analytics after consent.{%
 endblock %} {% block content %}
 <script type="application/ld+json">
     {
@@ -30,7 +30,7 @@ endblock %} {% block content %}
                 "@type": "WebPage",
                 "@id": "https://udemyenroller.madhudadi.in/privacy",
                 "name": "Privacy Policy - Udemy Enroller",
-                "description": "Udemy Enroller privacy policy: encrypted session cookie storage, no password retention, no third-party data sharing.",
+                "description": "Udemy Enroller privacy policy: encrypted session cookies, no password retention. Credentials not sold. GTM/GA4 analytics after consent.",
                 "isPartOf": {
                     "@type": "WebSite",
                     "@id": "https://udemyenroller.madhudadi.in/#website"
@@ -83,7 +83,9 @@ endblock %} {% block content %}
                     >
                         <p class="text-sm text-gray-500 leading-relaxed">
                             When you connect your Udemy account, the following
-                            data is collected and stored locally:
+                            data is collected and stored on the instance running
+                            the app (your self-hosted machine or the hosted demo
+                            server):
                         </p>
                         <ul
                             class="space-y-2 text-sm text-gray-500 leading-relaxed"
@@ -257,8 +259,10 @@ endblock %} {% block content %}
                                     class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
                                 ></span>
                                 <span
-                                    >No personal data is sold, shared, or
-                                    transmitted to any third party.</span
+                                    >Udemy credentials are not sold or shared
+                                    with third parties. Anonymous page analytics
+                                    via Google Tag Manager and GA4 load after
+                                    cookie consent (see above).</span
                                 >
                             </li>
                         </ul>
@@ -333,8 +337,8 @@ endblock %} {% block content %}
                             The application sets the following browser cookies
                             for authentication:
                         </p>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left">
+                        <div class="overflow-x-auto max-w-full">
+                            <table class="min-w-full text-sm text-left">
                                 <thead>
                                     <tr class="border-b border-gray-200">
                                         <th

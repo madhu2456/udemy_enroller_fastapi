@@ -11,7 +11,7 @@
 >
 > A free, open-source FastAPI application that automatically finds and enrolls you in 100% discounted Udemy courses. Built by [Madhu Dadi](https://madhudadi.in).
 
-[![Python](https://img.shields.io/badge/Python-3.13+-blue?logo=python)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://udemyenroller.madhudadi.in)
@@ -69,9 +69,9 @@ This tool solves that by:
 
 This application is built on a modern, fully asynchronous Python stack:
 
-- **Backend:** Python 3.13 + [FastAPI](https://fastapi.tiangolo.com) (async)
+- **Backend:** Python 3.11+ + [FastAPI](https://fastapi.tiangolo.com) (async)
 - **Database:** SQLite + [SQLAlchemy](https://www.sqlalchemy.org) ORM + Alembic migrations
-- **Automation:** [CloudScraper](https://github.com/VeNoMouS/cloudscraper) (primary HTTP client for coupon sites and Udemy API) + [Playwright](https://playwright.dev/python/) with [playwright-stealth](https://github.com/Mattwmaster58/playwright_stealth) (fallback for Cloudflare-protected coupon aggregator sites)
+- **Automation:** [CloudScraper](https://github.com/VeNoMouS/cloudscraper) (primary HTTP client) + [Playwright](https://playwright.dev/python/) (fallback browser client for some coupon aggregator sites), with rate-limited requests and no CAPTCHA solving
 - **Frontend:** HTML5 + [Tailwind CSS](https://tailwindcss.com) + vanilla JavaScript
 - **Deployment:** Docker + docker-compose ready
 
@@ -82,7 +82,7 @@ The frontend is intentionally lightweight to ensure sub-second load times. Serve
 ## Quick Start
 
 ### Prerequisites
-- Python 3.13+ (or Docker)
+- Python 3.11+ (or Docker)
 - A Udemy account
 
 ### Option 1: Local Setup
@@ -201,8 +201,7 @@ cp udemy_enroller.db.backup udemy_enroller.db
 ## Project Impact
 
 - **Designed to automate** the manual process of finding and claiming free coupons
-- **1,400+ courses** enrolled to date via automated enrollment
-- **₹8,44,000+** estimated cost savings (based on list prices of enrolled courses)
+- **Live impact metrics** on the demo homepage and `/llms.txt` are computed from aggregate enrollment totals in the database (sum of per-user lifetime stats), using Udemy list prices — not hardcoded
 - Scales to **hundreds of concurrent** coupon processing requests
 - **100% open-source** and self-hostable
 
@@ -275,10 +274,11 @@ Using this tool involves interacting with Udemy's systems through automated mean
 - The project maintainers cannot guarantee uninterrupted availability of any Udemy feature.
 
 ### 🔒 Credential Safety
-- Your Udemy session cookies (`access_token`, `client_id`, `csrftoken`) are **encrypted** (Fernet) before storage in the local database.
+- Your Udemy session cookies (`access_token`, `client_id`, `csrftoken`) are **encrypted** (Fernet) before storage on the instance running the app (self-hosted machine or hosted demo server).
 - Your Udemy password is **never stored** — not even as a hash.
-- Credentials are **never transmitted** to any third-party server.
-- All data stays on your instance (local or self-hosted).
+- Udemy credentials are sent only to Udemy — not sold or shared with third parties.
+- On the **hosted demo**, only **Cookie Login** is available (`DEPLOYMENT_ENV=server`).
+- Anonymous analytics (Google Tag Manager / GA4) load only after cookie consent.
 
 ### ⏳ Rate Limiting & Respectful Use
 - The tool implements **deployment-aware rate limiting**:
@@ -291,11 +291,11 @@ Using this tool involves interacting with Udemy's systems through automated mean
 - Coupon codes expire rapidly — sometimes within hours or minutes.
 - Not all 100% off coupons result in successful enrollment.
 - Udemy may change their enrollment flow at any time, which could break this tool.
-- The project's impact metrics ("1,400+ courses", "₹8,44,000+ savings") reflect aggregate data across all users and are calculated using course list prices, not actual payments.
+- Impact metrics on the live site reflect aggregate enrollment totals across all users and are calculated using course list prices, not actual payments.
 - No guarantee is made that any specific course or coupon will be available.
 
 ### 📝 Data Stored
-The following data is stored in the local database:
+The following data is stored in the database on your instance:
 - **Encrypted** Udemy session cookies (access_token, client_id, csrftoken)
 - Your user preferences (category filters, language, rating thresholds)
 - Aggregated enrollment history and savings totals
@@ -308,10 +308,10 @@ The following data is **never** stored:
 
 ### 🤖 Browser Automation & Scraping
 
-This tool uses CloudScraper and Playwright (with optional stealth patches) to access coupon aggregator sites. These are used for legitimate purposes — discovering publicly available coupon codes. The tool:
+This tool uses CloudScraper and Playwright to access coupon aggregator sites for discovering publicly available coupon codes. The tool:
 
-- Implements respectful rate limiting (3–15 seconds between requests)
-- Does not bypass CAPTCHAs
+- Implements respectful, deployment-aware rate limiting (3–15 seconds between requests)
+- Does not solve or bypass CAPTCHAs
 - Does not rotate proxies for evasion
 - Does not perform mass scraping
 - Blocks itself after consecutive errors (circuit breaker pattern)

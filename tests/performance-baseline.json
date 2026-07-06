@@ -1,0 +1,337 @@
+{
+  "generated_at": "2026-07-06T17:18:15.391Z",
+  "base_url": "https://udemyenroller.madhudadi.in",
+  "tool_version": "1.0.0",
+  "summary": {
+    "routes_tested": 6,
+    "measurements": 12,
+    "lcp_good": 12,
+    "lcp_poor": 0,
+    "cls_poor": 2,
+    "ttfb_needs_improvement": 5,
+    "thresholds": {
+      "lcp_ms": {
+        "good": 2500,
+        "poor": 4000
+      },
+      "fcp_ms": {
+        "good": 1800,
+        "poor": 3000
+      },
+      "cls": {
+        "good": 0.1,
+        "poor": 0.25
+      },
+      "ttfb_ms": {
+        "good": 800,
+        "poor": 1800
+      }
+    },
+    "findings": [
+      "2 viewport(s) have poor CLS (>= 0.25); likely dynamic content or late-loading assets.",
+      "5 viewport(s) have TTFB in needs-improvement range (>800ms)."
+    ]
+  },
+  "routes": [
+    {
+      "path": "/",
+      "name": "Home",
+      "viewports": [
+        {
+          "name": "mobile",
+          "width": 375,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 1162,
+            "fcp_ms": 1420,
+            "lcp_ms": 1420,
+            "cls": 0,
+            "dom_content_loaded_ms": 1517,
+            "load_ms": 1517,
+            "request_count": 9,
+            "transfer_bytes": 85814
+          },
+          "ratings": {
+            "ttfb": "needs-improvement",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:03.669Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 1001,
+            "fcp_ms": 1256,
+            "lcp_ms": 1256,
+            "cls": 0,
+            "dom_content_loaded_ms": 1340,
+            "load_ms": 1341,
+            "request_count": 9,
+            "transfer_bytes": 85814
+          },
+          "ratings": {
+            "ttfb": "needs-improvement",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:10.574Z"
+        }
+      ]
+    },
+    {
+      "path": "/udemycoupons",
+      "name": "Free Coupons",
+      "viewports": [
+        {
+          "name": "mobile",
+          "width": 375,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 1184,
+            "fcp_ms": 1600,
+            "lcp_ms": 1600,
+            "cls": 0,
+            "dom_content_loaded_ms": 1820,
+            "load_ms": 1825,
+            "request_count": 11,
+            "transfer_bytes": 96413
+          },
+          "ratings": {
+            "ttfb": "needs-improvement",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:18.179Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 562,
+            "fcp_ms": 784,
+            "lcp_ms": 784,
+            "cls": 0,
+            "dom_content_loaded_ms": 895,
+            "load_ms": 898,
+            "request_count": 11,
+            "transfer_bytes": 96413
+          },
+          "ratings": {
+            "ttfb": "good",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:24.459Z"
+        }
+      ]
+    },
+    {
+      "path": "/faq",
+      "name": "FAQ",
+      "viewports": [
+        {
+          "name": "mobile",
+          "width": 375,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 546,
+            "fcp_ms": 696,
+            "lcp_ms": 696,
+            "cls": 0,
+            "dom_content_loaded_ms": 756,
+            "load_ms": 756,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "good",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:30.643Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 553,
+            "fcp_ms": 816,
+            "lcp_ms": 892,
+            "cls": 1.0001,
+            "dom_content_loaded_ms": 948,
+            "load_ms": 955,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "good",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "poor"
+          },
+          "timestamp": "2026-07-06T17:17:36.773Z"
+        }
+      ]
+    },
+    {
+      "path": "/about",
+      "name": "About",
+      "viewports": [
+        {
+          "name": "mobile",
+          "width": 375,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 280,
+            "fcp_ms": 448,
+            "lcp_ms": 448,
+            "cls": 0,
+            "dom_content_loaded_ms": 554,
+            "load_ms": 554,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "good",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:42.742Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 973,
+            "fcp_ms": 1296,
+            "lcp_ms": 1296,
+            "cls": 0.0005,
+            "dom_content_loaded_ms": 1322,
+            "load_ms": 1322,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "needs-improvement",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:49.614Z"
+        }
+      ]
+    },
+    {
+      "path": "/guides",
+      "name": "Guides",
+      "viewports": [
+        {
+          "name": "mobile",
+          "width": 375,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 399,
+            "fcp_ms": 676,
+            "lcp_ms": 676,
+            "cls": 0,
+            "dom_content_loaded_ms": 731,
+            "load_ms": 731,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "good",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:17:55.723Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 736,
+            "fcp_ms": 1056,
+            "lcp_ms": 1056,
+            "cls": 0.0005,
+            "dom_content_loaded_ms": 1103,
+            "load_ms": 1103,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "good",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:18:02.394Z"
+        }
+      ]
+    },
+    {
+      "path": "/privacy",
+      "name": "Privacy",
+      "viewports": [
+        {
+          "name": "mobile",
+          "width": 375,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 405,
+            "fcp_ms": 672,
+            "lcp_ms": 672,
+            "cls": 1,
+            "dom_content_loaded_ms": 804,
+            "load_ms": 814,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "good",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "poor"
+          },
+          "timestamp": "2026-07-06T17:18:08.393Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 944,
+            "fcp_ms": 1380,
+            "lcp_ms": 1380,
+            "cls": 0.0007,
+            "dom_content_loaded_ms": 1477,
+            "load_ms": 1529,
+            "request_count": 10,
+            "transfer_bytes": 93397
+          },
+          "ratings": {
+            "ttfb": "needs-improvement",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-06T17:18:15.368Z"
+        }
+      ]
+    }
+  ]
+}

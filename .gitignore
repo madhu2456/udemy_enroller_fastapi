@@ -25,6 +25,7 @@ duce.log
 # IDE
 .vscode/
 .idea/
+opencode.json
 *.swp
 *.swo
 
@@ -43,6 +44,7 @@ test_nodriver.py
 
 # Generated artifacts
 .playwright_data/
+performance-report/
 htmlcov/
 .ruff_cache/
 .pytest_cache/

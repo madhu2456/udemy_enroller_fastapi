@@ -241,8 +241,14 @@
 
         <style>
             /* Custom styles matching premium light mode */
+            html {
+                overflow-x: clip;
+            }
+
             body {
                 margin: 0;
+                overflow-x: clip;
+                max-width: 100%;
                 line-height: 1.5;
                 font-family:
                     "Inter",
@@ -336,7 +342,9 @@
                     left: 50%;
                     transform: translateX(-50%);
                     right: auto;
-                    min-width: calc(100vw - 2rem);
+                    width: calc(100% - 2rem);
+                    max-width: 380px;
+                    min-width: 0;
                     animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
                 @keyframes slideDown {
@@ -453,7 +461,7 @@
         <!-- Skip link for keyboard accessibility (WCAG 2.4.1) -->
         <a
             href="#main-content"
-            class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[200] focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:text-blue-600 focus:font-semibold"
+            class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[200] focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:text-blue-600 focus:font-semibold focus:min-h-[44px] focus:min-w-[11rem] focus:inline-flex focus:items-center"
         >
             Skip to main content
         </a>
@@ -498,12 +506,12 @@
         <!-- Navigation -->
          <header
             role="banner"
-            class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm"
+            class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm overflow-hidden"
         >
             <!-- Main nav row -->
             <nav
                 role="navigation"
-                class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3"
+                class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 min-w-0 overflow-hidden"
                 aria-label="Main navigation"
             >
                 <!-- Logo -->
@@ -526,7 +534,7 @@
 
                 <!-- Centre nav links - always visible -->
                 <div
-                    class="flex items-center gap-0.5 overflow-x-auto no-scrollbar min-w-0 px-2 mask-edges"
+                    class="flex-1 min-w-0 flex items-center gap-0.5 overflow-x-auto no-scrollbar px-2 mask-edges"
                     id="nav-links"
                 >
                     <a
@@ -848,8 +856,8 @@
         <!-- Cookie consent banner -->
         {% if request.app.state.gtm_container_id or request.app.state.ga4_measurement_id %}
         <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 hidden" role="alert" aria-label="Cookie consent">
-            <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <p class="text-sm text-gray-600">
+            <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0 w-full">
+                <p class="text-sm text-gray-600 min-w-0 flex-1">
                     This site uses analytics cookies to improve your experience.
                     <a href="/privacy" class="text-blue-600 hover:underline">Read our privacy policy</a>.
                 </p>

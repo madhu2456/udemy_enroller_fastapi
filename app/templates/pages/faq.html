@@ -88,7 +88,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "Is it safe to connect my Udemy account?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. The tool interacts directly with Udemy's enrollment endpoints using your session token - the same way the Udemy website itself works. Session cookies are encrypted before being stored in the local database. Your password is never stored in any form. No credentials are transmitted to any third-party server. Because the project is fully open source, you can audit every line of code on GitHub."
+                    "text": "Yes. The tool uses your Udemy session tokens with the same enrollment endpoints as the Udemy website. Session cookies are Fernet-encrypted before storage on the instance running the app (self-hosted or hosted demo). Your password is never stored. Udemy credentials are not sold or shared with third parties. Anonymous analytics (GTM/GA4) load only after cookie consent. The project is open source on GitHub."
                 }
             },
             {
@@ -104,7 +104,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "What data does the tool collect about me?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "The tool stores your Udemy session data (encrypted cookies) in a local database on your instance. Your password is never stored. This data is never transmitted to third-party servers. You can delete all stored data at any time from the Settings page."
+                    "text": "The app stores encrypted Udemy session cookies and your preferences in the database on your instance (or the hosted demo server). Passwords are never stored. Anonymous usage analytics (GTM/GA4) run only after you accept cookies. You can delete stored data from Settings."
                 }
             },
             {
@@ -112,7 +112,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "What is the difference between Email Login and Cookie Login?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "                                    Email Login uses your Udemy email and password to authenticate via Udemy's enrollment endpoints. It is the simplest option but may trigger additional login prompts on server or cloud environments. Cookie Login uses pre-authenticated session tokens extracted from your browser - specifically access_token, client_id, and csrftoken - which typically avoids triggering additional login prompts and is the recommended method for reliability."
+                    "text": "Email Login uses your Udemy email and password to authenticate via Udemy's login endpoint. It is available when self-hosting but may trigger additional prompts on some servers. Cookie Login uses session tokens from your browser (access_token, client_id, csrftoken) and is the recommended method. On the hosted demo, only Cookie Login is available."
                 }
             },
             {
@@ -429,16 +429,16 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Yes. The tool interacts directly with Udemy's
-                                    enrollment endpoints using your session token
-                                    obtain a session token - the same way the
-                                    Udemy website itself works. Session cookies
-                                    are encrypted before being stored in the
-                                    local database. Your password is never
-                                    stored in any form. No credentials are
-                                    transmitted to any third-party server.
-                                    Because the project is fully open source,
-                                    you can audit every line of code on GitHub.
+                                    Yes. The tool uses your Udemy session tokens
+                                    with the same enrollment endpoints as the
+                                    Udemy website. Session cookies are
+                                    Fernet-encrypted before storage on the
+                                    instance running the app (self-hosted or
+                                    hosted demo). Your password is never stored.
+                                    Udemy credentials are not sold or shared
+                                    with third parties. Anonymous analytics
+                                    (GTM/GA4) load only after cookie consent.
+                                    The project is open source on GitHub.
                                 </p>
                             </div>
                         </div>
@@ -477,13 +477,13 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    The tool stores your Udemy session data
-                                    (encrypted cookies) in a local database on
-                                    your instance. Your password is never
-                                    stored. This data is never transmitted to
-                                    third-party servers. You can delete all
-                                    stored data at any time from the Settings
-                                    page.
+                                    The app stores encrypted Udemy session
+                                    cookies and your preferences in the database
+                                    on your instance (or the hosted demo server).
+                                    Passwords are never stored. Anonymous usage
+                                    analytics (GTM/GA4) run only after you
+                                    accept cookies. You can delete stored data
+                                    from Settings.
                                 </p>
                             </div>
                         </div>
@@ -531,16 +531,13 @@ filters, and authentication.{% endblock %} {% block content %}
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
                                     Email Login uses your Udemy email and
-                                    password to authenticate via Udemy's login endpoint.
-                                    It is the simplest option but may trigger
-                                    additional login prompts on server or cloud
-                                    environments. Cookie Login uses
-                                    pre-authenticated session tokens extracted
-                                    from your browser - specifically
-                                    access_token, client_id, and csrftoken -
-                                    which typically avoids triggering additional
-                                    login prompts and is the
-                                    recommended method for reliability.
+                                    password via Udemy's login endpoint. It is
+                                    available when self-hosting but may trigger
+                                    additional prompts on some servers. Cookie
+                                    Login uses session tokens from your browser
+                                    (access_token, client_id, csrftoken) and is
+                                    the recommended method. On the hosted demo,
+                                    only Cookie Login is available.
                                 </p>
                             </div>
                         </div>

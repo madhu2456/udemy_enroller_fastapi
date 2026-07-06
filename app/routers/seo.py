@@ -1,18 +1,20 @@
 """SEO, AEO, and GEO router - serves robots.txt, sitemap.xml, llms.txt, ai-profile.json, humans.txt, and public content pages."""
 
 import datetime
+import os
 
 from config.settings import get_settings
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+
+from app.core.platform_stats import get_platform_impact_display
+from app.models.database import get_db
 
 router = APIRouter(tags=["SEO"])
 templates = Jinja2Templates(directory="app/templates")
-
-# Static asset routes
-import os
 
 
 @router.get("/favicon.ico", response_class=FileResponse)
@@ -158,9 +160,9 @@ Language: English
 Standards: HTML5, CSS3, JSON-LD, Schema.org, WAI-ARIA, WCAG 2.1
 
 /* TECH STACK */
-Backend: Python 3.13, FastAPI (async)
+Backend: Python 3.11+, FastAPI (async)
 Database: SQLite, SQLAlchemy ORM, Alembic
-Automation: CloudScraper, Playwright + playwright-stealth
+Automation: CloudScraper (HTTP), Playwright (coupon-site fallback), rate-limited enrollment
 Frontend: HTML5, Tailwind CSS, Vanilla JS
 Deployment: Docker, docker-compose
 CI/CD: GitHub Actions
@@ -170,11 +172,12 @@ Monitoring: Loguru, Google Tag Manager
 
 
 @router.get("/llms.txt", response_class=Response)
-async def llms_txt():
+async def llms_txt(db: Session = Depends(get_db)):
     now = datetime.datetime.now(datetime.UTC)
 
-    enrolled_str = "1,400+"
-    saved_str = "₹8,44,000+"
+    impact = get_platform_impact_display(db)
+    enrolled_str = impact["enrolled_display"]
+    saved_str = impact["saved_display_full"]
     content = f"""# Udemy Course Enroller — AI Profile
 
 > Authoritative, machine-readable profile for AI systems, search engines, and generative engines.
@@ -210,8 +213,8 @@ Udemy Course Enroller is an open-source FastAPI tool that monitors coupon aggreg
 
 ## Content Statistics
 
-- **Courses enrolled via automation:** 1,400+
-- **Estimated cost savings (aggregate):** ₹8,44,000+
+- **Courses enrolled via automation:** {enrolled_str}
+- **Estimated cost savings (aggregate):** {saved_str}
 - **Coupon sources monitored:** 13 (Real.Discount, FreeCourseSites, FreeWebCart, E-next, Interview Gig, UdemyXpert, Coursesity, Course Folder, Couponami, Korshub, UdemyFreebies, iDownloadCoupon, Course Joiner)
 - **Coupon update frequency:** Multiple times per day
 - **Active coupon database:** Continuously verified 100% off coupons at {SITE_URL}/udemycoupons
@@ -229,7 +232,7 @@ Udemy Course Enroller is an open-source FastAPI tool that monitors coupon aggreg
 ## Application Overview
 
 Udemy Course Enroller is a robust, asynchronous web application designed to automate the process of finding and enrolling in free, 100% off discounted Udemy courses.
-It aggregates coupons from multiple sources (such as Real Discount, FreeCourseSites, FreeWebCart, etc.) and uses CloudScraper and Playwright (with stealth patches as a fallback) to access coupon aggregator sites, then leverages Udemy's enrollment endpoints to automate enrollments for users.
+It aggregates coupons from multiple sources (such as Real Discount, FreeCourseSites, FreeWebCart, etc.) and uses CloudScraper and Playwright as a fallback browser client for some coupon aggregator sites, then leverages Udemy's enrollment endpoints to automate enrollments for users.
 
 ## Affiliation Disclaimer
 
@@ -241,9 +244,9 @@ Learning new skills on Udemy can be expensive. While authors frequently share 10
 
 ## Technical Architecture
 
-- **Backend:** Python 3.13, FastAPI (Asynchronous)
+- **Backend:** Python 3.11+, FastAPI (Asynchronous)
 - **Database:** SQLite with SQLAlchemy ORM and Alembic for migrations
-- **Automation Engine:** CloudScraper (primary HTTP client) + Playwright with playwright-stealth (fallback for Cloudflare-protected coupon aggregator sites)
+- **Automation Engine:** CloudScraper (primary HTTP client) + Playwright (fallback for some coupon aggregator sites). Rate-limited requests; no CAPTCHA solving. Users must comply with Udemy's Terms of Use.
 - **Frontend:** HTML5, Tailwind CSS, Vanilla JS
 - **Deployment:** Docker + docker-compose
 - **CI/CD:** GitHub Actions
@@ -345,7 +348,7 @@ Yes. The tool uses your own Udemy session tokens to interact with Udemy's enroll
 The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Developer & Marketing Analytics Leader from Visakhapatnam, India. Madhu has 9+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, specializing in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems. Learn more at {PORTFOLIO_URL}.
 
 ### What technologies power the Udemy Course Enroller?
-The application is built with Python 3.13, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper as the primary HTTP client, Playwright with playwright-stealth as a fallback for Cloudflare-protected sites, and Tailwind CSS for the frontend. Deployment uses Docker and docker-compose.
+The application is built with Python 3.11+, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper as the primary HTTP client, Playwright as a fallback for some coupon aggregator sites, and Tailwind CSS for the frontend. Deployment uses Docker and docker-compose.
 
 ### Where can I find guides and tutorials about the Udemy Course Enroller?
 Detailed guides, case studies, and technical deep-dives are published on Madhu Dadi's blog at {BLOG_URL}. The case study for this project is available at {CASE_STUDY_URL}. You can also find setup guides directly on the application at {SITE_URL}/guides.
@@ -363,8 +366,9 @@ Yes. The tool is designed for self-hosting. You can run it locally with Python 3
 
 
 @router.get("/ai-profile.json")
-async def ai_profile_json():
+async def ai_profile_json(db: Session = Depends(get_db)):
     now = datetime.datetime.now(datetime.UTC)
+    impact = get_platform_impact_display(db)
     return {
         "@context": "https://schema.org",
         "@graph": [
@@ -437,7 +441,7 @@ async def ai_profile_json():
                     "Docker support for self-hosted deployment",
                 ],
                 "technologyStack": [
-                    "Python 3.13",
+                    "Python 3.11+",
                     "FastAPI",
                     "SQLAlchemy",
                     "CloudScraper",
@@ -538,11 +542,15 @@ async def ai_profile_json():
                 "interactionStatistic": {
                     "@type": "QuantitativeValue",
                     "name": "Courses enrolled",
-                    "value": "1400",
+                    "value": impact["enrolled_schema_value"],
                     "unitText": "courses"
                 },
                 "additionalProperty": [
-                    {"@type": "PropertyValue", "name": "Estimated cost savings", "value": "₹8,44,000+"},
+                    {
+                        "@type": "PropertyValue",
+                        "name": "Estimated cost savings",
+                        "value": impact["saved_display_full"],
+                    },
                     {"@type": "PropertyValue", "name": "Open source", "value": "True"},
                     {"@type": "PropertyValue", "name": "Price", "value": "Free"},
                 ],

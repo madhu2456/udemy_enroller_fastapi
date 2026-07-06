@@ -143,7 +143,7 @@ async def main():
         valid_courses = (
             db.query(EnrolledCourse)
             .filter(
-                EnrolledCourse.is_coupon_valid == True,
+                EnrolledCourse.is_coupon_valid.is_(True),
                 EnrolledCourse.coupon_code.isnot(None),
             )
             .order_by(desc(EnrolledCourse.enrolled_at))

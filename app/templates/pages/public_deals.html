@@ -365,6 +365,15 @@ instant course enrollment.{% endblock %} {% block extra_head %}
             clearFiltersBtn: document.getElementById('clearFiltersBtn')
         };
 
+        // Honor SearchAction deep links: /udemycoupons?q={search_term_string}
+        const urlSearchQuery = new URLSearchParams(window.location.search).get('q');
+        if (urlSearchQuery) {
+            state.search = urlSearchQuery.trim();
+            if (els.searchInput) {
+                els.searchInput.value = state.search;
+            }
+        }
+
         // Custom Skeleton Animation
         const skeletonStyle = document.createElement('style');
         skeletonStyle.innerHTML = `

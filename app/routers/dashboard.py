@@ -13,6 +13,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.cache import _analytics_cache, _stats_cache, get_cached_or_compute
+from app.core.platform_stats import get_platform_impact_display
 from app.deps import get_current_user_id
 from app.models.database import (
     EnrollmentRun,
@@ -41,12 +42,12 @@ def login_page(request: Request):
     Redirect authenticated users server-side to avoid an extra client-side
     auth check request on initial page load.
     """
-    token = request.cookies.get("session_id")
-    if token:
-        from app.models.database import SessionLocal
+    from app.models.database import SessionLocal
 
-        db = SessionLocal()
-        try:
+    db = SessionLocal()
+    try:
+        token = request.cookies.get("session_id")
+        if token:
             session = db.query(UserSession).filter(UserSession.token == token).first()
             if session:
                 if session.expires_at and session.expires_at < _utcnow_naive():
@@ -54,10 +55,15 @@ def login_page(request: Request):
                     db.commit()
                 else:
                     return RedirectResponse(url="/dashboard", status_code=303)
-        finally:
-            db.close()
 
-    return templates.TemplateResponse(request, "pages/login.html")
+        platform_stats = get_platform_impact_display(db)
+        return templates.TemplateResponse(
+            request,
+            "pages/login.html",
+            {"platform_stats": platform_stats},
+        )
+    finally:
+        db.close()
 
 
 @router.get("/settings", response_class=HTMLResponse)
@@ -181,12 +187,12 @@ async def stream_logs(
             yield "data: Log file not found\n\n"
             return
 
-        def process_log_line(l: str) -> Optional[str]:
-            match = re.search(r" \[user:(\d+)\]", l)
+        def process_log_line(line: str) -> Optional[str]:
+            match = re.search(r" \[user:(\d+)\]", line)
             if match:
                 line_user_id = int(match.group(1))
                 if line_user_id == user_id:
-                    return l.replace(match.group(0), "")
+                    return line.replace(match.group(0), "")
             return None
 
         # Start by tailing the file, only last few lines then live

@@ -32,7 +32,6 @@ def public_deals_page(request: Request):
 
 @router.get("/", include_in_schema=False)
 async def public_deals_page_redirect():
-    from starlette.datastructures import URL
     return RedirectResponse(url="/udemycoupons", status_code=307)
 
 @router.get("/api/coupons")

@@ -18,7 +18,6 @@ from app.security import (
     login_rate_limiter,
     verify_csrf_token,
 )
-from app.logging_config import sanitize_log_message
 from app.services.udemy_client import LoginException, UdemyClient
 from config.settings import get_settings
 
@@ -88,6 +87,16 @@ async def login_with_credentials(
     db: Session = Depends(get_db),
 ):
     """Login with Udemy email and password."""
+    if settings.DEPLOYMENT_ENV == "server":
+        return LoginResponse(
+            success=False,
+            status="error",
+            message=(
+                "Email login is disabled on the hosted demo. "
+                "Use Cookie Login with session tokens from your browser."
+            ),
+        )
+
     login_rate_limiter.raise_if_limited(_client_key(request))
     client = UdemyClient()
     try:

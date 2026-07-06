@@ -382,16 +382,19 @@ async function checkAuthentication(page) {
   
   try {
     const hasCaptcha = await page.evaluate(() => {
-      const body = document.body.innerText || '';
-      const html = document.documentElement.innerHTML || '';
-      const captchaPatterns = /captcha|recaptcha|hcaptcha|turnstile|are you a robot|verify.*human/i;
-      
-      return {
-        captcha: captchaPatterns.test(body) || captchaPatterns.test(html),
-      };
+      const captchaSelectors = [
+        'iframe[src*="recaptcha"]',
+        'iframe[src*="hcaptcha"]',
+        '.g-recaptcha',
+        '.h-captcha',
+        '[data-sitekey]',
+        '.cf-turnstile',
+        'input[name*="captcha" i]',
+      ];
+      return captchaSelectors.some((sel) => document.querySelector(sel));
     });
-    
-    results.hasCaptcha = hasCaptcha.captcha;
+
+    results.hasCaptcha = hasCaptcha;
     
   } catch (e) {
     results.issues.push(`Authentication check error: ${e.message}`);
