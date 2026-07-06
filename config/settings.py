@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     COOKIE_ENCRYPTION_KEY: str = ""
     # Google Search Console verification code — set in .env after creating a GSC property
     GOOGLE_SITE_VERIFICATION: str = ""
+    # Bing Webmaster Tools verification code — set in .env after creating a Bing property
+    BING_SITE_VERIFICATION: str = ""
     # Google Tag Manager container ID
     GTM_CONTAINER_ID: str = "GTM-5JHNVN6K"
     # Google Analytics 4 Measurement ID — set in .env (e.g. G-XXXXXXXXXX)

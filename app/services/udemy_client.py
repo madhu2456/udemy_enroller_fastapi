@@ -703,7 +703,18 @@ class UdemyClient:
                     course.is_coupon_valid = False
                     details = attempts[0].get("details")
                     if attempt_status not in ("applied", "unused"):
-                        msg = f"{attempt_status}: {details}" if details else attempt_status
+                        if attempt_status == "expired":
+                            details_lower = (details or "").lower()
+                            is_permanent_expiry = not any(
+                                keyword in details_lower
+                                for keyword in ("temporary", "try again", "later")
+                            )
+                            if is_permanent_expiry:
+                                msg = "This coupon has permanently expired and is no longer valid."
+                            else:
+                                msg = "This coupon is temporarily unavailable. Please try again later."
+                        else:
+                            msg = f"{attempt_status}: {details}" if details else attempt_status
                     elif not is_100_percent:
                         msg = f"Coupon only {discount}% off (not 100%)"
                     else:
@@ -975,10 +986,11 @@ class UdemyClient:
 
             logger.info(f"[DU_CHECKOUT] status={r.status_code} (attempt {attempt + 1}) for {course.title}")
 
-            if r.headers.get("retry-after"):
-                logger.error(f"[DU_CHECKOUT] retry-after header detected for {course.title}")
-                course.status = False
-                return
+            if r.status_code == 429 and "Retry-After" in r.headers:
+                retry_after = int(r.headers["Retry-After"])
+                logger.warning(f"Rate limited. Waiting {retry_after} seconds.")
+                await asyncio.sleep(retry_after)
+                return await self._du_checkout(course)
 
             if r.status_code == 504:
                 logger.info(f"[DU_CHECKOUT] 504 treated as success for {course.title}")

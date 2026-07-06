@@ -1,0 +1,1239 @@
+{
+  "summary": {
+    "totalRoutes": 6,
+    "totalViolations": 32,
+    "totalPasses": 429
+  },
+  "routes": [
+    {
+      "name": "Home",
+      "path": "/",
+      "axeResults": [
+        {
+          "viewport": {
+            "width": 320,
+            "height": 568,
+            "name": "320px (Mobile)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 2,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            },
+            {
+              "id": "target-size",
+              "impact": "serious",
+              "help": "All touch targets must be 24px large, or leave sufficient space",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag22aa",
+                "wcag258"
+              ],
+              "description": "Ensure touch targets have sufficient size and space"
+            }
+          ],
+          "passes": 27,
+          "incomplete": 1
+        },
+        {
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "name": "768px (Tablet)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 2,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 26,
+          "incomplete": 1
+        },
+        {
+          "viewport": {
+            "width": 1366,
+            "height": 768,
+            "name": "1366px (Desktop)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 26,
+          "incomplete": 2
+        }
+      ],
+      "manualTests": {
+        "keyboardNav": {
+          "skipLinkWorks": false,
+          "focusVisible": true,
+          "tabOrderIssues": 0,
+          "issues": []
+        },
+        "reducedMotion": {
+          "respectsReducedMotion": true
+        },
+        "zoom200": {
+          "noHorizontalScroll": false
+        },
+        "targetSizes": {
+          "smallTargetsCount": 1,
+          "smallTargets": [
+            {
+              "tag": "A",
+              "text": "Skip to main content",
+              "width": 2,
+              "height": 2
+            }
+          ]
+        },
+        "semanticHTML": {
+          "landmarks": {
+            "banner": 1,
+            "navigation": 2,
+            "main": 2,
+            "contentinfo": 1
+          },
+          "issues": []
+        },
+        "formLabels": {
+          "issues": []
+        },
+        "dragging": {
+          "hasDraggingEvents": false,
+          "hasAlternatives": true
+        },
+        "consistentHelp": {
+          "helpLinks": []
+        },
+        "authentication": {
+          "hasCaptcha": true,
+          "hasCognitiveTest": false
+        }
+      }
+    },
+    {
+      "name": "Free Coupons",
+      "path": "/udemycoupons",
+      "axeResults": [
+        {
+          "viewport": {
+            "width": 320,
+            "height": 568,
+            "name": "320px (Mobile)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 46,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "target-size",
+              "impact": "serious",
+              "help": "All touch targets must be 24px large, or leave sufficient space",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag22aa",
+                "wcag258"
+              ],
+              "description": "Ensure touch targets have sufficient size and space"
+            }
+          ],
+          "passes": 24,
+          "incomplete": 2
+        },
+        {
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "name": "768px (Tablet)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 46,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            }
+          ],
+          "passes": 23,
+          "incomplete": 2
+        },
+        {
+          "viewport": {
+            "width": 1366,
+            "height": 768,
+            "name": "1366px (Desktop)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 46,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            }
+          ],
+          "passes": 23,
+          "incomplete": 2
+        }
+      ],
+      "manualTests": {
+        "keyboardNav": {
+          "skipLinkWorks": false,
+          "focusVisible": true,
+          "tabOrderIssues": 0,
+          "issues": []
+        },
+        "reducedMotion": {
+          "respectsReducedMotion": true
+        },
+        "zoom200": {
+          "noHorizontalScroll": false
+        },
+        "targetSizes": {
+          "smallTargetsCount": 1,
+          "smallTargets": [
+            {
+              "tag": "A",
+              "text": "Skip to main content",
+              "width": 2,
+              "height": 2
+            }
+          ]
+        },
+        "semanticHTML": {
+          "landmarks": {
+            "banner": 1,
+            "navigation": 2,
+            "main": 1,
+            "contentinfo": 1
+          },
+          "issues": [
+            "Heading level skipped: h1 -> h3"
+          ]
+        },
+        "formLabels": {
+          "issues": []
+        },
+        "dragging": {
+          "hasDraggingEvents": false,
+          "hasAlternatives": true
+        },
+        "consistentHelp": {
+          "helpLinks": []
+        },
+        "authentication": {
+          "hasCaptcha": false,
+          "hasCognitiveTest": false
+        }
+      }
+    },
+    {
+      "name": "FAQ",
+      "path": "/faq",
+      "axeResults": [
+        {
+          "viewport": {
+            "width": 320,
+            "height": 568,
+            "name": "320px (Mobile)"
+          },
+          "violations": [
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            },
+            {
+              "id": "target-size",
+              "impact": "serious",
+              "help": "All touch targets must be 24px large, or leave sufficient space",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag22aa",
+                "wcag258"
+              ],
+              "description": "Ensure touch targets have sufficient size and space"
+            }
+          ],
+          "passes": 23,
+          "incomplete": 2
+        },
+        {
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "name": "768px (Tablet)"
+          },
+          "violations": [
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 22,
+          "incomplete": 2
+        },
+        {
+          "viewport": {
+            "width": 1366,
+            "height": 768,
+            "name": "1366px (Desktop)"
+          },
+          "violations": [
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 2,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 22,
+          "incomplete": 0
+        }
+      ],
+      "manualTests": {
+        "keyboardNav": {
+          "skipLinkWorks": false,
+          "focusVisible": true,
+          "tabOrderIssues": 0,
+          "issues": []
+        },
+        "reducedMotion": {
+          "respectsReducedMotion": true
+        },
+        "zoom200": {
+          "noHorizontalScroll": false
+        },
+        "targetSizes": {
+          "smallTargetsCount": 1,
+          "smallTargets": [
+            {
+              "tag": "A",
+              "text": "Skip to main content",
+              "width": 2,
+              "height": 2
+            }
+          ]
+        },
+        "semanticHTML": {
+          "landmarks": {
+            "banner": 1,
+            "navigation": 2,
+            "main": 2,
+            "contentinfo": 1
+          },
+          "issues": []
+        },
+        "formLabels": {
+          "issues": []
+        },
+        "dragging": {
+          "hasDraggingEvents": false,
+          "hasAlternatives": true
+        },
+        "consistentHelp": {
+          "helpLinks": []
+        },
+        "authentication": {
+          "hasCaptcha": false,
+          "hasCognitiveTest": false
+        }
+      }
+    },
+    {
+      "name": "About",
+      "path": "/about",
+      "axeResults": [
+        {
+          "viewport": {
+            "width": 320,
+            "height": 568,
+            "name": "320px (Mobile)"
+          },
+          "violations": [
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            },
+            {
+              "id": "target-size",
+              "impact": "serious",
+              "help": "All touch targets must be 24px large, or leave sufficient space",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag22aa",
+                "wcag258"
+              ],
+              "description": "Ensure touch targets have sufficient size and space"
+            }
+          ],
+          "passes": 23,
+          "incomplete": 1
+        },
+        {
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "name": "768px (Tablet)"
+          },
+          "violations": [
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 22,
+          "incomplete": 1
+        },
+        {
+          "viewport": {
+            "width": 1366,
+            "height": 768,
+            "name": "1366px (Desktop)"
+          },
+          "violations": [],
+          "passes": 22,
+          "incomplete": 2
+        }
+      ],
+      "manualTests": {
+        "keyboardNav": {
+          "skipLinkWorks": false,
+          "focusVisible": true,
+          "tabOrderIssues": 0,
+          "issues": []
+        },
+        "reducedMotion": {
+          "respectsReducedMotion": true
+        },
+        "zoom200": {
+          "noHorizontalScroll": false
+        },
+        "targetSizes": {
+          "smallTargetsCount": 1,
+          "smallTargets": [
+            {
+              "tag": "A",
+              "text": "Skip to main content",
+              "width": 2,
+              "height": 2
+            }
+          ]
+        },
+        "semanticHTML": {
+          "landmarks": {
+            "banner": 1,
+            "navigation": 2,
+            "main": 2,
+            "contentinfo": 1
+          },
+          "issues": []
+        },
+        "formLabels": {
+          "issues": []
+        },
+        "dragging": {
+          "hasDraggingEvents": false,
+          "hasAlternatives": true
+        },
+        "consistentHelp": {
+          "helpLinks": []
+        },
+        "authentication": {
+          "hasCaptcha": false,
+          "hasCognitiveTest": false
+        }
+      }
+    },
+    {
+      "name": "Guides",
+      "path": "/guides",
+      "axeResults": [
+        {
+          "viewport": {
+            "width": 320,
+            "height": 568,
+            "name": "320px (Mobile)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 10,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "target-size",
+              "impact": "serious",
+              "help": "All touch targets must be 24px large, or leave sufficient space",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag22aa",
+                "wcag258"
+              ],
+              "description": "Ensure touch targets have sufficient size and space"
+            }
+          ],
+          "passes": 24,
+          "incomplete": 2
+        },
+        {
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "name": "768px (Tablet)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 10,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 23,
+          "incomplete": 1
+        },
+        {
+          "viewport": {
+            "width": 1366,
+            "height": 768,
+            "name": "1366px (Desktop)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 10,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 23,
+          "incomplete": 0
+        }
+      ],
+      "manualTests": {
+        "keyboardNav": {
+          "skipLinkWorks": false,
+          "focusVisible": true,
+          "tabOrderIssues": 0,
+          "issues": []
+        },
+        "reducedMotion": {
+          "respectsReducedMotion": true
+        },
+        "zoom200": {
+          "noHorizontalScroll": false
+        },
+        "targetSizes": {
+          "smallTargetsCount": 1,
+          "smallTargets": [
+            {
+              "tag": "A",
+              "text": "Skip to main content",
+              "width": 2,
+              "height": 2
+            }
+          ]
+        },
+        "semanticHTML": {
+          "landmarks": {
+            "banner": 1,
+            "navigation": 2,
+            "main": 2,
+            "contentinfo": 1
+          },
+          "issues": []
+        },
+        "formLabels": {
+          "issues": []
+        },
+        "dragging": {
+          "hasDraggingEvents": false,
+          "hasAlternatives": true
+        },
+        "consistentHelp": {
+          "helpLinks": []
+        },
+        "authentication": {
+          "hasCaptcha": true,
+          "hasCognitiveTest": false
+        }
+      }
+    },
+    {
+      "name": "Privacy",
+      "path": "/privacy",
+      "axeResults": [
+        {
+          "viewport": {
+            "width": 320,
+            "height": 568,
+            "name": "320px (Mobile)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            },
+            {
+              "id": "scrollable-region-focusable",
+              "impact": "serious",
+              "help": "Scrollable region must have keyboard access",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/scrollable-region-focusable?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag211",
+                "wcag213"
+              ],
+              "description": "Ensure elements that have scrollable content are accessible by keyboard in Safari"
+            },
+            {
+              "id": "target-size",
+              "impact": "serious",
+              "help": "All touch targets must be 24px large, or leave sufficient space",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag22aa",
+                "wcag258"
+              ],
+              "description": "Ensure touch targets have sufficient size and space"
+            }
+          ],
+          "passes": 26,
+          "incomplete": 2
+        },
+        {
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "name": "768px (Tablet)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 2,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 25,
+          "incomplete": 1
+        },
+        {
+          "viewport": {
+            "width": 1366,
+            "height": 768,
+            "name": "1366px (Desktop)"
+          },
+          "violations": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "help": "Elements must meet minimum color contrast ratio thresholds",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+            },
+            {
+              "id": "link-in-text-block",
+              "impact": "serious",
+              "help": "Links must be distinguishable without relying on color",
+              "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+              "nodes": 1,
+              "wcagTags": [
+                "wcag2a",
+                "wcag141"
+              ],
+              "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color"
+            }
+          ],
+          "passes": 25,
+          "incomplete": 2
+        }
+      ],
+      "manualTests": {
+        "keyboardNav": {
+          "skipLinkWorks": false,
+          "focusVisible": true,
+          "tabOrderIssues": 0,
+          "issues": []
+        },
+        "reducedMotion": {
+          "respectsReducedMotion": true
+        },
+        "zoom200": {
+          "noHorizontalScroll": false
+        },
+        "targetSizes": {
+          "smallTargetsCount": 1,
+          "smallTargets": [
+            {
+              "tag": "A",
+              "text": "Skip to main content",
+              "width": 2,
+              "height": 2
+            }
+          ]
+        },
+        "semanticHTML": {
+          "landmarks": {
+            "banner": 1,
+            "navigation": 2,
+            "main": 2,
+            "contentinfo": 1
+          },
+          "issues": []
+        },
+        "formLabels": {
+          "issues": []
+        },
+        "dragging": {
+          "hasDraggingEvents": false,
+          "hasAlternatives": true
+        },
+        "consistentHelp": {
+          "helpLinks": []
+        },
+        "authentication": {
+          "hasCaptcha": false,
+          "hasCognitiveTest": false
+        }
+      }
+    }
+  ],
+  "prioritizedFixes": [
+    {
+      "id": "W1",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W2",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/",
+      "nodes": 2,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W3",
+      "criterion": "wcag22aa, wcag258",
+      "issue": "All touch targets must be 24px large, or leave sufficient space",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright"
+    },
+    {
+      "id": "W4",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W5",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/",
+      "nodes": 2,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W6",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W7",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W8",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "L",
+      "route": "/udemycoupons",
+      "nodes": 46,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W9",
+      "criterion": "wcag22aa, wcag258",
+      "issue": "All touch targets must be 24px large, or leave sufficient space",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/udemycoupons",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright"
+    },
+    {
+      "id": "W10",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "L",
+      "route": "/udemycoupons",
+      "nodes": 46,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W11",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "L",
+      "route": "/udemycoupons",
+      "nodes": 46,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W12",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/faq",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W13",
+      "criterion": "wcag22aa, wcag258",
+      "issue": "All touch targets must be 24px large, or leave sufficient space",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/faq",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright"
+    },
+    {
+      "id": "W14",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/faq",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W15",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/faq",
+      "nodes": 2,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W16",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/about",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W17",
+      "criterion": "wcag22aa, wcag258",
+      "issue": "All touch targets must be 24px large, or leave sufficient space",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/about",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright"
+    },
+    {
+      "id": "W18",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/about",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W19",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "M",
+      "route": "/guides",
+      "nodes": 10,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W20",
+      "criterion": "wcag22aa, wcag258",
+      "issue": "All touch targets must be 24px large, or leave sufficient space",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/guides",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright"
+    },
+    {
+      "id": "W21",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "M",
+      "route": "/guides",
+      "nodes": 10,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W22",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/guides",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W23",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "M",
+      "route": "/guides",
+      "nodes": 10,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W24",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/guides",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W25",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W26",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W27",
+      "criterion": "wcag2a, wcag211, wcag213",
+      "issue": "Scrollable region must have keyboard access",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/scrollable-region-focusable?application=playwright"
+    },
+    {
+      "id": "W28",
+      "criterion": "wcag22aa, wcag258",
+      "issue": "All touch targets must be 24px large, or leave sufficient space",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/target-size?application=playwright"
+    },
+    {
+      "id": "W29",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W30",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 2,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    },
+    {
+      "id": "W31",
+      "criterion": "wcag2aa",
+      "issue": "Elements must meet minimum color contrast ratio thresholds",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright"
+    },
+    {
+      "id": "W32",
+      "criterion": "wcag2a",
+      "issue": "Links must be distinguishable without relying on color",
+      "severity": "High",
+      "effort": "XS",
+      "route": "/privacy",
+      "nodes": 1,
+      "evidence": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright"
+    }
+  ]
+}

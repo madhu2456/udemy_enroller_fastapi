@@ -195,9 +195,64 @@ class TestAuthEndpoints:
         assert response.json()["authenticated"] is False
 
     def test_logout_without_session(self):
-        """Test logout without active session is safe and returns 200."""
+        """Test logout without active session now returns 401 (CSRF guard)."""
+        client.cookies.clear()
         response = client.post("/api/auth/logout")
+        assert response.status_code == 401
+
+
+class TestLogoutCSRF:
+    """Test CSRF protection on the logout endpoint."""
+
+    def setup_method(self):
+        """Create an authenticated test session."""
+        db = TestingSessionLocal()
+        user = User(
+            email="logout-csrf@example.com",
+            password_hash=hash_password("SecurePassword123!"),
+            udemy_display_name="Logout CSRF User",
+            udemy_cookies=json.dumps(
+                {
+                    "access_token": "access-token",
+                    "client_id": "client-id",
+                    "csrf_token": "csrf-token",
+                }
+            ),
+            currency="USD",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        import secrets
+
+        token = secrets.token_hex(32)
+        db.add(UserSession(token=token, user_id=user.id))
+        db.commit()
+
+        self.db = db
+        self.session_token = token
+        self.csrf_token = generate_csrf_token(self.session_token)
+        client.cookies.set("session_id", self.session_token)
+
+    def teardown_method(self):
+        """Cleanup per-test state."""
+        self.db.close()
+        client.cookies.clear()
+
+    def test_logout_with_session_no_csrf_header(self):
+        """Test logout with session cookie but no CSRF header is rejected."""
+        response = client.post("/api/auth/logout")
+        assert response.status_code == 403
+
+    def test_logout_with_session_and_csrf_header(self):
+        """Test logout with valid session cookie and CSRF header succeeds."""
+        response = client.post(
+            "/api/auth/logout",
+            headers={"X-CSRF-Token": self.csrf_token},
+        )
         assert response.status_code == 200
+        assert response.json()["success"] is True
 
 
 class TestEnrollmentSessionRestore:

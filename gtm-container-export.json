@@ -51,7 +51,7 @@
         "firingTriggerId": ["2147479573"],
         "tagFiringOption": "ONCE_PER_EVENT",
         "monitoringMetadata": { "type": "MAP" },
-        "consentSettings": { "consentStatus": "NOT_SET" }
+        "consentSettings": { "consentStatus": "GRANTED" }
       }
     ],
     "trigger": [],

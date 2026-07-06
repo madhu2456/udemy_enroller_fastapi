@@ -115,6 +115,7 @@ async def lifespan(app: FastAPI):
     # Expose settings to templates via request.app.state
     _settings = get_settings()
     app.state.google_site_verification = _settings.GOOGLE_SITE_VERIFICATION
+    app.state.bing_site_verification = _settings.BING_SITE_VERIFICATION
     app.state.gtm_container_id = _settings.GTM_CONTAINER_ID
     app.state.ga4_measurement_id = _settings.GA4_MEASUREMENT_ID
 

@@ -4,22 +4,25 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>
-            {% block title %}Free Udemy Courses Automation | Udemy Enroller by
-            Madhu Dadi{% endblock %}
+            About the Automated Udemy
+Enroller Tool by Madhu Dadi
         </title>
 
         <!-- Primary Meta Tags -->
         <meta
             name="title"
-            content="{% block meta_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %}"
+            content="About the Automated Udemy
+Enroller Tool by Madhu Dadi"
         />
         <meta
             name="description"
-            content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you automatically - no manual hunting required.{% endblock %}"
+            content="Learn about the Udemy
+Enroller project - an open-source FastAPI automation tool built by Madhu Dadi to help
+learners automatically discover and claim 100% off Udemy courses."
         />
         <meta
             name="keywords"
-            content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2026, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper, free udemy courses 2026{% endblock %}"
+            content="free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2026, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper, free udemy courses 2026"
         />
         <meta name="author" content="Madhu Dadi" />
         <meta name="application-name" content="Udemy Enroller" />
@@ -29,26 +32,15 @@
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Udemy Enroller" />
-        {% if request.app.state.google_site_verification %}
-        <meta
-            name="google-site-verification"
-            content="{{ request.app.state.google_site_verification }}"
-        />
-        {% endif %}
-        {% if request.app.state.bing_site_verification %}
-        <meta
-            name="msvalidate.01"
-            content="{{ request.app.state.bing_site_verification }}"
-        />
-        {% endif %}
+        
         <meta
             name="robots"
-            content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}"
+            content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
         />
         <meta name="theme-color" content="#ffffff" />
         <link
             rel="canonical"
-            href="https://udemyenroller.madhudadi.in{{ request.url.path }}"
+            href="https://udemyenroller.madhudadi.in/about"
         />
         <link rel="author" href="https://madhudadi.in" />
         <link rel="publisher" href="https://madhudadi.in" />
@@ -75,7 +67,6 @@
             type="font/woff2"
             crossorigin
         />
-        <link rel="preload" href="/static/images/icon-512.webp" as="image" />
         <link rel="stylesheet" href="/static/fonts/inter.css" />
         <link
             rel="stylesheet"
@@ -88,18 +79,20 @@
         <link rel="dns-prefetch" href="https://madhudadi.in" />
 
         <!-- Open Graph / Facebook -->
-        <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
+        <meta property="og:type" content="article" />
         <meta
             property="og:url"
-            content="https://udemyenroller.madhudadi.in{{ request.url.path }}"
+            content="https://udemyenroller.madhudadi.in/about"
         />
         <meta
             property="og:title"
-            content="{% block og_title %}Udemy Enroller - Free Udemy Course Automation{% endblock %}"
+            content="About the Automated Udemy Enroller Tool by Madhu Dadi"
         />
         <meta
             property="og:description"
-            content="{% block og_description %}An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.{% endblock %}"
+            content="Learn
+about the Udemy Enroller project - an open-source FastAPI automation tool built by Madhu
+Dadi to help learners automatically claim 100% off Udemy courses."
         />
         <meta
             property="og:image"
@@ -117,15 +110,17 @@
         <meta name="twitter:card" content="summary_large_image" />
         <meta
             name="twitter:url"
-            content="https://udemyenroller.madhudadi.in{{ request.url.path }}"
+            content="https://udemyenroller.madhudadi.in/about"
         />
         <meta
             name="twitter:title"
-            content="{% block twitter_title %}Udemy Enroller - Free Udemy Course Automation{% endblock %}"
+            content="About the Automated Udemy Enroller Tool by Madhu Dadi"
         />
         <meta
             name="twitter:description"
-            content="{% block twitter_description %}An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.{% endblock %}"
+            content="Learn about the Udemy Enroller project - an open-source FastAPI
+automation tool built by Madhu Dadi to help learners claim 100% off Udemy
+courses."
         />
         <meta
             name="twitter:image"
@@ -219,11 +214,7 @@
             }
         </script>
 
-        {% if request.url.path == '/' %}
-        <style>
-            {% include 'components/tailwind-home.min.css' %}
-        </style>
-        {% else %}
+        
         <link rel="preload" href="/static/css/tailwind.min.css" as="style" />
         <link
             href="/static/css/tailwind.min.css"
@@ -234,10 +225,10 @@
         <noscript
             ><link href="/static/css/tailwind.min.css" rel="stylesheet"
         /></noscript>
-        {% endif %}
+        
 
         <!-- Lucide Icons CDN -->
-        <script defer src="https://unpkg.com/lucide@0.469.0" nonce="{{ request.state.nonce }}"></script>
+        <script defer src="https://unpkg.com/lucide@0.469.0" nonce="3AoA0NmsOrCzqnu0YWGS7Q"></script>
 
         <style>
             /* Custom styles matching premium light mode */
@@ -387,10 +378,10 @@
                 );
             }
         </style>
-        {% block extra_head %}{% endblock %}
-        {% if request.app.state.gtm_container_id %}
+        
+        
         <!-- Google Tag Manager (consent-gated) -->
-        <script nonce="{{ request.state.nonce }}">
+        <script nonce="3AoA0NmsOrCzqnu0YWGS7Q">
             (function(w,d,s,l,i){
                 w[l]=w[l]||[];
                 function gtm() {
@@ -406,27 +397,27 @@
                 if (localStorage.getItem('cookie_consent') === 'accepted') { gtm(); }
                 // Expose function so banner can call it later
                 window._loadGTM = gtm;
-            })(window,document,"script","dataLayer","{{ request.app.state.gtm_container_id }}");
+            })(window,document,"script","dataLayer","GTM-5JHNVN6K");
         </script>
-        <script nonce="{{ request.state.nonce }}">
+        <script nonce="3AoA0NmsOrCzqnu0YWGS7Q">
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
         </script>
-        {% endif %}
-        {% if request.app.state.ga4_measurement_id %}
+        
+        
         <!-- Google Analytics 4 (consent-gated) -->
-        <script nonce="{{ request.state.nonce }}">
+        <script nonce="3AoA0NmsOrCzqnu0YWGS7Q">
             function loadGA4() {
                 var s=document.createElement('script');
                 s.async=true;
-                s.src="https://www.googletagmanager.com/gtag/js?id={{ request.app.state.ga4_measurement_id }}";
-                s.nonce="{{ request.state.nonce }}";
+                s.src="https://www.googletagmanager.com/gtag/js?id=G-GT1FDTC7Y6";
+                s.nonce="3AoA0NmsOrCzqnu0YWGS7Q";
                 document.head.appendChild(s);
                 window.dataLayer=window.dataLayer||[];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config','{{ request.app.state.ga4_measurement_id }}',{
-                    page_path:'{{ request.url.path }}',
+                gtag('config','G-GT1FDTC7Y6',{
+                    page_path:'/about',
                     page_title:document.title,
                     send_page_view:true
                 });
@@ -436,20 +427,20 @@
             // Expose function so banner can call it later
             window._loadGA4 = loadGA4;
         </script>
-        {% endif %}
+        
     </head>
     <body class="min-h-screen flex flex-col">
-        {% if request.app.state.gtm_container_id %}
+        
         <!-- Google Tag Manager (noscript) -->
         <noscript id="gtm-noscript"
             ><iframe
-                src="https://www.googletagmanager.com/ns.html?id={{ request.app.state.gtm_container_id }}"
+                src="https://www.googletagmanager.com/ns.html?id=GTM-5JHNVN6K"
                 height="0"
                 width="0"
                 style="display: none; visibility: hidden"
             ></iframe
         ></noscript>
-        {% endif %}
+        
         <!-- Skip link for keyboard accessibility (WCAG 2.4.1) -->
         <a
             href="#main-content"
@@ -459,9 +450,7 @@
         </a>
         <!-- Global Announcement Bar -->
         <div
-            id="announcement-bar"
             class="bg-blue-50 px-4 py-2.5 text-center shadow-sm relative z-[100] border-b border-blue-100"
-            aria-live="polite"
         >
             <p
                 class="text-xs sm:text-sm font-medium text-gray-900 flex flex-wrap items-center justify-center gap-2"
@@ -531,43 +520,43 @@
                 >
                     <a
                         href="/guides"
-                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/guides' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                         >Guides</a
                     >
                     <a
                         href="/faq"
-                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/faq' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                         >FAQ</a
                     >
                     <a
                         href="/about"
-                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/about' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 bg-[#EFF6FF] text-[#2563EB]"
                         >About</a
                     >
                     <a
                         href="/udemycoupons"
-                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/udemycoupons' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                         >Free Coupons</a
                     >
                     <!-- Authenticated Links -->
                     <a
                         href="/dashboard"
-                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/dashboard' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                         >Dashboard</a
                     >
                     <a
                         href="/settings"
-                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/settings' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                         >Settings</a
                     >
                     <a
                         href="/history"
-                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/history' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                         >History</a
                     >
                     <a
                         href="/privacy"
-                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/privacy' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                         >Privacy</a
                     >
                 </div>
@@ -636,7 +625,446 @@
 
         <!-- Main Content -->
         <main id="main-content" role="main" class="flex-grow">
-            {% block content %}{% endblock %}
+            
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://udemyenroller.madhudadi.in/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "About",
+                        "item": "https://udemyenroller.madhudadi.in/about"
+                    }
+                ]
+            },
+            {
+                "@type": "AboutPage",
+                "@id": "https://udemyenroller.madhudadi.in/about",
+                "name": "About the Automated Udemy Enroller Tool",
+                "description": "Learn about the Udemy Enroller project - an open-source FastAPI automation tool built by Madhu Dadi.",
+                "significantLink": [
+                    "https://github.com/madhu2456/udemy_enroller_fastapi",
+                    "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
+                ],
+                "mainEntity": {
+                    "@type": "SoftwareApplication",
+                    "@id": "https://udemyenroller.madhudadi.in/#softwareapplication",
+                    "name": "Udemy Enroller"
+                }
+            }
+        ]
+    }
+</script>
+<div class="min-h-screen bg-white text-gray-900">
+    <main>
+        <!-- Hero -->
+        <section
+            class="max-w-6xl mx-auto px-6 pt-14 pb-12"
+            aria-labelledby="about-heading"
+        >
+            <div class="max-w-2xl">
+                <span
+                    class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1 text-xs font-medium mb-4"
+                >
+                    About
+                </span>
+                <h1
+                    id="about-heading"
+                    class="text-3xl font-semibold text-gray-900 tracking-tight mb-3"
+                >
+                    Built to democratise online learning
+                </h1>
+                <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                    Udemy Enroller is an open-source automation tool created by
+                    <a
+                        href="https://madhudadi.in"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-[#2563EB] hover:underline font-medium"
+                        >Madhu Dadi</a
+                    >
+                    to solve a simple but frustrating problem: free Udemy
+                    coupons expire within hours, and manually hunting for them
+                    is a losing game. The enroller monitors coupon aggregator
+                    sites around the clock and claims courses the moment they
+                    appear - so your learning never depends on perfect timing.
+                </p>
+                <p class="text-sm text-gray-500 leading-relaxed">
+                    Don't want to automate your account? You can also manually
+                    browse our live database of
+                    <a
+                        href="/udemycoupons"
+                        class="text-[#2563EB] hover:underline font-medium font-bold"
+                        >100% Free Udemy Coupons</a
+                    >, which is updated continuously throughout the day.
+                </p>
+            </div>
+        </section>
+
+        <!-- Facts bar - only verifiable facts -->
+        <section
+            class="border-y border-gray-200 bg-[#F9FAFB] py-5"
+            aria-label="Project facts"
+        >
+            <div class="max-w-6xl mx-auto px-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            100% Off
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Udemy coupon rate targeted
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            Open Source
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Fully auditable on GitHub
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            Free
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            No cost to use, ever
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            FastAPI
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Lightweight Python backend
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mission + Creator -->
+        <section class="max-w-6xl mx-auto px-6 py-16">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Mission -->
+                <div>
+                    <h2
+                        class="text-xl font-semibold text-gray-900 tracking-tight mb-4"
+                    >
+                        The Mission
+                    </h2>
+                    <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                        Quality education should not be gated behind price tags.
+                        Udemy instructors regularly publish their courses at
+                        100% off for limited promotional windows - but those
+                        windows close within hours. The Udemy Enroller exists to
+                        level that playing field.
+                    </p>
+                    <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                        By automating what would take a human hours of daily
+                        refreshing, the tool lets learners focus on what matters
+                        - actually studying the courses they have enrolled in,
+                        not hunting for the next coupon.
+                    </p>
+                    <p class="text-sm text-gray-500 leading-relaxed">
+                        The project is deliberately kept free, open source, and
+                        dependency-light so it can be audited, trusted, and run
+                        by anyone - from a personal laptop to a low-cost cloud
+                        server.
+                    </p>
+                </div>
+
+                <!-- Creator -->
+                <div>
+                    <h2
+                        class="text-xl font-semibold text-gray-900 tracking-tight mb-4"
+                    >
+                        The Creator
+                    </h2>
+                    <div
+                        class="bg-[#F9FAFB] rounded-xl border border-gray-200 p-6"
+                    >
+                        <div class="flex items-center gap-4 mb-5">
+                            <div
+                                class="w-12 h-12 rounded-full bg-[#2563EB] flex items-center justify-center text-white font-semibold text-lg"
+                            >
+                                M
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">
+                                    Madhu Dadi
+                                </p>
+                                <a
+                                    href="https://madhudadi.in"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-xs text-[#2563EB] hover:underline"
+                                    >madhudadi.in →</a
+                                >
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            Madhu is a developer and open-source contributor
+                            passionate about automation, developer tooling, and
+                            making quality learning resources accessible to
+                            everyone.
+                        </p>
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            The Udemy Enroller started as a personal script to
+                            stop missing time-limited free course coupons, and
+                            has since grown into an open-source project used by
+                            learners worldwide.
+                        </p>
+                        <div
+                            class="mt-5 pt-5 border-t border-gray-200 flex items-center gap-3"
+                        >
+                            <a
+                                href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                            >
+                                <svg
+                                    class="w-3.5 h-3.5"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"
+                                    />
+                                </svg>
+                                View on GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Values -->
+        <section
+            class="border-y border-gray-200 bg-[#F9FAFB]"
+            aria-labelledby="values-heading"
+        >
+            <div class="max-w-6xl mx-auto px-6 py-16">
+                <h2
+                    id="values-heading"
+                    class="text-xl font-semibold text-gray-900 tracking-tight mb-8"
+                >
+                    What we stand for
+                </h2>
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+                >
+                    <div class="bg-white rounded-xl border border-gray-200 p-5">
+                        <div
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#EFF6FF] border border-blue-100 mb-4"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+                            Open Source First
+                        </h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            Every line of code is public on GitHub. No black
+                            boxes, no hidden scrapers, no mystery. Fork it,
+                            audit it, improve it.
+                        </p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-5">
+                        <div
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#EFF6FF] border border-blue-100 mb-4"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+                            Privacy by Design
+                        </h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            Credentials are encrypted before local storage.
+                            Passwords are never stored - sent directly to
+                             Udemy's enrollment endpoints. Session data stays on your instance -
+                            never transmitted to third parties.
+                        </p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-5">
+                        <div
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#EFF6FF] border border-blue-100 mb-4"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+                            Free Forever
+                        </h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            No subscriptions, no freemium gates, no paywalled
+                            scrapers. Learning should be accessible to everyone.
+                        </p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-5">
+                        <div
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#EFF6FF] border border-blue-100 mb-4"
+                        >
+                            <svg
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+                            Community Driven
+                        </h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            New coupon scrapers, bug fixes, and feature ideas
+                            all come from the community. Star the repo to stay
+                            updated.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it's built -->
+        <section
+            class="max-w-6xl mx-auto px-6 py-16"
+            aria-labelledby="tech-heading"
+        >
+            <h2
+                id="tech-heading"
+                class="text-xl font-semibold text-gray-900 tracking-tight mb-2"
+            >
+                How it's built
+            </h2>
+            <p class="text-sm text-gray-500 mb-8">
+                A lightweight, auditable stack - nothing you can't read and
+                understand in an afternoon.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-[#F9FAFB] rounded-xl border border-gray-200 p-5">
+                    <p
+                        class="text-sm font-semibold text-gray-900 mb-1 font-mono"
+                    >
+                        FastAPI (Python)
+                    </p>
+                    <p class="text-xs text-gray-500 leading-relaxed">
+                        The backend engine that monitors coupon sites and talks
+                         to Udemy's enrollment endpoints.
+                    </p>
+                </div>
+                <div class="bg-[#F9FAFB] rounded-xl border border-gray-200 p-5">
+                    <p
+                        class="text-sm font-semibold text-gray-900 mb-1 font-mono"
+                    >
+                        Coupon Scrapers
+                    </p>
+                    <p class="text-xs text-gray-500 leading-relaxed">
+                        Modular scrapers for each aggregator site - easy to add
+                        new sources via pull request.
+                    </p>
+                </div>
+                <div class="bg-[#F9FAFB] rounded-xl border border-gray-200 p-5">
+                    <p
+                        class="text-sm font-semibold text-gray-900 mb-1 font-mono"
+                    >
+                         Udemy Integration
+                    </p>
+                    <p class="text-xs text-gray-500 leading-relaxed">
+                        Direct integration using your session token. No
+                                    third-party middleware, no data leakage. This is <strong>not</strong> an official Udemy API — it uses the same session-based enrollment endpoints that the Udemy website itself uses.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="border-t border-gray-200 bg-[#F9FAFB]">
+            <div class="max-w-6xl mx-auto px-6 py-14 text-center">
+                <h2
+                    class="text-xl font-semibold text-gray-900 tracking-tight mb-2"
+                >
+                    Ready to start learning for free?
+                </h2>
+                <p class="text-sm text-gray-500 max-w-md mx-auto mb-6">
+                    Connect your Udemy account and let the engine do the rest.
+                </p>
+                <div
+                    class="flex flex-col sm:flex-row items-center justify-center gap-3"
+                >
+                    <a
+                        href="/#connect"
+                        class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150"
+                        >Get Started Free</a
+                    >
+                    <a
+                        href="/guides"
+                        class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors duration-150"
+                        >Read the Guides</a
+                    >
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
         </main>
 
         <!-- Footer -->
@@ -750,8 +1178,8 @@
             </div>
         </footer>
 
-        <script src="/static/js/app.js" defer nonce="{{ request.state.nonce }}"></script>
-        <script nonce="{{ request.state.nonce }}">
+        <script src="/static/js/app.js" nonce="3AoA0NmsOrCzqnu0YWGS7Q"></script>
+        <script nonce="3AoA0NmsOrCzqnu0YWGS7Q">
             // Global security sanitization helpers
             function escapeHTML(str) {
                 if (str === null || str === undefined) return "";
@@ -846,7 +1274,7 @@
             });
         </script>
         <!-- Cookie consent banner -->
-        {% if request.app.state.gtm_container_id or request.app.state.ga4_measurement_id %}
+        
         <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 hidden" role="alert" aria-label="Cookie consent">
             <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <p class="text-sm text-gray-600">
@@ -863,7 +1291,7 @@
                 </div>
             </div>
         </div>
-        <script nonce="{{ request.state.nonce }}">
+        <script nonce="3AoA0NmsOrCzqnu0YWGS7Q">
             (function(){
                 var banner = document.getElementById('cookie-banner');
                 if (!banner) return;
@@ -896,7 +1324,7 @@
                 });
             })();
         </script>
-        {% endif %}
-        {% block scripts %}{% endblock %}
+        
+        
     </body>
 </html>

@@ -1,0 +1,1185 @@
+plan_id: 20260705-120000-forensic-audit
+objective: >-
+  Perform a read-only, evidence-based Phase 1 forensic audit of the local
+  Udemy Enroller codebase and live production site
+  (https://udemyenroller.madhudadi.in) across architecture, code quality,
+  build stability, SEO, GEO/AEO/AI-search readiness, structured data,
+  content/trust, UI/UX, accessibility, performance, security/privacy,
+  browser-automation/platform safety, and analytics. No code changes; no
+  deployment. Deliver inspection findings Section 1-22 as specified in the
+  audit brief.
+created_at: '2026-07-05T12:00:00+00:00'
+created_by: weave-planner
+status: in_progress
+plan_metrics:
+  wave_1_task_count: 17
+  total_dependencies: 17
+  risk_score: high
+tldr: >-
+  17-way parallel forensic inspection of the Udemy Enroller repository and
+  live site, followed by a single synthesis task that collates evidence into
+  the requested 22-section audit report. All tasks are read-only and
+  safety-constrained to avoid endorsing TOS violations or abusive automation.
+open_questions:
+  - question: Does the live site expose any authenticated/admin endpoints that must not be crawled?
+    context: >-
+      The plan instructs read-only crawling, but robot restrictions or
+      sensitive paths are unknown.
+    type: decision_blocker
+    affects:
+      - t02-live-crawl
+      - t08-security-privacy
+  - question: Are there browser-automation capabilities that interact with Udemy in ways that breach Terms of Service?
+    context: >-
+      The codebase appears to include enrollment/logic and a chrome-extension
+      directory. Auditors must flag any bypassing of rate limits, CAPTCHA, or
+      credential harvesting without prescribing continued use.
+    type: research
+    affects:
+      - t13-browser-automation
+      - t08-security-privacy
+      - t15-compliance-ethics
+  - question: Which analytics identifiers (GA4/GTM/Clarity/etc.) are present and are they privacy compliant?
+    context: >-
+      gtm-container-export.json exists; cookie consent and PII leakage must be
+      checked.
+    type: research
+    affects:
+      - t11-analytics
+      - t08-security-privacy
+      - t07-content-trust
+gaps:
+  - description: >-
+      The exact repository structure beyond top-level files is not yet
+      catalogued; discovery tasks must produce a full file tree and technology
+      inventory before deep-dive tasks can cite precise paths.
+    refinement_requests:
+      - query: Generate a complete file tree excluding venv, node_modules, __pycache__, .git, and .ruff_cache.
+        source_hint: filesystem
+  - description: >-
+      Live-site behavior (rendered DOM, redirect chains, CSP headers, real
+      performance metrics) is not yet measured; dynamic inspection tools are
+      required.
+    refinement_requests:
+      - query: Fetch root document + key pages with headers; run Lighthouse for mobile/desktop; capture HAR if possible.
+        source_hint: https://udemyenroller.madhudadi.in
+pre_mortem:
+  overall_risk_level: high
+  critical_failure_modes:
+    - scenario: Live site blocks automated crawling during audit.
+      likelihood: medium
+      impact: medium
+      mitigation: Use only manual curl/browser DevTools, respect robots.txt, and fall back to local builds/static files.
+    - scenario: Repository contains secrets or private credentials in tracked files.
+      likelihood: medium
+      impact: critical
+      mitigation: auditors scan with secret-detection regexes, do not commit findings, and surface them privately to the user.
+    - scenario: Browser-automation logic is found to violate Udemy ToS.
+      likelihood: medium
+      impact: high
+      mitigation: Flag explicitly, refrain from remediation, and recommend legal/compliance review.
+    - scenario: Evidence is lost because outputs are not persisted to the plan directory.
+      likelihood: low
+      impact: medium
+      mitigation: Every task must write machine-readable and human-readable evidence under docs/plan/20260705-120000-forensic-audit/evidence/.
+  assumptions:
+    - The local working directory is the authoritative source for code review tasks.
+    - The live site is reachable and representative of current production.
+    - All audit tasks will execute read-only; no task will mutate code, config, databases, or environment variables.
+    - The user retains responsibility for any legal/platform-compliance remediation derived from findings.
+implementation_specification:
+  code_structure: >-
+    Audit scope covers the project root, app/, chrome-extension/, config/,
+    scripts/, tests/, public_deals.json, README.md, main.py, run.py, setup.py,
+    requirements.txt, package.json, docker-related files, and the live site.
+  affected_areas:
+    - Local repository structure and configuration
+    - Live site public pages and assets
+    - SEO/GEO/AEO surface
+    - Structured data / schema markup
+    - Content and trust signals
+    - UI/UX and accessibility
+    - Performance
+    - Security, privacy, and secret exposure
+    - Browser automation / platform safety
+    - Analytics and monitoring plumbing
+  component_details:
+    - component: Repository discovery & inventory
+      responsibility: Map files, dependencies, language runtimes, build scripts, and entry points.
+      interfaces:
+        - file tree
+        - requirements.txt
+        - package.json
+        - setup.py
+        - docker-compose.yml
+        - main.py
+        - run.py
+      dependencies:
+        - component: Local filesystem
+          relationship: reads
+        - component: Git history
+          relationship: reads
+      integration_points:
+        - outputs file list to Section 1/2
+    - component: Live site crawler
+      responsibility: Fetch public pages, record status codes, headers, redirects, robots.txt, sitemap.xml.
+      interfaces:
+        - https://udemyenroller.madhudadi.in
+      dependencies:
+        - component: Internet connectivity
+          relationship: external
+      integration_points:
+        - feeds Section 3
+        - feeds t05-technical-seo
+        - feeds t06-geo-aeo
+        - feeds t07-content-trust
+        - feeds t10-performance
+    - component: Code-quality inspector
+      responsibility: Lint, static analysis, import graph, test inventory, coverage review.
+      interfaces:
+        - Python source files
+        - Chrome extension source files
+        - test files
+      dependencies:
+        - component: Local repository
+          relationship: reads
+      integration_points:
+        - outputs to Section 4
+    - component: SEO/GEO/structured-data/content inspector
+      responsibility: Meta tags, headings, canonical/hreflang, schema.org JSON-LD, internal links, E-E-A-T signals, AI-search readiness, sitemap coverage, llms.txt/robots.txt.
+      interfaces:
+        - live HTML
+        - public_deals.json
+        - README.md
+      dependencies:
+        - component: Live site crawler
+          relationship: consumes
+      integration_points:
+        - outputs Sections 5, 6, 8
+    - component: UI/UX/a11y inspector
+      responsibility: Accessibility tests, contrast, landmarks, forms, mobile viewport, navigation, visual consistency.
+      interfaces:
+        - rendered live pages
+        - CSS/Tailwind config
+      dependencies:
+        - component: Live site crawler
+          relationship: consumes
+      integration_points:
+        - outputs Sections 9, 10
+    - component: Security/privacy/automation inspector
+      responsibility: Secret scan, dependency vulnerabilities, CSP/permissions/CORS, cookie/localStorage usage, form security, chrome extension manifest permissions, automation safety review.
+      interfaces:
+        - local files
+        - live HTTP responses
+        - chrome-extension/
+      dependencies:
+        - component: Local repository
+          relationship: reads
+        - component: Live site crawler
+          relationship: consumes
+      integration_points:
+        - outputs Sections 12, 13, 15
+    - component: Analytics/ops inspector
+      responsibility: GTM/GA4/Clarity tags, event naming, data layer, cookie consent, monitoring, CI/CD, deployment config.
+      interfaces:
+        - live HTML
+        - gtm-container-export.json
+        - .github/workflows
+      dependencies:
+        - component: Live site crawler
+          relationship: consumes
+      integration_points:
+        - outputs Section 14
+    - component: Final synthesis
+      responsibility: Collate all evidence into a single 22-section evidence-based report with actionable severity ratings.
+      interfaces:
+        - evidence/ artifacts
+      dependencies:
+        - component: all inspection tasks
+          relationship: consumes
+      integration_points:
+        - outputs docs/plan/20260705-120000-forensic-audit/Section-1-through-22-Audit-Report.md
+contracts:
+  - from_task: t01-repo-discovery
+    to_task: t17-final-synthesis
+    interface: filesystem inventory manifest
+    format: JSON and Markdown list at evidence/01-repo-inventory.json + .md
+  - from_task: t02-live-crawl
+    to_task: t17-final-synthesis
+    interface: crawl dataset
+    format: JSON Lines at evidence/02-live-crawl.jsonl
+  - from_task: t03-command-validation
+    to_task: t17-final-synthesis
+    interface: runnable commands matrix
+    format: Markdown table at evidence/03-command-validation.md
+  - from_task: t04-code-quality
+    to_task: t17-final-synthesis
+    interface: lint/test/coverage report
+    format: Markdown + JSON at evidence/04-code-quality.{md,json}
+  - from_task: t05-technical-seo
+    to_task: t17-final-synthesis
+    interface: SEO findings
+    format: JSON at evidence/05-technical-seo.json
+  - from_task: t06-geo-aeo
+    to_task: t17-final-synthesis
+    interface: GEO/AEO findings
+    format: JSON at evidence/06-geo-aeo.json
+  - from_task: t07-content-trust
+    to_task: t17-final-synthesis
+    interface: content/trust findings
+    format: Markdown at evidence/07-content-trust.md
+  - from_task: t08-structured-data
+    to_task: t17-final-synthesis
+    interface: schema markup report
+    format: JSON at evidence/08-structured-data.json
+  - from_task: t09-ui-ux
+    to_task: t17-final-synthesis
+    interface: UI/UX heuristics report
+    format: Markdown at evidence/09-ui-ux.md
+  - from_task: t10-accessibility
+    to_task: t17-final-synthesis
+    interface: a11y findings
+    format: JSON at evidence/10-accessibility.json
+  - from_task: t11-performance
+    to_task: t17-final-synthesis
+    interface: performance metrics
+    format: JSON + Lighthouse artifacts at evidence/11-performance/
+  - from_task: t12-security-privacy
+    to_task: t17-final-synthesis
+    interface: security/privacy findings
+    format: JSON at evidence/12-security-privacy.json
+  - from_task: t13-browser-automation
+    to_task: t17-final-synthesis
+    interface: platform-safety review
+    format: Markdown at evidence/13-browser-automation-safety.md
+  - from_task: t14-analytics
+    to_task: t17-final-synthesis
+    interface: analytics inventory
+    format: JSON at evidence/14-analytics.json
+  - from_task: t15-build-stability
+    to_task: t17-final-synthesis
+    interface: build/run reproducibility report
+    format: Markdown at evidence/15-build-stability.md
+  - from_task: t16-static-search
+    to_task: t17-final-synthesis
+    interface: grep/static-search evidence
+    format: JSON Lines at evidence/16-static-search.jsonl
+  - from_task: all-wave-1-tasks
+    to_task: t17-final-synthesis
+    interface: evidence/ directory
+    format: files as defined above
+tasks:
+  - id: t01-repo-discovery
+    title: Repository Discovery & Technology Inventory
+    description: >-
+      Produce a complete, filtered file tree; identify all languages,
+      frameworks, runtimes, entry points, config files, dependency files, and
+      build/test/lint commands. Map repository organization to the audit brief
+      Step 1. Record exact paths and any obvious structural anomalies.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 1: repository discovery'
+      - Section 1
+      - Section 2
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller
+        description: project root
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/README.md
+        description: project readme
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/setup.py
+        description: package metadata
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/requirements.txt
+        description: python dependencies
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/package.json
+        description: node dependencies
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docker-compose.yml
+        description: container orchestration
+    estimated_effort: medium
+    estimated_files: 2
+    estimated_lines: 200
+    focus_area: architecture
+    verification:
+      - file tree excludes venv, node_modules, __pycache__, .git, .ruff_cache
+      - all top-level directories described
+      - commands required by README documented
+    acceptance_criteria:
+      - Complete filtered file tree saved
+      - Runtime/language inventory saved
+      - README commands extracted and listed
+    success_criteria:
+      - evidence/01-repo-inventory.json exists
+      - evidence/01-repo-inventory.md exists
+      - at least one entry per top-level directory/component
+    implementation_handoff:
+      do_not_reinvestigate:
+        - tree structure already documented
+      required_test_first: none
+      target_files:
+        - evidence/01-repo-inventory.json
+        - evidence/01-repo-inventory.md
+      minimal_change: read-only
+      acceptance_checks:
+        - file tree is reproducible
+        - README commands are quoted verbatim
+
+  - id: t02-live-crawl
+    title: Live Site Crawl & HTTP Inspection
+    description: >-
+      Crawl https://udemyenroller.madhudadi.in manually (curl/httpie or
+      DevTools) to map public URLs, status codes, redirect chains, response
+      headers (Content-Type, Cache-Control, Strict-Transport-Security,
+      Content-Security-Policy, X-Frame-Options), robots.txt, and sitemap.xml.
+      Capture HTML snapshots of key pages. Do not overwhelm the origin; add
+      delays and respect robots.txt.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 2: live crawl'
+      - Section 3
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: https://udemyenroller.madhudadi.in
+        description: live production site
+    estimated_effort: medium
+    estimated_files: 3
+    estimated_lines: 300
+    focus_area: operations
+    verification:
+      - crawl log includes timestamps and status codes
+      - robots.txt and sitemap.xml are fetched or explicitly absent
+      - no POST/mutating requests issued
+    acceptance_criteria:
+      - Public URLs discovered and logged
+      - Headers recorded per URL
+      - HTML snapshots saved for inspection by downstream tasks
+    success_criteria:
+      - evidence/02-live-crawl.jsonl exists
+      - evidence/02-live-crawl-summary.md exists
+      - at least root page + sitemap/robots captured
+    failure_modes:
+      - scenario: Site returns 403/429 during crawl.
+        likelihood: medium
+        impact: medium
+        mitigation: Slow crawl, use browser DevTools export, fall back to local static files.
+    implementation_handoff:
+      do_not_reinvestigate:
+        - public URL list
+      required_test_first: none
+      target_files:
+        - evidence/02-live-crawl.jsonl
+        - evidence/02-live-crawl-summary.md
+      minimal_change: read-only network requests only
+      acceptance_checks:
+        - every request is GET or HEAD
+        - robots.txt content preserved
+
+  - id: t03-command-validation
+    title: README & Build Command Validation
+    description: >-
+      Extract every command from README.md and any package/setup scripts. For
+      each command, verify whether the binary/dependency exists in the local
+      environment and whether the command runs without error in read-only or
+      safe dry-run modes. Do not execute destructive commands; document those
+      as untested with rationale.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 3: command validation'
+      - Section 2
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/README.md
+        description: commands source
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/setup.py
+        description: install config
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docker-compose.yml
+        description: docker orchestration
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 150
+    focus_area: build stability
+    verification:
+      - commands are listed verbatim
+      - each command labeled pass/fail/dry-run/untested
+    acceptance_criteria:
+      - Command matrix produced
+      - Failures or missing dependencies logged with evidence
+    success_criteria:
+      - evidence/03-command-validation.md exists
+      - every README command present in matrix
+    failure_modes:
+      - scenario: A command mutates the environment or deploys.
+        likelihood: low
+        impact: high
+        mitigation: Run only dry-run variants or inspect source and mark untested.
+    implementation_handoff:
+      do_not_reinvestigate:
+        - exact README commands already captured
+      required_test_first: none
+      target_files:
+        - evidence/03-command-validation.md
+      minimal_change: read-only
+      acceptance_checks:
+        - no destructive commands executed
+
+  - id: t04-code-quality
+    title: Static Code Quality & Test-Coverage Review
+    description: >-
+      Run available linters and tests in read-only reporting mode (ruff check,
+      pytest --collect-only where safe, inspect coverage file). Identify dead
+      code, duplicated code, import cycles, long functions, missing tests, and
+      coverage gaps. Review key Python modules and Chrome extension code.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 4: line-by-line code review'
+      - Section 4
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/app
+        description: application modules
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/chrome-extension
+        description: extension source
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/tests
+        description: test suite
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/main.py
+        description: main entry point
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/run.py
+        description: runner entry point
+    estimated_effort: large
+    estimated_files: 3
+    estimated_lines: 400
+    focus_area: code quality
+    verification:
+      - linter outputs captured
+      - coverage data parsed
+      - top issues ranked by severity
+    acceptance_criteria:
+      - Lint/test report saved
+      - Coverage gaps identified
+      - Worst files listed with rationale
+    success_criteria:
+      - evidence/04-code-quality.json exists
+      - evidence/04-code-quality.md exists
+      - at least 5 quality findings or explicit clean report
+    failure_modes:
+      - scenario: Running pytest executes live network calls or mutates DB.
+        likelihood: low
+        impact: high
+        mitigation: Use pytest --collect-only; inspect conftest.py for fixtures.
+    implementation_handoff:
+      do_not_reinvestigate:
+        - coverage file location and format
+      required_test_first: none
+      target_files:
+        - evidence/04-code-quality.json
+        - evidence/04-code-quality.md
+      minimal_change: read-only
+      acceptance_checks:
+        - no database writes during audit
+
+  - id: t05-technical-seo
+    title: Technical SEO Audit
+    description: >-
+      Evaluate title tags, meta descriptions, canonical URLs, hreflang,
+      robots meta, Open Graph, Twitter Cards, heading hierarchy, internal
+      linking, URL structure, 404/redirect behavior, and sitemap coverage using
+      live crawl snapshots and local source. Map findings to actionable
+      severity.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 6: technical SEO'
+      - Section 5
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+    conflicts_with: []
+    context_files:
+      - path: evidence/02-live-crawl.jsonl
+        description: crawl dataset
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/public_deals.json
+        description: public deals data
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 250
+    focus_area: seo
+    verification:
+      - one entry per page inspected
+      - missing/duplicate titles and descriptions counted
+    acceptance_criteria:
+      - Technical SEO findings saved as structured JSON
+      - Priority list of fixes included
+    success_criteria:
+      - evidence/05-technical-seo.json exists
+      - all public pages evaluated
+    implementation_handoff:
+      do_not_reinvestigate:
+        - public URL list from t02-live-crawl
+      required_test_first: none
+      target_files:
+        - evidence/05-technical-seo.json
+      minimal_change: read-only
+      acceptance_checks:
+        - findings cite exact URLs
+
+  - id: t06-geo-aeo
+    title: GEO / AEO / AI-Search Readiness Audit
+    description: >-
+      Assess Generative Engine Optimization signals: factual accuracy,
+      E-E-A-T, citation-friendliness, FAQ/how-to schema readiness,
+      structured-answer potential, brand consistency, llms.txt presence,
+      robots.txt guidance for AI crawlers, and schema coverage that aids
+      AI-generated answers. Compare against README positioning and live copy.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 7: GEO/AEO'
+      - Section 6
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+      - t05-technical-seo
+    conflicts_with: []
+    context_files:
+      - path: evidence/02-live-crawl.jsonl
+        description: crawl dataset
+      - path: evidence/05-technical-seo.json
+        description: technical SEO findings
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 200
+    focus_area: ai-seo
+    verification:
+      - AI-crawler directives parsed from robots.txt
+      - E-E-A-T signals documented
+    acceptance_criteria:
+      - GEO/AEO findings saved
+      - Recommendations aligned with anti-hallucination and safety constraints
+    success_criteria:
+      - evidence/06-geo-aeo.json exists
+      - evidence/06-geo-aeo.md exists
+    implementation_handoff:
+      do_not_reinvestigate:
+        - robots.txt content
+      required_test_first: none
+      target_files:
+        - evidence/06-geo-aeo.json
+      minimal_change: read-only
+      acceptance_checks:
+        - no endorsement of manipulative tactics
+
+  - id: t07-content-trust
+    title: Content & Trust Signals Audit
+    description: >-
+      Review homepage, about, privacy, terms, contact, and any deal pages for
+      clarity, legal disclaimers, trust signals, grammar, spelling, brand
+      voice, user-value proposition, safety warnings about platform terms, and
+      conversion-path transparency. Identify missing or weak trust pages.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 8: content/trust'
+      - Section 7
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+    conflicts_with: []
+    context_files:
+      - path: evidence/02-live-crawl.jsonl
+        description: crawl dataset
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 200
+    focus_area: content
+    verification:
+      - every public page content reviewed
+      - trust elements checklist applied
+    acceptance_criteria:
+      - Content audit saved
+      - Missing trust pages flagged
+    success_criteria:
+      - evidence/07-content-trust.md exists
+      - content findings link to page URLs
+    implementation_handoff:
+      do_not_reinvestigate:
+        - public page snapshots
+      required_test_first: none
+      target_files:
+        - evidence/07-content-trust.md
+      minimal_change: read-only
+      acceptance_checks:
+        - content quotes are verbatim
+
+  - id: t08-structured-data
+    title: Structured Data / Schema Markup Audit
+    description: >-
+      Extract and validate all JSON-LD, microdata, and RDFa from live pages.
+      Check schema types, required/optional fields, syntax errors, and
+      consistency with on-page content. Recommend missing schemas that would
+      improve search/AI visibility (e.g., WebSite, SoftwareApplication,
+      FAQPage, HowTo).
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 9: structured data'
+      - Section 8
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+      - t05-technical-seo
+    conflicts_with: []
+    context_files:
+      - path: evidence/02-live-crawl.jsonl
+        description: crawl dataset
+    estimated_effort: small
+    estimated_files: 1
+    estimated_lines: 150
+    focus_area: schema
+    verification:
+      - schema chunks collected per URL
+      - JSON syntax validated
+    acceptance_criteria:
+      - Structured data inventory saved
+      - Errors and gaps ranked
+    success_criteria:
+      - evidence/08-structured-data.json exists
+      - all live pages with schema are listed
+    implementation_handoff:
+      do_not_reinvestigate:
+        - live HTML snapshots
+      required_test_first: none
+      target_files:
+        - evidence/08-structured-data.json
+      minimal_change: read-only
+      acceptance_checks:
+        - schema JSON is syntactically valid or error documented
+
+  - id: t09-ui-ux
+    title: UI/UX Heuristic Review
+    description: >-
+      Inspect live pages for layout, visual hierarchy, branding consistency,
+      navigation clarity, call-to-action visibility, mobile responsiveness,
+      form design, error states, loader/empty states, and tailwind config
+      usage. Compare with README screenshots/descriptions if present.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 10: UI/UX'
+      - Section 9
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+    conflicts_with: []
+    context_files:
+      - path: evidence/02-live-crawl.jsonl
+        description: crawl dataset
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/tailwind.config.js
+        description: tailwind configuration
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/tailwind.home.config.js
+        description: tailwind home page configuration
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 200
+    focus_area: ui/ux
+    verification:
+      - screenshots referenced or described
+      - issues mapped to URLs and components
+    acceptance_criteria:
+      - UI/UX findings saved
+      - Mobile and desktop reviewed
+    success_criteria:
+      - evidence/09-ui-ux.md exists
+      - at least 5 heuristic findings or explicit clean report
+    implementation_handoff:
+      do_not_reinvestigate:
+        - tailwind configs
+      required_test_first: none
+      target_files:
+        - evidence/09-ui-ux.md
+      minimal_change: read-only
+      acceptance_checks:
+        - findings reference URLs
+
+  - id: t10-accessibility
+    title: Accessibility Audit
+    description: >-
+      Run automated accessibility checks against live pages and inspect source
+      for semantic HTML, ARIA usage, alt text, focus management, color
+      contrast, keyboard navigability, and screen-reader friendliness.
+      Prioritize WCAG 2.1 AA violations and warnings.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 11: accessibility'
+      - Section 10
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+      - t09-ui-ux
+    conflicts_with: []
+    context_files:
+      - path: evidence/02-live-crawl.jsonl
+        description: crawl dataset
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 200
+    focus_area: accessibility
+    verification:
+      - automated tool output captured
+      - manual checks documented
+    acceptance_criteria:
+      - Accessibility findings saved
+      - WCAG level assigned per finding
+    success_criteria:
+      - evidence/10-accessibility.json exists
+      - evidence/10-accessibility.md exists
+    implementation_handoff:
+      do_not_reinvestigate:
+        - live page snapshots
+      required_test_first: none
+      target_files:
+        - evidence/10-accessibility.json
+      minimal_change: read-only
+      acceptance_checks:
+        - findings reference WCAG success criteria where applicable
+
+  - id: t11-performance
+    title: Performance Audit
+    description: >-
+      Measure live page performance using Lighthouse or equivalent, record
+      Core Web Vitals, asset sizes, request counts, render-blocking resources,
+      image optimization, caching headers, and CDN usage. Also inspect local
+      build output if available.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 12: performance'
+      - Section 11
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+    conflicts_with: []
+    context_files:
+      - path: https://udemyenroller.madhudadi.in
+        description: live site
+    estimated_effort: medium
+    estimated_files: 3
+    estimated_lines: 200
+    focus_area: performance
+    verification:
+      - Lighthouse JSON saved
+      - metrics extracted for LCP, INP, CLS, TTFB, FCP
+    acceptance_criteria:
+      - Performance report saved
+      - Critical bottlenecks identified
+    success_criteria:
+      - evidence/11-performance/lighthouse-home.json exists
+      - evidence/11-performance/performance-summary.md exists
+    failure_modes:
+      - scenario: Lighthouse cannot run headless in environment.
+        likelihood: medium
+        impact: medium
+        mitigation: Use PageSpeed Insights URL or DevTools Performance panel exported trace.
+    implementation_handoff:
+      do_not_reinvestigate:
+        - public URLs already known
+      required_test_first: none
+      target_files:
+        - evidence/11-performance/lighthouse-home.json
+        - evidence/11-performance/performance-summary.md
+      minimal_change: read-only
+      acceptance_checks:
+        - metrics have units and thresholds
+
+  - id: t12-security-privacy
+    title: Security & Privacy Audit
+    description: >-
+      Scan for secrets, credentials, API keys, cookies, JWTs, hardcoded URLs,
+      SQL injection, XSS, unsafe eval, insecure dependencies, CSP/HSTS
+      headers, form CSRF protection, .env exposure, and PII leakage in code or
+      public data. Document any critical findings with evidence paths.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 13: security/privacy'
+      - Section 12
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+      - t01-repo-discovery
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller
+        description: entire repository
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/.env.example
+        description: environment template
+    estimated_effort: large
+    estimated_files: 2
+    estimated_lines: 300
+    focus_area: security
+    verification:
+      - secret-detection regexes executed
+      - headers reviewed against security baselines
+    acceptance_criteria:
+      - Security/privacy findings saved
+      - Critical exposures reported privately to orchestrator/user
+    success_criteria:
+      - evidence/12-security-privacy.json exists
+      - evidence/12-security-privacy.md exists
+    failure_modes:
+      - scenario: Real secrets are exposed in evidence files.
+        likelihood: low
+        impact: critical
+        mitigation: Do not copy secret values into evidence; hash/redact and note location.
+    implementation_handoff:
+      do_not_reinvestigate:
+        - .env.example keys
+      required_test_first: none
+      target_files:
+        - evidence/12-security-privacy.json
+        - evidence/12-security-privacy.md
+      minimal_change: read-only
+      acceptance_checks:
+        - no unredacted secrets stored in evidence
+
+  - id: t13-browser-automation
+    title: Browser Automation & Platform Safety Review
+    description: >-
+      Inspect main.py, run.py, app/, chrome-extension/, and any automation
+      configs for signs of bypassing Udemy restrictions, CAPTCHA solving,
+      rate-limit evasion, proxy rotation, credential harvesting, mass signup,
+      stealth automation, or other ToS-sensitive behavior. Flag issues with
+      severity and recommend compliance path; do not suggest improving the
+      bypass. Also evaluate Chrome extension manifest permissions and security.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 14: browser-automation/platform safety'
+      - Section 13
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t01-repo-discovery
+      - t04-code-quality
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/main.py
+        description: main entry point
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/run.py
+        description: runner
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/app
+        description: application source
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/chrome-extension
+        description: chrome extension
+    estimated_effort: large
+    estimated_files: 2
+    estimated_lines: 350
+    focus_area: compliance
+    verification:
+      - every suspicious pattern matched to a file path and line number
+      - recommendation does not improve bypass technique
+    acceptance_criteria:
+      - Platform-safety report saved
+      - ToS risks explicitly flagged
+    success_criteria:
+      - evidence/13-browser-automation-safety.md exists
+      - evidence/13-browser-automation-safety.json exists
+    implementation_handoff:
+      do_not_reinvestigate:
+        - chrome extension manifest already scoped
+      required_test_first: none
+      target_files:
+        - evidence/13-browser-automation-safety.md
+      minimal_change: read-only
+      acceptance_checks:
+        - no instructions to bypass protections
+
+  - id: t14-analytics
+    title: Analytics & Tracking Audit
+    description: >-
+      Inventory Google Tag Manager, Google Analytics 4, Microsoft Clarity, or
+      other trackers in live HTML and gtm-container-export.json. Review tag
+      firing logic, dataLayer, event names, cookie consent integration, and
+      PII leakage risk. Check local CI/deployment telemetry if any.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 15: analytics'
+      - Section 14
+    priority: medium
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t02-live-crawl
+      - t01-repo-discovery
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/gtm-container-export.json
+        description: GTM container export
+      - path: evidence/02-live-crawl.jsonl
+        description: crawl dataset
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 150
+    focus_area: analytics
+    verification:
+      - every tracker identified with ID
+      - consent mechanism noted
+    acceptance_criteria:
+      - Analytics inventory saved
+      - Privacy gaps listed
+    success_criteria:
+      - evidence/14-analytics.json exists
+      - evidence/14-analytics.md exists
+    implementation_handoff:
+      do_not_reinvestigate:
+        - GTM export path
+      required_test_first: none
+      target_files:
+        - evidence/14-analytics.json
+      minimal_change: read-only
+      acceptance_checks:
+        - tracker IDs redacted if sensitive
+
+  - id: t15-build-stability
+    title: Build, Test & Deployment Stability Audit
+    description: >-
+      Attempt safe, read-only build validation: dependency resolution, Docker
+      compose syntax, pytest collection, and any CI/CD workflow files. Inspect
+      Dockerfile, docker-entrypoint.sh, .github/workflows, and deployment
+      configs for fragility, hardcoded secrets, missing health checks, or
+      outdated base images. Do not deploy.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 16: build stability'
+      - Section 15
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t01-repo-discovery
+      - t03-command-validation
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/Dockerfile
+        description: Docker image build
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docker-compose.yml
+        description: compose orchestration
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/docker-entrypoint.sh
+        description: container entrypoint
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/.github
+        description: CI/CD workflows
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 200
+    focus_area: devops
+    verification:
+      - build commands validated in dry-run/syntax mode
+      - CI workflows inspected for weaknesses
+    acceptance_criteria:
+      - Build stability report saved
+      - Deployment risks listed
+    success_criteria:
+      - evidence/15-build-stability.md exists
+      - Dockerfile base image noted
+    implementation_handoff:
+      do_not_reinvestigate:
+        - identified build commands
+      required_test_first: none
+      target_files:
+        - evidence/15-build-stability.md
+      minimal_change: read-only
+      acceptance_checks:
+        - no deployment executed
+
+  - id: t16-static-search
+    title: Static Pattern Search & Red-Flag Inventory
+    description: >-
+      Run grep-based static searches across the repository for anti-patterns,
+      TODO/FIXME, print statements, hardcoded credentials, eval/exec, inner
+      HTML, debug flags, exception swallowing, and platform-sensitive keywords.
+      Produce a machine-readable inventory of locations and severities.
+    wave: 1
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 5: static search / grep audit'
+      - Section 16
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t01-repo-discovery
+    conflicts_with: []
+    context_files:
+      - path: /media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller
+        description: entire repository
+    estimated_effort: medium
+    estimated_files: 1
+    estimated_lines: 250
+    focus_area: static analysis
+    verification:
+      - grep commands saved
+      - each finding references path and line
+    acceptance_criteria:
+      - Static search report saved
+      - Patterns and severity documented
+    success_criteria:
+      - evidence/16-static-search.jsonl exists
+      - evidence/16-static-search-summary.md exists
+    implementation_handoff:
+      do_not_reinvestigate:
+        - file list from t01-repo-discovery
+      required_test_first: none
+      target_files:
+        - evidence/16-static-search.jsonl
+      minimal_change: read-only
+      acceptance_checks:
+        - grep results reproducible
+
+  - id: t17-final-synthesis
+    title: Final Audit Synthesis (Sections 1-22)
+    description: >-
+      Collate all evidence artifacts into a single, cross-referenced forensic
+      audit report organized into Sections 1-22 as specified in the audit
+      brief. Assign severity ratings, provide evidence paths, and produce an
+      executive summary with prioritized remediation roadmap. No code changes.
+    wave: 2
+    agent: weave-researcher
+    prototype: false
+    covers:
+      - 'Step 17: final synthesis'
+      - Section 17 through Section 22
+    priority: high
+    status: pending
+    flags:
+      flaky: false
+      retries_used: 0
+    dependencies:
+      - t01-repo-discovery
+      - t02-live-crawl
+      - t03-command-validation
+      - t04-code-quality
+      - t05-technical-seo
+      - t06-geo-aeo
+      - t07-content-trust
+      - t08-structured-data
+      - t09-ui-ux
+      - t10-accessibility
+      - t11-performance
+      - t12-security-privacy
+      - t13-browser-automation
+      - t14-analytics
+      - t15-build-stability
+      - t16-static-search
+    conflicts_with: []
+    context_files:
+      - path: evidence/
+        description: all wave-1 outputs
+    estimated_effort: large
+    estimated_files: 1
+    estimated_lines: 1000
+    focus_area: documentation
+    verification:
+      - every finding cites an evidence file
+      - Sections 1-22 headings present
+    acceptance_criteria:
+      - Final report saved
+      - Executive summary included
+      - Remediation roadmap prioritized
+    success_criteria:
+      - Section-1-through-22-Audit-Report.md exists
+      - every wave-1 evidence file referenced at least once
+    implementation_handoff:
+      do_not_reinvestigate:
+        - all wave-1 findings
+      required_test_first: none
+      target_files:
+        - Section-1-through-22-Audit-Report.md
+      minimal_change: read-only documentation only
+      acceptance_checks:
+        - report is read-only

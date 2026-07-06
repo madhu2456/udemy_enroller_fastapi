@@ -1,0 +1,688 @@
+{
+  "context_envelope": {
+    "meta": {
+      "plan_id": "20260705-120000-forensic-audit",
+      "created_at": "2026-07-05T12:00:00+00:00",
+      "last_updated": "2026-07-05T12:00:00+00:00",
+      "version": 1,
+      "previous_version_fields_changed": [],
+      "source": [
+        "user objective",
+        "17-step audit brief",
+        "local filesystem inspection",
+        "AGENTS.md"
+      ]
+    },
+    "scope": {
+      "purpose": [
+        "Reusable read-only audit context for forensic inspection of the Udemy Enroller project.",
+        "Keeps auditors aligned on safety, scope, anti-hallucination rules, and expected deliverables."
+      ],
+      "applies_to": [
+        "weave-researcher executing wave-1 inspection tasks",
+        "weave-researcher executing wave-2 synthesis task",
+        "weave-reviewer verifying audit artifacts",
+        "weave-critic challenging audit completeness and bias"
+      ],
+      "non_goals": [
+        "No code changes or refactors.",
+        "No deployment, migration, or database mutation.",
+        "No legal advice or platform-appeal drafting.",
+        "No design or implementation of automation bypass techniques."
+      ]
+    },
+    "project_summary": {
+      "business_domain": "Browser-automation utility that enrolls users into free Udemy courses, packaged as a web application plus Chrome extension.",
+      "primary_users": [
+        "Learners seeking free Udemy course enrollments",
+        "Visitors to the marketing/production site",
+        "Self-hosters evaluating the open-source tool"
+      ],
+      "key_features": [
+        "Udemy course enrollment automation",
+        "Web UI for search/enrollment/configuration",
+        "Chrome extension for cookie extraction",
+        "Public deals listing",
+        "Dockerized deployment",
+        "GTM/GA4 analytics instrumentation"
+      ],
+      "current_phase": "Phase 1 read-only forensic audit of local codebase and live production site."
+    },
+    "tech_stack": [
+      {
+        "name": "Python",
+        "version": "unknown (inspect requirements.txt / setup.py)",
+        "usage_context": "backend automation, web application, CLI entry points",
+        "config_files": [
+          "requirements.txt",
+          "setup.py",
+          "main.py",
+          "run.py"
+        ]
+      },
+      {
+        "name": "FastAPI / Jinja2 / SQLAlchemy / Alembic",
+        "version": "unknown",
+        "usage_context": "web app, templating, ORM, migrations",
+        "config_files": [
+          "app/",
+          "alembic/",
+          "alembic.ini"
+        ]
+      },
+      {
+        "name": "Chrome Extension",
+        "version": "unknown",
+        "usage_context": "cookie extraction helper for browser automation",
+        "config_files": [
+          "chrome-extension/"
+        ]
+      },
+      {
+        "name": "Tailwind CSS",
+        "version": "unknown",
+        "usage_context": "styling for web UI and home page",
+        "config_files": [
+          "tailwind.config.js",
+          "tailwind.home.config.js"
+        ]
+      },
+      {
+        "name": "Docker",
+        "version": "unknown",
+        "usage_context": "containerized runtime",
+        "config_files": [
+          "Dockerfile",
+          "docker-compose.yml",
+          "docker-entrypoint.sh"
+        ]
+      },
+      {
+        "name": "pytest / ruff / coverage",
+        "version": "unknown",
+        "usage_context": "testing, linting, coverage",
+        "config_files": [
+          "pytest.ini",
+          ".coverage",
+          "tests/"
+        ]
+      },
+      {
+        "name": "Node.js / npm",
+        "version": "unknown",
+        "usage_context": "frontend tooling and dependencies",
+        "config_files": [
+          "package.json",
+          "package-lock.json"
+        ]
+      }
+    ],
+    "conventions": [
+      "All audit tasks are read-only.",
+      "Evidence files live under docs/plan/20260705-120000-forensic-audit/evidence/.",
+      "Findings must cite exact file paths, URLs, and/or line numbers.",
+      "Use severity ratings: critical, high, medium, low, informational.",
+      "Never reproduce unredacted secrets or credentials in evidence.",
+      "Quotes from code or pages must be verbatim and attributed."
+    ],
+    "constraints": {
+      "hard": [
+        "Do not modify any file in the workspace.",
+        "Do not deploy, migrate, or mutate databases.",
+        "Do not execute destructive commands.",
+        "Do not issue POST/mutating requests against the live site.",
+        "Do not endorse, design, or improve any technique that bypasses Udemy rate limits, CAPTCHA, credential protections, or Terms of Service.",
+        "Do not recommend proxy rotation, stealth automation, account abuse, mass signup, credential harvesting, or unauthorized scraping.",
+        "Do not provide legal advice; flag platform-compliance risks for human review.",
+        "Redact any secrets, API keys, tokens, or PII discovered before saving evidence."
+      ],
+      "soft": [
+        "Prefer curl/httpie/browser DevTools for live inspection.",
+        "Respect robots.txt and crawl with delays.",
+        "Run tests only in collection or dry-run mode when possible.",
+        "Use Lighthouse or PageSpeed Insights for performance metrics."
+      ],
+      "compatibility": [
+        "Evidence must be consumable by both humans and the final synthesis task.",
+        "JSON and Markdown are the preferred evidence formats."
+      ],
+      "security_requirements": [
+        "Secret-detection scan must cover the full repository including history.",
+        "Security findings must be flagged critical/high if they expose credentials or PII.",
+        "Platform-safety findings must be kept distinct from general security findings."
+      ]
+    },
+    "architecture_snapshot": {
+      "key_dirs": {
+        "project_root": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller",
+        "app": "app/",
+        "chrome_extension": "chrome-extension/",
+        "config": "config/",
+        "scripts": "scripts/",
+        "tests": "tests/",
+        "alembic": "alembic/",
+        "data": "data/",
+        "docs": "docs/",
+        "logs": "logs/"
+      },
+      "patterns": [
+        "Python CLI/web hybrid with main.py and run.py entry points",
+        "FastAPI-style web layer under app/",
+        "Browser automation logic in Python modules",
+        "Chrome extension for cookie/token extraction",
+        "SQLite database at project root",
+        "Dockerized deployment with docker-compose",
+        "Tailwind CSS for styling",
+        "GTM container export present at root"
+      ],
+      "key_components": [
+        {
+          "name": "main.py / run.py",
+          "location": "project root",
+          "responsibility": [
+            "CLI entry",
+            "application bootstrap",
+            "automation orchestration"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "app/",
+          "location": "app/",
+          "responsibility": [
+            "web UI",
+            "API routes",
+            "business logic",
+            "database models"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "chrome-extension/",
+          "location": "chrome-extension/",
+          "responsibility": [
+            "browser-side cookie extraction",
+            "automation helper"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "name": "public_deals.json",
+          "location": "project root",
+          "responsibility": [
+            "public deals data feed"
+          ],
+          "confidence": 0.95
+        },
+        {
+          "name": "gtm-container-export.json",
+          "location": "project root",
+          "responsibility": [
+            "Google Tag Manager container configuration"
+          ],
+          "confidence": 0.95
+        }
+      ]
+    },
+    "quality_metrics": {
+      "test_coverage_overall": null,
+      "test_coverage_by_component": [],
+      "known_test_gaps": [
+        "Coverage data exists in .coverage but has not yet been parsed.",
+        "Browser-automation paths may lack deterministic tests."
+      ],
+      "cyclomatic_complexity_avg": null,
+      "code_duplication_percent": null
+    },
+    "operations": {
+      "environments": [
+        {
+          "name": "production",
+          "url": "https://udemyenroller.madhudadi.in",
+          "deployment_frequency": "unknown",
+          "rollback_procedure": "unknown",
+          "health_check_endpoint": "unknown"
+        },
+        {
+          "name": "local",
+          "url": "http://localhost (port unknown)",
+          "deployment_frequency": "developer",
+          "rollback_procedure": "git revert / docker rebuild",
+          "health_check_endpoint": "unknown"
+        }
+      ],
+      "ci_cd": {
+        "pipeline_path": ".github/workflows/ (exists)",
+        "approval_required": [
+          "unknown"
+        ],
+        "automated_tests": [
+          "pytest (to be verified)"
+        ]
+      },
+      "monitoring": {
+        "tools": [
+          "Google Analytics 4 / GTM (to be verified)",
+          "Microsoft Clarity (to be verified)"
+        ],
+        "key_metrics": [
+          "unknown"
+        ],
+        "alert_channels": [
+          "unknown"
+        ]
+      }
+    },
+    "data_model": {
+      "core_entities": [
+        {
+          "name": "Course / Deal",
+          "fields": [
+            {
+              "name": "unknown",
+              "type": "unknown",
+              "constraints": [
+                "inspect public_deals.json and app/models"
+              ]
+            }
+          ],
+          "relationships": [
+            "listed in public_deals.json",
+            "used by enrollment logic"
+          ]
+        },
+        {
+          "name": "User / Enrollment",
+          "fields": [
+            {
+              "name": "unknown",
+              "type": "unknown",
+              "constraints": [
+                "inspect app/models and SQLite schema"
+              ]
+            }
+          ],
+          "relationships": [
+            "tracked in udemy_enroller.db"
+          ]
+        }
+      ],
+      "api_contracts": [
+        {
+          "endpoint": "unknown",
+          "method": "unknown",
+          "auth": "unknown",
+          "request_schema": "unknown",
+          "response_schema": "unknown",
+          "error_codes": []
+        }
+      ]
+    },
+    "performance": {
+      "slas": {
+        "api_response_p95_ms": null,
+        "api_throughput_rps": null
+      },
+      "bottlenecks_known": [
+        "Browser automation may rely on external page loads (high latency/variability).",
+        "SQLite concurrency may limit multi-user scaling."
+      ],
+      "resource_usage": {
+        "memory_per_request_mb": null,
+        "cpu_per_request_cores": null
+      },
+      "scaling": "vertical",
+      "caching_strategy": "unknown"
+    },
+    "domain": {
+      "primary_users": [
+        {
+          "persona": "Free-course seeker",
+          "goals": [
+            "Discover limited-time free Udemy courses",
+            "Enroll with minimal friction",
+            "Trust the tool/platform"
+          ]
+        },
+        {
+          "persona": "Self-hoster / developer",
+          "goals": [
+            "Run the tool locally or via Docker",
+            "Understand code quality and automation safety"
+          ]
+        }
+      ],
+      "business_concepts": [
+        {
+          "term": "Udemy Enroller",
+          "definition": "Tool that automates enrollment into free Udemy courses.",
+          "owner": "user"
+        },
+        {
+          "term": "Public deals",
+          "definition": "JSON feed of curated free-course offers.",
+          "owner": "user"
+        }
+      ],
+      "compliance": [
+        "Udemy Terms of Service must be respected.",
+        "CAPTCHA/rate-limit bypassing is prohibited.",
+        "User credential handling must be minimal and secure."
+      ],
+      "priority_weights": {
+        "platform_safety": "highest",
+        "security_privacy": "highest",
+        "technical_seo": "high",
+        "content_trust": "high",
+        "performance": "medium",
+        "ui_ux_a11y": "medium",
+        "build_stability": "medium",
+        "analytics": "low"
+      }
+    },
+    "system_assertions": [
+      {
+        "description": "No workspace files modified during audit",
+        "predicate": "git diff --exit-code",
+        "expected_value": true
+      },
+      {
+        "description": "No unredacted secrets stored in evidence",
+        "predicate": "manual scan of evidence/ for API keys, passwords, tokens",
+        "expected_value": 0
+      },
+      {
+        "description": "Live site crawl is read-only",
+        "predicate": "audit log contains only GET/HEAD requests",
+        "expected_value": true
+      },
+      {
+        "description": "Final report references all wave-1 evidence files",
+        "predicate": "every evidence file path appears in Section-1-through-22-Audit-Report.md",
+        "expected_value": true
+      }
+    ],
+    "research_digest": {
+      "relevant_files": [
+        {
+          "path": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/README.md",
+          "purpose": [
+            "Project overview",
+            "Installation/setup commands",
+            "Feature list"
+          ],
+          "why_relevant": [
+            "Source of truth for public positioning and user instructions"
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "docs",
+          "confidence": 0.95
+        },
+        {
+          "path": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/main.py",
+          "purpose": [
+            "Primary CLI entry point"
+          ],
+          "why_relevant": [
+            "Likely contains automation orchestration and platform-sensitive logic"
+          ],
+          "security_sensitivity": "confidential",
+          "contains_secrets": "unknown",
+          "reliability": "codebase",
+          "confidence": 0.9
+        },
+        {
+          "path": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/run.py",
+          "purpose": [
+            "Secondary runner"
+          ],
+          "why_relevant": [
+            "May include web server bootstrap or automation invocation"
+          ],
+          "security_sensitivity": "confidential",
+          "contains_secrets": "unknown",
+          "reliability": "codebase",
+          "confidence": 0.85
+        },
+        {
+          "path": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/chrome-extension/",
+          "purpose": [
+            "Browser extension for cookie extraction"
+          ],
+          "why_relevant": [
+            "Critical for platform-safety and permissions review"
+          ],
+          "security_sensitivity": "confidential",
+          "contains_secrets": "unknown",
+          "reliability": "codebase",
+          "confidence": 0.9
+        },
+        {
+          "path": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/gtm-container-export.json",
+          "purpose": [
+            "GTM configuration"
+          ],
+          "why_relevant": [
+            "Analytics and tracking inventory"
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": "unknown",
+          "reliability": "codebase",
+          "confidence": 0.9
+        },
+        {
+          "path": "/media/madhudadi/Storage/LinuxProjects/Codes/Projects/Udemy Enroller/public_deals.json",
+          "purpose": [
+            "Public course deal feed"
+          ],
+          "why_relevant": [
+            "SEO/content/structured data signals"
+          ],
+          "security_sensitivity": "none",
+          "contains_secrets": false,
+          "reliability": "codebase",
+          "confidence": 0.95
+        },
+        {
+          "path": "https://udemyenroller.madhudadi.in",
+          "purpose": [
+            "Live production site"
+          ],
+          "why_relevant": [
+            "All live-site audit dimensions"
+          ],
+          "security_sensitivity": "internal",
+          "contains_secrets": false,
+          "reliability": "assumption",
+          "confidence": 0.9
+        }
+      ],
+      "patterns_found": [
+        {
+          "name": "Python + browser automation utility",
+          "category": "architecture",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": [
+            "main.py",
+            "app/"
+          ]
+        },
+        {
+          "name": "Chrome extension helper",
+          "category": "architecture",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": [
+            "chrome-extension/"
+          ]
+        },
+        {
+          "name": "Dockerized deployment",
+          "category": "operations",
+          "confidence": 0.9,
+          "source": "codebase_analysis",
+          "example_location": [
+            "Dockerfile",
+            "docker-compose.yml"
+          ]
+        }
+      ],
+      "dependencies": {
+        "internal": [
+          "main.py -> app/",
+          "run.py -> app/",
+          "app/ -> udemy_enroller.db",
+          "chrome-extension/ -> browser automation workflow"
+        ],
+        "external": [
+          "udemy.com platform",
+          "Google Tag Manager / Google Analytics 4",
+          "Microsoft Clarity (to be confirmed)",
+          "Docker Hub base images"
+        ]
+      },
+      "gotchas": [
+        {
+          "text": "Browser-automation code must be examined for ToS-sensitive patterns; do not assume it is safe.",
+          "confidence": 0.9
+        },
+        {
+          "text": "Chrome extension permissions in manifest.json are a key attack surface and trust signal.",
+          "confidence": 0.9
+        },
+        {
+          "text": "public_deals.json may contain thousands of entries; audit should sample and summarize, not dump.",
+          "confidence": 0.85
+        },
+        {
+          "text": "SQLite database files at project root may contain test or production data; never open unless necessary and never modify.",
+          "confidence": 0.9
+        }
+      ],
+      "open_questions": [
+        {
+          "question": "Does the live site expose any authenticated/admin endpoints that must not be crawled?",
+          "context": "Read-only audit must avoid touching sensitive paths.",
+          "type": "decision_blocker",
+          "affects": [
+            "t02-live-crawl",
+            "t12-security-privacy"
+          ]
+        },
+        {
+          "question": "Are there browser-automation capabilities that interact with Udemy in ways that breach Terms of Service?",
+          "context": "Codebase includes enrollment logic and a chrome-extension directory.",
+          "type": "research",
+          "affects": [
+            "t13-browser-automation",
+            "t12-security-privacy",
+            "t15-build-stability"
+          ]
+        }
+      ]
+    },
+    "prior_decisions": [
+      {
+        "decision": "This is a read-only forensic audit; no remediation code will be produced.",
+        "rationale": [
+          "User requested Phase 1 audit only.",
+          "Prevents accidental mutation of production-adjacent repository."
+        ],
+        "evidence": [
+          "user objective"
+        ],
+        "confidence": 1.0,
+        "linked_constraints": [
+          "Do not modify any file in the workspace.",
+          "Do not deploy."
+        ],
+        "linked_patterns": [
+          "read-only evidence gathering"
+        ]
+      },
+      {
+        "decision": "Platform-safety and security findings are the highest priority.",
+        "rationale": [
+          "Tool interacts with a third-party platform under ToS.",
+          "Credential/automation safety is a trust-critical domain."
+        ],
+        "evidence": [
+          "business domain: Udemy enrollment automation"
+        ],
+        "confidence": 0.95,
+        "linked_constraints": [
+          "Do not endorse bypassing rate limits/CAPTCHA/TOS."
+        ],
+        "linked_patterns": [
+          "audit priority weights"
+        ]
+      }
+    ],
+    "evidence_map": [
+      {
+        "claim": "Repository uses Python for automation and a web layer",
+        "evidence_paths": [
+          "requirements.txt",
+          "setup.py",
+          "app/",
+          "main.py",
+          "run.py"
+        ]
+      },
+      {
+        "claim": "Live site URL is https://udemyenroller.madhudadi.in",
+        "evidence_paths": [
+          "user objective"
+        ]
+      },
+      {
+        "claim": "Project includes a Chrome extension for cookie extraction",
+        "evidence_paths": [
+          "chrome-extension/",
+          "git log"
+        ]
+      }
+    ],
+    "reuse_notes": {
+      "do_not_re_read": [
+        "Top-level directory listing already captured in this envelope.",
+        "Live site URL and project root path are fixed for this plan."
+      ],
+      "safe_to_assume": [
+        "Audit is read-only unless user explicitly changes scope.",
+        "Platform-safety constraints remain in force for all downstream tasks."
+      ],
+      "verify_before_use": [
+        "All findings must be cross-checked against live site or exact code path.",
+        "Assumptions about analytics tools must be confirmed by live crawl.",
+        "Security findings involving secrets must be validated before escalation."
+      ]
+    },
+    "expected_output_sections": {
+      "Section_1": "Executive Summary — scope, methodology, highest-severity findings, overall risk score.",
+      "Section_2": "Repository & Architecture Inventory — file tree, languages, frameworks, entry points, config files.",
+      "Section_3": "Live Site Crawl Results — URLs, status codes, headers, robots.txt, sitemap.xml, snapshots.",
+      "Section_4": "Code Quality & Test Health — lint results, coverage, dead code, duplication, critical smells.",
+      "Section_5": "Technical SEO Findings — titles, meta descriptions, canonical, hreflang, headings, links, redirects.",
+      "Section_6": "GEO / AEO / AI-Search Readiness — E-E-A-T, citation signals, structured-answer potential, llms.txt.",
+      "Section_7": "Content & Trust Signals — page copy, disclaimers, legal/ToS links, brand voice, conversion clarity.",
+      "Section_8": "Structured Data / Schema Markup — JSON-LD inventory, errors, gaps, recommendations.",
+      "Section_9": "UI/UX Heuristics — layout, navigation, CTAs, responsiveness, visual consistency.",
+      "Section_10": "Accessibility Audit — WCAG 2.1 AA findings, automated + manual checks.",
+      "Section_11": "Performance Audit — Core Web Vitals, Lighthouse, assets, caching, CDN.",
+      "Section_12": "Security & Privacy Findings — secrets scan, headers, injections, PII, dependencies.",
+      "Section_13": "Browser Automation & Platform Safety — ToS-sensitive logic, extension permissions, rate-limit/CAPTCHA bypass.",
+      "Section_14": "Analytics & Tracking Audit — GTM/GA4/Clarity inventory, consent, dataLayer.",
+      "Section_15": "Build, Test & Deployment Stability — Docker, CI/CD, dependency resolution, reproducibility.",
+      "Section_16": "Static Search / Red-Flag Inventory — grep-based anti-patterns, TODOs, unsafe constructs.",
+      "Section_17": "Risk Register — ranked issues with likelihood, impact, evidence paths, owner.",
+      "Section_18": "Compliance & Safety Cross-Cut — Udemy ToS, data handling, user safety.",
+      "Section_19": "Prioritized Remediation Roadmap — quick wins, medium fixes, strategic items.",
+      "Section_20": "Evidence Index — full list of evidence files and how to read them.",
+      "Section_21": "Assumptions & Limitations — what was not tested and why.",
+      "Section_22": "Next Steps — recommended Phase 2 activities (if any)."
+    }
+  }
+}

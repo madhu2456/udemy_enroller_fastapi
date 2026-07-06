@@ -178,6 +178,7 @@ instant course enrollment.{% endblock %} {% block extra_head %}
         <div
             id="courseGrid"
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 {% if not initial_courses %}hidden{% endif %}"
+            aria-live="polite"
         >
             {% if initial_courses %} {% for course in initial_courses %}
             <article

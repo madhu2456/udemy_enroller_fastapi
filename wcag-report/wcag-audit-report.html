@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WCAG 2.2 AA Conformance Audit - Udemy Enroller</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; color: #333; }
+    h1, h2, h3, h4 { color: #111; }
+    table { border-collapse: collapse; width: 100%; margin: 15px 0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 14px; }
+    th { background: #2563EB; color: white; font-weight: 600; }
+    tr:nth-child(even) { background: #f9fafb; }
+    tr:hover { background: #f0f7ff; }
+    code { background: #e8e8e8; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    .severity-critical { color: #fff; background: #dc2626; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .severity-high { color: #fff; background: #ea580c; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .severity-medium { color: #fff; background: #ca8a04; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .severity-low { color: #fff; background: #6b7280; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .summary-box { background: white; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .stat-card { text-align: center; padding: 15px; background: #f9fafb; border-radius: 8px; }
+    .stat-number { font-size: 28px; font-weight: 700; color: #2563EB; }
+    .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .violation-detail td { font-size: 12px; color: #666; }
+    .manual-section { margin: 20px 0; }
+    .manual-section h4 { margin: 20px 0 10px; padding: 8px 0; border-bottom: 2px solid #2563EB; }
+    .fail { color: red; font-weight: bold; }
+    .pass { color: green; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>WCAG 2.2 AA Conformance Audit Report</h1>
+  <p><strong>Site:</strong> <a href="https://udemyenroller.madhudadi.in">https://udemyenroller.madhudadi.in</a></p>
+  <p><strong>Date:</strong> 2026-07-06T09:54:46.376Z</p>
+  <p><strong>Scope:</strong> All public routes at 320px, 768px, 1366px viewports</p>
+  
+  <div class="summary-box">
+    <h2>Summary</h2>
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="stat-number">6</div>
+        <div class="stat-label">Routes Tested</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">32</div>
+        <div class="stat-label">Total Violations</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">429</div>
+        <div class="stat-label">Total Passes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">32</div>
+        <div class="stat-label">Issues Found</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="summary-box">
+    <h2>Automated Test Results (axe-core)</h2>
+    <table>
+      <tr>
+        <th>Route</th>
+        <th>Page</th>
+        <th>Violations</th>
+        <th>Passes</th>
+        <th>Incomplete</th>
+      </tr>
+      
+      <tr>
+        <td><code>/</code></td>
+        <td>Home</td>
+        <td>7</td>
+        <td>79</td>
+        <td>4</td>
+      </tr>
+    
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>color-contrast</strong>: Elements must meet minimum color contrast ratio thresholds [serious]</td>
+            <td>wcag2aa, wcag143</td>
+            <td>1 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>link-in-text-block</strong>: Links must be distinguishable without relying on color [serious]</td>
+            <td>wcag2a, wcag141</td>
+            <td>1 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>target-size</strong>: All touch targets must be 24px large, or leave sufficient space [serious]</td>
+            <td>wcag22aa, wcag258</td>
+            <td>1 nodes</td>
+          </tr>
+        
+      <tr>
+        <td><code>/udemycoupons</code></td>
+        <td>Free Coupons</td>
+        <td>4</td>
+        <td>70</td>
+        <td>6</td>
+      </tr>
+    
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>color-contrast</strong>: Elements must meet minimum color contrast ratio thresholds [serious]</td>
+            <td>wcag2aa, wcag143</td>
+            <td>46 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>target-size</strong>: All touch targets must be 24px large, or leave sufficient space [serious]</td>
+            <td>wcag22aa, wcag258</td>
+            <td>1 nodes</td>
+          </tr>
+        
+      <tr>
+        <td><code>/faq</code></td>
+        <td>FAQ</td>
+        <td>4</td>
+        <td>67</td>
+        <td>4</td>
+      </tr>
+    
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>link-in-text-block</strong>: Links must be distinguishable without relying on color [serious]</td>
+            <td>wcag2a, wcag141</td>
+            <td>2 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>target-size</strong>: All touch targets must be 24px large, or leave sufficient space [serious]</td>
+            <td>wcag22aa, wcag258</td>
+            <td>1 nodes</td>
+          </tr>
+        
+      <tr>
+        <td><code>/about</code></td>
+        <td>About</td>
+        <td>3</td>
+        <td>67</td>
+        <td>4</td>
+      </tr>
+    
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>link-in-text-block</strong>: Links must be distinguishable without relying on color [serious]</td>
+            <td>wcag2a, wcag141</td>
+            <td>1 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>target-size</strong>: All touch targets must be 24px large, or leave sufficient space [serious]</td>
+            <td>wcag22aa, wcag258</td>
+            <td>1 nodes</td>
+          </tr>
+        
+      <tr>
+        <td><code>/guides</code></td>
+        <td>Guides</td>
+        <td>6</td>
+        <td>70</td>
+        <td>3</td>
+      </tr>
+    
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>color-contrast</strong>: Elements must meet minimum color contrast ratio thresholds [serious]</td>
+            <td>wcag2aa, wcag143</td>
+            <td>10 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>target-size</strong>: All touch targets must be 24px large, or leave sufficient space [serious]</td>
+            <td>wcag22aa, wcag258</td>
+            <td>1 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>link-in-text-block</strong>: Links must be distinguishable without relying on color [serious]</td>
+            <td>wcag2a, wcag141</td>
+            <td>1 nodes</td>
+          </tr>
+        
+      <tr>
+        <td><code>/privacy</code></td>
+        <td>Privacy</td>
+        <td>8</td>
+        <td>76</td>
+        <td>5</td>
+      </tr>
+    
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>color-contrast</strong>: Elements must meet minimum color contrast ratio thresholds [serious]</td>
+            <td>wcag2aa, wcag143</td>
+            <td>1 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>link-in-text-block</strong>: Links must be distinguishable without relying on color [serious]</td>
+            <td>wcag2a, wcag141</td>
+            <td>1 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>scrollable-region-focusable</strong>: Scrollable region must have keyboard access [serious]</td>
+            <td>wcag2a, wcag211, wcag213</td>
+            <td>1 nodes</td>
+          </tr>
+        
+          <tr class="violation-detail">
+            <td></td>
+            <td colspan="2"><strong>target-size</strong>: All touch targets must be 24px large, or leave sufficient space [serious]</td>
+            <td>wcag22aa, wcag258</td>
+            <td>1 nodes</td>
+          </tr>
+        
+    </table>
+  </div>
+  
+  <div class="summary-box">
+    <h2>Manual Test Results</h2>
+    <div class="manual-section">
+      
+      <h4>Home (/)</h4>
+      <table>
+        <tr><th>Criterion</th><th>Status</th><th>Detail</th></tr>
+        <tr><td>2.4.1 Skip Link</td><td style="color:red">FAIL</td><td>Skip link not working</td></tr>
+        <tr><td>2.4.7 Focus Visible</td><td style="color:green">PASS</td><td>All elements have visible focus</td></tr>
+        <tr><td>2.4.11 Focus Not Obscured</td><td style="color:green">PASS</td><td>Tab order issues: 0</td></tr>
+        <tr><td>2.3.3 Reduced Motion</td><td style="color:green">PASS</td><td>prefers-reduced-motion: respected</td></tr>
+        <tr><td>1.4.10 Reflow (200% Zoom)</td><td style="color:red">FAIL</td><td>Horizontal scroll detected</td></tr>
+        <tr><td>2.5.8 Target Size</td><td style="color:red">FAIL (1 issues)</td><td>A "Skip to main content" = 2x2px</td></tr>
+        <tr><td>2.5.7 Dragging Movements</td><td>N/A</td><td>No dragging interactions found</td></tr>
+        <tr><td>3.2.6 Consistent Help</td><td>CHECK</td><td>Help links: None found in expected locations</td></tr>
+        <tr><td>3.3.8 Accessible Auth</td><td style="color:red">FAIL (CAPTCHA found)</td><td>CAPTCHA detected</td></tr>
+        <tr><td>Semantic Landmarks</td><td>PASS</td><td>banner: 1, navigation: 2, main: 2, contentinfo: 1</td></tr>
+        <tr><td>Heading Structure</td><td style="color:green">PASS</td><td>No heading level skips</td></tr>
+        <tr><td>Form Labels</td><td style="color:green">PASS</td><td>All form elements have labels</td></tr>
+      </table>
+    
+      <h4>Free Coupons (/udemycoupons)</h4>
+      <table>
+        <tr><th>Criterion</th><th>Status</th><th>Detail</th></tr>
+        <tr><td>2.4.1 Skip Link</td><td style="color:red">FAIL</td><td>Skip link not working</td></tr>
+        <tr><td>2.4.7 Focus Visible</td><td style="color:green">PASS</td><td>All elements have visible focus</td></tr>
+        <tr><td>2.4.11 Focus Not Obscured</td><td style="color:green">PASS</td><td>Tab order issues: 0</td></tr>
+        <tr><td>2.3.3 Reduced Motion</td><td style="color:green">PASS</td><td>prefers-reduced-motion: respected</td></tr>
+        <tr><td>1.4.10 Reflow (200% Zoom)</td><td style="color:red">FAIL</td><td>Horizontal scroll detected</td></tr>
+        <tr><td>2.5.8 Target Size</td><td style="color:red">FAIL (1 issues)</td><td>A "Skip to main content" = 2x2px</td></tr>
+        <tr><td>2.5.7 Dragging Movements</td><td>N/A</td><td>No dragging interactions found</td></tr>
+        <tr><td>3.2.6 Consistent Help</td><td>CHECK</td><td>Help links: None found in expected locations</td></tr>
+        <tr><td>3.3.8 Accessible Auth</td><td style="color:green">PASS (no CAPTCHA)</td><td>No cognitive tests detected</td></tr>
+        <tr><td>Semantic Landmarks</td><td>PASS</td><td>banner: 1, navigation: 2, main: 1, contentinfo: 1</td></tr>
+        <tr><td>Heading Structure</td><td style="color:red">ISSUES</td><td>Heading level skipped: h1 -> h3</td></tr>
+        <tr><td>Form Labels</td><td style="color:green">PASS</td><td>All form elements have labels</td></tr>
+      </table>
+    
+      <h4>FAQ (/faq)</h4>
+      <table>
+        <tr><th>Criterion</th><th>Status</th><th>Detail</th></tr>
+        <tr><td>2.4.1 Skip Link</td><td style="color:red">FAIL</td><td>Skip link not working</td></tr>
+        <tr><td>2.4.7 Focus Visible</td><td style="color:green">PASS</td><td>All elements have visible focus</td></tr>
+        <tr><td>2.4.11 Focus Not Obscured</td><td style="color:green">PASS</td><td>Tab order issues: 0</td></tr>
+        <tr><td>2.3.3 Reduced Motion</td><td style="color:green">PASS</td><td>prefers-reduced-motion: respected</td></tr>
+        <tr><td>1.4.10 Reflow (200% Zoom)</td><td style="color:red">FAIL</td><td>Horizontal scroll detected</td></tr>
+        <tr><td>2.5.8 Target Size</td><td style="color:red">FAIL (1 issues)</td><td>A "Skip to main content" = 2x2px</td></tr>
+        <tr><td>2.5.7 Dragging Movements</td><td>N/A</td><td>No dragging interactions found</td></tr>
+        <tr><td>3.2.6 Consistent Help</td><td>CHECK</td><td>Help links: None found in expected locations</td></tr>
+        <tr><td>3.3.8 Accessible Auth</td><td style="color:green">PASS (no CAPTCHA)</td><td>No cognitive tests detected</td></tr>
+        <tr><td>Semantic Landmarks</td><td>PASS</td><td>banner: 1, navigation: 2, main: 2, contentinfo: 1</td></tr>
+        <tr><td>Heading Structure</td><td style="color:green">PASS</td><td>No heading level skips</td></tr>
+        <tr><td>Form Labels</td><td style="color:green">PASS</td><td>All form elements have labels</td></tr>
+      </table>
+    
+      <h4>About (/about)</h4>
+      <table>
+        <tr><th>Criterion</th><th>Status</th><th>Detail</th></tr>
+        <tr><td>2.4.1 Skip Link</td><td style="color:red">FAIL</td><td>Skip link not working</td></tr>
+        <tr><td>2.4.7 Focus Visible</td><td style="color:green">PASS</td><td>All elements have visible focus</td></tr>
+        <tr><td>2.4.11 Focus Not Obscured</td><td style="color:green">PASS</td><td>Tab order issues: 0</td></tr>
+        <tr><td>2.3.3 Reduced Motion</td><td style="color:green">PASS</td><td>prefers-reduced-motion: respected</td></tr>
+        <tr><td>1.4.10 Reflow (200% Zoom)</td><td style="color:red">FAIL</td><td>Horizontal scroll detected</td></tr>
+        <tr><td>2.5.8 Target Size</td><td style="color:red">FAIL (1 issues)</td><td>A "Skip to main content" = 2x2px</td></tr>
+        <tr><td>2.5.7 Dragging Movements</td><td>N/A</td><td>No dragging interactions found</td></tr>
+        <tr><td>3.2.6 Consistent Help</td><td>CHECK</td><td>Help links: None found in expected locations</td></tr>
+        <tr><td>3.3.8 Accessible Auth</td><td style="color:green">PASS (no CAPTCHA)</td><td>No cognitive tests detected</td></tr>
+        <tr><td>Semantic Landmarks</td><td>PASS</td><td>banner: 1, navigation: 2, main: 2, contentinfo: 1</td></tr>
+        <tr><td>Heading Structure</td><td style="color:green">PASS</td><td>No heading level skips</td></tr>
+        <tr><td>Form Labels</td><td style="color:green">PASS</td><td>All form elements have labels</td></tr>
+      </table>
+    
+      <h4>Guides (/guides)</h4>
+      <table>
+        <tr><th>Criterion</th><th>Status</th><th>Detail</th></tr>
+        <tr><td>2.4.1 Skip Link</td><td style="color:red">FAIL</td><td>Skip link not working</td></tr>
+        <tr><td>2.4.7 Focus Visible</td><td style="color:green">PASS</td><td>All elements have visible focus</td></tr>
+        <tr><td>2.4.11 Focus Not Obscured</td><td style="color:green">PASS</td><td>Tab order issues: 0</td></tr>
+        <tr><td>2.3.3 Reduced Motion</td><td style="color:green">PASS</td><td>prefers-reduced-motion: respected</td></tr>
+        <tr><td>1.4.10 Reflow (200% Zoom)</td><td style="color:red">FAIL</td><td>Horizontal scroll detected</td></tr>
+        <tr><td>2.5.8 Target Size</td><td style="color:red">FAIL (1 issues)</td><td>A "Skip to main content" = 2x2px</td></tr>
+        <tr><td>2.5.7 Dragging Movements</td><td>N/A</td><td>No dragging interactions found</td></tr>
+        <tr><td>3.2.6 Consistent Help</td><td>CHECK</td><td>Help links: None found in expected locations</td></tr>
+        <tr><td>3.3.8 Accessible Auth</td><td style="color:red">FAIL (CAPTCHA found)</td><td>CAPTCHA detected</td></tr>
+        <tr><td>Semantic Landmarks</td><td>PASS</td><td>banner: 1, navigation: 2, main: 2, contentinfo: 1</td></tr>
+        <tr><td>Heading Structure</td><td style="color:green">PASS</td><td>No heading level skips</td></tr>
+        <tr><td>Form Labels</td><td style="color:green">PASS</td><td>All form elements have labels</td></tr>
+      </table>
+    
+      <h4>Privacy (/privacy)</h4>
+      <table>
+        <tr><th>Criterion</th><th>Status</th><th>Detail</th></tr>
+        <tr><td>2.4.1 Skip Link</td><td style="color:red">FAIL</td><td>Skip link not working</td></tr>
+        <tr><td>2.4.7 Focus Visible</td><td style="color:green">PASS</td><td>All elements have visible focus</td></tr>
+        <tr><td>2.4.11 Focus Not Obscured</td><td style="color:green">PASS</td><td>Tab order issues: 0</td></tr>
+        <tr><td>2.3.3 Reduced Motion</td><td style="color:green">PASS</td><td>prefers-reduced-motion: respected</td></tr>
+        <tr><td>1.4.10 Reflow (200% Zoom)</td><td style="color:red">FAIL</td><td>Horizontal scroll detected</td></tr>
+        <tr><td>2.5.8 Target Size</td><td style="color:red">FAIL (1 issues)</td><td>A "Skip to main content" = 2x2px</td></tr>
+        <tr><td>2.5.7 Dragging Movements</td><td>N/A</td><td>No dragging interactions found</td></tr>
+        <tr><td>3.2.6 Consistent Help</td><td>CHECK</td><td>Help links: None found in expected locations</td></tr>
+        <tr><td>3.3.8 Accessible Auth</td><td style="color:green">PASS (no CAPTCHA)</td><td>No cognitive tests detected</td></tr>
+        <tr><td>Semantic Landmarks</td><td>PASS</td><td>banner: 1, navigation: 2, main: 2, contentinfo: 1</td></tr>
+        <tr><td>Heading Structure</td><td style="color:green">PASS</td><td>No heading level skips</td></tr>
+        <tr><td>Form Labels</td><td style="color:green">PASS</td><td>All form elements have labels</td></tr>
+      </table>
+    
+    </div>
+  </div>
+  
+  <div class="summary-box">
+    <h2>Screenshots</h2>
+    <p>Screenshots saved to: <code>wcag-report/screenshots/</code></p>
+  </div>
+  
+  <div class="summary-box">
+    <h2>Prioritized Fixes</h2>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>WCAG</th>
+        <th>Issue</th>
+        <th>Severity</th>
+        <th>Effort</th>
+        <th>Route</th>
+        <th>Nodes</th>
+      </tr>
+      
+      <tr>
+        <td>W1</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W2</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/</code></td>
+        <td>2 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W3</td>
+        <td>wcag22aa, wcag258</td>
+        <td>All touch targets must be 24px large, or leave sufficient space</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W4</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W5</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/</code></td>
+        <td>2 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W6</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W7</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W8</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>L</td>
+        <td><code>/udemycoupons</code></td>
+        <td>46 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W9</td>
+        <td>wcag22aa, wcag258</td>
+        <td>All touch targets must be 24px large, or leave sufficient space</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/udemycoupons</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W10</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>L</td>
+        <td><code>/udemycoupons</code></td>
+        <td>46 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W11</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>L</td>
+        <td><code>/udemycoupons</code></td>
+        <td>46 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W12</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/faq</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W13</td>
+        <td>wcag22aa, wcag258</td>
+        <td>All touch targets must be 24px large, or leave sufficient space</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/faq</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W14</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/faq</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W15</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/faq</code></td>
+        <td>2 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W16</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/about</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W17</td>
+        <td>wcag22aa, wcag258</td>
+        <td>All touch targets must be 24px large, or leave sufficient space</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/about</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W18</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/about</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W19</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>M</td>
+        <td><code>/guides</code></td>
+        <td>10 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W20</td>
+        <td>wcag22aa, wcag258</td>
+        <td>All touch targets must be 24px large, or leave sufficient space</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/guides</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W21</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>M</td>
+        <td><code>/guides</code></td>
+        <td>10 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W22</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/guides</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W23</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>M</td>
+        <td><code>/guides</code></td>
+        <td>10 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W24</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/guides</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W25</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W26</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W27</td>
+        <td>wcag2a, wcag211, wcag213</td>
+        <td>Scrollable region must have keyboard access</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W28</td>
+        <td>wcag22aa, wcag258</td>
+        <td>All touch targets must be 24px large, or leave sufficient space</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W29</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W30</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>2 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W31</td>
+        <td>wcag2aa</td>
+        <td>Elements must meet minimum color contrast ratio thresholds</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+      <tr>
+        <td>W32</td>
+        <td>wcag2a</td>
+        <td>Links must be distinguishable without relying on color</td>
+        <td><span class="severity-high">High</span></td>
+        <td>XS</td>
+        <td><code>/privacy</code></td>
+        <td>1 nodes</td>
+      </tr>
+    
+    </table>
+  </div>
+  
+  <div class="summary-box">
+    <h2>Not Verified</h2>
+    <table>
+      <tr><th>Check</th><th>Reason</th></tr>
+      <tr><td>Screen Reader (NVDA/VoiceOver)</td><td>Requires physical screen reader testing on actual devices</td></tr>
+      <tr><td>Focus Not Obscured (2.4.11 Full)</td><td>Requires dynamic positioning test with overlays/modals</td></tr>
+      <tr><td>Content on Hover/Focus (1.4.13)</td><td>Requires manual interaction with tooltip/popover content</td></tr>
+      <tr><td>Pointer Gestures (2.5.1)</td><td>Requires touch device or emulator testing</td></tr>
+      <tr><td>Motion Actuation (2.5.4)</td><td>Requires device motion sensor testing</td></tr>
+      <tr><td>Identify Input Purpose (1.3.5)</td><td>Requires autofill field validation</td></tr>
+      <tr><td>Character Key Shortcuts (2.1.4)</td><td>Requires application-specific keyboard shortcut audit</td></tr>
+      <tr><td>Color Contrast (1.4.3, 1.4.6)</td><td>Covered by axe-core automated checks; custom contrast verification requires color picker tooling</td></tr>
+    </table>
+  </div>
+</body>
+</html>

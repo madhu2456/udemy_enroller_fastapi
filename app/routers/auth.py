@@ -16,6 +16,7 @@ from app.security import (
     encrypt_cookies,
     generate_csrf_token,
     login_rate_limiter,
+    verify_csrf_token,
 )
 from app.logging_config import sanitize_log_message
 from app.services.udemy_client import LoginException, UdemyClient
@@ -270,6 +271,7 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
 async def logout(
     request: Request,
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_token),
 ):
     """Logout — delete DB session and clear all cookies."""
     token = request.cookies.get("session_id")

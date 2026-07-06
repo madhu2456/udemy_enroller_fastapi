@@ -177,8 +177,10 @@ async def main():
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             "public_deals.json",
         )
-        with open(json_path, "w", encoding="utf-8") as f:
+        tmp_path = json_path + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, json_path)
 
         logger.info(f"Exported {len(export_data)} valid coupons to {json_path}")
         db.close()

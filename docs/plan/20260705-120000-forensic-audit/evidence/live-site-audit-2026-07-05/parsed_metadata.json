@@ -1,0 +1,1375 @@
+{
+  "homepage": {
+    "url": "https://udemyenroller.madhudadi.in",
+    "title": "Free Udemy Courses\nAutomation | Udemy Enroller by Madhu Dadi",
+    "title_len": 60,
+    "description": "Automate your learning with 100% off free Udemy\ncourses. Our engine monitors coupon sites and enrolls you automatically. Stop\nhunting for codes.",
+    "desc_len": 144,
+    "canonical": "https://udemyenroller.madhudadi.in/",
+    "robots_meta": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+    "lang": "en",
+    "h1": [
+      "Claim Free Udemy Courses -Automatically"
+    ],
+    "h2": [
+      "Bridging the gap between expensive education and free access.",
+      "Everything you need to learn for free",
+      "Discover 100% Free Udemy Coupons",
+      "Up and running in under 2 minutes",
+      "Connect Your Account",
+      "Open Source & Community Driven"
+    ],
+    "h3": [
+      "Fully Automated Engine",
+      "100% Secure Authentication",
+      "Smart Course Filters",
+      "Track Your Savings",
+      "How It Works"
+    ],
+    "og_count": 10,
+    "og_keys": [
+      "og:type",
+      "og:url",
+      "og:title",
+      "og:description",
+      "og:image",
+      "og:image:width",
+      "og:image:height",
+      "og:image:alt",
+      "og:locale",
+      "og:site_name"
+    ],
+    "twitter_count": 6,
+    "twitter_keys": [
+      "twitter:card",
+      "twitter:url",
+      "twitter:title",
+      "twitter:description",
+      "twitter:image",
+      "twitter:site"
+    ],
+    "schema_count": 2,
+    "cta_candidates": [
+      {
+        "text": "Udemy Enroller",
+        "href": "/",
+        "class": "flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
+      },
+      {
+        "text": "Guides",
+        "href": "/guides",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "FAQ",
+        "href": "/faq",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "About",
+        "href": "/about",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "/udemycoupons",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Dashboard",
+        "href": "/dashboard",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Settings",
+        "href": "/settings",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "History",
+        "href": "/history",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      }
+    ],
+    "forms": [
+      {
+        "action": "",
+        "method": "",
+        "id": "email-form",
+        "inputs": [
+          {
+            "type": "email",
+            "name": "",
+            "required": true,
+            "placeholder": "you@example.com"
+          },
+          {
+            "type": "password",
+            "name": "",
+            "required": true,
+            "placeholder": "Your Udemy password"
+          }
+        ]
+      },
+      {
+        "action": "",
+        "method": "",
+        "id": "cookie-form",
+        "inputs": [
+          {
+            "type": "text",
+            "name": "",
+            "required": true,
+            "placeholder": "Paste your access_token cookie"
+          },
+          {
+            "type": "text",
+            "name": "",
+            "required": true,
+            "placeholder": "Paste your client_id cookie"
+          },
+          {
+            "type": "text",
+            "name": "",
+            "required": true,
+            "placeholder": "Paste your csrftoken cookie"
+          }
+        ]
+      }
+    ],
+    "internal_links_count": 18,
+    "external_links_count": 9,
+    "internal_links": [
+      {
+        "text": "Browse Deals",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Udemy Enroller",
+        "href": "https://udemyenroller.madhudadi.in/"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Dashboard",
+        "href": "https://udemyenroller.madhudadi.in/dashboard"
+      },
+      {
+        "text": "Settings",
+        "href": "https://udemyenroller.madhudadi.in/settings"
+      },
+      {
+        "text": "History",
+        "href": "https://udemyenroller.madhudadi.in/history"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Get Started",
+        "href": "https://udemyenroller.madhudadi.in/#connect"
+      },
+      {
+        "text": "View Today's Free Courses",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Read our privacy policy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      }
+    ],
+    "external_links": [
+      {
+        "text": "★ Star",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "View Source Code",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "udemy.com",
+        "href": "https://www.udemy.com"
+      },
+      {
+        "text": "Review the source code.",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Star on GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Blog",
+        "href": "https://madhudadi.in/blog"
+      },
+      {
+        "text": "Madhu Dadi",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "SEO & GEO improved byAdticks",
+        "href": "https://adticks.com"
+      }
+    ],
+    "has_disclaimer_text": true
+  },
+  "udemycoupons": {
+    "url": "https://udemyenroller.madhudadi.in/udemycoupons",
+    "title": "Free Udemy Coupons 2026 -\n100% Off Discount Codes [Updated Daily]",
+    "title_len": 65,
+    "description": "Browse the latest 100% off Udemy courses discovered by the enroller engine. Free verified coupons updated daily across 13 sources — claim them before they expire.",
+    "desc_len": 162,
+    "canonical": "https://udemyenroller.madhudadi.in/udemycoupons",
+    "robots_meta": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+    "lang": "en",
+    "h1": [
+      "Free Udemy Coupons"
+    ],
+    "h2": [
+      "Frequently Asked Questions"
+    ],
+    "h3": [
+      "No deals found",
+      "Introduction to Seawater Desalination",
+      "Principles of Sustainable Architecture & Green Buildings",
+      "Microsoft Outlook Associate (MO-400): Practice Exams",
+      "Microsoft Publisher (MO-400): Practice Exams",
+      "Microsoft Access Expert (MO-500): Practice Exams",
+      "Microsoft PowerPoint Associate (MO-300): Practice Exams",
+      "CompTIA A+ 220-1202 Core 2 V15: 900 Practice Questions 2026",
+      "Fundamental Question on Industrial Electronics",
+      "Fundamental Questions on Electrical Cables",
+      "More Free Courses in Teaching & Academics",
+      "More Free Courses in Teaching & Academics",
+      "More Free Courses in Teaching & Academics",
+      "More Free Courses in Teaching & Academics",
+      "Cómo Crear una Academia Online con WordPress y LearnPress",
+      "Principles of Sustainable Architecture & Green Buildings",
+      "Бренд-директор: стратегия бренда и AI-инструменты [RU]",
+      "Промпт-инженерия для HR: ChatGPT, Claude, AI-агенты [RU]",
+      "Внутрішні комунікації: запуск IC у компанії [UA]",
+      "Claude AI для C&B и Total Rewards: грейды, зарплаты, HR [RU]",
+      "HR Аналитика с AI: People Analytics в Claude и Excel [RU]",
+      "Cours HR Business Partner : Certification HRBP [FR]",
+      "AI Рекрутер: Claude, Сорсинг, Скрининг & Автоматизация [RU]",
+      "Onboarding Expert: Employee Adaptation Checklist [EN]",
+      "PIP Master: 1-Day Performance Improvement Plan [EN]",
+      "Are these Udemy coupons really 100% free?",
+      "Do I get lifetime access to the free courses?",
+      "How often are the coupon codes updated?"
+    ],
+    "og_count": 10,
+    "og_keys": [
+      "og:type",
+      "og:url",
+      "og:title",
+      "og:description",
+      "og:image",
+      "og:image:width",
+      "og:image:height",
+      "og:image:alt",
+      "og:locale",
+      "og:site_name"
+    ],
+    "twitter_count": 6,
+    "twitter_keys": [
+      "twitter:card",
+      "twitter:url",
+      "twitter:title",
+      "twitter:description",
+      "twitter:image",
+      "twitter:site"
+    ],
+    "schema_count": 3,
+    "cta_candidates": [
+      {
+        "text": "Udemy Enroller",
+        "href": "/",
+        "class": "flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
+      },
+      {
+        "text": "Guides",
+        "href": "/guides",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "FAQ",
+        "href": "/faq",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "About",
+        "href": "/about",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "/udemycoupons",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 bg-[#EFF6FF] text-[#2563EB]"
+      },
+      {
+        "text": "Dashboard",
+        "href": "/dashboard",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Settings",
+        "href": "/settings",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "History",
+        "href": "/history",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      }
+    ],
+    "forms": [],
+    "internal_links_count": 17,
+    "external_links_count": 29,
+    "internal_links": [
+      {
+        "text": "Browse Deals",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Udemy Enroller",
+        "href": "https://udemyenroller.madhudadi.in/"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Dashboard",
+        "href": "https://udemyenroller.madhudadi.in/dashboard"
+      },
+      {
+        "text": "Settings",
+        "href": "https://udemyenroller.madhudadi.in/settings"
+      },
+      {
+        "text": "History",
+        "href": "https://udemyenroller.madhudadi.in/history"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Get Started",
+        "href": "https://udemyenroller.madhudadi.in/#connect"
+      },
+      {
+        "text": "Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Read our privacy policy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      }
+    ],
+    "external_links": [
+      {
+        "text": "★ Star",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/introduction-to-reverse-osmosis-desalination/?couponCode=90B2BDA5D98A17674EA4"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/sustainable-architecture-and-green-buildings/?couponCode=47E940FCD48B1728D060"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/microsoft-outlook-associate-mo-400-practice-exams/?couponCode=426294DA387A1F3010F6"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/microsoft-publisher-mo-400-practice-exams/?couponCode=0A8CC37A06092B818DCB"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/microsoft-access-expert-mo-500-practice-exams/?couponCode=3AAC9E3756AF3453509B"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/microsoft-powerpoint-associate-mo-300-practice-exams/?couponCode=5DBB2F3D23A36B3FE6B3"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/comptia-a-220-1202-core-2-v15-900-practice-questions-2026/?couponCode=TECHSERKSOFF"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/fundamental-question-on-industrial-electronics/?couponCode=FAF9EE83E76CBBEF0CEF"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/fundamental-question-on-electrical-cables/?couponCode=0BE8253A8B8800706F08"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/ibps-clerk-hindi-mock-test-exam-series-government-job/?couponCode=E2F4D574331B4A4CB5A3"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/ibps-po-mock-test-exam-series-government-job/?couponCode=A959173B805CF80D9A84"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/ssc-cpo-mock-test-exam-series-hindi-government-job/?couponCode=E677A221C053DA7B42C4"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/rrb-group-d-exam-mock-test-exam-series-hindi-government-job/?couponCode=47512504A1C77F63DDB9"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/como-crear-una-academia-online-con-wordpress-y-learnpress/?couponCode=JULIO0701"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/sustainable-architecture-and-green-buildings/?couponCode=25F3AC31C2190C3A709B"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/ai-brand-director-ru/?couponCode=PAPAHR_JUL_367437"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/prompt-hr-chatgpt-claude-ai-ru/?couponCode=PAPAHR_JUL_612579"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/ic-ua-rk/?couponCode=PAPAHR_JUL_102921"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/claude-ai-cb-total-rewards-hr-ru/?couponCode=PAPAHR_JUL_429293"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/hr-ai-people-analytics-claude-excel-ru/?couponCode=PAPAHR_JUL_420529"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/cours-hr-business-partner-certification-hrbp-fr/?couponCode=PAPAHR_JUL_718712"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/ai-claude-ru/?couponCode=PAPAHR_JUL_263404"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/onboarding-expert-employee-adaptation-checklist-en/?couponCode=PAPAHR_JUL_097931"
+      },
+      {
+        "text": "Enroll Now",
+        "href": "https://www.udemy.com/course/pip-master-1-day-performance-improvement-plan-en/?couponCode=PAPAHR_JUL_765173"
+      },
+      {
+        "text": "Blog",
+        "href": "https://madhudadi.in/blog"
+      },
+      {
+        "text": "Madhu Dadi",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "SEO & GEO improved byAdticks",
+        "href": "https://adticks.com"
+      }
+    ],
+    "has_disclaimer_text": true
+  },
+  "faq": {
+    "url": "https://udemyenroller.madhudadi.in/faq",
+    "title": "Frequently Asked Questions\n- Udemy Enroller Automation Tool",
+    "title_len": 59,
+    "description": "Answers to\ncommon questions about the Udemy Enroller automation tool: how it works, security,\nprivacy, filters, Cookie vs Email login, coupon accuracy, and free Udemy courses.",
+    "desc_len": 175,
+    "canonical": "https://udemyenroller.madhudadi.in/faq",
+    "robots_meta": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+    "lang": "en",
+    "h1": [
+      "Frequently Asked Questions"
+    ],
+    "h2": [
+      "How it Works",
+      "Legal & Affiliation",
+      "Security & Privacy",
+      "Authentication",
+      "Smart Filters"
+    ],
+    "h3": [
+      "How does the automated Udemy course enroller\n                                work?",
+      "Which coupon aggregator sites does it monitor?",
+      "How fast does enrollment happen after a coupon\n                                is posted?",
+      "Does the tool work 24/7 without me being online?",
+      "Can I just view the coupons without automating\n                                my account?",
+      "Is this project affiliated with or endorsed by Udemy?",
+      "Is it safe to connect my Udemy account?",
+      "Does the tool store my email or password\n                                anywhere?",
+      "What data does the tool collect about me?",
+      "What is the difference between Email Login and\n                                Cookie Login?",
+      "I got a CSRF error with Email Login. What do I\n                                do?",
+      "How do I extract my Udemy cookies for Cookie\n                                Login?",
+      "How long do my session cookies last before I\n                                need to refresh them?",
+      "Can I filter which courses are automatically\n                                enrolled?",
+      "Can I exclude courses from a specific\n                                instructor?",
+      "Will it enroll me in courses outside my\n                                preferred language?"
+    ],
+    "og_count": 10,
+    "og_keys": [
+      "og:type",
+      "og:url",
+      "og:title",
+      "og:description",
+      "og:image",
+      "og:image:width",
+      "og:image:height",
+      "og:image:alt",
+      "og:locale",
+      "og:site_name"
+    ],
+    "twitter_count": 6,
+    "twitter_keys": [
+      "twitter:card",
+      "twitter:url",
+      "twitter:title",
+      "twitter:description",
+      "twitter:image",
+      "twitter:site"
+    ],
+    "schema_count": 3,
+    "cta_candidates": [
+      {
+        "text": "Udemy Enroller",
+        "href": "/",
+        "class": "flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
+      },
+      {
+        "text": "Guides",
+        "href": "/guides",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "FAQ",
+        "href": "/faq",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 bg-[#EFF6FF] text-[#2563EB]"
+      },
+      {
+        "text": "About",
+        "href": "/about",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "/udemycoupons",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Dashboard",
+        "href": "/dashboard",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Settings",
+        "href": "/settings",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "History",
+        "href": "/history",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      }
+    ],
+    "forms": [],
+    "internal_links_count": 19,
+    "external_links_count": 7,
+    "internal_links": [
+      {
+        "text": "Browse Deals",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Udemy Enroller",
+        "href": "https://udemyenroller.madhudadi.in/"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Dashboard",
+        "href": "https://udemyenroller.madhudadi.in/dashboard"
+      },
+      {
+        "text": "Settings",
+        "href": "https://udemyenroller.madhudadi.in/settings"
+      },
+      {
+        "text": "History",
+        "href": "https://udemyenroller.madhudadi.in/history"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Get Started",
+        "href": "https://udemyenroller.madhudadi.in/#connect"
+      },
+      {
+        "text": "100% Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Browse Guides →",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Read our privacy policy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      }
+    ],
+    "external_links": [
+      {
+        "text": "★ Star",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Udemy's Terms of Use",
+        "href": "https://www.udemy.com/terms/"
+      },
+      {
+        "text": "Open a GitHub Issue",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi/issues"
+      },
+      {
+        "text": "Blog",
+        "href": "https://madhudadi.in/blog"
+      },
+      {
+        "text": "Madhu Dadi",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "SEO & GEO improved byAdticks",
+        "href": "https://adticks.com"
+      }
+    ],
+    "has_disclaimer_text": true
+  },
+  "about": {
+    "url": "https://udemyenroller.madhudadi.in/about",
+    "title": "About the Automated Udemy\nEnroller Tool by Madhu Dadi",
+    "title_len": 53,
+    "description": "Learn about the Udemy\nEnroller project - an open-source FastAPI automation tool built by Madhu Dadi to help\nlearners automatically discover and claim 100% off Udemy courses.",
+    "desc_len": 173,
+    "canonical": "https://udemyenroller.madhudadi.in/about",
+    "robots_meta": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+    "lang": "en",
+    "h1": [
+      "Built to democratise online learning"
+    ],
+    "h2": [
+      "The Mission",
+      "The Creator",
+      "What we stand for",
+      "How it's built",
+      "Ready to start learning for free?"
+    ],
+    "h3": [
+      "Open Source First",
+      "Privacy by Design",
+      "Free Forever",
+      "Community Driven"
+    ],
+    "og_count": 10,
+    "og_keys": [
+      "og:type",
+      "og:url",
+      "og:title",
+      "og:description",
+      "og:image",
+      "og:image:width",
+      "og:image:height",
+      "og:image:alt",
+      "og:locale",
+      "og:site_name"
+    ],
+    "twitter_count": 6,
+    "twitter_keys": [
+      "twitter:card",
+      "twitter:url",
+      "twitter:title",
+      "twitter:description",
+      "twitter:image",
+      "twitter:site"
+    ],
+    "schema_count": 2,
+    "cta_candidates": [
+      {
+        "text": "Udemy Enroller",
+        "href": "/",
+        "class": "flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
+      },
+      {
+        "text": "Guides",
+        "href": "/guides",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "FAQ",
+        "href": "/faq",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "About",
+        "href": "/about",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 bg-[#EFF6FF] text-[#2563EB]"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "/udemycoupons",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Dashboard",
+        "href": "/dashboard",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Settings",
+        "href": "/settings",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "History",
+        "href": "/history",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      }
+    ],
+    "forms": [],
+    "internal_links_count": 20,
+    "external_links_count": 8,
+    "internal_links": [
+      {
+        "text": "Browse Deals",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Udemy Enroller",
+        "href": "https://udemyenroller.madhudadi.in/"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Dashboard",
+        "href": "https://udemyenroller.madhudadi.in/dashboard"
+      },
+      {
+        "text": "Settings",
+        "href": "https://udemyenroller.madhudadi.in/settings"
+      },
+      {
+        "text": "History",
+        "href": "https://udemyenroller.madhudadi.in/history"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Get Started",
+        "href": "https://udemyenroller.madhudadi.in/#connect"
+      },
+      {
+        "text": "100% Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Get Started Free",
+        "href": "https://udemyenroller.madhudadi.in/#connect"
+      },
+      {
+        "text": "Read the Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Read our privacy policy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      }
+    ],
+    "external_links": [
+      {
+        "text": "★ Star",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Madhu Dadi",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "madhudadi.in →",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "View on GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Blog",
+        "href": "https://madhudadi.in/blog"
+      },
+      {
+        "text": "Madhu Dadi",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "SEO & GEO improved byAdticks",
+        "href": "https://adticks.com"
+      }
+    ],
+    "has_disclaimer_text": true
+  },
+  "guides": {
+    "url": "https://udemyenroller.madhudadi.in/guides",
+    "title": "How to Get Free Udemy\nCourses: Step-by-Step Guides",
+    "title_len": 50,
+    "description": "Step-by-step guides for the Udemy Enroller automation tool: learn how to\nconnect your Udemy account, extract cookies, configure smart filters, deploy\non a server, and automatically enroll in 100% off courses.",
+    "desc_len": 208,
+    "canonical": "https://udemyenroller.madhudadi.in/guides",
+    "robots_meta": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+    "lang": "en",
+    "h1": [
+      "Guides & Walkthroughs"
+    ],
+    "h2": [
+      "Get Started in 5 Minutes",
+      "How to Use Cookie Login",
+      "Configuring Smart Filters",
+      "Running on a Cloud Server",
+      "Common Issues & Fixes"
+    ],
+    "h3": [],
+    "og_count": 10,
+    "og_keys": [
+      "og:type",
+      "og:url",
+      "og:title",
+      "og:description",
+      "og:image",
+      "og:image:width",
+      "og:image:height",
+      "og:image:alt",
+      "og:locale",
+      "og:site_name"
+    ],
+    "twitter_count": 6,
+    "twitter_keys": [
+      "twitter:card",
+      "twitter:url",
+      "twitter:title",
+      "twitter:description",
+      "twitter:image",
+      "twitter:site"
+    ],
+    "schema_count": 2,
+    "cta_candidates": [
+      {
+        "text": "Udemy Enroller",
+        "href": "/",
+        "class": "flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
+      },
+      {
+        "text": "Guides",
+        "href": "/guides",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 bg-[#EFF6FF] text-[#2563EB]"
+      },
+      {
+        "text": "FAQ",
+        "href": "/faq",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "About",
+        "href": "/about",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "/udemycoupons",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Dashboard",
+        "href": "/dashboard",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Settings",
+        "href": "/settings",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "History",
+        "href": "/history",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      }
+    ],
+    "forms": [],
+    "internal_links_count": 18,
+    "external_links_count": 6,
+    "internal_links": [
+      {
+        "text": "Browse Deals",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Udemy Enroller",
+        "href": "https://udemyenroller.madhudadi.in/"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Dashboard",
+        "href": "https://udemyenroller.madhudadi.in/dashboard"
+      },
+      {
+        "text": "Settings",
+        "href": "https://udemyenroller.madhudadi.in/settings"
+      },
+      {
+        "text": "History",
+        "href": "https://udemyenroller.madhudadi.in/history"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Get Started",
+        "href": "https://udemyenroller.madhudadi.in/#connect"
+      },
+      {
+        "text": "Browse FAQ →",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Read our privacy policy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      }
+    ],
+    "external_links": [
+      {
+        "text": "★ Star",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Open a GitHub Issue",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi/issues"
+      },
+      {
+        "text": "Blog",
+        "href": "https://madhudadi.in/blog"
+      },
+      {
+        "text": "Madhu Dadi",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "SEO & GEO improved byAdticks",
+        "href": "https://adticks.com"
+      }
+    ],
+    "has_disclaimer_text": true
+  },
+  "privacy": {
+    "url": "https://udemyenroller.madhudadi.in/privacy",
+    "title": "Privacy Policy - Udemy\nEnroller Automation Tool",
+    "title_len": 47,
+    "description": "Udemy Enroller privacy policy: encrypted session cookies (Fernet), no password storage, no third-party data transmission. Fully open-source and transparent.",
+    "desc_len": 156,
+    "canonical": "https://udemyenroller.madhudadi.in/privacy",
+    "robots_meta": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+    "lang": "en",
+    "h1": [
+      "Privacy Policy"
+    ],
+    "h2": [
+      "What Data Is Collected",
+      "How Data Is Stored",
+      "What Data Is Not Collected",
+      "How to Delete Your Data",
+      "Browser Cookies",
+      "Affiliation",
+      "Source Code"
+    ],
+    "h3": [],
+    "og_count": 10,
+    "og_keys": [
+      "og:type",
+      "og:url",
+      "og:title",
+      "og:description",
+      "og:image",
+      "og:image:width",
+      "og:image:height",
+      "og:image:alt",
+      "og:locale",
+      "og:site_name"
+    ],
+    "twitter_count": 6,
+    "twitter_keys": [
+      "twitter:card",
+      "twitter:url",
+      "twitter:title",
+      "twitter:description",
+      "twitter:image",
+      "twitter:site"
+    ],
+    "schema_count": 2,
+    "cta_candidates": [
+      {
+        "text": "Udemy Enroller",
+        "href": "/",
+        "class": "flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
+      },
+      {
+        "text": "Guides",
+        "href": "/guides",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "FAQ",
+        "href": "/faq",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "About",
+        "href": "/about",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "/udemycoupons",
+        "class": "px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Dashboard",
+        "href": "/dashboard",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "Settings",
+        "href": "/settings",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      },
+      {
+        "text": "History",
+        "href": "/history",
+        "class": "auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+      }
+    ],
+    "forms": [],
+    "internal_links_count": 18,
+    "external_links_count": 8,
+    "internal_links": [
+      {
+        "text": "Browse Deals",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Udemy Enroller",
+        "href": "https://udemyenroller.madhudadi.in/"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Free Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Dashboard",
+        "href": "https://udemyenroller.madhudadi.in/dashboard"
+      },
+      {
+        "text": "Settings",
+        "href": "https://udemyenroller.madhudadi.in/settings"
+      },
+      {
+        "text": "History",
+        "href": "https://udemyenroller.madhudadi.in/history"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Get Started",
+        "href": "https://udemyenroller.madhudadi.in/#connect"
+      },
+      {
+        "text": "Browse FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "Free Udemy Coupons",
+        "href": "https://udemyenroller.madhudadi.in/udemycoupons"
+      },
+      {
+        "text": "Guides",
+        "href": "https://udemyenroller.madhudadi.in/guides"
+      },
+      {
+        "text": "FAQ",
+        "href": "https://udemyenroller.madhudadi.in/faq"
+      },
+      {
+        "text": "About",
+        "href": "https://udemyenroller.madhudadi.in/about"
+      },
+      {
+        "text": "Privacy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      },
+      {
+        "text": "Read our privacy policy",
+        "href": "https://udemyenroller.madhudadi.in/privacy"
+      }
+    ],
+    "external_links": [
+      {
+        "text": "★ Star",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Google Privacy Policy",
+        "href": "https://policies.google.com/privacy"
+      },
+      {
+        "text": "View Source on GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "Open a GitHub Issue",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi/issues"
+      },
+      {
+        "text": "Blog",
+        "href": "https://madhudadi.in/blog"
+      },
+      {
+        "text": "Madhu Dadi",
+        "href": "https://madhudadi.in"
+      },
+      {
+        "text": "GitHub",
+        "href": "https://github.com/madhu2456/udemy_enroller_fastapi"
+      },
+      {
+        "text": "SEO & GEO improved byAdticks",
+        "href": "https://adticks.com"
+      }
+    ],
+    "has_disclaimer_text": true
+  }
+}

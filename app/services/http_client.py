@@ -1,6 +1,7 @@
 import asyncio
 import random
 from typing import Dict, Optional, Union
+from urllib.parse import urlparse
 
 import httpx
 from loguru import logger
@@ -133,8 +134,6 @@ class AsyncHTTPClient:
         req_type: str = "document",
     ) -> Dict[str, str]:
         """Generate randomized headers for each request, respecting existing ones."""
-        from urllib.parse import urlparse
-
         parsed_url = urlparse(url)
 
         if self._is_server:
