@@ -12,29 +12,39 @@ Course Enroller{% endblock %} {% block twitter_description %}Customize your
 automated course enrollment preferences. Set rating thresholds, filter
 languages, and refine your learning feed.{% endblock %} {% block
 content %}
-<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 pb-16">
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 pb-16 min-w-0 overflow-x-clip">
     <!-- Page Header -->
-    <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-2.5">
-            <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-200">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 min-w-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-200 flex-shrink-0">
                 <i data-lucide="settings" class="text-blue-600 w-5 h-5"></i>
             </div>
-            <h1 class="text-xl font-semibold text-gray-900 tracking-tight">
-                Enrollment Settings
-            </h1>
+            <div class="min-w-0">
+                <h1 class="text-xl font-semibold text-gray-900 tracking-tight">
+                    Enrollment Settings
+                </h1>
+                <p
+                    id="session-expiry-note"
+                    class="hidden text-xs mt-1 max-w-md leading-relaxed text-gray-500"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
             <button
+                type="button"
                 onclick="resetSettings()"
-                class="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm"
+                class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5" aria-hidden="true"></i> Reset
             </button>
             <button
+                type="button"
                 onclick="saveSettings()"
-                class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm"
+                class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
-                <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Settings
+                <i data-lucide="save" class="w-3.5 h-3.5" aria-hidden="true"></i> Save Settings
             </button>
         </div>
     </div>
@@ -124,12 +134,14 @@ content %}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div class="space-y-1.5">
                     <label
+                        for="min-rating"
                         class="block text-xs font-semibold text-gray-500 uppercase tracking-wider"
                         >Minimum Rating</label
                     >
                     <input
                         type="number"
                         id="min-rating"
+                        name="min-rating"
                         min="0"
                         max="5"
                         step="0.5"
@@ -141,12 +153,14 @@ content %}
 
                 <div class="space-y-1.5">
                     <label
+                        for="update-threshold"
                         class="block text-xs font-semibold text-gray-500 uppercase tracking-wider"
                         >Course Updated Within (months)</label
                     >
                     <input
                         type="number"
                         id="update-threshold"
+                        name="update-threshold"
                         min="1"
                         max="48"
                         value="24"
@@ -164,6 +178,7 @@ content %}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div class="space-y-1.5">
                     <label
+                        for="instructor-input"
                         class="block text-xs font-semibold text-gray-500 uppercase tracking-wider"
                         >Exclude Instructors</label
                     >
@@ -174,6 +189,7 @@ content %}
                         <input
                             type="text"
                             id="instructor-input"
+                            name="instructor-input"
                             placeholder="Type name, press Enter..."
                             class="flex-grow min-w-[120px] bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
                         />
@@ -185,6 +201,7 @@ content %}
 
                 <div class="space-y-1.5">
                     <label
+                        for="title-input"
                         class="block text-xs font-semibold text-gray-500 uppercase tracking-wider"
                         >Exclude Title Keywords</label
                     >
@@ -195,6 +212,7 @@ content %}
                         <input
                             type="text"
                             id="title-input"
+                            name="title-input"
                             placeholder="Type keyword, press Enter..."
                             class="flex-grow min-w-[120px] bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
                         />
@@ -210,12 +228,14 @@ content %}
             <!-- Proxy URL configuration -->
             <div class="space-y-1.5">
                 <label
+                    for="proxy-url"
                     class="block text-xs font-semibold text-gray-500 uppercase tracking-wider"
                     >Proxy URL</label
                 >
                 <input
                     type="text"
                     id="proxy-url"
+                    name="proxy-url"
                     placeholder="http://user:pass@host:port"
                     class="w-full bg-gray-55 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
@@ -228,51 +248,67 @@ content %}
 
             <!-- Toggle switches for save/discount flags -->
             <div class="divide-y divide-gray-100">
-                <div class="flex items-center justify-between py-3">
-                    <div>
+                <div class="flex items-center justify-between py-3 gap-4">
+                    <div id="save-txt-desc">
                         <p class="text-sm font-medium text-gray-800">
                             Save enrolled courses to text file
                         </p>
-                        <p class="text-xs text-gray-400 mt-0.5">
+                        <p class="text-xs text-gray-600 mt-0.5">
                             Generates a local .txt log of every enrolled course
                             title
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onclick="toggleSwitch(this)"
-                        class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200"
-                    >
-                        <input type="checkbox" id="save-txt" class="hidden" />
-                        <span
-                            class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-0"
-                        ></span>
-                    </button>
+                    <div class="relative flex-shrink-0">
+                        <input type="checkbox" id="save-txt" class="sr-only" tabindex="-1" aria-hidden="true" />
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked="false"
+                            aria-labelledby="save-txt-desc"
+                            data-switch-for="save-txt"
+                            onclick="toggleSwitch(this)"
+                            class="relative inline-flex items-center w-11 h-6 min-h-[24px] rounded-full transition-colors bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        >
+                            <span
+                                class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all translate-x-0 pointer-events-none"
+                                aria-hidden="true"
+                            ></span>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex items-center justify-between py-3">
-                    <div>
+                <div class="flex items-center justify-between py-3 gap-4">
+                    <div id="discounted-only-desc">
                         <p class="text-sm font-medium text-gray-800">
                             Discounted courses only (skip free)
                         </p>
-                        <p class="text-xs text-gray-400 mt-0.5">
+                        <p class="text-xs text-gray-600 mt-0.5">
                             Only enroll paid courses with 100% off coupons, skip
                             already-free courses
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onclick="toggleSwitch(this)"
-                        class="relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200"
-                    >
+                    <div class="relative flex-shrink-0">
                         <input
                             type="checkbox"
                             id="discounted-only"
-                            class="hidden"
+                            class="sr-only"
+                            tabindex="-1"
+                            aria-hidden="true"
                         />
-                        <span
-                            class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-0"
-                        ></span>
-                    </button>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked="false"
+                            aria-labelledby="discounted-only-desc"
+                            data-switch-for="discounted-only"
+                            onclick="toggleSwitch(this)"
+                            class="relative inline-flex items-center w-11 h-6 min-h-[24px] rounded-full transition-colors bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        >
+                            <span
+                                class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all translate-x-0 pointer-events-none"
+                                aria-hidden="true"
+                            ></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -297,17 +333,21 @@ content %}
                         Clear All Enrollment Data
                     </p>
                     <p
-                        class="text-xs text-red-600 mt-0.5 max-w-lg leading-relaxed font-light"
+                        class="text-xs text-red-800 mt-0.5 max-w-lg leading-relaxed font-light"
                     >
-                        Permanently deletes all enrollment history, run logs,
-                        and resets lifetime statistics. This cannot be undone.
+                        Permanently deletes enrollment history and run logs,
+                        resets lifetime statistics, ends app sessions, and
+                        removes stored Udemy cookies. Preference settings and
+                        the local account row are kept. You will need to
+                        connect again. This cannot be undone.
                     </p>
                 </div>
                 <button
+                    type="button"
                     onclick="clearAllData()"
-                    class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-sm"
+                    class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
                 >
-                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5" aria-hidden="true"></i>
                     Clear All Data
                 </button>
             </div>
@@ -329,6 +369,47 @@ content %}
         setupTagInput("title-input", "title-tags");
     });
 
+    function formatSessionRemaining(seconds) {
+        if (seconds == null || seconds < 0) return null;
+        if (seconds < 60) return "less than a minute";
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const days = Math.floor(hours / 24);
+        if (days >= 2) return `about ${days} days`;
+        if (days === 1) return "about 1 day";
+        if (hours >= 2) return `about ${hours} hours`;
+        if (hours === 1) return "about 1 hour";
+        if (mins >= 2) return `about ${mins} minutes`;
+        return "about 1 minute";
+    }
+
+    function updateSessionExpiryNote(data) {
+        const el = document.getElementById("session-expiry-note");
+        if (!el) return;
+        const remaining = data.session_seconds_remaining;
+        const env = data.deployment_env || "local";
+        const label = formatSessionRemaining(remaining);
+        if (label == null) {
+            el.classList.add("hidden");
+            el.textContent = "";
+            return;
+        }
+        el.classList.remove("hidden");
+        if (env === "server") {
+            el.className =
+                remaining < 3600
+                    ? "text-xs mt-1 max-w-md leading-relaxed text-amber-800"
+                    : "text-xs mt-1 max-w-md leading-relaxed text-gray-500";
+            el.textContent =
+                remaining < 3600
+                    ? `Hosted session ends in ${label}. Connect again after it expires.`
+                    : `Hosted session ends in ${label} (~24h from login).`;
+        } else {
+            el.className = "text-xs mt-1 max-w-md leading-relaxed text-gray-600";
+            el.textContent = `Local session ends in ${label}.`;
+        }
+    }
+
     async function checkAuth() {
         try {
             const resp = await fetch("/api/auth/status");
@@ -337,6 +418,7 @@ content %}
                 window.location.href = "/";
                 return false;
             }
+            updateSessionExpiryNote(data);
             return true;
         } catch (e) {
             window.location.href = "/";
@@ -344,17 +426,29 @@ content %}
         }
     }
 
+    const SWITCH_BASE =
+        "relative inline-flex items-center w-11 h-6 min-h-[24px] rounded-full transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2";
+
     function toggleSwitch(btn) {
-        const checkbox = btn.querySelector('input[type="checkbox"]');
+        const id = btn.getAttribute("data-switch-for");
+        const checkbox = id
+            ? document.getElementById(id)
+            : btn.parentElement.querySelector('input[type="checkbox"]');
+        if (!checkbox) return;
         checkbox.checked = !checkbox.checked;
+        btn.setAttribute("aria-checked", checkbox.checked ? "true" : "false");
 
         const span = btn.querySelector("span");
         if (checkbox.checked) {
-            btn.classList.replace("bg-gray-200", "bg-blue-600");
-            span.classList.replace("translate-x-0", "translate-x-5");
+            btn.classList.remove("bg-gray-200");
+            btn.classList.add("bg-blue-600");
+            span.classList.remove("translate-x-0");
+            span.classList.add("translate-x-5");
         } else {
-            btn.classList.replace("bg-blue-600", "bg-gray-200");
-            span.classList.replace("translate-x-5", "translate-x-0");
+            btn.classList.remove("bg-blue-600");
+            btn.classList.add("bg-gray-200");
+            span.classList.remove("translate-x-5");
+            span.classList.add("translate-x-0");
         }
     }
 
@@ -362,18 +456,21 @@ content %}
         const checkbox = document.getElementById(id);
         if (!checkbox) return;
         checkbox.checked = checked;
-        const btn = checkbox.parentElement;
+        const btn =
+            checkbox.parentElement.querySelector(
+                'button[data-switch-for="' + id + '"]',
+            ) || checkbox.parentElement.querySelector('button[role="switch"]');
+        if (!btn) return;
         const span = btn.querySelector("span");
+        btn.setAttribute("aria-checked", checked ? "true" : "false");
         if (checked) {
-            btn.className =
-                "relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-blue-600";
+            btn.className = SWITCH_BASE + " bg-blue-600";
             span.className =
-                "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-5";
+                "absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all translate-x-5 pointer-events-none";
         } else {
-            btn.className =
-                "relative w-10 h-5 rounded-full transition-colors flex-shrink-0 bg-gray-200";
+            btn.className = SWITCH_BASE + " bg-gray-200";
             span.className =
-                "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all translate-x-0";
+                "absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all translate-x-0 pointer-events-none";
         }
     }
 
@@ -588,8 +685,14 @@ content %}
     }
 
     async function resetSettings() {
-        if (!confirm("Discard all changes and reset to factory defaults?"))
-            return;
+        const ok = await window.accessibleConfirm({
+            title: "Reset settings?",
+            message: "Discard all changes and reset to factory defaults?",
+            confirmLabel: "Reset to defaults",
+            cancelLabel: "Cancel",
+            danger: true,
+        });
+        if (!ok) return;
         try {
             const r = await apiFetch("/api/settings/reset", { method: "POST" });
             if (r.ok) {
@@ -602,18 +705,25 @@ content %}
     }
 
     async function clearAllData() {
-        if (
-            !confirm(
-                "Are you absolutely sure you want to delete ALL enrollment history and statistics? This cannot be undone.",
-            )
-        )
-            return;
-        if (
-            !confirm(
-                "REALLY? This will wipe your history and reset all counters to zero.",
-            )
-        )
-            return;
+        const ok1 = await window.accessibleConfirm({
+            title: "Clear all enrollment data?",
+            message:
+                "This clears enrollment history, statistics, sessions, and stored Udemy cookies.\n\n" +
+                "You will be signed out and must connect again. Preference settings are kept. This cannot be undone.",
+            confirmLabel: "Continue",
+            cancelLabel: "Cancel",
+            danger: true,
+        });
+        if (!ok1) return;
+        const ok2 = await window.accessibleConfirm({
+            title: "Confirm wipe?",
+            message:
+                "Really wipe history, counters, sessions, and stored Udemy cookies?",
+            confirmLabel: "Wipe data",
+            cancelLabel: "Cancel",
+            danger: true,
+        });
+        if (!ok2) return;
 
         try {
             const r = await apiFetch("/api/settings/clear-data", {
@@ -621,8 +731,16 @@ content %}
             });
             const data = await r.json();
             if (r.ok) {
-                alert("All data has been cleared successfully.");
-                window.location.reload();
+                await window.accessibleConfirm({
+                    title: "Data cleared",
+                    message:
+                        data.message ||
+                        "Data cleared. Connect again to use enrollment.",
+                    confirmLabel: "OK",
+                    cancelLabel: "Close",
+                    danger: false,
+                });
+                window.location.href = "/#connect";
             } else {
                 showMsg(data.detail || "Failed to clear data", "red");
             }

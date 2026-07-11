@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-07-11T20:52:31.424Z",
+  "base_url": "http://127.0.0.1:8000",
+  "results": [
+    {
+      "browser": "chromium",
+      "ok": true,
+      "skipped": false,
+      "skip_reason": null,
+      "public_pass": 6,
+      "public_total": 6,
+      "auth_pass": 4,
+      "auth_total": 4,
+      "failures": [],
+      "errors": []
+    },
+    {
+      "browser": "firefox",
+      "ok": true,
+      "skipped": false,
+      "skip_reason": null,
+      "public_pass": 6,
+      "public_total": 6,
+      "auth_pass": 4,
+      "auth_total": 4,
+      "failures": [],
+      "errors": []
+    },
+    {
+      "browser": "webkit",
+      "skipped": true,
+      "skip_reason": "host_missing_browser_dependencies",
+      "public_pass": 0,
+      "public_total": 0,
+      "auth_pass": 0,
+      "auth_total": 0,
+      "failures": [],
+      "errors": [
+        "launch failed: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libavif16                   ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
+      ]
+    }
+  ]
+}

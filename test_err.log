@@ -1,9 +1,0 @@
-============================= test session starts ==============================
-platform linux -- Python 3.13.14, pytest-8.3.4, pluggy-1.6.0
-rootdir: /mnt/LinuxProjects/Codes/Projects/Udemy Enroller
-configfile: pytest.ini
-plugins: anyio-4.13.0, cov-4.1.0, asyncio-0.25.3, time-machine-2.19.0
-asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=function
-collected 3 items
-
-tests/test_regression_fixes.py FF

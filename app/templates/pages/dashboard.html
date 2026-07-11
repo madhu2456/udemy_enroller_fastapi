@@ -15,28 +15,42 @@ session status, active runs, and track learning progress easily.{% endblock %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
     <!-- Section Navigation Tabs -->
     <div
+        role="tablist"
+        aria-label="Dashboard sections"
         class="flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl w-full sm:w-fit border border-gray-200 shadow-sm"
     >
         <button
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="section-overview"
             onclick="switchDashboardSection('overview')"
             id="tab-sec-overview"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
         >
-            <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Overview
+            <i data-lucide="bar-chart-2" class="w-3.5 h-3.5" aria-hidden="true"></i>Overview
         </button>
         <button
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="section-runs"
             onclick="switchDashboardSection('runs')"
             id="tab-sec-runs"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-500 hover:text-gray-900"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
         >
-            <i data-lucide="list" class="w-3.5 h-3.5"></i>Runs
+            <i data-lucide="list" class="w-3.5 h-3.5" aria-hidden="true"></i>Runs
         </button>
         <button
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="section-logs"
             onclick="switchDashboardSection('logs')"
             id="tab-sec-logs"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-500 hover:text-gray-900"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
         >
-            <i data-lucide="terminal" class="w-3.5 h-3.5"></i>Logs
+            <i data-lucide="terminal" class="w-3.5 h-3.5" aria-hidden="true"></i>Logs
         </button>
     </div>
 
@@ -53,29 +67,38 @@ session status, active runs, and track learning progress easily.{% endblock %}
             <p class="text-sm text-gray-500 mt-0.5" id="run-meta-text">
                 Start the enrollment engine to claim courses
             </p>
+            <p
+                id="session-expiry-note"
+                class="hidden text-xs mt-1.5 max-w-xl leading-relaxed"
+                role="status"
+                aria-live="polite"
+            ></p>
         </div>
         <div class="flex items-center gap-2">
             <a
                 href="/settings"
-                class="p-2.5 bg-white border border-gray-200 rounded-lg text-gray-400 hover:text-gray-900 transition-colors shadow-sm"
+                class="inline-flex items-center justify-center min-h-[40px] min-w-[40px] p-2.5 bg-white border border-gray-200 rounded-lg text-gray-600 hover:text-gray-900 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                 title="Settings"
+                aria-label="Open settings"
             >
-                <i data-lucide="settings" class="w-4.5 h-4.5"></i>
+                <i data-lucide="settings" class="w-4.5 h-4.5" aria-hidden="true"></i>
             </a>
             <button
+                type="button"
                 id="stop-btn"
                 onclick="stopEnrollment()"
-                class="hidden flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-all shadow-sm"
+                class="hidden flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
             >
-                <i data-lucide="square" class="w-3.5 h-3.5 fill-current"></i>
+                <i data-lucide="square" class="w-3.5 h-3.5 fill-current" aria-hidden="true"></i>
                 Stop Enrollment
             </button>
             <button
+                type="button"
                 id="start-btn"
                 onclick="startEnrollment()"
-                class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
-                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current" aria-hidden="true"></i>
                 Start Enrollment
             </button>
         </div>
@@ -151,7 +174,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
     </div>
 
     <!-- Section: Overview -->
-    <div id="section-overview" class="space-y-6">
+    <div id="section-overview" role="tabpanel" aria-labelledby="tab-sec-overview" class="space-y-6">
         <!-- Stats Cards Grid -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Stat card 1 -->
@@ -350,7 +373,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
     </div>
 
     <!-- Section: Runs & Active Run Table -->
-    <div id="section-runs" class="hidden space-y-6">
+    <div id="section-runs" role="tabpanel" aria-labelledby="tab-sec-runs" class="hidden space-y-6" hidden>
         <!-- Progress panel -->
         <div
             id="progress-panel"
@@ -647,7 +670,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
     </div>
 
     <!-- Section: Logs -->
-    <div id="section-logs" class="hidden space-y-6">
+    <div id="section-logs" role="tabpanel" aria-labelledby="tab-sec-logs" class="hidden space-y-6" hidden>
         <!-- Live System Logs -->
         <div
             class="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col shadow-sm"
@@ -879,21 +902,29 @@ session status, active runs, and track learning progress easily.{% endblock %}
 
     function switchDashboardSection(section) {
         const sections = ["overview", "runs", "logs"];
+        const activeTab =
+            "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1";
+        const inactiveTab =
+            "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1";
         sections.forEach((s) => {
             const el = document.getElementById(`section-${s}`);
             const tab = document.getElementById(`tab-sec-${s}`);
 
             if (s === section) {
                 el?.classList.remove("hidden");
+                if (el) el.removeAttribute("hidden");
                 if (tab) {
-                    tab.className =
-                        "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50";
+                    tab.className = activeTab;
+                    tab.setAttribute("aria-selected", "true");
+                    tab.setAttribute("tabindex", "0");
                 }
             } else {
                 el?.classList.add("hidden");
+                if (el) el.setAttribute("hidden", "");
                 if (tab) {
-                    tab.className =
-                        "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-500 hover:text-gray-900";
+                    tab.className = inactiveTab;
+                    tab.setAttribute("aria-selected", "false");
+                    tab.setAttribute("tabindex", "-1");
                 }
             }
         });
@@ -917,6 +948,48 @@ session status, active runs, and track learning progress easily.{% endblock %}
         }, 1000);
     }
 
+    function formatSessionRemaining(seconds) {
+        if (seconds == null || seconds < 0) return null;
+        if (seconds < 60) return "less than a minute";
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const days = Math.floor(hours / 24);
+        if (days >= 2) return `about ${days} days`;
+        if (days === 1) return "about 1 day";
+        if (hours >= 2) return `about ${hours} hours`;
+        if (hours === 1) return mins > 5 ? "about 1 hour" : "about 1 hour";
+        if (mins >= 2) return `about ${mins} minutes`;
+        return "about 1 minute";
+    }
+
+    function updateSessionExpiryNote(data) {
+        const el = document.getElementById("session-expiry-note");
+        if (!el) return;
+        const remaining = data.session_seconds_remaining;
+        const env = data.deployment_env || "local";
+        const label = formatSessionRemaining(remaining);
+        if (label == null) {
+            el.classList.add("hidden");
+            el.textContent = "";
+            return;
+        }
+        el.classList.remove("hidden");
+        if (env === "server") {
+            el.className =
+                remaining < 3600
+                    ? "text-xs mt-1.5 max-w-xl leading-relaxed text-amber-800 bg-amber-50 border border-amber-100 rounded-md px-2 py-1"
+                    : "text-xs mt-1.5 max-w-xl leading-relaxed text-gray-500";
+            el.textContent =
+                remaining < 3600
+                    ? `Hosted demo session ends in ${label}. Connect again after it expires. Prefer self-hosting for longer control.`
+                    : `Hosted demo session ends in ${label} (about 24 hours from login). You’ll need to connect again after that.`;
+        } else {
+            el.className =
+                "text-xs mt-1.5 max-w-xl leading-relaxed text-gray-600";
+            el.textContent = `Local session ends in ${label}.`;
+        }
+    }
+
     async function checkAuth() {
         try {
             const resp = await fetch("/api/auth/status");
@@ -927,6 +1000,7 @@ session status, active runs, and track learning progress easily.{% endblock %}
             }
             document.getElementById("header-user-name").textContent =
                 data.display_name;
+            updateSessionExpiryNote(data);
             return true;
         } catch (e) {
             window.location.href = "/";
@@ -1002,11 +1076,11 @@ session status, active runs, and track learning progress easily.{% endblock %}
                     <td class="px-6 py-4">${statusBadge}</td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-2">
-                            <a href="/api/enrollment/run/${escapeAttr(String(run.run_id))}/export" class="p-1 text-gray-400 hover:text-gray-900 transition-colors" title="Export CSV">
-                                <i data-lucide="file-output" class="w-4 h-4"></i>
+                            <a href="/api/enrollment/run/${escapeAttr(String(run.run_id))}/export" class="inline-flex items-center justify-center min-h-[32px] min-w-[32px] p-1.5 text-gray-600 hover:text-gray-900 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" title="Export CSV" aria-label="Export run ${escapeAttr(String(run.run_id))} as CSV">
+                                <i data-lucide="file-output" class="w-4 h-4" aria-hidden="true"></i>
                             </a>
-                            <button onclick="deleteRun(${escapeAttr(String(run.run_id))})" class="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Delete Run" ${["pending", "scraping", "enrolling"].includes(run.status) ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ""}>
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            <button type="button" onclick="deleteRun(${escapeAttr(String(run.run_id))})" class="inline-flex items-center justify-center min-h-[32px] min-w-[32px] p-1.5 text-gray-600 hover:text-red-500 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" title="Delete Run" aria-label="Delete run ${escapeAttr(String(run.run_id))}" ${["pending", "scraping", "enrolling"].includes(run.status) ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ""}>
+                                <i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i>
                             </button>
                         </div>
                     </td>
@@ -1027,13 +1101,15 @@ session status, active runs, and track learning progress easily.{% endblock %}
     }
 
     async function deleteRun(runId) {
-        if (
-            !confirm(
-                "Are you sure you want to delete this run? Your lifetime metrics will be kept, but course records for this run will be permanently deleted.",
-            )
-        ) {
-            return;
-        }
+        const ok = await window.accessibleConfirm({
+            title: "Delete this run?",
+            message:
+                "Your lifetime metrics will be kept, but course records for this run will be permanently deleted.",
+            confirmLabel: "Delete run",
+            cancelLabel: "Cancel",
+            danger: true,
+        });
+        if (!ok) return;
 
         try {
             const resp = await apiFetch(`/api/enrollment/run/${runId}`, {
@@ -1058,6 +1134,19 @@ session status, active runs, and track learning progress easily.{% endblock %}
     }
 
     async function startEnrollment() {
+        const ok = await window.accessibleConfirm({
+            title: "Start enrollment?",
+            message:
+                "This uses your connected Udemy session to attempt enrollments. " +
+                "Success is not guaranteed. Coupons may be expired, courses may be " +
+                "unavailable, and automation may conflict with Udemy's Terms of Use. " +
+                "This project is not affiliated with Udemy.",
+            confirmLabel: "Start enrollment",
+            cancelLabel: "Cancel",
+            danger: false,
+        });
+        if (!ok) return;
+
         const btn = document.getElementById("start-btn");
         const origText = btn.innerHTML;
         btn.disabled = true;
@@ -1722,15 +1811,47 @@ session status, active runs, and track learning progress easily.{% endblock %}
 
         const modal = document.getElementById("stats-modal");
         const card = document.getElementById("stats-modal-card");
+        window._statsModalLastFocus = document.activeElement;
         modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+        document.addEventListener("keydown", onStatsModalKeydown, true);
 
         requestAnimationFrame(() => {
             card.classList.remove("scale-95", "opacity-0");
             card.classList.add("scale-100", "opacity-100");
+            const closeBtn = modal.querySelector('[aria-label="Close dialog"]');
+            if (closeBtn) closeBtn.focus();
         });
 
         if (window.lucide) {
             lucide.createIcons();
+        }
+    }
+
+    function onStatsModalKeydown(e) {
+        const modal = document.getElementById("stats-modal");
+        if (!modal || modal.classList.contains("hidden")) return;
+        if (e.key === "Escape") {
+            e.preventDefault();
+            closeStatsModal();
+            return;
+        }
+        if (e.key !== "Tab") return;
+        const focusable = modal.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        const nodes = Array.from(focusable).filter(
+            (el) => el.offsetParent !== null || el === document.activeElement,
+        );
+        if (!nodes.length) return;
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
         }
     }
 
@@ -1740,9 +1861,18 @@ session status, active runs, and track learning progress easily.{% endblock %}
 
         card.classList.remove("scale-100", "opacity-100");
         card.classList.add("scale-95", "opacity-0");
+        document.removeEventListener("keydown", onStatsModalKeydown, true);
+        document.body.classList.remove("overflow-hidden");
 
         setTimeout(() => {
             modal.classList.add("hidden");
+            const prev = window._statsModalLastFocus;
+            if (prev && typeof prev.focus === "function") {
+                try {
+                    prev.focus();
+                } catch (e) {}
+            }
+            window._statsModalLastFocus = null;
         }, 300);
     }
 </script>

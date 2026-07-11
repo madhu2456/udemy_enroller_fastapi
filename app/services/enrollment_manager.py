@@ -383,6 +383,18 @@ class EnrollmentManager:
             _health = self.udemy.get_session_health_report()
             logger.info(f"Enrollment pipeline completed. Enrolled: {self.udemy.successfully_enrolled_c}")
 
+            # Refresh public coupon listing + sitemap (same as scripts/coupon_checker)
+            try:
+                from app.services.public_deals_export import export_public_deals_json
+
+                n = export_public_deals_json(db)  # also rebuilds sitemap deal URLs
+                logger.info(
+                    f"Updated public_deals.json + sitemap after enrollment "
+                    f"({n} valid coupons)"
+                )
+            except Exception as e:
+                logger.warning(f"Could not update public_deals/sitemap after enrollment: {e}")
+
         except asyncio.CancelledError:
             logger.info(f"Enrollment pipeline {self.run_id} cancelled")
             cleanup_db = SessionLocal()
@@ -392,6 +404,13 @@ class EnrollmentManager:
                     run.status = "cancelled"
                     run.completed_at = _utcnow_naive()
                     cleanup_db.commit()
+                # Still refresh deals from DB (partial coupon checks during the run)
+                try:
+                    from app.services.public_deals_export import export_public_deals_json
+
+                    export_public_deals_json(cleanup_db)
+                except Exception as exp:
+                    logger.warning(f"public_deals export on cancel failed: {exp}")
             finally:
                 cleanup_db.close()
             raise
@@ -404,6 +423,12 @@ class EnrollmentManager:
                     run.error_message = str(e)
                     run.completed_at = _utcnow_naive()
                     db.commit()
+                try:
+                    from app.services.public_deals_export import export_public_deals_json
+
+                    export_public_deals_json(db)
+                except Exception as exp:
+                    logger.warning(f"public_deals export on failure failed: {exp}")
             except Exception:
                 pass
         finally:
@@ -452,6 +477,21 @@ class EnrollmentManager:
             # only if status is enrolled. Otherwise it's just 0.0.
             price_val = float(course.list_price or course.price or 0.0)
 
+            # Persist coupon validity so public_deals.json can be rebuilt after runs
+            # (same fields the standalone coupon_checker updates).
+            coupon_valid = None
+            if course.coupon_code:
+                coupon_valid = bool(getattr(course, "is_coupon_valid", False))
+            list_price = float(
+                getattr(course, "list_price", None) or course.price or price_val or 0.0
+            )
+            # Enrolled rows keep savings amount; valid free deals also keep list price for UI
+            stored_price = (
+                price_val
+                if status == "enrolled"
+                else (list_price if coupon_valid else 0.0)
+            )
+
             ec = EnrolledCourse(
                 enrollment_run_id=run.id,
                 title=course.title,
@@ -459,13 +499,15 @@ class EnrollmentManager:
                 slug=course.slug,
                 course_id=course.course_id,
                 coupon_code=course.coupon_code,
-                price=price_val if status == "enrolled" else 0.0,
+                price=stored_price,
                 category=course.category,
                 language=course.language,
                 rating=course.rating,
                 site_source=course.site,
                 status=status,
                 error_message=error_msg or course.error,
+                is_coupon_valid=coupon_valid,
+                last_checked_at=_utcnow_naive() if course.coupon_code else None,
             )
             db.add(ec)
 

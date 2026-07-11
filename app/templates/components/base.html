@@ -15,11 +15,11 @@
         />
         <meta
             name="description"
-            content="{% block meta_description %}Automatically claim 100% off Udemy courses and free Udemy coupons. Our automated Udemy course enroller monitors top coupon aggregator sites and enrolls you automatically - no manual hunting required.{% endblock %}"
+            content="{% block meta_description %}Open-source helper to find 100% off Udemy coupons and attempt enrollment when you start a run. Not affiliated with Udemy. Enrollment is not guaranteed.{% endblock %}"
         />
         <meta
             name="keywords"
-            content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, automated udemy enroller, udemy free coupon 2026, udemy course automation, udemy promo codes, free online courses with certificates, udemy enroller tool, udemy coupon scraper, free udemy courses 2026{% endblock %}"
+            content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, udemy enroller, free udemy coupon, course enrollment helper, open source udemy tool{% endblock %}"
         />
         <meta name="author" content="Madhu Dadi" />
         <meta name="application-name" content="Udemy Enroller" />
@@ -99,7 +99,7 @@
         />
         <meta
             property="og:description"
-            content="{% block og_description %}An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.{% endblock %}"
+            content="{% block og_description %}An open-source FastAPI tool that monitors coupon aggregator sites and can attempt enrollment in free Udemy courses when you start a run. Not affiliated with Udemy.{% endblock %}"
         />
         <meta
             property="og:image"
@@ -125,7 +125,7 @@
         />
         <meta
             name="twitter:description"
-            content="{% block twitter_description %}An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.{% endblock %}"
+            content="{% block twitter_description %}An open-source FastAPI tool that monitors coupon aggregator sites and can attempt enrollment in free Udemy courses when you start a run. Not affiliated with Udemy.{% endblock %}"
         />
         <meta
             name="twitter:image"
@@ -142,7 +142,7 @@
         />
         <link rel="apple-touch-icon" href="/static/images/icon-512.webp" />
 
-        <!-- JSON-LD Structured Data — comprehensive site-wide schemas -->
+        <!-- JSON-LD site graph (compact @id references; single SoftwareApplication) -->
         <script type="application/ld+json">
             {
                 "@context": "https://schema.org",
@@ -152,27 +152,13 @@
                         "@id": "https://udemyenroller.madhudadi.in/#website",
                         "url": "https://udemyenroller.madhudadi.in",
                         "name": "Udemy Enroller",
-                        "alternateName": "Udemy Course Enroller",
-                        "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
+                        "description": "Open-source tool that can attempt free Udemy enrollments when you start a run. Not affiliated with Udemy.",
                         "inLanguage": "en",
-                        "isPartOf": {
-                            "@type": "WebSite",
-                            "@id": "https://madhudadi.in/#website",
-                            "url": "https://madhudadi.in",
-                            "name": "Madhu Dadi - Portfolio"
-                        },
-                        "publisher": {
-                            "@type": "Person",
-                            "@id": "https://madhudadi.in/#person",
-                            "name": "Madhu Dadi",
-                            "url": "https://madhudadi.in"
-                        },
+                        "isPartOf": { "@id": "https://madhudadi.in/#website" },
+                        "publisher": { "@id": "https://madhudadi.in/#person" },
                         "potentialAction": {
                             "@type": "SearchAction",
-                            "target": {
-                                "@type": "EntryPoint",
-                                "urlTemplate": "https://udemyenroller.madhudadi.in/udemycoupons?q={search_term_string}"
-                            },
+                            "target": "https://udemyenroller.madhudadi.in/udemycoupons?q={search_term_string}",
                             "query-input": "required name=search_term_string"
                         }
                     },
@@ -181,13 +167,9 @@
                         "@id": "https://madhudadi.in/#person",
                         "name": "Madhu Dadi",
                         "url": "https://madhudadi.in",
-                        "jobTitle": "AI Developer & Marketing Analytics Leader",
-                        "description": "AI consultant and ML engineer with 9+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
                         "sameAs": [
-                            "https://madhudadi.in/blog",
                             "https://github.com/madhu2456",
-                            "https://www.linkedin.com/in/madhu-dadi-54684531",
-                            "https://x.com/madhu245"
+                            "https://www.linkedin.com/in/madhu-dadi-54684531"
                         ]
                     },
                     {
@@ -197,23 +179,21 @@
                         "applicationCategory": "EducationalApplication",
                         "operatingSystem": "Web",
                         "url": "https://udemyenroller.madhudadi.in",
-                        "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
+                        "description": "Open-source FastAPI helper for free Udemy coupons. Not affiliated with Udemy. Enrollment not guaranteed.",
                         "offers": {
                             "@type": "Offer",
                             "price": "0",
                             "priceCurrency": "USD"
                         },
-                        "author": {
-                            "@type": "Person",
-                            "@id": "https://madhudadi.in/#person"
-                        }
+                        "author": { "@id": "https://madhudadi.in/#person" },
+                        "codeRepository": "https://github.com/madhu2456/udemy_enroller_fastapi",
+                        "license": "https://opensource.org/licenses/MIT"
                     },
                     {
                         "@type": "Organization",
                         "@id": "https://adticks.com/#organization",
                         "name": "Adticks",
-                        "url": "https://adticks.com",
-                        "description": "Real-time AI Visibility & SERP Intelligence Platform. Crawls 10,000+ pages in parallel with Playwright for SEO, AEO, and GEO auditing."
+                        "url": "https://adticks.com"
                     }
                 ]
             }
@@ -238,163 +218,8 @@
 
         <!-- Lucide Icons CDN -->
         <script defer src="https://unpkg.com/lucide@0.469.0" nonce="{{ request.state.nonce }}"></script>
+        <link rel="stylesheet" href="/static/css/site.css" />
 
-        <style>
-            /* Custom styles matching premium light mode */
-            html {
-                overflow-x: clip;
-            }
-
-            body {
-                margin: 0;
-                overflow-x: clip;
-                max-width: 100%;
-                line-height: 1.5;
-                font-family:
-                    "Inter",
-                    ui-sans-serif,
-                    system-ui,
-                    -apple-system,
-                    BlinkMacSystemFont,
-                    "Segoe UI",
-                    Roboto,
-                    "Helvetica Neue",
-                    Arial,
-                    sans-serif;
-                background-color: #f9fafb;
-                color: #111827;
-            }
-
-            /* Custom Scrollbar */
-            ::-webkit-scrollbar {
-                width: 6px;
-                height: 6px;
-            }
-            ::-webkit-scrollbar-track {
-                background: transparent;
-            }
-            ::-webkit-scrollbar-thumb {
-                background: #e5e7eb;
-                border-radius: 3px;
-            }
-            ::-webkit-scrollbar-thumb:hover {
-                background: #d1d5db;
-            }
-
-            /* Active navigation layout link */
-            .nav-link.active {
-                background-color: #f3f4f6;
-                color: #111827;
-            }
-
-            /* Card and button micro-transitions */
-            * {
-                transition-property:
-                    background-color, border-color, color, transform, box-shadow;
-                transition-duration: 200ms;
-                transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            /* Checkbox custom pill toggle checkmarks */
-            .checkbox-pill input[type="checkbox"]:checked ~ .checkmark-box {
-                background-color: #2563eb;
-                border-color: #2563eb;
-            }
-
-            /* Sonner-style custom Toast notifications */
-            .toast {
-                position: fixed;
-                bottom: 1.5rem;
-                right: 1.5rem;
-                padding: 1rem 1.25rem;
-                background-color: #18191b;
-                border: 1px solid #2c2d2f;
-                color: #f2f2f2;
-                border-radius: 12px;
-                box-shadow:
-                    0 10px 25px -5px rgba(0, 0, 0, 0.15),
-                    0 8px 10px -6px rgba(0, 0, 0, 0.15);
-                font-size: 0.8125rem;
-                font-weight: 500;
-                z-index: 1000;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                min-width: 280px;
-                max-width: 380px;
-                animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            }
-            @keyframes slideUp {
-                from {
-                    transform: translateY(1rem);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateY(0);
-                    opacity: 1;
-                }
-            }
-
-            @media (max-width: 767px) {
-                .toast {
-                    bottom: auto;
-                    top: 1rem;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    right: auto;
-                    width: calc(100% - 2rem);
-                    max-width: 380px;
-                    min-width: 0;
-                    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                }
-                @keyframes slideDown {
-                    from {
-                        transform: translate(-50%, -1rem);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translate(-50%, 0);
-                        opacity: 1;
-                    }
-                }
-            }
-
-            /* Respect reduced motion preferences (WCAG 2.3.3) */
-            @media (prefers-reduced-motion: reduce) {
-                *,
-                *::before,
-                *::after {
-                    animation-duration: 0.01ms !important;
-                    animation-iteration-count: 1 !important;
-                    transition-duration: 0.01ms !important;
-                    scroll-behavior: auto !important;
-                }
-            }
-
-            .no-scrollbar::-webkit-scrollbar {
-                display: none;
-            }
-            .no-scrollbar {
-                -ms-overflow-style: none;
-                scrollbar-width: none;
-            }
-            .mask-edges {
-                -webkit-mask-image: linear-gradient(
-                    to right,
-                    transparent,
-                    black 10px,
-                    black calc(100% - 10px),
-                    transparent
-                );
-                mask-image: linear-gradient(
-                    to right,
-                    transparent,
-                    black 10px,
-                    black calc(100% - 10px),
-                    transparent
-                );
-            }
-        </style>
         {% block extra_head %}{% endblock %}
         {% if request.app.state.gtm_container_id %}
         <!-- Google Tag Manager (consent-gated) -->
@@ -478,8 +303,8 @@
                     class="animate-pulse w-2 h-2 rounded-full bg-green-500 inline-block shadow-[0_0_8px_rgba(34,197,94,0.6)]"
                 ></span>
                 <span
-                    ><strong>New Feature:</strong> Access our live database of
-                    manually verified, 100% free Udemy coupons!</span
+                    ><strong>Free coupons:</strong> Browse public listings of
+                    free Udemy course coupons (validity can change).</span
                 >
                 <a
                     href="/udemycoupons"
@@ -632,10 +457,12 @@
                     <!-- Logout -->
                     <button
                         id="logout-btn"
-                        class="hidden flex items-center gap-1.5 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-200 transition-colors"
+                        type="button"
+                        aria-label="Logout"
+                        class="hidden flex items-center gap-1.5 min-h-[28px] px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                         onclick="logout()"
                     >
-                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                        <i data-lucide="log-out" class="w-3.5 h-3.5" aria-hidden="true"></i>
                         <span class="hidden sm:inline">Logout</span>
                     </button>
                 </div>
@@ -670,54 +497,66 @@
                     <!-- Links -->
                     <nav
                         role="navigation"
-                        class="flex items-center flex-wrap justify-center gap-x-6 gap-y-2 h-7"
+                        class="flex items-center flex-wrap justify-center gap-x-4 gap-y-3"
                         aria-label="Footer navigation"
                     >
                         <a
                             href="/udemycoupons"
-                            class="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs font-medium text-blue-700 hover:text-blue-900 transition-colors"
                             >Free Udemy Coupons</a
                         >
                         <a
+                            href="/guides/free-udemy-coupons"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                            >How Coupons Work</a
+                        >
+                        <a
                             href="/guides"
-                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Guides</a
                         >
                         <a
                             href="/faq"
-                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >FAQ</a
                         >
                         <a
                             href="/about"
-                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >About</a
                         >
                         <a
                             href="/privacy"
-                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Privacy</a
                         >
                         <a
                             href="https://madhudadi.in/blog"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Blog</a
                         >
                         <a
                             href="https://madhudadi.in"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Madhu Dadi</a
                         >
                         <a
                             href="https://github.com/madhu2456/udemy_enroller_fastapi"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2 transition-colors"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2 transition-colors"
                             >GitHub</a
+                        >
+                        <a
+                            href="https://github.com/madhu2456/udemy_enroller_fastapi/issues"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                            >Report an issue</a
                         >
                     </nav>
 
@@ -859,7 +698,7 @@
             <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0 w-full">
                 <p class="text-sm text-gray-600 min-w-0 flex-1">
                     This site uses analytics cookies to improve your experience.
-                    <a href="/privacy" class="text-blue-600 hover:underline">Read our privacy policy</a>.
+                    <a href="/privacy" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Read our privacy policy</a>.
                 </p>
                 <div class="flex gap-2 flex-shrink-0">
                     <button id="cookie-decline" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
@@ -905,6 +744,158 @@
             })();
         </script>
         {% endif %}
+
+        <!-- Accessible confirm dialog (replaces window.confirm where used) -->
+        <div
+            id="a11y-confirm-root"
+            class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+            role="presentation"
+        >
+            <div
+                class="absolute inset-0 bg-black/40"
+                data-a11y-confirm-backdrop
+                tabindex="-1"
+            ></div>
+            <div
+                id="a11y-confirm-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="a11y-confirm-title"
+                aria-describedby="a11y-confirm-desc"
+                class="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-5 shadow-xl"
+            >
+                <h2
+                    id="a11y-confirm-title"
+                    class="text-base font-semibold text-gray-900 tracking-tight"
+                ></h2>
+                <p
+                    id="a11y-confirm-desc"
+                    class="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap"
+                ></p>
+                <div class="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <button
+                        type="button"
+                        id="a11y-confirm-cancel"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        id="a11y-confirm-ok"
+                        class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                    >
+                        Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script nonce="{{ request.state.nonce }}">
+            (function () {
+                var root = document.getElementById("a11y-confirm-root");
+                if (!root) return;
+                var dialog = document.getElementById("a11y-confirm-dialog");
+                var titleEl = document.getElementById("a11y-confirm-title");
+                var descEl = document.getElementById("a11y-confirm-desc");
+                var okBtn = document.getElementById("a11y-confirm-ok");
+                var cancelBtn = document.getElementById("a11y-confirm-cancel");
+                var backdrop = root.querySelector("[data-a11y-confirm-backdrop]");
+                var lastFocus = null;
+                var resolver = null;
+
+                function getFocusable() {
+                    return [cancelBtn, okBtn].filter(function (el) {
+                        return el && !el.disabled;
+                    });
+                }
+
+                function close(result) {
+                    root.classList.add("hidden");
+                    document.body.classList.remove("overflow-hidden");
+                    document.removeEventListener("keydown", onKeydown, true);
+                    if (lastFocus && typeof lastFocus.focus === "function") {
+                        try {
+                            lastFocus.focus();
+                        } catch (e) {}
+                    }
+                    lastFocus = null;
+                    if (resolver) {
+                        var r = resolver;
+                        resolver = null;
+                        r(result);
+                    }
+                }
+
+                function onKeydown(e) {
+                    if (root.classList.contains("hidden")) return;
+                    if (e.key === "Escape") {
+                        e.preventDefault();
+                        close(false);
+                        return;
+                    }
+                    if (e.key !== "Tab") return;
+                    var nodes = getFocusable();
+                    if (!nodes.length) return;
+                    var first = nodes[0];
+                    var last = nodes[nodes.length - 1];
+                    if (e.shiftKey) {
+                        if (document.activeElement === first) {
+                            e.preventDefault();
+                            last.focus();
+                        }
+                    } else if (document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+
+                /**
+                 * Accessible confirm. Returns Promise<boolean>.
+                 * opts: { title, message, confirmLabel, cancelLabel, danger }
+                 */
+                window.accessibleConfirm = function (opts) {
+                    opts = opts || {};
+                    return new Promise(function (resolve) {
+                        if (resolver) {
+                            // Nested confirm: resolve previous as cancel
+                            resolver(false);
+                        }
+                        resolver = resolve;
+                        lastFocus = document.activeElement;
+                        titleEl.textContent = opts.title || "Please confirm";
+                        descEl.textContent = opts.message || "";
+                        okBtn.textContent = opts.confirmLabel || "Continue";
+                        cancelBtn.textContent = opts.cancelLabel || "Cancel";
+                        if (opts.danger) {
+                            okBtn.className =
+                                "px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2";
+                        } else {
+                            okBtn.className =
+                                "px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2";
+                        }
+                        root.classList.remove("hidden");
+                        document.body.classList.add("overflow-hidden");
+                        document.addEventListener("keydown", onKeydown, true);
+                        setTimeout(function () {
+                            okBtn.focus();
+                        }, 0);
+                    });
+                };
+
+                okBtn.addEventListener("click", function () {
+                    close(true);
+                });
+                cancelBtn.addEventListener("click", function () {
+                    close(false);
+                });
+                if (backdrop) {
+                    backdrop.addEventListener("click", function () {
+                        close(false);
+                    });
+                }
+            })();
+        </script>
         {% block scripts %}{% endblock %}
     </body>
 </html>
+

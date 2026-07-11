@@ -46,6 +46,11 @@ from loguru import logger
 from app.logging_config import setup_logging
 from app.models.database import create_tables, engine
 from app.routers import auth, dashboard, enrollment, public_deals, seo, settings
+from app.security import (
+    _client_key,
+    analytics_rate_limiter,
+    csp_report_rate_limiter,
+)
 from config.settings import get_settings
 
 # Configure logging with JSON support
@@ -240,24 +245,37 @@ async def add_cache_headers(request: Request, call_next):
     if path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     elif path in {
-        "/",
+        # Fully public, non-personalized content — short CDN/browser cache
         "/faq",
         "/about",
         "/guides",
         "/privacy",
-        "/udemycoupons",
         "/robots.txt",
         "/sitemap.xml",
         "/humans.txt",
         "/llms.txt",
         "/ai-profile.json",
+        "/.well-known/security.txt",
+        "/security.txt",
     }:
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Vary"] = "Cookie"
-    elif path in {"/dashboard", "/settings", "/history"} or path.startswith("/api/"):
+        # max-age=120: up to 2 minutes stale after deploy; SWR keeps serving while revalidating
+        response.headers["Cache-Control"] = (
+            "public, max-age=120, stale-while-revalidate=600"
+        )
+    elif path in {
+        # Personalized or frequently changing — do not store
+        "/",
+        "/udemycoupons",
+        "/dashboard",
+        "/settings",
+        "/history",
+    } or path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+        if path == "/":
+            # Homepage may vary by session cookie (redirect vs marketing)
+            response.headers["Vary"] = "Cookie"
 
     return response
 
@@ -327,7 +345,9 @@ async def health_check(request: Request):
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
     except Exception as e:
-        db_status = f"unhealthy: {e}"
+        # Do not expose exception details publicly
+        logger.warning(f"Health check database probe failed: {e}")
+        db_status = "unhealthy"
 
     return {
         "status": "healthy" if db_status == "healthy" else "degraded",
@@ -340,10 +360,11 @@ async def health_check(request: Request):
 async def track_analytics_event(request: Request):
     """Privacy-friendly analytics endpoint for tracking CTA clicks and outbound links.
     No PII is stored. Events are logged to the application log file only."""
+    analytics_rate_limiter.raise_if_limited(_client_key(request))
     try:
         body = await request.json()
-        event_type = body.get("type", "unknown")
-        event_target = body.get("target", "")[:200]  # Truncate for safety
+        event_type = str(body.get("type", "unknown"))[:64]
+        event_target = str(body.get("target", ""))[:200]
         logger.info(f"[analytics] {event_type}: {event_target}")
     except Exception:
         pass
@@ -352,10 +373,13 @@ async def track_analytics_event(request: Request):
 
 @app.post("/api/csp-violation")
 async def csp_violation(request: Request):
-    """Receive and log CSP violation reports."""
+    """Receive and log CSP violation reports (rate-limited)."""
+    csp_report_rate_limiter.raise_if_limited(_client_key(request))
     try:
         report = await request.json()
-        logger.warning(f"CSP violation: {json.dumps(report, indent=2)}")
+        # Cap log size to avoid multi-MB report spam
+        raw = json.dumps(report)[:4000]
+        logger.warning(f"CSP violation: {raw}")
     except Exception as e:
         logger.warning(f"CSP violation (parse error): {e}")
     return Response(status_code=204)

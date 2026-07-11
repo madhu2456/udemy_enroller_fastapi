@@ -1,15 +1,14 @@
 {% extends "components/base.html" %} {% block title %}Frequently Asked Questions
 - Udemy Enroller Automation Tool{% endblock %} {% block meta_title %}Frequently Asked Questions
-- Udemy Enroller Automation Tool{% endblock %} {% block meta_description %}Answers to
-common questions about the Udemy Enroller automation tool: how it works, security,
-privacy, filters, Cookie vs Email login, coupon accuracy, and free Udemy courses.{% endblock %} {% block og_type
+- Udemy Enroller Automation Tool{% endblock %} {% block meta_description %}FAQ for Udemy Enroller: how runs work, security,
+privacy, filters, cookie login, and free coupons. Not affiliated with Udemy.
+Enrollment is not guaranteed.{% endblock %} {% block og_type
 %}article{% endblock %} {% block og_title
-%}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}Answers to
-common questions about the Udemy Enroller automation tool: how it works, security,
-filters, and authentication.{% endblock %} {% block twitter_title %}Frequently Asked Questions - Udemy
-Enroller Automation Tool{% endblock %} {% block twitter_description %}Answers to
-common questions about the Udemy Enroller automation tool: how it works, security,
-filters, and authentication.{% endblock %} {% block content %}
+%}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}FAQ for Udemy Enroller: how it works, security, privacy,
+filters, and login. Not affiliated with Udemy. Enrollment not guaranteed.{% endblock %} {% block twitter_title %}Frequently Asked Questions - Udemy
+Enroller Automation Tool{% endblock %} {% block twitter_description %}FAQ for
+Udemy Enroller: how it works, security, privacy, and login. Not affiliated with
+Udemy.{% endblock %} {% block content %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -48,7 +47,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "How does the automated Udemy course enroller work?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "The tool continuously monitors a curated list of coupon aggregator websites - sites like Real.Discount, FreeCourseSites, FreeWebCart, E-next, and others. The moment a new 100% off Udemy coupon is detected, the engine validates it against your smart filters and applies it to your Udemy account via Udemy's enrollment endpoints, enrolling you automatically without any manual action."
+                    "text": "When you start an enrollment run on a running app instance, the tool monitors configured coupon aggregator websites (for example Real.Discount, FreeCourseSites, FreeWebCart, E-next, and others in the app registry). It validates matching 100% off listings against your filters and attempts enrollment via session-based Udemy endpoints. You must start a run; there is no always-on scheduler independent of the app. Enrollment is not guaranteed."
                 }
             },
             {
@@ -56,7 +55,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "Which coupon aggregator sites does it monitor?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "The open-source project ships with scrapers for the most popular coupon sites, including Real.Discount, Discudemy, and Tutorialbar. New scrapers are contributed regularly by the community. You can check the GitHub repository for the current list."
+                    "text": "The open-source project ships with scrapers for popular coupon sites, including Real.Discount, Discudemy, and Tutorialbar. New scrapers are contributed by the community. Check the GitHub repository for the current list."
                 }
             },
             {
@@ -64,15 +63,15 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "How fast does enrollment happen after a coupon is posted?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Enrollment typically completes within seconds of coupon detection. The engine polls continuously and applies coupons programmatically, reducing the chance of a coupon expiring before you claim it."
+                    "text": "While a run is active, the engine polls configured sources and attempts enrollment programmatically. Timing depends on when you start the run, network conditions, and coupon inventory. Coupons can still expire or fail; success is not guaranteed."
                 }
             },
             {
                 "@type": "Question",
-                "name": "Does the tool work 24/7 without me being online?",
+                "name": "Does the tool work without me staying in the browser?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. Once the engine is running (either locally or on a server), it operates continuously in the background. You do not need to keep a browser or tab open."
+                    "text": "While an enrollment run is active on a running app instance (local or self-hosted server), work continues in the app process without an open browser tab. There is no separate built-in always-on scheduler independent of the running application. You must start a run and keep the service running for background work."
                 }
             },
             {
@@ -80,7 +79,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "Can I just view the coupons without automating my account?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Absolutely! You can manually browse our live database of 100% Free Udemy Coupons. Our system checks and verifies these coupons continuously throughout the day, so you can manually claim whichever ones you want."
+                    "text": "Yes. Browse the public free-coupon listings at /udemycoupons and claim manually on Udemy. Listings refresh when enrollment runs or the coupon checker finish. Validity can change; always confirm the price on Udemy."
                 }
             },
             {
@@ -88,7 +87,7 @@ filters, and authentication.{% endblock %} {% block content %}
                 "name": "Is it safe to connect my Udemy account?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. The tool uses your Udemy session tokens with the same enrollment endpoints as the Udemy website. Session cookies are Fernet-encrypted before storage on the instance running the app (self-hosted or hosted demo). Your password is never stored. Udemy credentials are not sold or shared with third parties. Anonymous analytics (GTM/GA4) load only after cookie consent. The project is open source on GitHub."
+                    "text": "Session cookies are Fernet-encrypted before storage on the instance running the app (self-hosted machine or the hosted demo server). Passwords are never stored. Credentials are not sold or shared with third parties. Anonymous analytics (GTM/GA4) load only after cookie consent. The tool uses session-authenticated enrollment endpoints (not a Udemy partnership). That does not mean your account cannot be limited for automated access—you must follow Udemy's Terms of Use. Prefer self-hosting for greater control over where session data lives. See /privacy. The project is open source on GitHub."
                 }
             },
             {
@@ -185,10 +184,15 @@ filters, and authentication.{% endblock %} {% block content %}
                 >
                     Frequently Asked Questions
                 </h1>
-                <p class="text-sm text-gray-500 leading-relaxed">
+                <p class="text-sm text-gray-500 leading-relaxed mb-3">
                     Everything you need to know about how the Udemy Enroller
                     works, how to set it up, and how to keep your account
                     secure.
+                </p>
+                <p class="text-sm">
+                    <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2 font-medium">How free Udemy coupons work</a>
+                    ·
+                    <a href="/udemycoupons" class="text-blue-700 underline underline-offset-2 font-medium">Browse free coupons</a>
                 </p>
             </div>
         </section>
@@ -238,15 +242,17 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    The tool continuously monitors a curated
-                                    list of coupon aggregator websites - sites
-                                    like Real.Discount, Discudemy, Tutorialbar,
-                                    and others. The moment a new 100% off Udemy
-                                    coupon is detected, the engine validates it
-                                    against your smart filters and applies it to
-                                    your Udemy account via Udemy's enrollment endpoints,
-                                    enrolling you automatically without any manual
-                                    action.
+                                    When you start an enrollment run on a
+                                    running app instance, the tool monitors
+                                    configured coupon aggregator websites —
+                                    sites like Real.Discount, Discudemy,
+                                    Tutorialbar, and others in the registry. It
+                                    validates matching 100% off listings against
+                                    your smart filters and attempts enrollment
+                                    via session-based Udemy endpoints. Success
+                                    is not guaranteed; you must start a run
+                                    (there is no always-on scheduler independent
+                                    of the app).
                                 </p>
                             </div>
                         </div>
@@ -283,11 +289,12 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Enrollment typically completes within seconds
-                                    of coupon detection. The engine polls
-                                    continuously and applies coupons
-                                    programmatically, reducing the chance of a
-                                    coupon expiring before you claim it.
+                                    While a run is active, the engine polls
+                                    configured sources and attempts enrollment
+                                    programmatically. Timing depends on when you
+                                    start the run, network conditions, and
+                                    coupon inventory. Coupons can still expire
+                                    or fail; success is not guaranteed.
                                 </p>
                             </div>
                         </div>
@@ -297,16 +304,20 @@ filters, and authentication.{% endblock %} {% block content %}
                             <h3
                                 class="text-sm font-semibold text-gray-900 mb-2"
                             >
-                                Does the tool work 24/7 without me being online?
+                                Does the tool work without me staying in the
+                                browser?
                             </h3>
                             <div>
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Yes. Once the engine is running (either
-                                    locally or on a server), it operates
-                                    continuously in the background. You do not
-                                    need to keep a browser or tab open.
+                                    While an enrollment run is active on a
+                                    running app instance (local or self-hosted),
+                                    work continues in the app process without an
+                                    open browser tab. There is no separate
+                                    always-on scheduler independent of the
+                                    running application—you must start a run and
+                                    keep the service running.
                                 </p>
                             </div>
                         </div>
@@ -323,16 +334,17 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Absolutely! You can manually browse our live
-                                    database of
+                                    Yes. Browse the public free-coupon listings
+                                    at
                                     <a
                                         href="/udemycoupons"
-                                        class="text-[#2563EB] hover:underline font-bold"
+                                        class="text-blue-700 underline underline-offset-2 hover:text-blue-900 font-bold"
                                         >100% Free Udemy Coupons</a
-                                    >. Our system checks and verifies these
-                                    coupons continuously throughout the day, so
-                                    you can manually claim whichever ones you
-                                    want.
+                                    >
+                                    and claim manually on Udemy. Listings
+                                    refresh when enrollment runs or the coupon
+                                    checker finish. Validity can change — always
+                                    confirm the price on Udemy.
                                 </p>
                             </div>
                         </div>
@@ -383,7 +395,7 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Users are solely responsible for ensuring their use complies with <a href="https://www.udemy.com/terms/" target="_blank" rel="noopener noreferrer" class="text-[#2563EB] hover:underline">Udemy's Terms of Use</a>.
+                                    Users are solely responsible for ensuring their use complies with <a href="https://www.udemy.com/terms/" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Udemy's Terms of Use</a>.
                                 </p>
                             </div>
                         </div>
@@ -429,16 +441,25 @@ filters, and authentication.{% endblock %} {% block content %}
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    Yes. The tool uses your Udemy session tokens
-                                    with the same enrollment endpoints as the
-                                    Udemy website. Session cookies are
-                                    Fernet-encrypted before storage on the
-                                    instance running the app (self-hosted or
-                                    hosted demo). Your password is never stored.
-                                    Udemy credentials are not sold or shared
-                                    with third parties. Anonymous analytics
-                                    (GTM/GA4) load only after cookie consent.
-                                    The project is open source on GitHub.
+                                    Session cookies are Fernet-encrypted before
+                                    storage on the instance running the app
+                                    (self-hosted machine or the hosted demo
+                                    server). Passwords are never stored.
+                                    Credentials are not sold or shared with
+                                    third parties. Anonymous analytics (GTM/GA4)
+                                    load only after cookie consent. The tool
+                                    uses session-authenticated enrollment
+                                    endpoints (not a Udemy partnership). That
+                                    does not mean your account cannot be limited
+                                    for automated access—you must follow
+                                    Udemy's Terms of Use. Prefer self-hosting
+                                    for greater control over where session data
+                                    lives. See
+                                    <a
+                                        href="/privacy"
+                                        class="text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm"
+                                        >Privacy</a
+                                    >. The project is open source on GitHub.
                                 </p>
                             </div>
                         </div>

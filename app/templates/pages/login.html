@@ -1,101 +1,55 @@
 {% extends "components/base.html" %} {% block title %}Free Udemy Courses
 Automation | Udemy Enroller by Madhu Dadi{% endblock %} {% block meta_title
 %}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{% endblock %} {%
-block meta_description %}Automate your learning with 100% off free Udemy
-courses. Our engine monitors coupon sites and enrolls you automatically. Stop
-hunting for codes.{% endblock %} {% block og_title %}Free Udemy Courses
+block meta_description %}Open-source helper for 100% off Udemy coupons. Start a
+run to monitor configured sources and attempt enrollment. Not guaranteed. Not
+affiliated with Udemy.{% endblock %} {% block og_title %}Free Udemy Courses
 Automation | Udemy Enroller by Madhu Dadi{% endblock %} {% block og_description
-%}Automate your learning with 100% off free Udemy courses. Our engine monitors
-coupon sites and enrolls you automatically. Stop hunting for codes.{% endblock %} {%
+%}Open-source helper for 100% off Udemy coupons. Start a run to monitor
+configured sources and attempt enrollment. Not guaranteed. Not affiliated with
+Udemy.{% endblock %} {%
 block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu
-Dadi{% endblock %} {% block twitter_description %}Automate your learning with
-100% off free Udemy courses. Our engine monitors coupon sites and enrolls you
-automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
+Dadi{% endblock %} {% block twitter_description %}Open-source helper for 100%
+off Udemy coupons. Start a run to monitor sources and attempt enrollment. Not
+guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@graph": [
             {
-                "@type": "SoftwareApplication",
+                "@type": "WebPage",
+                "@id": "https://udemyenroller.madhudadi.in/#webpage",
+                "url": "https://udemyenroller.madhudadi.in/",
                 "name": "Udemy Enroller",
-                "operatingSystem": "Web",
-                "applicationCategory": "EducationalApplication",
-                "description": "An open-source FastAPI tool that monitors coupon aggregator sites and enrolls users in free Udemy courses automatically.",
-                "url": "https://udemyenroller.madhudadi.in",
-                "author": {
-                    "@type": "Person",
-                    "@id": "https://madhudadi.in/#person",
-                    "name": "Madhu Dadi",
-                    "url": "https://madhudadi.in",
-                    "jobTitle": "AI Developer & Marketing Analytics Leader",
-                    "sameAs": [
-                        "https://madhudadi.in/blog",
-                        "https://github.com/madhu2456/udemy_enroller_fastapi",
-                        "https://www.linkedin.com/in/madhu-dadi-54684531",
-                        "https://x.com/madhu245"
-                    ]
+                "description": "Open-source helper for free Udemy coupons. Start a run to attempt enrollment. Not affiliated with Udemy. Enrollment is not guaranteed.",
+                "isPartOf": {
+                    "@id": "https://udemyenroller.madhudadi.in/#website"
                 },
-                "offers": {
-                    "@type": "Offer",
-                    "price": "0",
-                    "priceCurrency": "USD"
+                "about": {
+                    "@id": "https://udemyenroller.madhudadi.in/#softwareapplication"
                 },
-                "provider": {
-                    "@type": "Organization",
-                    "name": "Adticks",
-                    "url": "https://adticks.com",
-                    "description": "SEO, AEO, and GEO improvement platform."
+                "mainEntity": {
+                    "@id": "https://udemyenroller.madhudadi.in/#softwareapplication"
                 },
-                "hasPart": [
-                    {
-                        "@type": "WebPage",
-                        "name": "100% Free Udemy Coupons Database",
-                        "url": "https://udemyenroller.madhudadi.in/udemycoupons"
-                    }
-                ],
-                "mainEntityOfPage": {
-                    "@type": "WebPage",
-                    "@id": "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
-                }
-            },
-            {
-                "@type": "Person",
-                "@id": "https://madhudadi.in/#person",
-                "name": "Madhu Dadi",
-                "url": "https://madhudadi.in",
-                "jobTitle": "AI Developer & Marketing Analytics Leader",
-                "description": "AI consultant and ML engineer with 9+ years of experience delivering generative AI consulting, LLM applications, and RAG systems that drive measurable business outcomes.",
-                "sameAs": [
-                    "https://madhudadi.in/blog",
+                "significantLink": [
+                    "https://udemyenroller.madhudadi.in/udemycoupons",
                     "https://github.com/madhu2456/udemy_enroller_fastapi",
-                    "https://www.linkedin.com/in/madhu-dadi-54684531",
-                    "https://x.com/madhu245"
-                ],
-                "knowsAbout": [
-                    "Python",
-                    "FastAPI",
-                    "SQL",
-                    "Machine Learning",
-                    "REST API Design",
-                    "CloudScraper",
-                    "Tailwind CSS"
+                    "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
                 ]
             },
             {
                 "@type": "SoftwareSourceCode",
+                "@id": "https://github.com/madhu2456/udemy_enroller_fastapi#source",
                 "name": "Udemy Enroller",
                 "url": "https://github.com/madhu2456/udemy_enroller_fastapi",
                 "codeRepository": "https://github.com/madhu2456/udemy_enroller_fastapi",
                 "programmingLanguage": ["Python", "JavaScript"],
                 "license": "https://opensource.org/licenses/MIT",
                 "author": {
-                    "@type": "Person",
-                    "@id": "https://madhudadi.in/#person",
-                    "name": "Madhu Dadi"
+                    "@id": "https://madhudadi.in/#person"
                 },
                 "isPartOf": {
-                    "@type": "WebApplication",
-                    "url": "https://udemyenroller.madhudadi.in"
+                    "@id": "https://udemyenroller.madhudadi.in/#softwareapplication"
                 }
             }
         ]
@@ -134,18 +88,18 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                 class="animate-fade-in-up delay-100 text-4xl md:text-5xl font-semibold text-gray-900 tracking-tight max-w-3xl mx-auto leading-tight mb-5"
             >
                 Claim Free Udemy Courses -
-                <span class="text-[#2563EB]">Automatically</span>
+                <span class="text-[#2563EB]">With Less Manual Work</span>
             </h1>
 
             <p
                 class="animate-fade-in-up delay-200 text-base text-gray-500 max-w-xl mx-auto leading-relaxed mb-8"
             >
-                Stop hunting for expired coupons. Our engine monitors coupon
-                aggregator sites and enrolls you in
+                Stop hunting expired coupons alone. When you start a run, the
+                engine monitors configured aggregator sites and
                 <strong class="font-semibold text-gray-700"
-                    >100% off Udemy courses</strong
+                    >attempts enrollment</strong
                 >
-                the moment they appear.
+                in matching 100% off courses. Success is not guaranteed.
             </p>
 
             <div
@@ -155,7 +109,12 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
             >
                 <span class="font-medium text-amber-700">Important:</span>
                 <span
-                    >Udemy Enroller is <strong>not affiliated with Udemy, Inc.</strong> Automated access may violate Udemy's Terms of Use. Use responsibly.
+                    >Udemy Enroller is <strong>not affiliated with Udemy, Inc.</strong>
+                    Automated access may violate Udemy's Terms of Use. Enrollment
+                    and coupon availability are <strong>not guaranteed</strong>.
+                    On the hosted demo, encrypted session cookies may be stored
+                    on the server (short-lived sessions; wipe on logout/Clear All Data).
+                    Prefer self-hosting for stronger control.
                     <a
                         href="/privacy"
                         class="text-blue-600 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm"
@@ -247,7 +206,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                         <p
                             class="text-lg font-semibold text-gray-900 tracking-tight"
                         >
-                            10+
+                            13
                         </p>
                         <p class="text-xs text-gray-500 mt-0.5">
                             Coupon sources monitored
@@ -260,7 +219,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                             {{ platform_stats.enrolled_display }}
                         </p>
                         <p class="text-xs text-gray-500 mt-0.5">
-                            Courses enrolled automatically
+                            Courses enrolled via automation
                         </p>
                     </div>
                     <div class="text-center">
@@ -311,7 +270,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                     Bridging the gap between expensive education and free access.
                 </h2>
                 <p class="text-sm text-gray-500 leading-relaxed">
-                    "As an AI Developer and open-source advocate, I built this automation tool to solve a frustrating problem: premium Udemy courses cost thousands, but 100% off coupons expire within hours. The enroller runs 24/7, monitoring 10+ coupon sources and claiming courses automatically — so your learning never depends on perfect timing."
+                    "As an AI Developer and open-source advocate, I built this automation tool to solve a frustrating problem: premium Udemy courses cost thousands, but 100% off coupons expire within hours. When you start a run, the enroller monitors configured coupon sources and attempts enrollment — success is not guaranteed, and users must follow Udemy's Terms of Use."
                 </p>
                 <p class="text-xs text-gray-600 mt-3">— Madhu Dadi</p>
             </div>
@@ -357,27 +316,30 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                         </div>
                     </div>
                     <h3 class="text-base font-semibold text-gray-900 mb-1">
-                        Fully Automated Engine
+                        Run-Based Enrollment Helper
                     </h3>
                     <p class="text-sm text-gray-500 mb-4 leading-relaxed">
-                        Set your filters once and let the engine do the rest. No
-                        manual monitoring, no copy-pasting coupon codes.
+                        Set your filters, start a run, and let the engine monitor
+                        configured sources while the run is active. Enrollment
+                        is not guaranteed.
                     </p>
                     <ul class="space-y-1.5">
                         <li class="flex items-start text-sm text-gray-600">
                             <span class="text-gray-400 mr-2 mt-px select-none"
                                 >-</span
-                            >Monitors coupon aggregator sites
+                            >Monitors coupon aggregator sites during a run
                         </li>
                         <li class="flex items-start text-sm text-gray-600">
                             <span class="text-gray-400 mr-2 mt-px select-none"
                                 >-</span
-                             >Applies valid coupons automatically
+                            >
+                            Attempts enrollment for matching free coupons when
+                            you start a run
                         </li>
                         <li class="flex items-start text-sm text-gray-600">
                             <span class="text-gray-400 mr-2 mt-px select-none"
                                 >-</span
-                            >Runs continuously in the background
+                            >Works in the app process while a run is active
                         </li>
                     </ul>
                 </article>
@@ -404,7 +366,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                         </div>
                     </div>
                     <h3 class="text-base font-semibold text-gray-900 mb-1">
-                        100% Secure Authentication
+                        Encrypted Session Authentication
                     </h3>
                     <p class="text-sm text-gray-500 mb-4 leading-relaxed">
                         Your credentials are used only to generate a temporary
@@ -555,9 +517,9 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                     <p
                         class="text-blue-100 max-w-2xl mx-auto text-base md:text-lg mb-8 leading-relaxed"
                     >
-                        Not ready to use the automation tool? Browse our live,
-                        real-time database of manually verified 100% off Udemy
-                        courses and claim them yourself.
+                        Not ready to use the automation tool? Browse public free
+                        coupon listings (validity can change) and claim them
+                        yourself on Udemy.
                     </p>
                     <a
                         href="/udemycoupons"
@@ -618,9 +580,18 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                     <p
                                         class="text-sm text-gray-500 leading-relaxed"
                                     >
+                                        {% if request.app.state.deployment_env == 'server' %}
+                                        Authenticate via Cookie Login (session
+                                        tokens from your browser). On the hosted
+                                        demo, email/password login is not
+                                        available. Session cookies are used only
+                                        to enroll on your behalf.
+                                        {% else %}
                                         Authenticate via Email Login or Cookie
-                                        Login. Your credentials are used only to
-                                        generate a temporary API token.
+                                        Login. Credentials are used only to
+                                        establish a session for enrollment on
+                                        your behalf.
+                                        {% endif %}
                                     </p>
                                 </div>
                             </li>
@@ -660,9 +631,9 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                     <p
                                         class="text-sm text-gray-500 leading-relaxed"
                                     >
-                                        The engine monitors coupon aggregator
-                                        sites and enrolls you in matching free
-                                         courses automatically.
+                                        Start a run: the engine monitors
+                                        configured coupon sources and attempts
+                                        enrollment in matching free courses.
                                     </p>
                                 </div>
                             </li>
@@ -681,9 +652,9 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                     <p
                                         class="text-sm text-gray-500 leading-relaxed"
                                     >
-                                        Watch your cumulative educational
-                                        savings grow as courses are claimed
-                                        automatically.
+                                        Watch estimated savings grow as
+                                        successful enrollments are recorded on
+                                        your dashboard.
                                     </p>
                                 </div>
                             </li>
@@ -714,8 +685,9 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                     <p
                                         class="text-xs text-gray-500 leading-relaxed"
                                     >
-                                        Continuously polls coupon aggregator
-                                        sites for new 100% off Udemy listings.
+                                        While a run is active, polls configured
+                                        coupon aggregator sites for 100% off
+                                        Udemy listings.
                                     </p>
                                 </div>
                             </div>
@@ -789,7 +761,8 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                 class="w-2 h-2 rounded-full bg-green-500"
                             ></span
                             ><span class="text-xs text-gray-500"
-                                >Engine runs continuously once connected</span
+                                >Enrollment runs while you keep the app running
+                                and a run is active</span
                             >
                         </div>
                     </div>
@@ -816,7 +789,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                             </div>
                             <h3 class="text-base font-semibold text-gray-900">How It Works</h3>
                         </div>
-                        <p class="text-sm text-gray-500">Respectful automation with built-in safeguards</p>
+                        <p class="text-sm text-gray-500">Best-effort pacing — not a guarantee of compliance or account safety</p>
                     </div>
                     
                     <!-- Steps -->
@@ -846,8 +819,8 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                 <span class="text-xs font-semibold text-blue-600">3</span>
                             </div>
                             <div>
-                                <p class="text-sm font-medium text-gray-900">Respectful Automation</p>
-                                <p class="text-xs text-gray-500">Rate-limited requests. No CAPTCHA solving. You are responsible for complying with Udemy's Terms of Use.</p>
+                                <p class="text-sm font-medium text-gray-900">User responsibility</p>
+                                <p class="text-xs text-gray-500">Rate-limited requests and no CAPTCHA solving are technical choices, not legal approval. You must follow Udemy's Terms of Use.</p>
                             </div>
                         </div>
                     </div>
@@ -859,7 +832,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                     
                     <!-- FAQ -->
                     <div class="px-6 py-5">
-                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">FAQ</p>
+                        <p class="text-xs font-medium text-gray-600 uppercase tracking-wider mb-3">FAQ</p>
                         <div class="space-y-3">
                             <div class="group cursor-pointer" onclick="toggleFaq(this)">
                                 <div class="flex items-center justify-between py-2">
@@ -869,7 +842,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                     </svg>
                                 </div>
                                 <div class="faq-content hidden pb-2">
-                                    <p class="text-sm text-gray-500">Monitors coupon sites 24/7 and automatically applies valid 100% off coupons to your account.</p>
+                                    <p class="text-sm text-gray-500">When you start a run, monitors configured coupon sources and attempts 100% off enrollments. Availability is not guaranteed.</p>
                                 </div>
                             </div>
                             
@@ -883,7 +856,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                     </svg>
                                 </div>
                                 <div class="faq-content hidden pb-2">
-                                    <p class="text-sm text-gray-500">Yes. Passwords are never stored. Cookies are encrypted. Uses Udemy's own endpoints.</p>
+                                    <p class="text-sm text-gray-500">Passwords are never stored. Session cookies are encrypted. The tool uses session-authenticated enrollment endpoints (not a Udemy partnership). That does not mean your account cannot be limited for automated access—you must follow Udemy's Terms. See <a href="/faq" class="text-blue-600 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm">FAQ</a> and <a href="/privacy" class="text-blue-600 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm">Privacy</a>.</p>
                                 </div>
                             </div>
                             
@@ -953,7 +926,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                     </svg>
                                 </div>
                                 <div class="faq-content hidden pb-2">
-                                    <p class="text-sm text-gray-500">The tool uses respectful rate limiting and the same endpoints as the Udemy website. However, automated access may violate Udemy's Terms of Service. Users are responsible for compliance.</p>
+                                    <p class="text-sm text-gray-500">The tool uses delayed, rate-limited requests and does not solve CAPTCHAs. That does not make automated use safe or permitted. Udemy may still limit or restrict accounts. Automated access may violate Udemy's Terms of Service. You are solely responsible for compliance. Prefer self-hosting and conservative use.</p>
                                 </div>
                             </div>
                             
@@ -1033,8 +1006,8 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                             Account Connected
                         </p>
                         <p class="text-xs text-gray-500" id="success-msg">
-                            The enroller is now running and will claim free
-                            courses automatically.
+                            Connected. Start an enrollment run from the dashboard
+                            when you are ready. Success is not guaranteed.
                         </p>
                         <button
                             onclick="window.location.reload()"
@@ -1048,7 +1021,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                         <!-- Disclaimer -->
                         <div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
                             <p class="text-xs text-amber-800 leading-relaxed">
-                                <strong>Disclaimer:</strong> Udemy Enroller is not affiliated with Udemy, Inc. Automated access may be subject to Udemy's Terms of Service. Course availability is not guaranteed. Users are responsible for compliance with platform terms.
+                                <strong>Disclaimer:</strong> Udemy Enroller is not affiliated with Udemy, Inc. Automated access may violate Udemy's Terms of Use. Course enrollment is not guaranteed. On the hosted demo, encrypted cookies may be stored briefly on the server—prefer self-hosting for privacy control. You are responsible for compliance.
                             </p>
                         </div>
 
@@ -1151,10 +1124,11 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                             </ol>
                         </div>
 
+                        {% if request.app.state.deployment_env != 'server' %}
                         <form
                             id="email-form"
                             onsubmit="loginWithEmail(event)"
-                            class="space-y-4{% if request.app.state.deployment_env == 'server' %} hidden{% endif %}"
+                            class="space-y-4"
                         >
                             <div>
                                 <label
@@ -1200,11 +1174,12 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                                 Connect Account
                             </button>
                         </form>
+                        {% endif %}
 
                         <form
                             id="cookie-form"
                             onsubmit="loginWithCookies(event)"
-                            class="hidden space-y-4"
+                            class="{% if request.app.state.deployment_env == 'server' %}space-y-4{% else %}hidden space-y-4{% endif %}"
                         >
                             <div>
                                 <label
@@ -1271,7 +1246,7 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
                         href="https://github.com/madhu2456/udemy_enroller_fastapi"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-blue-600 hover:underline"
+                        class="text-blue-700 underline underline-offset-2 hover:text-blue-900"
                         >Review the source code.</a
                     >
                 </p>
@@ -1414,7 +1389,13 @@ automatically. Stop hunting for codes.{% endblock %} {% block extra_head %}
 
     async function loginWithEmail(e) {
         e.preventDefault();
+        if (!EMAIL_LOGIN_ENABLED) {
+            return;
+        }
         const btn = document.getElementById("login-btn-email");
+        if (!btn) {
+            return;
+        }
         const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = `<span class="flex items-center justify-center gap-2">${spinnerSvg} Connecting...</span>`;

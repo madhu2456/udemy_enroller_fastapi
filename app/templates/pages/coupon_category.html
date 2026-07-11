@@ -1,0 +1,93 @@
+{% extends "components/base.html" %}
+{% block title %}Free {{ category_name }} Udemy Coupons | Udemy Enroller{% endblock %}
+{% block meta_title %}Free {{ category_name }} Udemy Coupons | Udemy Enroller{% endblock %}
+{% block meta_description %}Browse {{ deal_count }} free Udemy coupon listing{% if deal_count != 1 %}s{% endif %} in {{ category_name }}. Validity can change. Not affiliated with Udemy. Open-source Udemy Enroller by Madhu Dadi.{% endblock %}
+{% block meta_keywords %}free udemy coupons, {{ category_name }}, 100% off udemy, free {{ category_name }} courses, udemy enroller{% endblock %}
+{% block robots %}index, follow{% endblock %}
+{% block og_title %}Free {{ category_name }} Udemy Coupons{% endblock %}
+{% block og_description %}{{ deal_count }} free coupon listings in {{ category_name }}. Validity can change. Not affiliated with Udemy.{% endblock %}
+{% block twitter_title %}Free {{ category_name }} Udemy Coupons{% endblock %}
+{% block twitter_description %}{{ deal_count }} free coupon listings. Validity can change. Not affiliated with Udemy.{% endblock %}
+{% block extra_head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://udemyenroller.madhudadi.in/"},
+    {"@type": "ListItem", "position": 2, "name": "Free Coupons", "item": "https://udemyenroller.madhudadi.in/udemycoupons"},
+    {"@type": "ListItem", "position": 3, "name": {{ category_name | tojson }}, "item": "https://udemyenroller.madhudadi.in/udemycoupons/category/{{ category_slug }}"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": {{ category_name | tojson }},
+  "description": "Free Udemy coupon listings in this category. Validity can change.",
+  "url": "https://udemyenroller.madhudadi.in/udemycoupons/category/{{ category_slug }}",
+  "isPartOf": { "@id": "https://udemyenroller.madhudadi.in/#website" },
+  "numberOfItems": {{ deal_count }}
+}
+</script>
+{% endblock %}
+{% block content %}
+<div class="py-10 text-gray-900">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6">
+    <nav class="text-xs text-gray-500 mb-6" aria-label="Breadcrumb">
+      <ol class="flex flex-wrap items-center gap-1.5">
+        <li><a href="/" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Home</a></li>
+        <li aria-hidden="true">/</li>
+        <li><a href="/udemycoupons" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Free Coupons</a></li>
+        <li aria-hidden="true">/</li>
+        <li class="text-gray-800" aria-current="page">{{ category_name }}</li>
+      </ol>
+    </nav>
+
+    <header class="mb-8">
+      <h1 class="text-3xl font-semibold text-gray-900 tracking-tight mb-2">
+        Free {{ category_name }} Udemy Coupons
+      </h1>
+      <p class="text-sm text-gray-600 max-w-2xl leading-relaxed mb-3">
+        Coupon listings in <strong>{{ category_name }}</strong> collected by Udemy Enroller.
+        Codes may expire — always confirm the price on Udemy. Not affiliated with Udemy, Inc.
+      </p>
+      <p class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 inline-flex flex-wrap gap-x-3 gap-y-1" role="status">
+        <span><strong class="text-gray-900">{{ deal_count }}</strong> listing{% if deal_count != 1 %}s{% endif %}</span>
+        {% if freshness and freshness.last_updated %}
+        <span class="text-gray-400" aria-hidden="true">·</span>
+        <span>List updated <time>{{ freshness.last_updated }}</time></span>
+        {% endif %}
+        <span class="text-gray-400" aria-hidden="true">·</span>
+        <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2">How free coupons work</a>
+      </p>
+    </header>
+
+    {% if deals %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
+      {% for course in deals %}
+      <article class="bg-white rounded-xl border border-gray-200 flex flex-col p-5 shadow-sm hover:border-gray-300 transition-colors">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-2">{{ course.category or category_name }}</p>
+        <h2 class="text-sm font-semibold text-gray-900 mb-3 line-clamp-2">
+          <a href="/udemycoupons/c/{{ course.slug }}" class="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm">{{ course.title }}</a>
+        </h2>
+        <p class="text-xs text-gray-500 mb-3 font-mono">Code: {{ course.coupon_code }}</p>
+        <a href="/udemycoupons/c/{{ course.slug }}" class="mt-auto text-sm font-semibold text-blue-700 hover:underline">View details →</a>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-600">No valid listings in this category right now.</p>
+    {% endif %}
+
+    <p class="text-sm text-gray-600">
+      <a href="/udemycoupons" class="text-blue-700 underline underline-offset-2">← All free coupons</a>
+      ·
+      <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2">Coupon guide</a>
+      ·
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" class="text-blue-700 underline underline-offset-2" rel="noopener noreferrer" target="_blank">Source on GitHub</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -8,7 +8,10 @@
     "build:css": "npm run build:css:app && npm run build:css:home",
     "audit:performance": "node tests/performance-audit.js",
     "audit:performance:baseline": "node tests/performance-audit.js --write-baseline",
-    "audit:performance:check": "node tests/performance-audit.js --check"
+    "audit:performance:check": "node tests/performance-audit.js --check",
+    "audit:wcag": "node tests/wcag-audit.js",
+    "smoke:browsers": "node tests/browser-smoke.js",
+    "smoke:viewports": "node tests/viewport-smoke.js"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

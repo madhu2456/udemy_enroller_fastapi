@@ -1,0 +1,35 @@
+{
+  "date": "2026-07-11T20:37:47.838Z",
+  "note": "Keyboard-only auth page audit after #23 fixes",
+  "routes": [
+    {
+      "route": "/dashboard",
+      "axe": [],
+      "checks": {
+        "confirmOpen": true,
+        "confirmClosed": true,
+        "focusBack": "start-btn",
+        "logsTab": {
+          "selected": "true",
+          "visible": true
+        }
+      }
+    },
+    {
+      "route": "/settings",
+      "axe": [],
+      "checks": {
+        "switch": {
+          "aria": "true",
+          "h": 24,
+          "checked": true
+        }
+      }
+    },
+    {
+      "route": "/history",
+      "axe": [],
+      "checks": {}
+    }
+  ]
+}

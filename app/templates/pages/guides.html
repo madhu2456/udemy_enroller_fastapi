@@ -1,13 +1,16 @@
 {% extends "components/base.html" %} {% block title %}How to Get Free Udemy
 Courses: Step-by-Step Guides{% endblock %} {% block meta_title %}How to Get Free
 Udemy Courses: Step-by-Step Guides{% endblock %} {% block meta_description
-%}Step-by-step Udemy Enroller guides: connect via cookies, configure filters, self-host with Docker, and enroll in 100% off courses safely and transparently.{% endblock %} {% block og_type
+%}Step-by-step Udemy Enroller guides: cookie login, filters, Docker self-host,
+and starting enrollment runs for free coupons. Not affiliated with Udemy.{% endblock %} {% block og_type
 %}article{% endblock %} {% block og_title %}How to Get Free Udemy
 Courses: Step-by-Step Guides{% endblock %} {% block og_description
-%}Step-by-step Udemy Enroller guides: cookie login, smart filters, Docker self-hosting, and safe enrollment in 100% off courses.{% endblock %} {% block
+%}Guides for Udemy Enroller: cookie login, smart filters, Docker self-hosting,
+and starting a run. Enrollment is not guaranteed.{% endblock %} {% block
 twitter_title %}How to Get Free Udemy
 Courses: Step-by-Step Guides{% endblock %} {% block
-twitter_description %}Step-by-step Udemy Enroller guides: cookie login, smart filters, Docker self-hosting, and safe enrollment in 100% off courses.{%
+twitter_description %}Guides for cookie login, filters, Docker self-host, and
+enrollment runs. Not affiliated with Udemy.{%
 endblock %} {% block content %}
 <script type="application/ld+json">
     {
@@ -38,7 +41,7 @@ endblock %} {% block content %}
                         "position": 1,
                         "name": "Quick Start Guide",
                         "url": "https://udemyenroller.madhudadi.in/guides#quickstart",
-                        "description": "Set up the Udemy Enroller in minutes and start claiming free courses automatically."
+                        "description": "Set up the Udemy Enroller in minutes and start an enrollment run for free coupons."
                     },
                     {
                         "@type": "ListItem",
@@ -59,25 +62,25 @@ endblock %} {% block content %}
                         "position": 4,
                         "name": "Server Deployment Guide",
                         "url": "https://udemyenroller.madhudadi.in/guides#deploy",
-                        "description": "Deploy the Udemy Enroller on a server using Docker for 24/7 automated enrollment."
+                        "description": "Deploy the Udemy Enroller on a server using Docker so enrollment runs can continue without your local computer."
                     },
                     {
                         "@type": "ListItem",
                         "position": 5,
                         "name": "Browsing Manual Coupons Guide",
                         "url": "https://udemyenroller.madhudadi.in/guides#manual",
-                        "description": "Browse our live database of manually verified free Udemy coupons."
+                        "description": "Browse public free Udemy coupon listings (validity can change) and claim manually on Udemy."
                     }
                 ]
             }
         ]
     }
 </script>
-<div class="min-h-screen bg-white text-gray-900">
-    <main>
+<div class="min-h-screen bg-white text-gray-900 overflow-x-clip">
+    <main class="min-w-0">
         <!-- Hero -->
         <section
-            class="max-w-6xl mx-auto px-6 pt-14 pb-10"
+            class="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-10 min-w-0"
             aria-labelledby="guides-hero-heading"
         >
             <div class="max-w-2xl">
@@ -92,24 +95,36 @@ endblock %} {% block content %}
                 >
                     Guides & Walkthroughs
                 </h1>
+                <p class="mb-4">
+                    <a
+                        href="/guides/free-udemy-coupons"
+                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 hover:bg-blue-100 transition-colors"
+                        >How free Udemy coupons work →</a
+                    >
+                    <a
+                        href="/udemycoupons"
+                        class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 ml-2 underline underline-offset-2 hover:text-blue-700"
+                        >Browse free coupons</a
+                    >
+                </p>
                 <p class="text-sm text-gray-500 leading-relaxed">
                     Step-by-step instructions for every part of the Udemy
                     Enroller - from connecting your account in 5 minutes to
-                    deploying on a 24/7 cloud server.
+                    deploying on an always-on cloud server.
                 </p>
             </div>
         </section>
 
         <!-- Guides list -->
-        <section class="max-w-6xl mx-auto px-6 pb-20">
-            <div class="space-y-16">
+        <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 min-w-0">
+            <div class="space-y-16 min-w-0">
                 <!-- Guide 1: Get Started -->
                 <article id="get-started" aria-labelledby="guide-get-started">
                     <div
                         class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6"
                     >
                         <div class="flex items-center gap-3">
-                            <span class="text-xs text-gray-400 font-mono"
+                            <span class="text-xs text-gray-600 font-mono"
                                 >01</span
                             >
                             <span
@@ -118,7 +133,7 @@ endblock %} {% block content %}
                                 Beginner
                             </span>
                         </div>
-                        <span class="text-xs text-gray-400">5 min read</span>
+                        <span class="text-xs text-gray-600">5 min read</span>
                     </div>
                     <h2
                         id="guide-get-started"
@@ -127,11 +142,11 @@ endblock %} {% block content %}
                         Get Started in 5 Minutes
                     </h2>
                     <p class="text-sm text-gray-500 mb-6">
-                        Connect your Udemy account and claim your first batch of
-                        free courses automatically.
+                        Connect your Udemy account and start a run to attempt
+                        your first batch of free-course enrollments.
                     </p>
                     <ol class="space-y-0">
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -140,7 +155,7 @@ endblock %} {% block content %}
                             >
                                 1
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -155,7 +170,7 @@ endblock %} {% block content %}
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -164,7 +179,7 @@ endblock %} {% block content %}
                             >
                                 2
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -180,7 +195,7 @@ endblock %} {% block content %}
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -189,7 +204,7 @@ endblock %} {% block content %}
                             >
                                 3
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -204,13 +219,13 @@ endblock %} {% block content %}
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500"
                             >
                                 4
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -236,7 +251,7 @@ endblock %} {% block content %}
                         class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6"
                     >
                         <div class="flex items-center gap-3">
-                            <span class="text-xs text-gray-400 font-mono"
+                            <span class="text-xs text-gray-600 font-mono"
                                 >02</span
                             >
                             <span
@@ -245,7 +260,7 @@ endblock %} {% block content %}
                                 Authentication
                             </span>
                         </div>
-                        <span class="text-xs text-gray-400">4 min read</span>
+                        <span class="text-xs text-gray-600">4 min read</span>
                     </div>
                     <h2
                         id="guide-cookie-login"
@@ -259,7 +274,7 @@ endblock %} {% block content %}
                         environment.
                     </p>
                     <ol class="space-y-0">
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -268,7 +283,7 @@ endblock %} {% block content %}
                             >
                                 1
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -282,7 +297,7 @@ endblock %} {% block content %}
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -291,7 +306,7 @@ endblock %} {% block content %}
                             >
                                 2
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -305,7 +320,7 @@ endblock %} {% block content %}
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -314,7 +329,7 @@ endblock %} {% block content %}
                             >
                                 3
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -330,7 +345,7 @@ endblock %} {% block content %}
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -339,7 +354,7 @@ endblock %} {% block content %}
                             >
                                 4
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -352,7 +367,7 @@ endblock %} {% block content %}
                                     each of these three cookies:
                                 </p>
                                 <pre
-                                    class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed"
+                                    class="bg-gray-950 text-gray-100 rounded-lg px-3 sm:px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed max-w-full"
                                 >
 access_token
 client_id
@@ -360,7 +375,7 @@ csrftoken</pre
                                 >
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -369,7 +384,7 @@ csrftoken</pre
                             >
                                 5
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -385,13 +400,13 @@ csrftoken</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500"
                             >
                                 6
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -419,7 +434,7 @@ csrftoken</pre
                         class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6"
                     >
                         <div class="flex items-center gap-3">
-                            <span class="text-xs text-gray-400 font-mono"
+                            <span class="text-xs text-gray-600 font-mono"
                                 >03</span
                             >
                             <span
@@ -428,7 +443,7 @@ csrftoken</pre
                                 Configuration
                             </span>
                         </div>
-                        <span class="text-xs text-gray-400">3 min read</span>
+                        <span class="text-xs text-gray-600">3 min read</span>
                     </div>
                     <h2
                         id="guide-smart-filters"
@@ -441,7 +456,7 @@ csrftoken</pre
                         language, and instructor.
                     </p>
                     <ol class="space-y-0">
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -450,7 +465,7 @@ csrftoken</pre
                             >
                                 1
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -466,7 +481,7 @@ csrftoken</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -475,7 +490,7 @@ csrftoken</pre
                             >
                                 2
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -491,7 +506,7 @@ csrftoken</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -500,7 +515,7 @@ csrftoken</pre
                             >
                                 3
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -516,13 +531,13 @@ csrftoken</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500"
                             >
                                 4
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -550,7 +565,7 @@ csrftoken</pre
                         class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6"
                     >
                         <div class="flex items-center gap-3">
-                            <span class="text-xs text-gray-400 font-mono"
+                            <span class="text-xs text-gray-600 font-mono"
                                 >04</span
                             >
                             <span
@@ -559,7 +574,7 @@ csrftoken</pre
                                 Advanced
                             </span>
                         </div>
-                        <span class="text-xs text-gray-400">8 min read</span>
+                        <span class="text-xs text-gray-600">8 min read</span>
                     </div>
                     <h2
                         id="guide-run-on-server"
@@ -568,11 +583,12 @@ csrftoken</pre
                         Running on a Cloud Server
                     </h2>
                     <p class="text-sm text-gray-500 mb-6">
-                        Deploy the FastAPI backend on a VPS or cloud VM so the
-                        engine runs 24/7 without your computer.
+                        Deploy the FastAPI backend on a VPS or cloud VM so
+                        enrollment runs can continue without your local computer
+                        (while the service remains running).
                     </p>
                     <ol class="space-y-0">
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -581,7 +597,7 @@ csrftoken</pre
                             >
                                 1
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -593,14 +609,14 @@ csrftoken</pre
                                     SSH into your server and clone the project:
                                 </p>
                                 <pre
-                                    class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed"
+                                    class="bg-gray-950 text-gray-100 rounded-lg px-3 sm:px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed max-w-full"
                                 >
 git clone https://github.com/madhu2456/udemy_enroller_fastapi.git
 cd udemy_enroller_fastapi</pre
                                 >
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -609,7 +625,7 @@ cd udemy_enroller_fastapi</pre
                             >
                                 2
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -622,7 +638,7 @@ cd udemy_enroller_fastapi</pre
                                     Python requirements:
                                 </p>
                                 <pre
-                                    class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed"
+                                    class="bg-gray-950 text-gray-100 rounded-lg px-3 sm:px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed max-w-full"
                                 >
 python3 -m venv venv
 source venv/bin/activate
@@ -630,7 +646,7 @@ pip install -r requirements.txt</pre
                                 >
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -639,7 +655,7 @@ pip install -r requirements.txt</pre
                             >
                                 3
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -653,14 +669,14 @@ pip install -r requirements.txt</pre
                                     filter preferences:
                                 </p>
                                 <pre
-                                    class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed"
+                                    class="bg-gray-950 text-gray-100 rounded-lg px-3 sm:px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed max-w-full"
                                 >
 cp .env.example .env
 nano .env</pre
                                 >
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -669,7 +685,7 @@ nano .env</pre
                             >
                                 4
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -681,19 +697,19 @@ nano .env</pre
                                     Run the application with uvicorn:
                                 </p>
                                 <pre
-                                    class="bg-gray-950 text-gray-100 rounded-lg px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed"
+                                    class="bg-gray-950 text-gray-100 rounded-lg px-3 sm:px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed max-w-full"
                                 >
 uvicorn main:app --host 0.0.0.0 --port 8000</pre
                                 >
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500"
                             >
                                 5
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -722,7 +738,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                         class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6"
                     >
                         <div class="flex items-center gap-3">
-                            <span class="text-xs text-gray-400 font-mono"
+                            <span class="text-xs text-gray-600 font-mono"
                                 >05</span
                             >
                             <span
@@ -731,7 +747,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                                 Troubleshooting
                             </span>
                         </div>
-                        <span class="text-xs text-gray-400">5 min read</span>
+                        <span class="text-xs text-gray-600">5 min read</span>
                     </div>
                     <h2
                         id="guide-troubleshooting"
@@ -744,7 +760,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                         expired cookies, and enrollment failures.
                     </p>
                     <ol class="space-y-0">
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -753,7 +769,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                             >
                                 1
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -770,7 +786,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -779,7 +795,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                             >
                                 2
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -796,7 +812,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -805,7 +821,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                             >
                                 3
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -823,7 +839,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="absolute left-[13px] top-7 bottom-0 w-px bg-gray-200"
                             ></div>
@@ -832,7 +848,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                             >
                                 4
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
@@ -849,13 +865,13 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                                 </p>
                             </div>
                         </li>
-                        <li class="flex gap-5 pb-6 relative">
+                        <li class="flex gap-3 sm:gap-5 pb-6 relative min-w-0">
                             <div
                                 class="relative z-10 flex-shrink-0 w-7 h-7 rounded-full border border-gray-200 bg-white flex items-center justify-center text-xs font-semibold text-gray-500"
                             >
                                 5
                             </div>
-                            <div class="flex-1 pt-0.5">
+                            <div class="flex-1 min-w-0 pt-0.5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >

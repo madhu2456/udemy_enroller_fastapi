@@ -22,17 +22,51 @@ from app.models.database import (
     _utcnow_naive,
     get_db,
 )
+from app.session_lifecycle import cleanup_expired_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Dashboard"])
 templates = Jinja2Templates(directory="app/templates")
 
+def _redirect_to_connect() -> RedirectResponse:
+    """Fresh redirect each time (do not reuse a shared Response instance)."""
+    return RedirectResponse(url="/#connect", status_code=303)
+
+
+def _session_user_id_for_html(request: Request, db: Session) -> int | RedirectResponse:
+    """Return user_id for HTML pages, or redirect to connect UI if unauthenticated.
+
+    HTML routes should not return raw JSON 401; API routes keep Depends(get_current_user_id).
+    """
+    token = request.cookies.get("session_id")
+    if not token:
+        return _redirect_to_connect()
+
+    session = db.query(UserSession).filter(UserSession.token == token).first()
+    if not session:
+        return _redirect_to_connect()
+
+    if session.expires_at and session.expires_at < _utcnow_naive():
+        cleanup_expired_session(db, session, getattr(request.app, "state", None))
+        return _redirect_to_connect()
+
+    return session.user_id
+
 
 @router.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request):
-    """Main dashboard page."""
+def dashboard(request: Request, db: Session = Depends(get_db)):
+    """Main dashboard page (server-side auth; client check remains as defense-in-depth)."""
+    user_id = _session_user_id_for_html(request, db)
+    if isinstance(user_id, RedirectResponse):
+        return user_id
     return templates.TemplateResponse(request, "pages/dashboard.html")
+
+
+@router.get("/login", include_in_schema=False)
+def login_alias():
+    """Compatibility redirect: connect UI lives on the homepage."""
+    return RedirectResponse(url="/#connect", status_code=303)
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -51,8 +85,9 @@ def login_page(request: Request):
             session = db.query(UserSession).filter(UserSession.token == token).first()
             if session:
                 if session.expires_at and session.expires_at < _utcnow_naive():
-                    db.delete(session)
-                    db.commit()
+                    cleanup_expired_session(
+                        db, session, getattr(request.app, "state", None)
+                    )
                 else:
                     return RedirectResponse(url="/dashboard", status_code=303)
 
@@ -67,16 +102,22 @@ def login_page(request: Request):
 
 
 @router.get("/settings", response_class=HTMLResponse)
-def settings_page(request: Request, user_id: int = Depends(get_current_user_id)):
+def settings_page(request: Request, db: Session = Depends(get_db)):
     """Render settings configuration page."""
+    user_id = _session_user_id_for_html(request, db)
+    if isinstance(user_id, RedirectResponse):
+        return user_id
     return templates.TemplateResponse(
         request, "pages/settings.html", {"user_id": user_id}
     )
 
 
 @router.get("/history", response_class=HTMLResponse)
-def history_page(request: Request, user_id: int = Depends(get_current_user_id)):
+def history_page(request: Request, db: Session = Depends(get_db)):
     """Render history logs page."""
+    user_id = _session_user_id_for_html(request, db)
+    if isinstance(user_id, RedirectResponse):
+        return user_id
     return templates.TemplateResponse(
         request, "pages/history.html", {"user_id": user_id}
     )

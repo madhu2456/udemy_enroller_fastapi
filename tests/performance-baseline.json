@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-06T17:18:15.391Z",
+  "generated_at": "2026-07-11T20:42:18.953Z",
   "base_url": "https://udemyenroller.madhudadi.in",
   "tool_version": "1.0.0",
   "summary": {
@@ -7,8 +7,8 @@
     "measurements": 12,
     "lcp_good": 12,
     "lcp_poor": 0,
-    "cls_poor": 2,
-    "ttfb_needs_improvement": 5,
+    "cls_poor": 0,
+    "ttfb_needs_improvement": 7,
     "thresholds": {
       "lcp_ms": {
         "good": 2500,
@@ -28,8 +28,7 @@
       }
     },
     "findings": [
-      "2 viewport(s) have poor CLS (>= 0.25); likely dynamic content or late-loading assets.",
-      "5 viewport(s) have TTFB in needs-improvement range (>800ms)."
+      "7 viewport(s) have TTFB in needs-improvement range (>800ms)."
     ]
   },
   "routes": [
@@ -42,14 +41,14 @@
           "width": 375,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 1162,
-            "fcp_ms": 1420,
-            "lcp_ms": 1420,
+            "ttfb_ms": 885,
+            "fcp_ms": 1544,
+            "lcp_ms": 1544,
             "cls": 0,
-            "dom_content_loaded_ms": 1517,
-            "load_ms": 1517,
-            "request_count": 9,
-            "transfer_bytes": 85814
+            "dom_content_loaded_ms": 1830,
+            "load_ms": 1830,
+            "request_count": 8,
+            "transfer_bytes": 85514
           },
           "ratings": {
             "ttfb": "needs-improvement",
@@ -57,21 +56,21 @@
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:03.669Z"
+          "timestamp": "2026-07-11T20:41:01.138Z"
         },
         {
           "name": "desktop",
           "width": 1366,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 1001,
-            "fcp_ms": 1256,
-            "lcp_ms": 1256,
+            "ttfb_ms": 946,
+            "fcp_ms": 1516,
+            "lcp_ms": 1516,
             "cls": 0,
-            "dom_content_loaded_ms": 1340,
-            "load_ms": 1341,
-            "request_count": 9,
-            "transfer_bytes": 85814
+            "dom_content_loaded_ms": 1829,
+            "load_ms": 1830,
+            "request_count": 8,
+            "transfer_bytes": 85514
           },
           "ratings": {
             "ttfb": "needs-improvement",
@@ -79,7 +78,7 @@
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:10.574Z"
+          "timestamp": "2026-07-11T20:41:08.528Z"
         }
       ]
     },
@@ -92,36 +91,14 @@
           "width": 375,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 1184,
-            "fcp_ms": 1600,
-            "lcp_ms": 1600,
+            "ttfb_ms": 605,
+            "fcp_ms": 1248,
+            "lcp_ms": 1248,
             "cls": 0,
-            "dom_content_loaded_ms": 1820,
-            "load_ms": 1825,
-            "request_count": 11,
-            "transfer_bytes": 96413
-          },
-          "ratings": {
-            "ttfb": "needs-improvement",
-            "fcp": "good",
-            "lcp": "good",
-            "cls": "good"
-          },
-          "timestamp": "2026-07-06T17:17:18.179Z"
-        },
-        {
-          "name": "desktop",
-          "width": 1366,
-          "status": 200,
-          "metrics": {
-            "ttfb_ms": 562,
-            "fcp_ms": 784,
-            "lcp_ms": 784,
-            "cls": 0,
-            "dom_content_loaded_ms": 895,
-            "load_ms": 898,
-            "request_count": 11,
-            "transfer_bytes": 96413
+            "dom_content_loaded_ms": 1577,
+            "load_ms": 1579,
+            "request_count": 10,
+            "transfer_bytes": 96166
           },
           "ratings": {
             "ttfb": "good",
@@ -129,7 +106,29 @@
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:24.459Z"
+          "timestamp": "2026-07-11T20:41:15.289Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 877,
+            "fcp_ms": 1528,
+            "lcp_ms": 1528,
+            "cls": 0,
+            "dom_content_loaded_ms": 1852,
+            "load_ms": 1855,
+            "request_count": 10,
+            "transfer_bytes": 96166
+          },
+          "ratings": {
+            "ttfb": "needs-improvement",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-11T20:41:22.621Z"
         }
       ]
     },
@@ -142,14 +141,14 @@
           "width": 375,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 546,
-            "fcp_ms": 696,
-            "lcp_ms": 696,
+            "ttfb_ms": 617,
+            "fcp_ms": 1252,
+            "lcp_ms": 1252,
             "cls": 0,
-            "dom_content_loaded_ms": 756,
-            "load_ms": 756,
-            "request_count": 10,
-            "transfer_bytes": 93397
+            "dom_content_loaded_ms": 1585,
+            "load_ms": 1585,
+            "request_count": 9,
+            "transfer_bytes": 93150
           },
           "ratings": {
             "ttfb": "good",
@@ -157,29 +156,29 @@
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:30.643Z"
+          "timestamp": "2026-07-11T20:41:29.689Z"
         },
         {
           "name": "desktop",
           "width": 1366,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 553,
-            "fcp_ms": 816,
-            "lcp_ms": 892,
-            "cls": 1.0001,
-            "dom_content_loaded_ms": 948,
-            "load_ms": 955,
-            "request_count": 10,
-            "transfer_bytes": 93397
+            "ttfb_ms": 834,
+            "fcp_ms": 1500,
+            "lcp_ms": 1500,
+            "cls": 0,
+            "dom_content_loaded_ms": 1805,
+            "load_ms": 1805,
+            "request_count": 9,
+            "transfer_bytes": 93150
           },
           "ratings": {
-            "ttfb": "good",
+            "ttfb": "needs-improvement",
             "fcp": "good",
             "lcp": "good",
-            "cls": "poor"
+            "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:36.773Z"
+          "timestamp": "2026-07-11T20:41:36.694Z"
         }
       ]
     },
@@ -192,14 +191,14 @@
           "width": 375,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 280,
-            "fcp_ms": 448,
-            "lcp_ms": 448,
+            "ttfb_ms": 620,
+            "fcp_ms": 1276,
+            "lcp_ms": 1276,
             "cls": 0,
-            "dom_content_loaded_ms": 554,
-            "load_ms": 554,
-            "request_count": 10,
-            "transfer_bytes": 93397
+            "dom_content_loaded_ms": 1602,
+            "load_ms": 1602,
+            "request_count": 9,
+            "transfer_bytes": 93150
           },
           "ratings": {
             "ttfb": "good",
@@ -207,29 +206,29 @@
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:42.742Z"
+          "timestamp": "2026-07-11T20:41:43.821Z"
         },
         {
           "name": "desktop",
           "width": 1366,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 973,
-            "fcp_ms": 1296,
-            "lcp_ms": 1296,
-            "cls": 0.0005,
-            "dom_content_loaded_ms": 1322,
-            "load_ms": 1322,
-            "request_count": 10,
-            "transfer_bytes": 93397
+            "ttfb_ms": 613,
+            "fcp_ms": 1264,
+            "lcp_ms": 1264,
+            "cls": 0,
+            "dom_content_loaded_ms": 1553,
+            "load_ms": 1553,
+            "request_count": 9,
+            "transfer_bytes": 93150
           },
           "ratings": {
-            "ttfb": "needs-improvement",
+            "ttfb": "good",
             "fcp": "good",
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:49.614Z"
+          "timestamp": "2026-07-11T20:41:50.787Z"
         }
       ]
     },
@@ -242,36 +241,36 @@
           "width": 375,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 399,
-            "fcp_ms": 676,
-            "lcp_ms": 676,
+            "ttfb_ms": 882,
+            "fcp_ms": 1536,
+            "lcp_ms": 1536,
             "cls": 0,
-            "dom_content_loaded_ms": 731,
-            "load_ms": 731,
-            "request_count": 10,
-            "transfer_bytes": 93397
+            "dom_content_loaded_ms": 1858,
+            "load_ms": 1858,
+            "request_count": 9,
+            "transfer_bytes": 93150
           },
           "ratings": {
-            "ttfb": "good",
+            "ttfb": "needs-improvement",
             "fcp": "good",
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:17:55.723Z"
+          "timestamp": "2026-07-11T20:41:57.828Z"
         },
         {
           "name": "desktop",
           "width": 1366,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 736,
-            "fcp_ms": 1056,
-            "lcp_ms": 1056,
-            "cls": 0.0005,
-            "dom_content_loaded_ms": 1103,
-            "load_ms": 1103,
-            "request_count": 10,
-            "transfer_bytes": 93397
+            "ttfb_ms": 618,
+            "fcp_ms": 1288,
+            "lcp_ms": 1288,
+            "cls": 0,
+            "dom_content_loaded_ms": 1594,
+            "load_ms": 1594,
+            "request_count": 9,
+            "transfer_bytes": 93150
           },
           "ratings": {
             "ttfb": "good",
@@ -279,7 +278,7 @@
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:18:02.394Z"
+          "timestamp": "2026-07-11T20:42:04.664Z"
         }
       ]
     },
@@ -292,36 +291,14 @@
           "width": 375,
           "status": 200,
           "metrics": {
-            "ttfb_ms": 405,
-            "fcp_ms": 672,
-            "lcp_ms": 672,
-            "cls": 1,
-            "dom_content_loaded_ms": 804,
-            "load_ms": 814,
-            "request_count": 10,
-            "transfer_bytes": 93397
-          },
-          "ratings": {
-            "ttfb": "good",
-            "fcp": "good",
-            "lcp": "good",
-            "cls": "poor"
-          },
-          "timestamp": "2026-07-06T17:18:08.393Z"
-        },
-        {
-          "name": "desktop",
-          "width": 1366,
-          "status": 200,
-          "metrics": {
-            "ttfb_ms": 944,
-            "fcp_ms": 1380,
-            "lcp_ms": 1380,
-            "cls": 0.0007,
-            "dom_content_loaded_ms": 1477,
-            "load_ms": 1529,
-            "request_count": 10,
-            "transfer_bytes": 93397
+            "ttfb_ms": 957,
+            "fcp_ms": 1604,
+            "lcp_ms": 1604,
+            "cls": 0,
+            "dom_content_loaded_ms": 1937,
+            "load_ms": 1937,
+            "request_count": 9,
+            "transfer_bytes": 93150
           },
           "ratings": {
             "ttfb": "needs-improvement",
@@ -329,7 +306,29 @@
             "lcp": "good",
             "cls": "good"
           },
-          "timestamp": "2026-07-06T17:18:15.368Z"
+          "timestamp": "2026-07-11T20:42:11.842Z"
+        },
+        {
+          "name": "desktop",
+          "width": 1366,
+          "status": 200,
+          "metrics": {
+            "ttfb_ms": 912,
+            "fcp_ms": 1576,
+            "lcp_ms": 1576,
+            "cls": 0,
+            "dom_content_loaded_ms": 1887,
+            "load_ms": 1887,
+            "request_count": 9,
+            "transfer_bytes": 93150
+          },
+          "ratings": {
+            "ttfb": "needs-improvement",
+            "fcp": "good",
+            "lcp": "good",
+            "cls": "good"
+          },
+          "timestamp": "2026-07-11T20:42:18.928Z"
         }
       ]
     }

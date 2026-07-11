@@ -9,7 +9,8 @@ const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
 
-const BASE_URL = 'https://udemyenroller.madhudadi.in';
+// Prefer local during development: BASE_URL=http://127.0.0.1:8000 npm run audit:wcag
+const BASE_URL = process.env.BASE_URL || 'https://udemyenroller.madhudadi.in';
 const REPORT_DIR = path.join(__dirname, '..', 'wcag-report');
 const SCREENSHOTS_DIR = path.join(REPORT_DIR, 'screenshots');
 const TIMEOUT = 30000;
@@ -526,6 +527,11 @@ function generateReport(allResults) {
           help: v.help,
           helpUrl: v.helpUrl,
           nodes: v.nodes.length,
+          targets: v.nodes.slice(0, 12).map(n => ({
+            target: n.target,
+            html: (n.html || '').slice(0, 180),
+            failureSummary: (n.failureSummary || '').slice(0, 280),
+          })),
           wcagTags: v.tags.filter(t => t.startsWith('wcag')),
           description: v.description,
         })),

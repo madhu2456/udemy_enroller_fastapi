@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.database import get_db, UserSession, _utcnow_naive
 from app.security import decrypt_cookies
 from app.services.udemy_client import UdemyClient
+from app.session_lifecycle import cleanup_expired_session
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +23,8 @@ def get_session(request: Request, db: Session = Depends(get_db)) -> UserSession:
         raise HTTPException(status_code=401, detail="Invalid session")
 
     if session.expires_at and session.expires_at < _utcnow_naive():
-        # Cleanup expired session
-        db.delete(session)
-        db.commit()
-        cache = getattr(request.app.state, "session_cache", None)
-        if cache:
-            cache.pop(token)
-        elif hasattr(request.app.state, "udemy_clients"):
-            request.app.state.udemy_clients.pop(token, None)
+        # Delete session; wipe Udemy cookies if this was the user's last session
+        cleanup_expired_session(db, session, getattr(request.app, "state", None))
         raise HTTPException(status_code=401, detail="Session expired")
 
     return session

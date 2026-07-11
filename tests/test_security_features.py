@@ -150,6 +150,56 @@ class TestRateLimiting:
             limiter.raise_if_limited("key1")
         assert exc.value.status_code == 429
 
+    def test_csp_violation_endpoint_rate_limited(self, monkeypatch):
+        """Unauthenticated CSP report edge is rate-limited per client."""
+        from fastapi.testclient import TestClient
+        import main as main_mod
+
+        tight = RateLimiter(max_requests=2, window_seconds=60)
+        monkeypatch.setattr(main_mod, "csp_report_rate_limiter", tight)
+        client = TestClient(main_mod.app)
+        headers = {"cf-connecting-ip": "203.0.113.90"}
+        assert (
+            client.post("/api/csp-violation", json={"csp-report": {}}, headers=headers).status_code
+            == 204
+        )
+        assert (
+            client.post("/api/csp-violation", json={"csp-report": {}}, headers=headers).status_code
+            == 204
+        )
+        assert (
+            client.post("/api/csp-violation", json={"csp-report": {}}, headers=headers).status_code
+            == 429
+        )
+
+    def test_public_coupons_api_rate_limited(self, monkeypatch):
+        """Public coupon JSON API is rate-limited per client."""
+        from fastapi.testclient import TestClient
+        import main as main_mod
+        import app.routers.public_deals as deals_mod
+
+        tight = RateLimiter(max_requests=2, window_seconds=60)
+        monkeypatch.setattr(deals_mod, "public_coupons_api_limiter", tight)
+        client = TestClient(main_mod.app)
+        headers = {"cf-connecting-ip": "203.0.113.91"}
+        assert client.get("/udemycoupons/api/coupons", headers=headers).status_code == 200
+        assert client.get("/udemycoupons/api/coupons", headers=headers).status_code == 200
+        assert client.get("/udemycoupons/api/coupons", headers=headers).status_code == 429
+
+    def test_auth_status_rate_limited(self, monkeypatch):
+        """Auth status probe is rate-limited per client."""
+        from fastapi.testclient import TestClient
+        import main as main_mod
+        import app.routers.auth as auth_mod
+
+        tight = RateLimiter(max_requests=2, window_seconds=60)
+        monkeypatch.setattr(auth_mod, "auth_status_rate_limiter", tight)
+        client = TestClient(main_mod.app)
+        headers = {"cf-connecting-ip": "203.0.113.92"}
+        assert client.get("/api/auth/status", headers=headers).status_code == 200
+        assert client.get("/api/auth/status", headers=headers).status_code == 200
+        assert client.get("/api/auth/status", headers=headers).status_code == 429
+
     def test_client_key_extracts_forwarded_for(self):
         req = MagicMock(spec=Request)
         req.headers = {"x-forwarded-for": "1.2.3.4, 5.6.7.8"}

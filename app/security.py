@@ -139,8 +139,12 @@ def _client_key(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-# Global limiters — shared across the app
+# Global limiters — shared across the app (unauthenticated / abuse-sensitive edges)
 login_rate_limiter = RateLimiter(max_requests=5, window_seconds=60)
+analytics_rate_limiter = RateLimiter(max_requests=30, window_seconds=60)
+csp_report_rate_limiter = RateLimiter(max_requests=20, window_seconds=60)
+public_coupons_api_limiter = RateLimiter(max_requests=60, window_seconds=60)
+auth_status_rate_limiter = RateLimiter(max_requests=90, window_seconds=60)
 
 
 # ── CSRF Protection ───────────────────────────────────

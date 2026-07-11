@@ -22,11 +22,11 @@ class Settings(BaseSettings):
     GOOGLE_SITE_VERIFICATION: str = ""
     # Bing Webmaster Tools verification code — set in .env after creating a Bing property
     BING_SITE_VERIFICATION: str = ""
-    # Google Tag Manager container ID
-    GTM_CONTAINER_ID: str = "GTM-5JHNVN6K"
-    # Google Analytics 4 Measurement ID — set in .env (e.g. G-XXXXXXXXXX)
+    # Google Tag Manager container ID — set in production .env only (no hard-coded default)
+    GTM_CONTAINER_ID: str = ""
+    # Google Analytics 4 Measurement ID — set in production .env only (e.g. G-XXXXXXXXXX)
     # Used for direct GA4 gtag.js tracking (works independently of GTM)
-    GA4_MEASUREMENT_ID: str = "G-GT1FDTC7Y6"
+    GA4_MEASUREMENT_ID: str = ""
     # CORS origins - in production, set specific domains
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 
@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     # Deployment environment: "local" or "server"
     # "server" applies stricter rate limits and adaptive backoff to avoid Udemy blocks
     DEPLOYMENT_ENV: str = "local"
+
+    # Max concurrent non-expired app sessions per user (login creates a new one).
+    # Oldest sessions are revoked when the cap is exceeded. Set 0 to disable.
+    MAX_SESSIONS_PER_USER: int = 3
 
     # Logging
     LOG_LEVEL: str = "WARNING"

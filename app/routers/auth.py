@@ -8,10 +8,13 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy.orm import Session
 
+from datetime import timedelta
+
 from app.models.database import User, UserSession, UserSettings, _utcnow_naive, get_db
 from app.schemas.schemas import CookieLoginRequest, LoginRequest, LoginResponse
 from app.security import (
     _client_key,
+    auth_status_rate_limiter,
     decrypt_cookies,
     encrypt_cookies,
     generate_csrf_token,
@@ -19,10 +22,22 @@ from app.security import (
     verify_csrf_token,
 )
 from app.services.udemy_client import LoginException, UdemyClient
+from app.session_lifecycle import cleanup_expired_session, enforce_session_limit
 from config.settings import get_settings
 
 settings = get_settings()
 router = APIRouter(prefix="/api/auth", tags=["Authentication"], redirect_slashes=False)
+
+# Hosted demo: short-lived app sessions (reduces multi-tenant cookie exposure window).
+# Local/self-host: longer convenience TTL.
+_SESSION_TTL_SERVER_SECONDS = 24 * 60 * 60  # 24 hours
+_SESSION_TTL_LOCAL_SECONDS = 30 * 24 * 60 * 60  # 30 days
+
+
+def _session_ttl_seconds() -> int:
+    if settings.DEPLOYMENT_ENV == "server":
+        return _SESSION_TTL_SERVER_SECONDS
+    return _SESSION_TTL_LOCAL_SECONDS
 
 
 def _create_session(
@@ -30,12 +45,27 @@ def _create_session(
 ) -> str:
     """Create a DB session record and register the client in session cache.
     Returns the session token to set as cookie.
+
+    Enforces ``MAX_SESSIONS_PER_USER`` by revoking the oldest sessions first.
     """
     token = secrets.token_hex(32)
+    ttl = _session_ttl_seconds()
+    expires_at = _utcnow_naive() + timedelta(seconds=ttl)
 
-    # Persist session in DB (survives server restarts)
-    db.add(UserSession(token=token, user_id=user.id))
+    # Persist session in DB (survives server restarts until expires_at)
+    db.add(UserSession(token=token, user_id=user.id, expires_at=expires_at))
     db.commit()
+
+    # Cap concurrent sessions (stolen cookie / multi-device control)
+    max_sessions = int(getattr(settings, "MAX_SESSIONS_PER_USER", 3) or 0)
+    if max_sessions > 0:
+        enforce_session_limit(
+            db,
+            user.id,
+            max_sessions=max_sessions,
+            app_state=getattr(request.app, "state", None),
+            keep_token=token,
+        )
 
     # Store authenticated client in bounded LRU cache
     cache = getattr(request.app.state, "session_cache", None)
@@ -45,13 +75,14 @@ def _create_session(
             request.app.state.udemy_clients = {}
         request.app.state.udemy_clients[token] = client
     else:
-        cache.set(token, client)
+        cache.set(token, client, ttl=ttl)
 
     return token
 
 
 def _login_response(client: UdemyClient, token: str) -> JSONResponse:
     csrf_token = generate_csrf_token(token)
+    max_age = _session_ttl_seconds()
     response = JSONResponse(
         content={
             "success": True,
@@ -68,6 +99,8 @@ def _login_response(client: UdemyClient, token: str) -> JSONResponse:
         httponly=True,
         samesite="lax",
         secure=settings.COOKIE_SECURE,
+        max_age=max_age,
+        path="/",
     )
     # CSRF cookie is NOT httponly so frontend JS can read it and send back in header
     response.set_cookie(
@@ -76,6 +109,8 @@ def _login_response(client: UdemyClient, token: str) -> JSONResponse:
         httponly=False,
         samesite="strict",
         secure=settings.COOKIE_SECURE,
+        max_age=max_age,
+        path="/",
     )
     return response
 
@@ -212,6 +247,7 @@ async def login_with_cookies(
 @router.get("/status")
 async def auth_status(request: Request, db: Session = Depends(get_db)):
     """Check if user is authenticated."""
+    auth_status_rate_limiter.raise_if_limited(_client_key(request))
     token = request.cookies.get("session_id")
     if not token:
         return {"authenticated": False}
@@ -223,13 +259,16 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
 
     # Check session expiration
     if session.expires_at and session.expires_at < _utcnow_naive():
-        db.delete(session)
-        db.commit()
-        cache = getattr(request.app.state, "session_cache", None)
-        if cache:
-            cache.pop(token)
-        elif hasattr(request.app.state, "udemy_clients"):
-            request.app.state.udemy_clients.pop(token, None)
+        client = cleanup_expired_session(
+            db, session, getattr(request.app, "state", None)
+        )
+        if client is not None:
+            try:
+                close_res = client.close()
+                if asyncio.iscoroutine(close_res):
+                    await close_res
+            except Exception as e:
+                logger.error(f"Error closing client after session expiry: {e}")
         return {"authenticated": False}
 
     # Check in-memory client from cache
@@ -265,6 +304,16 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
         else:
             return {"authenticated": False}
 
+    # Session lifetime metadata for UI (no secrets)
+    expires_at = session.expires_at
+    session_expires_at = None
+    session_seconds_remaining = None
+    if expires_at is not None:
+        # Stored as naive UTC
+        session_expires_at = expires_at.replace(microsecond=0).isoformat() + "Z"
+        remaining = int((expires_at - _utcnow_naive()).total_seconds())
+        session_seconds_remaining = max(0, remaining)
+
     return {
         "authenticated": True,
         "display_name": client.display_name,
@@ -273,6 +322,10 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
         if client.enrolled_courses
         else 0,
         "needs_reauth": False,
+        "deployment_env": settings.DEPLOYMENT_ENV,
+        "session_expires_at": session_expires_at,
+        "session_seconds_remaining": session_seconds_remaining,
+        "session_ttl_seconds": _session_ttl_seconds(),
     }
 
 
@@ -306,27 +359,39 @@ async def logout(
 
             # Delete session from DB
             db.query(UserSession).filter(UserSession.token == token).delete()
+
+            # Wipe stored Udemy session cookies on logout (short retention policy)
+            if user_id is not None:
+                user = db.query(User).filter(User.id == user_id).first()
+                if user is not None:
+                    user.udemy_cookies = None
             db.commit()
 
-            # Close in-memory client
+            # Close in-memory client (session_cache may be aliased as udemy_clients)
             cache = getattr(request.app.state, "session_cache", None)
-            client = cache.pop(token) if cache else None
+            client = None
+            if cache is not None:
+                client = cache.pop(token, None)
 
-            # Fallback to legacy dict
             if client is None and hasattr(request.app.state, "udemy_clients"):
-                client = request.app.state.udemy_clients.pop(token, None)
-                if client:
-                    try:
-                        close_res = client.close()
-                        if asyncio.iscoroutine(close_res):
-                            await close_res
-                    except Exception as e:
-                        logger.error(f"Error closing client {token} during logout: {e}")
+                clients = request.app.state.udemy_clients
+                # Avoid double-pop when udemy_clients is the same SessionCache object
+                if clients is not cache and clients is not None:
+                    if hasattr(clients, "pop"):
+                        client = clients.pop(token, None)
 
-                    log_user_id = user_id if user_id is not None else "unknown"
-                    logger.info(
-                        f"Closed Udemy client session for user {log_user_id} due to logout."
-                    )
+            if client is not None:
+                try:
+                    close_res = client.close()
+                    if asyncio.iscoroutine(close_res):
+                        await close_res
+                except Exception as e:
+                    logger.error(f"Error closing client during logout: {e}")
+
+                log_user_id = user_id if user_id is not None else "unknown"
+                logger.info(
+                    f"Closed Udemy client session for user {log_user_id} due to logout."
+                )
     except Exception as e:
         logger.error(f"Error during logout: {e}")
 
@@ -335,8 +400,9 @@ async def logout(
         content={"success": True, "message": "Logged out successfully"}
     )
 
-    # Delete session cookie with explicit settings
+    # Delete session and CSRF cookies with explicit settings
     response.delete_cookie("session_id", path="/", domain=None)
+    response.delete_cookie("csrf_token", path="/", domain=None)
 
     # Prevent browser caching of authenticated pages
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

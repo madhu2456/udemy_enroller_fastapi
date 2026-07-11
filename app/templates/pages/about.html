@@ -1,16 +1,17 @@
-{% extends "components/base.html" %} {% block title %}About the Automated Udemy
-Enroller Tool by Madhu Dadi{% endblock %} {% block meta_title %}About the Automated Udemy
-Enroller Tool by Madhu Dadi{% endblock %} {% block meta_description %}Learn about the Udemy
-Enroller project - an open-source FastAPI automation tool built by Madhu Dadi to help
-learners automatically discover and claim 100% off Udemy courses.{% endblock %} {% block
+{% extends "components/base.html" %} {% block title %}About Udemy Enroller by
+Madhu Dadi{% endblock %} {% block meta_title %}About Udemy Enroller by Madhu
+Dadi{% endblock %} {% block meta_description %}About Udemy Enroller by Madhu
+Dadi: open-source FastAPI helper for free Udemy coupons and enrollment runs. Not
+affiliated with Udemy. Enrollment is not guaranteed.{% endblock %} {% block
 og_type %}article{% endblock %} {% block
-og_title %}About the Automated Udemy Enroller Tool by Madhu Dadi{% endblock %} {% block og_description %}Learn
-about the Udemy Enroller project - an open-source FastAPI automation tool built by Madhu
-Dadi to help learners automatically claim 100% off Udemy courses.{% endblock %} {% block
-twitter_title %}About the Automated Udemy Enroller Tool by Madhu Dadi{% endblock %} {% block
-twitter_description %}Learn about the Udemy Enroller project - an open-source FastAPI
-automation tool built by Madhu Dadi to help learners claim 100% off Udemy
-courses.{% endblock %} {% block content %}
+og_title %}About Udemy Enroller by Madhu Dadi{% endblock %} {% block
+og_description %}Open-source FastAPI tool by Madhu Dadi that helps find free
+Udemy coupons and attempt enrollment when you start a run. Not affiliated with
+Udemy.{% endblock %} {% block
+twitter_title %}About Udemy Enroller by Madhu Dadi{% endblock %} {% block
+twitter_description %}Open-source FastAPI tool by Madhu Dadi for free Udemy
+coupons and enrollment runs. Not affiliated with Udemy. Not guaranteed.{%
+endblock %} {% block content %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -80,9 +81,10 @@ courses.{% endblock %} {% block content %}
                     >
                     to solve a simple but frustrating problem: free Udemy
                     coupons expire within hours, and manually hunting for them
-                    is a losing game. The enroller monitors coupon aggregator
-                    sites around the clock and claims courses the moment they
-                    appear - so your learning never depends on perfect timing.
+                    is a losing game. When you start a run on a running app
+                    instance, the enroller monitors configured coupon aggregator
+                    sites and attempts enrollment for matching free courses.
+                    Success is not guaranteed.
                 </p>
                 <p class="text-sm text-gray-500 leading-relaxed">
                     Don't want to automate your account? You can also manually
@@ -91,7 +93,8 @@ courses.{% endblock %} {% block content %}
                         href="/udemycoupons"
                         class="text-[#2563EB] hover:underline font-medium font-bold"
                         >100% Free Udemy Coupons</a
-                    >, which is updated continuously throughout the day.
+                    >. Listings refresh when enrollment runs or the coupon
+                    checker finish — validity can still change.
                 </p>
             </div>
         </section>

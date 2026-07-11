@@ -1,6 +1,9 @@
 """Settings router for managing user enrollment preferences."""
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from loguru import logger
 
@@ -8,6 +11,7 @@ from app.models.database import (
     get_db,
     UserSettings,
     User,
+    UserSession,
     EnrollmentRun,
     EnrolledCourse,
 )
@@ -149,7 +153,10 @@ async def clear_data(
     user_id: int = Depends(get_current_user_id),
     _csrf: None = Depends(verify_csrf_token),
 ):
-    """Delete all enrollment runs and course data for the user, and reset lifetime stats."""
+    """Delete enrollment history/stats, app sessions, and stored Udemy cookies.
+
+    Keeps the local user row and preference settings so the account can re-connect.
+    """
     # Check for active run
     active_run = (
         db.query(EnrollmentRun)
@@ -170,13 +177,25 @@ async def clear_data(
         # 1. Delete all enrolled courses associated with the user's runs
         # Correlated delete avoids race condition between SELECT and DELETE
         from sqlalchemy import select
+
         subq = select(EnrollmentRun.id).where(EnrollmentRun.user_id == user_id).scalar_subquery()
         db.execute(delete(EnrolledCourse).where(EnrolledCourse.enrollment_run_id.in_(subq)))
 
         # 2. Delete all enrollment runs
         db.execute(delete(EnrollmentRun).where(EnrollmentRun.user_id == user_id))
 
-        # 3. Reset user lifetime stats
+        # 3. Collect session tokens before deleting sessions (for cache cleanup)
+        session_tokens = [
+            row[0]
+            for row in db.query(UserSession.token)
+            .filter(UserSession.user_id == user_id)
+            .all()
+        ]
+
+        # 4. Delete all app sessions for this user
+        db.execute(delete(UserSession).where(UserSession.user_id == user_id))
+
+        # 5. Reset lifetime stats and wipe encrypted Udemy cookies
         db.execute(
             update(User)
             .where(User.id == user_id)
@@ -186,19 +205,50 @@ async def clear_data(
                 total_expired=0,
                 total_excluded=0,
                 total_amount_saved=0.0,
+                udemy_cookies=None,
             )
         )
 
         db.commit()
-        logger.info(f"All data cleared and stats reset for user {user_id}")
+        logger.info(
+            f"Cleared history, stats, sessions, and Udemy cookies for user {user_id}"
+        )
 
-        # Clear cache to ensure UI stats are refreshed
+        # Close in-memory Udemy clients for this user's sessions
+        cache = getattr(request.app.state, "session_cache", None)
+        for tok in session_tokens:
+            client = None
+            if cache is not None:
+                client = cache.pop(tok, None)
+            if client is None and hasattr(request.app.state, "udemy_clients"):
+                clients = request.app.state.udemy_clients
+                if clients is not cache and clients is not None and hasattr(clients, "pop"):
+                    client = clients.pop(tok, None)
+            if client is not None:
+                try:
+                    close_res = client.close()
+                    if asyncio.iscoroutine(close_res):
+                        await close_res
+                except Exception as e:
+                    logger.error(f"Error closing client during clear-data: {e}")
+
+        # Clear dashboard caches
         clear_user_caches(user_id)
 
-        return {
-            "status": "success",
-            "message": "All enrollment history and statistics have been cleared",
-        }
+        response = JSONResponse(
+            content={
+                "status": "success",
+                "message": (
+                    "Enrollment history, statistics, sessions, and stored Udemy "
+                    "cookies were cleared. Connect again to use enrollment."
+                ),
+            }
+        )
+        # Force re-auth in the browser
+        response.delete_cookie("session_id", path="/", domain=None)
+        response.delete_cookie("csrf_token", path="/", domain=None)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        return response
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to clear data for user {user_id}: {e}")

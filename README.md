@@ -9,7 +9,7 @@
 
 > **⚠️ Disclaimer:** This project is **NOT affiliated, endorsed, or connected with Udemy or any of its affiliates.** "Udemy" is a registered trademark of Udemy, Inc. This is an independent, open-source tool built for educational purposes. Users are solely responsible for ensuring their use complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
 >
-> A free, open-source FastAPI application that automatically finds and enrolls you in 100% discounted Udemy courses. Built by [Madhu Dadi](https://madhudadi.in).
+> A free, open-source FastAPI application that monitors coupon sources and can **attempt** enrollment in 100% discounted Udemy courses when **you start a run**. Success is not guaranteed. Built by [Madhu Dadi](https://madhudadi.in).
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com)
@@ -32,9 +32,9 @@
 
 ## What is Udemy Course Enroller?
 
-**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that automates the process of discovering and enrolling in free, 100% off discounted Udemy courses. It continuously monitors popular coupon aggregator websites - such as Real Discount, Discudemy, and Courson - and uses Udemy's enrollment endpoints to claim courses directly to your account.
+**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that helps you discover free (often 100% off) Udemy course coupons and **attempt** enrollment when you start a run. While a run is active, it monitors configured coupon aggregator sites — such as Real Discount, Discudemy, and Courson — applies your filters, and uses session-based Udemy enrollment endpoints. Enrollment success and coupon validity are **not guaranteed**.
 
-No more manually hunting for expired coupons or missing limited-time offers. The tool runs in the background, filters courses based on your preferences, and builds you a library of premium educational content - completely free.
+You can also browse public free-coupon listings without automation. Prefer self-hosting if you want full control over where session cookies are stored.
 
 ---
 
@@ -42,11 +42,11 @@ No more manually hunting for expired coupons or missing limited-time offers. The
 
 Premium online education on platforms like Udemy can be expensive. However, instructors frequently share **100% off coupons** on aggregator sites to build reviews and reach new students. The problem? These coupons expire within hours - sometimes minutes.
 
-This tool solves that by:
-- **Monitoring** multiple coupon sources 24/7
+This tool helps with that by:
+- **Monitoring** configured coupon sources when you start an enrollment run
 - **Filtering** courses by category, language, rating, and instructor
-- **Enrolling** automatically via Udemy's enrollment endpoints
-- **Tracking** your lifetime savings in real-time
+- **Attempting enrollment** via Udemy's session-based enrollment endpoints (not guaranteed)
+- **Tracking** recorded enrollments and estimated savings on the dashboard
 
 ---
 
@@ -54,7 +54,7 @@ This tool solves that by:
 
 | Feature | Description |
 |---------|-------------|
-| **Fully Automated** | Set filters once, let the engine handle everything else |
+| **Run-based automation** | Set filters, start a run; the engine monitors sources while the run is active |
 | **Smart Filtering** | Exclude categories, languages, low-rated courses, or specific instructors |
 | **Cookie-Based Auth** | Secure login using Udemy session cookies - no passwords stored |
 | **Bulk Enrollment** | Intelligently batches API requests to respect rate limits |
@@ -121,20 +121,23 @@ By default, containerized deployments run in `DEPLOYMENT_ENV=server` mode to enf
    cd udemy_enroller_fastapi
    ```
 
-2. Generate and set a strong `SECRET_KEY` in a `.env` file:
+2. Create a `.env` with strong secrets (required in `DEPLOYMENT_ENV=server`):
    ```bash
-   # Generate a secure 32-byte key
-   openssl rand -hex 32
+   openssl rand -hex 32   # SECRET_KEY
+   python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"  # COOKIE_ENCRYPTION_KEY
    ```
 
-   Create a `.env` file:
    ```env
    SECRET_KEY=your_generated_strong_hex_key_here
+   COOKIE_ENCRYPTION_KEY=your_fernet_key_here
+   DEPLOYMENT_ENV=server
    ```
+
+   See `.env.example` for optional analytics and other settings.
 
 3. Launch the container:
    ```bash
-   docker-compose up -d
+   docker compose up -d --build
    ```
 
 ---
@@ -148,35 +151,110 @@ By default, containerized deployments run in `DEPLOYMENT_ENV=server` mode to enf
    - `csrftoken`
 3. **Paste cookies** into the login form at the app's homepage
 4. **Configure filters** in Settings (categories, languages, ratings, exclusions)
-5. **Click "Start Enrollment"** on the Dashboard
-6. **Watch** as courses are automatically claimed and tracked
+5. **Click "Start Enrollment"** on the Dashboard (confirm when prompted)
+6. **Watch progress** as the run attempts enrollments and records results (success is not guaranteed)
 
 For detailed setup instructions, visit the [Guides](https://udemyenroller.madhudadi.in/guides) page or read the [case study](https://madhudadi.in/case-studies/udemy-enroller-fastapi/).
 
 ---
 
+## Updating
+
+### Local (git + venv)
+
+```bash
+cd udemy_enroller_fastapi
+git pull origin main
+source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+alembic upgrade head
+# Restart the app (stop python run.py / uvicorn, then start again)
+python run.py
+```
+
+If you changed Tailwind sources:
+
+```bash
+npm ci
+npm run build:css
+```
+
+### Docker
+
+```bash
+cd udemy_enroller_fastapi
+git pull origin main
+docker compose up -d --build
+```
+
+Production pushes to `main` can also deploy via **GitHub Actions** (`.github/workflows/deploy.yaml`), if that workflow is configured for your server.
+
+After updates, re-check `.env.example` for any new variables (for example `COOKIE_ENCRYPTION_KEY` and analytics IDs in server mode).
+
+---
+
+## Uninstall / remove
+
+### Local
+
+1. Stop the app (Ctrl+C if running in a terminal, or stop the process/service).
+2. Optional: export or back up data first (see [Backup & Recovery](#backup--recovery)).
+3. Remove the project directory (this deletes the app, venv, and local DB if they live there):
+   ```bash
+   # From the parent directory — adjust the folder name if different
+   rm -rf udemy_enroller_fastapi
+   ```
+4. If you installed the Chrome extension unpacked: Chrome → Extensions → remove **Udemy Enroller - Cookie Extractor**.
+5. Browser cookies for the app origin are separate from Udemy; clear site data for your enroller URL if desired.
+
+### Docker
+
+```bash
+cd udemy_enroller_fastapi
+docker compose down
+# Optional: remove built images
+docker compose down --rmi local
+# Optional: remove named volumes (DESTROYS container data)
+docker compose down -v
+```
+
+Then delete the project directory if you no longer need the files.
+
+### Hosted demo
+
+There is nothing to uninstall for the public demo. Use **Logout** and/or **Clear All Data** in Settings to remove your session cookies and enrollment history on that instance (see [Privacy](https://udemyenroller.madhudadi.in/privacy)).
+
+---
+
 ## Validating Expired Coupons
 
-The application includes a background script to automatically hit the Udemy pricing API and validate whether your scraped coupons are still active or have expired. This drives the public `/udemycoupons` deals page.
+The application checks coupon listing validity for the public `/udemycoupons` page (`public_deals.json`). Prefer mocks/fixtures in development; be mindful of third-party rate limits and terms.
+
+**Either process updates `public_deals.json` and the coupon entries in `/sitemap.xml`:**
+
+1. **Enrollment run** (Start Enrollment) — coupons are checked in the pipeline; when the run finishes, the JSON is rebuilt from DB rows with `is_coupon_valid=true`, then the sitemap deal URLs are refreshed.
+2. **Standalone checker** — re-validates existing DB coupons and rebuilds the same JSON + sitemap.
+
+`GET /sitemap.xml` always rebuilds from the current `public_deals.json` (valid slugs only). A disk snapshot is also written as `sitemap.generated.xml` / `sitemap.meta.json` after each export.
 
 ### Running Locally
-If you are running the application locally via Python, simply run the bash script from the root directory:
+From the project root:
 ```bash
 ./scripts/coupon_checker.sh
 ```
 
 ### Running on Production Server (Docker)
-If you have deployed the application using Docker (e.g., via `scripts/deploy.sh`), you must run the checker *inside* the running container:
+Run the checker *inside* the running container:
 ```bash
 docker compose exec web bash ./scripts/coupon_checker.sh
 ```
-*(Note: You can safely add this command to your server's cron jobs to automatically check coupon statuses daily.)*
+*(Optional: schedule this via cron if you want periodic re-checks without starting an enrollment run.)*
 
 ---
 
 ## Backup & Recovery
 
-Your enrollment history and settings are stored in a local SQLite database (`udemy_enroller.db`). To back up your data:
+Your enrollment history and settings are stored in a local SQLite database (`udemy_enroller.db` locally, or under the Docker data volume, e.g. `/app/data/udemy_enroller.db`). To back up your data:
 
 ### Manual Backup
 ```bash
@@ -241,19 +319,24 @@ This project is part of a broader portfolio of open-source automation tools aime
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for setup, tests, PR expectations, and safety rules (no real Udemy abuse tests, no secret commits).
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Short version:
+
+1. Fork and branch from `main`
+2. Install deps, run `ruff check .` and `pytest`
+3. Open a focused Pull Request
+
+Security issues: [SECURITY.md](SECURITY.md) (prefer private reporting).  
+Owner/counsel process checklist (not legal advice): [docs/legal-counsel-review.md](docs/legal-counsel-review.md).
 
 ---
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Notable changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

@@ -38,6 +38,11 @@ node_modules/
 
 # Application data
 Courses/*.txt
+*.bak
+public_deals.json.bak
+# Generated when deals are exported (enrollment / coupon_checker)
+sitemap.generated.xml
+sitemap.meta.json
 
 # Test scripts
 test_nodriver.py

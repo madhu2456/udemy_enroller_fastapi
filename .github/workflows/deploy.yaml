@@ -12,12 +12,14 @@ jobs:
     
     steps:
     - name: Get latest code
-      uses: actions/checkout@v4
+      # Pin full commit SHA (tag v4.2.2) for supply-chain integrity
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
     # The rsync action copies your project files to the remote server.
     # Excludes are used so we don't overwrite virtual environments or local DBs.
     - name: Sync files to remote server
-      uses: burnett01/rsync-deployments@7.0.1
+      # Pin full commit SHA (tag 7.0.1)
+      uses: burnett01/rsync-deployments@796cf0d5e4b535745ce49d7429f77cf39e25ef39 # 7.0.1
       with:
         switches: -avzr --delete --exclude=.git/ --exclude=venv/ --exclude=__pycache__/ --exclude=*.db --exclude=.env
         rsh: -4 -o BatchMode=yes -o ConnectTimeout=30
@@ -27,10 +29,10 @@ jobs:
         remote_user: ${{ secrets.SERVER_USER }}
         remote_key: ${{ secrets.SSH_KEY_DEPLOY }}
 
-    # Optional: Once the code is copied, you likely want to restart your Docker container or systemd service.
-    # You can use a tool like appleboy/ssh-action for that.
+    # Restart Docker on the remote host after sync.
     - name: Restart Docker Container
-      uses: appleboy/ssh-action@master
+      # Pin full commit SHA (release tag v1.2.5); never use @master
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}

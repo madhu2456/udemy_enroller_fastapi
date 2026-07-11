@@ -203,12 +203,22 @@ endblock %} {% block content %}
                                     class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
                                 ></span>
                                 <span
-                             >When self-hosting, no data leaves your
-                                     instance. On the hosted demo at
-                                     udemyenroller.madhudadi.in, encrypted
-                                     cookies are stored on the demo server.
-                                     Your credentials are used only to
-                                     communicate directly with Udemy's enrollment endpoints.</span
+                                    >When self-hosting, no data leaves your
+                                    instance. On the hosted demo at
+                                    udemyenroller.madhudadi.in, encrypted
+                                    Udemy session cookies may be stored on the
+                                    demo server so enrollment can run for your
+                                    session. Hosted app sessions expire after
+                                    about 24 hours. Each account is limited to a
+                                    small number of concurrent app sessions
+                                    (oldest sessions are signed out when the
+                                    limit is exceeded). When the last session
+                                    expires, log out, or you use Clear All Data,
+                                    stored Udemy cookies for that user are
+                                    removed. Prefer self-hosting for greater
+                                    control over where session data lives.
+                                    Credentials are used only to communicate
+                                    with Udemy's enrollment endpoints.</span
                                 >
                             </li>
                         </ul>
@@ -239,7 +249,7 @@ endblock %} {% block content %}
                                          href="https://policies.google.com/privacy"
                                          target="_blank"
                                          rel="noopener noreferrer"
-                                         class="text-blue-600 hover:underline"
+                                         class="text-blue-700 underline underline-offset-2 hover:text-blue-900"
                                          >Google Privacy Policy</a
                                      >
                                      for details.</span
@@ -305,8 +315,18 @@ endblock %} {% block content %}
                                     <strong class="text-gray-700"
                                         >Clear All Data</strong
                                     >
-                                    to delete your enrollment history, settings,
-                                    and account.</span
+                                    to delete your enrollment history, reset
+                                    lifetime statistics, end app sessions, and
+                                    remove encrypted Udemy session cookies
+                                    stored for your user. You will need to
+                                    connect again to enroll. This does
+                                    <strong class="text-gray-700"
+                                        >not</strong
+                                    >
+                                    delete your local app account row or
+                                    preference settings. Self-hosters can also
+                                    delete the database file as described
+                                    below.</span
                                 >
                             </li>
                             <li class="flex items-start gap-2">
@@ -318,7 +338,7 @@ endblock %} {% block content %}
                                     >If you are self-hosting, you can also
                                     delete the SQLite database file directly
                                     (<code
-                                        class="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-mono"
+                                        class="text-xs text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded font-mono"
                                         >udemy_enroller.db</code
                                     >).</span
                                 >
@@ -337,7 +357,12 @@ endblock %} {% block content %}
                             The application sets the following browser cookies
                             for authentication:
                         </p>
-                        <div class="overflow-x-auto max-w-full">
+                        <div
+                            class="overflow-x-auto max-w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-md"
+                            tabindex="0"
+                            role="region"
+                            aria-label="Browser cookies table (scroll horizontally if needed)"
+                        >
                             <table class="min-w-full text-sm text-left">
                                 <thead>
                                     <tr class="border-b border-gray-200">

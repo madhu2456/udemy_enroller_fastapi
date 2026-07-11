@@ -136,53 +136,15 @@ async def main():
             await asyncio.sleep(3)
 
     finally:
-        # Export valid coupons to a JSON file for the server
-        logger.info("Exporting valid coupons to public_deals.json...")
-        import json
+        # Same export used after enrollment runs — public_deals.json + sitemap
+        logger.info("Exporting valid coupons to public_deals.json + sitemap...")
+        try:
+            from app.services.public_deals_export import export_public_deals_json
 
-        valid_courses = (
-            db.query(EnrolledCourse)
-            .filter(
-                EnrolledCourse.is_coupon_valid.is_(True),
-                EnrolledCourse.coupon_code.isnot(None),
-            )
-            .order_by(desc(EnrolledCourse.enrolled_at))
-            .limit(500)
-            .all()
-        )
-
-        export_data = []
-        for c in valid_courses:
-            export_data.append(
-                {
-                    "id": c.id,
-                    "title": c.title,
-                    "url": c.url,
-                    "coupon_code": c.coupon_code,
-                    "price": c.price,
-                    "category": c.category,
-                    "language": c.language,
-                    "rating": c.rating,
-                    "is_coupon_valid": c.is_coupon_valid,
-                    "enrolled_at": c.enrolled_at.isoformat() + "Z"
-                    if c.enrolled_at
-                    else None,
-                    "last_checked_at": c.last_checked_at.isoformat() + "Z"
-                    if c.last_checked_at
-                    else None,
-                }
-            )
-
-        json_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "public_deals.json",
-        )
-        tmp_path = json_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(export_data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp_path, json_path)
-
-        logger.info(f"Exported {len(export_data)} valid coupons to {json_path}")
+            n = export_public_deals_json(db)  # writes JSON and refreshes sitemap
+            logger.info(f"Export complete ({n} valid coupons; sitemap refreshed)")
+        except Exception as e:
+            logger.error(f"public_deals/sitemap export failed: {e}")
         db.close()
         logger.info("Coupon Check Completed.")
 

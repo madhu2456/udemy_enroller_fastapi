@@ -26,10 +26,11 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
         </div>
         <div class="flex items-center">
             <button
+                type="button"
                 onclick="fetchHistory()"
-                class="flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all active:scale-95"
+                class="flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sync Data
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5" aria-hidden="true"></i> Sync Data
             </button>
         </div>
     </div>
@@ -206,8 +207,8 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
             if (!data || data.length === 0) {
                 feed.innerHTML = `
                 <div class="bg-white border border-gray-200 rounded-xl p-20 text-center shadow-sm">
-                    <p class="text-gray-400 italic mb-6 font-light">Your history log is currently empty.</p>
-                    <a href="/dashboard" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full text-sm font-semibold transition-all shadow-sm">Start Automated Enrollment</a>
+                    <p class="text-gray-600 italic mb-6 font-light">Your history log is currently empty.</p>
+                    <a href="/dashboard" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full text-sm font-semibold transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Start Automated Enrollment</a>
                 </div>
             `;
                 return;
@@ -230,51 +231,51 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
 
                     return `
                 <div class="bg-white border border-gray-200 rounded-xl transition-all duration-300 hover:border-gray-300 overflow-hidden shadow-sm" id="card-${run.run_id}">
-                    <!-- Main Header (Clickable) -->
-                    <div class="p-6 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6" onclick="handleCardToggle(${run.run_id})">
-                        <div class="flex items-center gap-4">
-                            <div class="hidden md:flex w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 items-center justify-center text-gray-400 group-hover:text-blue-600 transition-all">
+                    <!-- Main Header (keyboard-expandable) -->
+                    <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <button type="button" class="flex items-center gap-4 text-left flex-1 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" onclick="handleCardToggle(${run.run_id})" aria-expanded="false" aria-controls="expansion-${run.run_id}" id="toggle-run-${run.run_id}">
+                            <div class="hidden md:flex w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 items-center justify-center text-gray-500 flex-shrink-0" aria-hidden="true">
                                 <i data-lucide="terminal" class="w-5 h-5"></i>
                             </div>
-                            <div>
-                                <div class="flex items-center gap-3 mb-1">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-3 mb-1 flex-wrap">
                                     <span class="text-gray-900 font-semibold text-base tracking-tight">Run #${run.run_id}</span>
                                     <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase border ${badgeClass}">${escapeHTML(run.status)}</span>
                                 </div>
-                                <div class="flex items-center gap-3 text-xs text-gray-400 font-light">
+                                <div class="flex items-center gap-3 text-xs text-gray-600 font-light">
                                     <span>${formatTime(run.started_at)}</span>
-                                    <span class="opacity-40">|</span>
-                                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i>${getRunTime(run.started_at, run.completed_at)}</span>
+                                    <span class="opacity-40" aria-hidden="true">|</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>${getRunTime(run.started_at, run.completed_at)}</span>
                                 </div>
                             </div>
-                        </div>
+                        </button>
 
                         <div class="flex items-center justify-between md:justify-end gap-8 md:gap-12">
                             <div class="flex gap-8">
                                 <div class="text-center md:text-left">
-                                    <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">Enrolled</p>
-                                    <p class="text-lg font-semibold text-green-600 leading-none">${run.successfully_enrolled}</p>
+                                    <p class="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5">Enrolled</p>
+                                    <p class="text-lg font-semibold text-green-700 leading-none">${run.successfully_enrolled}</p>
                                 </div>
                                 <div class="text-center md:text-left">
-                                    <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">Savings</p>
-                                    <p class="text-lg font-semibold text-blue-600 leading-none">${currencySym}${(run.amount_saved || 0).toFixed(2)}</p>
+                                    <p class="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5">Savings</p>
+                                    <p class="text-lg font-semibold text-blue-700 leading-none">${currencySym}${(run.amount_saved || 0).toFixed(2)}</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
-                                <button onclick="event.stopPropagation(); requestDelete(${run.run_id})" class="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                <button type="button" onclick="requestDelete(${run.run_id})" class="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" aria-label="Delete run ${run.run_id}">
+                                    <i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i>
                                 </button>
-                                <div class="text-gray-400 transition-all duration-300 transform" id="chevron-${run.run_id}">
-                                    <i data-lucide="chevron-down" class="w-5 h-5"></i>
-                                </div>
+                                <button type="button" class="text-gray-600 transition-all duration-300 transform p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" id="chevron-${run.run_id}" onclick="handleCardToggle(${run.run_id})" aria-label="Expand or collapse run ${run.run_id}" aria-controls="expansion-${run.run_id}">
+                                    <i data-lucide="chevron-down" class="w-5 h-5" aria-hidden="true"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Expansion Area -->
-                    <div id="expansion-${run.run_id}" class="hidden border-t border-gray-100 bg-gray-50/50">
+                    <div id="expansion-${run.run_id}" class="hidden border-t border-gray-100 bg-gray-50/50" role="region" aria-labelledby="toggle-run-${run.run_id}">
                         <div class="p-6 md:p-8" id="details-${run.run_id}">
-                            <div class="flex justify-center py-10"><i data-lucide="loader" class="text-blue-500 w-6 h-6 animate-spin"></i></div>
+                            <div class="flex justify-center py-10"><i data-lucide="loader" class="text-blue-500 w-6 h-6 animate-spin" aria-hidden="true"></i></div>
                         </div>
                     </div>
                 </div>
@@ -301,18 +302,21 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
         const box = document.getElementById(`expansion-${id}`);
         const chevron = document.getElementById(`chevron-${id}`);
         const content = document.getElementById(`details-${id}`);
+        const toggleBtn = document.getElementById(`toggle-run-${id}`);
 
         const isClosed = box.classList.contains("hidden");
 
         if (!isClosed) {
             box.classList.add("hidden");
             if (chevron) chevron.style.transform = "rotate(0deg)";
+            if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
             return;
         }
 
         // Open
         box.classList.remove("hidden");
         if (chevron) chevron.style.transform = "rotate(180deg)";
+        if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "true");
 
         // Load details if not cached
         if (sessionCache.has(id)) return;
@@ -470,12 +474,15 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
      * Request Deletion
      */
     async function requestDelete(id) {
-        if (
-            !confirm(
+        const ok = await window.accessibleConfirm({
+            title: "Delete this run?",
+            message:
                 "Permanently purge this enrollment session from the logs? Metrics will be preserved.",
-            )
-        )
-            return;
+            confirmLabel: "Delete",
+            cancelLabel: "Cancel",
+            danger: true,
+        });
+        if (!ok) return;
         try {
             const r = await apiFetch(`/api/enrollment/run/${id}`, {
                 method: "DELETE",
