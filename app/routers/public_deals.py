@@ -1,11 +1,8 @@
-from fastapi import APIRouter, Depends, Request, Query, HTTPException
+from fastapi import APIRouter, Request, Query, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
 
-from app.models.database import get_db, EnrolledCourse
 from app.security import _client_key, public_coupons_api_limiter
 from app.services.public_deals_export import (
     category_slug as category_slug_fn,
@@ -13,6 +10,7 @@ from app.services.public_deals_export import (
     get_valid_deal_by_slug,
     list_category_summaries,
     list_valid_deals,
+    load_public_deals,
     public_deals_freshness,
     related_deals,
 )
@@ -122,7 +120,6 @@ async def public_deals_page_redirect():
 @router.get("/api/coupons")
 def get_public_coupons(
     request: Request,
-    db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
     limit: int = Query(PUBLIC_COUPON_PAGE_SIZE, ge=1, le=100),
     search: str = Query(None),
@@ -130,81 +127,43 @@ def get_public_coupons(
     status: str = Query(None)
 ):
     """API endpoint to fetch coupons for the public dashboard."""
-    import os
-    import json
-
     public_coupons_api_limiter.raise_if_limited(_client_key(request))
 
-    json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "public_deals.json")
-    
-    if os.path.exists(json_path):
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                all_courses = json.load(f)
-                
-            categories = sorted(list(set(c.get("category") for c in all_courses if c.get("category"))))
-            
-            if search:
-                search_lower = search.lower()
-                all_courses = [c for c in all_courses if search_lower in (c.get("title") or "").lower()]
-                
-            if category:
-                all_courses = [c for c in all_courses if c.get("category") == category]
-                
-            if status and status.lower() != "all":
-                is_valid_filter = status.lower() == "enrolled"
-                all_courses = [c for c in all_courses if c.get("is_coupon_valid") == is_valid_filter]
-                
-            total = len(all_courses)
-            start_idx = (page - 1) * limit
-            paged_courses = all_courses[start_idx:start_idx + limit]
-            
-            return {
-                "items": paged_courses,
-                "categories": categories,
-                "total": total,
-                "page": page,
-                "pages": (total + limit - 1) // limit
-            }
-        except Exception:
-            pass # Fallback to DB
-            
-    query = db.query(EnrolledCourse)
-    
+    # The public endpoint must only serve the explicitly published export. The
+    # canonical loader returns an empty list when the export is unavailable or
+    # malformed, preventing a fallback across the private database boundary.
+    all_courses = load_public_deals()
+    categories = sorted(
+        {c.get("category") for c in all_courses if c.get("category")}
+    )
+
     if search:
-        query = query.filter(EnrolledCourse.title.ilike(f"%{search}%"))
-        
+        search_lower = search.lower()
+        all_courses = [
+            c
+            for c in all_courses
+            if search_lower in (c.get("title") or "").lower()
+        ]
+
     if category:
-        query = query.filter(EnrolledCourse.category == category)
-        
+        all_courses = [c for c in all_courses if c.get("category") == category]
+
     if status and status.lower() != "all":
         is_valid_filter = status.lower() == "enrolled"
-        query = query.filter(EnrolledCourse.is_coupon_valid == is_valid_filter)
-        
-    total = query.count()
-    courses = query.order_by(desc(EnrolledCourse.enrolled_at)).offset((page - 1) * limit).limit(limit).all()
-    
-    # Extract unique categories for the filter
-    categories = [cat[0] for cat in db.query(EnrolledCourse.category).filter(EnrolledCourse.category.isnot(None)).distinct().all()]
-    
+        all_courses = [
+            c
+            for c in all_courses
+            if c.get("is_coupon_valid") == is_valid_filter
+        ]
+
+    total = len(all_courses)
+    start_idx = (page - 1) * limit
+    paged_courses = all_courses[start_idx : start_idx + limit]
+
     return {
-        "items": [
-            {
-                "id": c.id,
-                "title": c.title,
-                "url": c.url,
-                "coupon_code": c.coupon_code,
-                "price": c.price,
-                "category": c.category,
-                "language": c.language,
-                "rating": c.rating,
-                "is_coupon_valid": c.is_coupon_valid,
-                "enrolled_at": c.enrolled_at.isoformat() + "Z" if c.enrolled_at else None,
-                "last_checked_at": c.last_checked_at.isoformat() + "Z" if c.last_checked_at else None
-            } for c in courses
-        ],
+        "items": paged_courses,
         "categories": categories,
         "total": total,
         "page": page,
-        "pages": (total + limit - 1) // limit
+        "pages": (total + limit - 1) // limit,
     }

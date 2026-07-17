@@ -11,14 +11,13 @@ DB_PATH=$(echo $DB_URL | sed 's|^sqlite:///||')
 
 echo "------------------------------------------------"
 echo " Database Initialization"
-echo " URL:  $DB_URL"
-echo " Path: $DB_PATH"
+echo " Database configuration detected."
 echo "------------------------------------------------"
 
 # Ensure directory exists for SQLite
 DB_DIR=$(dirname "$DB_PATH")
 if [ "$DB_DIR" != "." ] && [ ! -d "$DB_DIR" ]; then
-    echo "Creating directory $DB_DIR..."
+    echo "Creating database directory..."
     mkdir -p "$DB_DIR"
 fi
 
@@ -75,7 +74,7 @@ EOF
         alembic stamp 20260411_0001
     fi
 else
-    echo "No existing database found at $DB_PATH. A new one will be created."
+    echo "No existing database found. A new one will be created."
 fi
 
 echo "Running migrations (alembic upgrade head)..."

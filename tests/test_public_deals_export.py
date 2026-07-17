@@ -1,13 +1,18 @@
 """Tests for public_deals.json export shared by coupon checker and enrollment."""
 
 import json
+import os
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from pathlib import Path
+from threading import Barrier
+from types import SimpleNamespace
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import app.services.public_deals_export as public_deals_export_module
 from app.models.database import (
     Base,
     EnrolledCourse,
@@ -86,7 +91,9 @@ def test_export_only_valid_with_coupon_code():
     try:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "public_deals.json"
-            n = export_public_deals_json(db, path=str(out))
+            n = export_public_deals_json(
+                db, path=str(out), refresh_sitemap=False
+            )
             assert n == 1
             data = json.loads(out.read_text(encoding="utf-8"))
             assert len(data) == 1
@@ -104,7 +111,7 @@ def test_export_atomic_replace():
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "public_deals.json"
             out.write_text("[]", encoding="utf-8")
-            export_public_deals_json(db, path=str(out))
+            export_public_deals_json(db, path=str(out), refresh_sitemap=False)
             assert not (Path(tmp) / "public_deals.json.tmp").exists()
             data = json.loads(out.read_text(encoding="utf-8"))
             assert isinstance(data, list)
@@ -113,6 +120,84 @@ def test_export_atomic_replace():
             assert "web-development" in data[0]["slug"] or "valid" in data[0]["slug"]
     finally:
         db.close()
+
+
+def test_concurrent_exports_use_independent_temp_files(monkeypatch, tmp_path):
+    """Overlapping exporters must not move or rewrite each other's temp files."""
+    target = tmp_path / "public_deals.json"
+    replace_barrier = Barrier(2)
+    replace_sources = []
+    original_replace = os.replace
+
+    def synchronized_replace(source, destination):
+        if Path(destination) == target:
+            replace_sources.append(Path(source))
+            replace_barrier.wait(timeout=5)
+        original_replace(source, destination)
+
+    monkeypatch.setattr(
+        public_deals_export_module.os,
+        "replace",
+        synchronized_replace,
+    )
+
+    def make_course(course_id, coupon_code):
+        return SimpleNamespace(
+            id=course_id,
+            title=f"Concurrent Export Course {course_id}",
+            url=f"https://www.udemy.com/course/concurrent-export-{course_id}/",
+            slug=f"concurrent-export-{course_id}",
+            coupon_code=coupon_code,
+            price=0.0,
+            category="Development",
+            language="English",
+            rating=4.5,
+            is_coupon_valid=True,
+            enrolled_at=_utcnow_naive(),
+            last_checked_at=_utcnow_naive(),
+        )
+
+    courses = [
+        make_course(1, "CONCURRENT-A"),
+        make_course(2, "CONCURRENT-B"),
+    ]
+
+    class FakeDatabase:
+        def __init__(self, course):
+            self.course = course
+
+        def query(self, model):
+            return self
+
+        def filter(self, *criteria):
+            return self
+
+        def order_by(self, *ordering):
+            return self
+
+        def limit(self, value):
+            return self
+
+        def all(self):
+            return [self.course]
+
+    def run_export(course):
+        return export_public_deals_json(
+            FakeDatabase(course),
+            path=str(target),
+            refresh_sitemap=False,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(run_export, courses))
+
+    assert results == [1, 1]
+    assert len(replace_sources) == 2
+    assert len(set(replace_sources)) == 2
+    published = json.loads(target.read_text(encoding="utf-8"))
+    assert len(published) == 1
+    assert published[0]["coupon_code"] in {"CONCURRENT-A", "CONCURRENT-B"}
+    assert list(tmp_path.iterdir()) == [target]
 
 
 def test_slug_from_udemy_url_and_title():

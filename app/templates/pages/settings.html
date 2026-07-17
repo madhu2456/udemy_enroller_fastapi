@@ -12,7 +12,7 @@ Course Enroller{% endblock %} {% block twitter_description %}Customize your
 automated course enrollment preferences. Set rating thresholds, filter
 languages, and refine your learning feed.{% endblock %} {% block
 content %}
-<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 pb-16 min-w-0 overflow-x-clip">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 pb-16 min-w-0 overflow-x-clip">
     <!-- Page Header -->
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 min-w-0">
         <div class="flex items-center gap-2.5 min-w-0">
@@ -355,7 +355,7 @@ content %}
     </div>
 
     <div id="settings-message" class="text-center text-sm hidden"></div>
-</main>
+</div>
 {% endblock %} {% block scripts %}
 <script nonce="{{ request.state.nonce }}">
     let currentSettings = {};

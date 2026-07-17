@@ -42,7 +42,7 @@ class SessionCache:
         }
         while len(self._cache) > self._max_size:
             oldest_key, _ = self._cache.popitem(last=False)
-            logger.info(f"Evicted oldest session from cache: {oldest_key[:8]}...")
+            logger.info(f"Evicted oldest session from cache (max entries={self._max_size})")
 
     def pop(self, key: str, default: Any = None) -> Optional[Any]:
         entry = self._cache.pop(key, None)
@@ -95,12 +95,15 @@ class SessionCache:
         return self._cleanup_task
 
     async def stop_cleanup_task(self):
-        if self._cleanup_task:
-            self._cleanup_task.cancel()
+        cleanup_task = self._cleanup_task
+        if cleanup_task is not None:
+            cleanup_task.cancel()
             try:
-                await self._cleanup_task
+                await cleanup_task
             except asyncio.CancelledError:
-                pass
+                caller = asyncio.current_task()
+                if caller is not None and caller.cancelling():
+                    raise
 
 
 # Global cache stores

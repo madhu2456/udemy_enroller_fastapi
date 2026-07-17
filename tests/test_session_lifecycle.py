@@ -102,9 +102,14 @@ class TestSessionLifecycle:
 
 
 class TestSessionLimit:
-    def test_enforce_session_limit_revokes_oldest(self):
+    def test_enforce_session_limit_revokes_oldest(self, monkeypatch):
         Base.metadata.create_all(bind=engine)
         db = SessionLocal()
+        info_messages = []
+        monkeypatch.setattr(
+            "app.session_lifecycle.logger.info",
+            info_messages.append,
+        )
         try:
             user = User(email=f"cap_{secrets.token_hex(4)}@example.com")
             db.add(user)
@@ -114,7 +119,7 @@ class TestSessionLimit:
 
             tokens = []
             for i in range(4):
-                t = secrets.token_hex(32)
+                t = "0123456789abcdef" * 4 if i == 0 else secrets.token_hex(32)
                 tokens.append(t)
                 db.add(
                     UserSession(
@@ -152,8 +157,74 @@ class TestSessionLimit:
                 .first()
                 is not None
             )
+            assert info_messages == [f"Revoked oldest session for user {user.id} (max concurrent sessions=3)"]
+            logged = "\n".join(str(message) for message in info_messages)
+            assert tokens[0] not in logged
+            assert tokens[0][:8] not in logged
         finally:
             db.close()
+
+    def test_enforce_session_limit_commits_expired_only_purge(self):
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        expired_token = secrets.token_hex(32)
+        active_token = secrets.token_hex(32)
+        try:
+            user = User(email=f"expired_cap_{secrets.token_hex(4)}@example.com")
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            user_id = user.id
+
+            db.add_all(
+                [
+                    UserSession(
+                        token=expired_token,
+                        user_id=user_id,
+                        expires_at=_utcnow_naive() - timedelta(hours=1),
+                    ),
+                    UserSession(
+                        token=active_token,
+                        user_id=user_id,
+                        expires_at=_utcnow_naive() + timedelta(hours=1),
+                    ),
+                ]
+            )
+            db.commit()
+
+            clients = {expired_token: object(), active_token: object()}
+            app_state = SimpleNamespace(udemy_clients=clients, session_cache=None)
+
+            revoked = enforce_session_limit(
+                db,
+                user_id,
+                max_sessions=3,
+                app_state=app_state,
+                keep_token=active_token,
+            )
+
+            assert revoked == []
+            assert expired_token not in clients
+            assert active_token in clients
+        finally:
+            db.close()
+
+        verification_db = SessionLocal()
+        try:
+            assert (
+                verification_db.query(UserSession)
+                .filter(UserSession.token == expired_token)
+                .first()
+                is None
+            )
+            assert (
+                verification_db.query(UserSession)
+                .filter(UserSession.token == active_token)
+                .first()
+                is not None
+            )
+        finally:
+            verification_db.close()
 
     def test_enforce_session_limit_disabled_when_zero(self):
         Base.metadata.create_all(bind=engine)

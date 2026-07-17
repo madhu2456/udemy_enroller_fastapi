@@ -87,7 +87,7 @@ def enforce_session_limit(
     if max_sessions is None or max_sessions <= 0:
         return []
 
-    purge_expired_sessions_for_user(db, user_id, app_state)
+    purged = purge_expired_sessions_for_user(db, user_id, app_state)
 
     active = (
         _active_sessions_query(db, user_id)
@@ -111,12 +111,9 @@ def enforce_session_limit(
         db.delete(victim)
         pop_session_client(app_state, token)
         revoked.append(token)
-        logger.info(
-            f"Revoked oldest session {token[:8]}… for user {user_id} "
-            f"(max concurrent sessions={max_sessions})"
-        )
+        logger.info(f"Revoked oldest session for user {user_id} (max concurrent sessions={max_sessions})")
 
-    if revoked:
+    if purged or revoked:
         db.commit()
     else:
         db.flush()

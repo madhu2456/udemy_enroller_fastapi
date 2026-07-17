@@ -1,6 +1,8 @@
 """Tests for EnrollmentManager pipeline logic with mocked dependencies."""
 
 import asyncio
+import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,7 +15,11 @@ from app.services.course import Course
 from app.services.enrollment_manager import EnrollmentManager
 
 # File-based test DB so multiple SessionLocal() calls share the same DB
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_enrollment_manager.db"
+_test_database_dir = tempfile.TemporaryDirectory(
+    prefix="udemy-enroller-manager-tests-"
+)
+_test_database_path = Path(_test_database_dir.name) / "test_manager.db"
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{_test_database_path}"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
@@ -21,6 +27,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 Base.metadata.create_all(bind=engine)
 
 # Patch the module's SessionLocal so the pipeline uses our test DB
+_original_session_local = em_module.SessionLocal
 em_module.SessionLocal = TestingSessionLocal
 
 
@@ -33,13 +40,28 @@ def override_get_db():
 
 
 @pytest.fixture(autouse=True)
-def cleanup_db():
-    """Clean up database after each test."""
+def isolate_side_effects_and_cleanup_db(monkeypatch):
+    """Prevent public exports and clean up database state after each test."""
+    monkeypatch.setattr(
+        "app.services.public_deals_export.export_public_deals_json",
+        lambda *args, **kwargs: 0,
+    )
     yield
     with engine.begin() as connection:
         for table in reversed(Base.metadata.sorted_tables):
             connection.execute(table.delete())
     EnrollmentManager.active_tasks.clear()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def cleanup_test_database():
+    """Restore the patched session factory and remove the temporary database."""
+    try:
+        yield
+    finally:
+        em_module.SessionLocal = _original_session_local
+        engine.dispose()
+        _test_database_dir.cleanup()
 
 
 @pytest.fixture

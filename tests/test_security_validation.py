@@ -1,5 +1,8 @@
 """Comprehensive test suite for authentication, security, and validation."""
 
+import tempfile
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -20,7 +23,11 @@ import json
 
 
 # Test database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_udemy_enroller.db"
+_test_db_dir = tempfile.TemporaryDirectory(
+    prefix="udemy-enroller-security-tests-"
+)
+_test_db_path = Path(_test_db_dir.name) / "test_security.db"
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{_test_db_path}"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
@@ -38,8 +45,24 @@ def override_get_db():
         db.close()
 
 
-app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def isolate_test_database():
+    """Use the temporary database only for this test module."""
+    previous_override = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = override_get_db
+
+    yield
+
+    if previous_override is None:
+        app.dependency_overrides.pop(get_db, None)
+    else:
+        app.dependency_overrides[get_db] = previous_override
+    client.close()
+    engine.dispose()
+    _test_db_dir.cleanup()
 
 
 @pytest.fixture(autouse=True)

@@ -58,7 +58,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
 {% endblock %}
 {% block content %}
 <div class="min-h-screen bg-white text-gray-900">
-    <main>
+    <div>
         <!-- HERO -->
         <section
             class="max-w-6xl mx-auto px-6 pt-16 pb-14 text-center"
@@ -834,112 +834,176 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                     <div class="px-6 py-5">
                         <p class="text-xs font-medium text-gray-600 uppercase tracking-wider mb-3">FAQ</p>
                         <div class="space-y-3">
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-how-it-works-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-how-it-works-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">How does it work?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-how-it-works-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">When you start a run, monitors configured coupon sources and attempts 100% off enrollments. Availability is not guaranteed.</p>
                                 </div>
                             </div>
                             
                             <div class="border-t border-gray-100"></div>
                             
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-account-safety-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-account-safety-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Is my account safe?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-account-safety-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">Passwords are never stored. Session cookies are encrypted. The tool uses session-authenticated enrollment endpoints (not a Udemy partnership). That does not mean your account cannot be limited for automated access—you must follow Udemy's Terms. See <a href="/faq" class="text-blue-600 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm">FAQ</a> and <a href="/privacy" class="text-blue-600 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm">Privacy</a>.</p>
                                 </div>
                             </div>
                             
                             <div class="border-t border-gray-100"></div>
                             
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-login-method-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-login-method-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Email or Cookie login?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-login-method-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">Cookie Login is more reliable. Email may trigger CSRF errors on servers.</p>
                                 </div>
                             </div>
                             
                             <div class="border-t border-gray-100"></div>
                             
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-open-source-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-open-source-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Really free?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-open-source-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">100% free and open source on GitHub.</p>
                                 </div>
                             </div>
                             
                             <div class="border-t border-gray-100"></div>
                             
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-course-filters-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-course-filters-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Can I filter which courses get enrolled?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-course-filters-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">Yes. Set minimum rating, preferred language, and exclude specific instructors.</p>
                                 </div>
                             </div>
                             
                             <div class="border-t border-gray-100"></div>
                             
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-getting-started-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-getting-started-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">How do I get started?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-getting-started-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">Log into Udemy, extract your cookies using the Chrome extension, and paste them into the Cookie Login form.</p>
                                 </div>
                             </div>
                             
                             <div class="border-t border-gray-100"></div>
                             
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-account-restrictions-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-account-restrictions-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Will Udemy ban my account?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-account-restrictions-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">The tool uses delayed, rate-limited requests and does not solve CAPTCHAs. That does not make automated use safe or permitted. Udemy may still limit or restrict accounts. Automated access may violate Udemy's Terms of Service. You are solely responsible for compliance. Prefer self-hosting and conservative use.</p>
                                 </div>
                             </div>
                             
                             <div class="border-t border-gray-100"></div>
                             
-                            <div class="group cursor-pointer" onclick="toggleFaq(this)">
-                                <div class="flex items-center justify-between py-2">
+                            <div>
+                                <button
+                                    type="button"
+                                    id="faq-current-support-button"
+                                    class="faq-toggle group cursor-pointer flex w-full items-center justify-between py-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                                    style="text-align: left"
+                                    aria-expanded="false"
+                                    aria-controls="faq-current-support-panel"
+                                    onclick="toggleFaq(this)"
+                                >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Does it still work in 2026?</span>
-                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
-                                </div>
-                                <div class="faq-content hidden pb-2">
+                                </button>
+                                <div id="faq-current-support-panel" class="faq-content hidden pb-2">
                                     <p class="text-sm text-gray-500">Yes. The tool is actively maintained with regular updates to coupon scrapers and enrollment logic. Check the GitHub repository for the latest version.</p>
                                 </div>
                             </div>
@@ -1291,7 +1355,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                 </a>
             </div>
         </section>
-    </main>
+    </div>
 </div>
 {% endblock %} {% block scripts %}
 <script nonce="{{ request.state.nonce }}">
@@ -1469,15 +1533,20 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
     }
 
     function toggleFaq(button) {
-        const content = button.querySelector('.faq-content');
+        const panelId = button.getAttribute('aria-controls');
+        const content = panelId ? document.getElementById(panelId) : null;
         const icon = button.querySelector('svg');
-        
-        if (content) {
-            content.classList.toggle('hidden');
+
+        if (!content) {
+            return;
         }
-        
+
+        const nextExpanded = button.getAttribute('aria-expanded') !== 'true';
+        button.setAttribute('aria-expanded', String(nextExpanded));
+        content.classList.toggle('hidden', !nextExpanded);
+
         if (icon) {
-            icon.classList.toggle('rotate-180');
+            icon.classList.toggle('rotate-180', nextExpanded);
         }
     }
 </script>

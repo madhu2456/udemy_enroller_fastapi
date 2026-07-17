@@ -63,8 +63,13 @@ async def test_idownloadcoupon_semaphore_enforcement():
                 mock_sem.assert_any_call(8)
 
 @pytest.mark.asyncio
-async def test_telemetry_status_assignment():
+async def test_telemetry_status_assignment(monkeypatch):
     """Test that EnrollmentManager correctly maps and passes status telemetry."""
+    mock_export = MagicMock(return_value=0)
+    monkeypatch.setattr(
+        "app.services.public_deals_export.export_public_deals_json", mock_export
+    )
+
     udemy_mock = MagicMock()
     udemy_mock.currency = "usd"
     udemy_mock.is_authenticated = True
@@ -125,3 +130,4 @@ async def test_telemetry_status_assignment():
 
                     # Verify that _save_course was called for both courses
                     assert manager._save_course.call_count == 2
+                    mock_export.assert_called_once_with(mock_db)

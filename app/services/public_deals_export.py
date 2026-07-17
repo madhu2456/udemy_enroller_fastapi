@@ -13,6 +13,7 @@ import datetime
 import json
 import os
 import re
+import secrets
 import unicodedata
 import xml.sax.saxutils as xml_escape
 from typing import Optional
@@ -35,6 +36,56 @@ DEFAULT_SITEMAP_META_PATH = os.path.join(_PROJECT_ROOT, "sitemap.meta.json")
 # Cap indexable deal pages / sitemap entries (matches export limit default)
 SITEMAP_DEAL_LIMIT = 500
 SITE_URL_DEFAULT = "https://udemyenroller.madhudadi.in"
+
+
+def _atomic_write_text(path: str, content: str) -> None:
+    """Publish text atomically through a writer-owned same-directory temp file."""
+    target_path = os.path.abspath(path)
+    directory = os.path.dirname(target_path) or "."
+    basename = os.path.basename(target_path)
+    file_descriptor: Optional[int] = None
+    temp_path: Optional[str] = None
+
+    for _ in range(10):
+        candidate = os.path.join(
+            directory,
+            f".{basename}.{os.getpid()}.{secrets.token_hex(16)}.tmp",
+        )
+        try:
+            file_descriptor = os.open(
+                candidate,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o666,
+            )
+        except FileExistsError:
+            continue
+        temp_path = candidate
+        break
+    else:
+        raise FileExistsError(f"Could not create a unique temp file for {path}")
+
+    try:
+        stream = os.fdopen(file_descriptor, "w", encoding="utf-8")
+        file_descriptor = None
+        with stream:
+            stream.write(content)
+        os.replace(temp_path, target_path)
+    finally:
+        if file_descriptor is not None:
+            try:
+                os.close(file_descriptor)
+            except OSError:
+                pass
+        if temp_path is not None:
+            try:
+                os.unlink(temp_path)
+            except FileNotFoundError:
+                pass
+            except OSError as cleanup_error:
+                logger.warning(
+                    f"Could not clean temporary export file {temp_path}: "
+                    f"{cleanup_error}"
+                )
 
 
 def slugify(text: str, *, max_len: int = 80) -> str:
@@ -430,10 +481,7 @@ def write_sitemap_files(
     out = sitemap_path or DEFAULT_SITEMAP_PATH
     meta_out = meta_path or DEFAULT_SITEMAP_META_PATH
     try:
-        tmp = out + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(xml)
-        os.replace(tmp, out)
+        _atomic_write_text(out, xml)
 
         meta = {
             "generated_at": datetime.datetime.now(datetime.UTC)
@@ -445,10 +493,7 @@ def write_sitemap_files(
             "deals_path": deals_path or DEFAULT_PUBLIC_DEALS_PATH,
             "sitemap_path": out,
         }
-        meta_tmp = meta_out + ".tmp"
-        with open(meta_tmp, "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
-        os.replace(meta_tmp, meta_out)
+        _atomic_write_text(meta_out, json.dumps(meta, indent=2))
 
         logger.info(
             f"Sitemap refreshed: {deal_count} deal URLs "
@@ -517,10 +562,10 @@ def export_public_deals_json(
 
         assign_unique_slugs(export_data)
 
-        tmp_path = json_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(export_data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp_path, json_path)
+        _atomic_write_text(
+            json_path,
+            json.dumps(export_data, ensure_ascii=False, indent=2),
+        )
 
         logger.info(
             f"Exported {len(export_data)} valid coupons to {json_path}"

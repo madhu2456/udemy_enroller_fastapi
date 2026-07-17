@@ -115,6 +115,17 @@ def _login_response(client: UdemyClient, token: str) -> JSONResponse:
     return response
 
 
+async def _close_failed_login_client(client: UdemyClient, login_method: str) -> None:
+    """Close a request-owned client without replacing the login result."""
+    try:
+        await client.close()
+    except Exception as exc:
+        logger.warning(
+            f"Failed to close {login_method} client after unsuccessful "
+            f"authentication: {type(exc).__name__}"
+        )
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login_with_credentials(
     login_req: LoginRequest,
@@ -134,6 +145,7 @@ async def login_with_credentials(
 
     login_rate_limiter.raise_if_limited(_client_key(request))
     client = UdemyClient()
+    client_handed_off = False
     try:
         await client.manual_login(login_req.email, login_req.password)
         await client.get_session_info()
@@ -160,17 +172,21 @@ async def login_with_credentials(
             logger.info(f"User updated (ID: {user.id})")
 
         token = _create_session(user, client, request, db)
+        client_handed_off = True
         logger.info(f"Login successful (ID: {user.id})")
         return _login_response(client, token)
 
     except LoginException as e:
         logger.warning(f"Login rejected: {e}")
         return LoginResponse(success=False, status="error", message=str(e))
-    except Exception as e:
-        logger.exception(f"Unexpected login error for {login_req.email}: {e}")
+    except Exception as exc:
+        logger.error(f"Unexpected credential-login error ({type(exc).__name__})")
         return LoginResponse(
             success=False, status="error", message="Authentication failed"
         )
+    finally:
+        if not client_handed_off:
+            await _close_failed_login_client(client, "credential-login")
 
 
 @router.post("/login/cookies", response_model=LoginResponse)
@@ -182,6 +198,7 @@ async def login_with_cookies(
     """Login using browser cookies (access_token, client_id, csrf_token)."""
     login_rate_limiter.raise_if_limited(_client_key(request))
     client = UdemyClient()
+    client_handed_off = False
     try:
         client.cookie_login(
             cookie_req.access_token,
@@ -231,17 +248,21 @@ async def login_with_cookies(
             )
 
         token = _create_session(user, client, request, db)
+        client_handed_off = True
         logger.info(f"Cookie login successful (ID: {user.id}, currency: {client.currency})")
         return _login_response(client, token)
 
     except LoginException as e:
         logger.warning(f"Cookie login rejected: {e}")
         return LoginResponse(success=False, status="error", message=str(e))
-    except Exception as e:
-        logger.exception(f"Unexpected cookie login error: {e}")
+    except Exception as exc:
+        logger.error(f"Unexpected cookie-login error ({type(exc).__name__})")
         return LoginResponse(
             success=False, status="error", message="Cookie authentication failed"
         )
+    finally:
+        if not client_handed_off:
+            await _close_failed_login_client(client, "cookie-login")
 
 
 @router.get("/status")
@@ -338,6 +359,7 @@ async def logout(
     """Logout — delete DB session and clear all cookies."""
     token = request.cookies.get("session_id")
     user_id = None
+    task_to_cancel = None
 
     try:
         if token:
@@ -350,12 +372,7 @@ async def logout(
 
                 active_run = EnrollmentManager.get_active_run(db, user_id)
                 if active_run:
-                    task = EnrollmentManager.active_tasks.get(active_run.id)
-                    if task:
-                        task.cancel()
-                        logger.info(
-                            f"Cancelled active enrollment for user {user_id} due to logout."
-                        )
+                    task_to_cancel = EnrollmentManager.active_tasks.get(active_run.id)
 
             # Delete session from DB
             db.query(UserSession).filter(UserSession.token == token).delete()
@@ -366,7 +383,39 @@ async def logout(
                 if user is not None:
                     user.udemy_cookies = None
             db.commit()
+    except Exception as exc:
+        try:
+            db.rollback()
+        except Exception as rollback_exc:
+            logger.error(f"Logout rollback failed ({type(rollback_exc).__name__})")
+        logger.error(f"Logout session revocation failed ({type(exc).__name__})")
 
+        response = JSONResponse(
+            status_code=500,
+            content={"success": False, "message": "Logout failed. Please try again."},
+        )
+        response.headers["Cache-Control"] = (
+            "no-cache, no-store, must-revalidate, max-age=0"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
+    if token:
+        # Only stop work and release memory after durable session revocation.
+        if task_to_cancel is not None:
+            try:
+                task_to_cancel.cancel()
+                logger.info(
+                    f"Cancelled active enrollment for user {user_id} due to logout."
+                )
+            except Exception as exc:
+                logger.error(
+                    "Session revoked but enrollment cleanup failed "
+                    f"({type(exc).__name__})"
+                )
+
+        try:
             # Close in-memory client (session_cache may be aliased as udemy_clients)
             cache = getattr(request.app.state, "session_cache", None)
             client = None
@@ -385,15 +434,21 @@ async def logout(
                     close_res = client.close()
                     if asyncio.iscoroutine(close_res):
                         await close_res
-                except Exception as e:
-                    logger.error(f"Error closing client during logout: {e}")
-
-                log_user_id = user_id if user_id is not None else "unknown"
-                logger.info(
-                    f"Closed Udemy client session for user {log_user_id} due to logout."
-                )
-    except Exception as e:
-        logger.error(f"Error during logout: {e}")
+                except Exception as exc:
+                    logger.error(
+                        "Session revoked but client cleanup failed "
+                        f"({type(exc).__name__})"
+                    )
+                else:
+                    log_user_id = user_id if user_id is not None else "unknown"
+                    logger.info(
+                        f"Closed Udemy client session for user {log_user_id} due to logout."
+                    )
+        except Exception as exc:
+            logger.error(
+                "Session revoked but client-cache cleanup failed "
+                f"({type(exc).__name__})"
+            )
 
     # Create response with explicit cache-control headers
     response = JSONResponse(

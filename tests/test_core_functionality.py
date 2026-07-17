@@ -1,5 +1,8 @@
 """Comprehensive pytest test suite for core functionality."""
 
+import tempfile
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -12,7 +15,11 @@ from app.security import validate_proxy_url
 
 
 # Test database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_udemy_enroller.db"
+_test_database_dir = tempfile.TemporaryDirectory(
+    prefix="udemy-enroller-core-tests-"
+)
+_test_database_path = Path(_test_database_dir.name) / "test_core.db"
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{_test_database_path}"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
@@ -276,11 +283,15 @@ class TestAPIIntegration:
 # ──────────────────────────────────────────────────────────────
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def cleanup_test_db():
-    """Cleanup test database after each test."""
-    yield
-    # Cleanup can happen here if needed
+    """Dispose the test engine and remove its temporary database."""
+    try:
+        yield
+    finally:
+        client.close()
+        engine.dispose()
+        _test_database_dir.cleanup()
 
 
 if __name__ == "__main__":

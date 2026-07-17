@@ -32,7 +32,6 @@ if sys.platform == "win32":
     except ImportError:
         pass  # Fallback for older python versions if any
 
-import json
 import secrets
 from contextlib import asynccontextmanager
 
@@ -66,6 +65,10 @@ if hasattr(sys.stderr, "reconfigure"):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown events."""
+    from app.core.constants import shutdown_event
+
+    shutdown_event.clear()
+
     # Startup
     os.makedirs("logs", exist_ok=True)
     os.makedirs("Courses", exist_ok=True)
@@ -105,8 +108,8 @@ async def lifespan(app: FastAPI):
                 )
                 db.commit()
                 logger.info("Cleaned up stale enrollment runs.")
-    except Exception as e:
-        logger.warning(f"Skipped stale run cleanup: {e}")
+    except Exception as exc:
+        logger.warning(f"Skipped stale run cleanup ({type(exc).__name__})")
 
     # Initialize app state
     from app.core.cache import SessionCache
@@ -128,8 +131,6 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    from app.core.constants import shutdown_event
-
     shutdown_event.set()
 
     logger.info("Server shutting down, cancelling active tasks...")
@@ -150,25 +151,42 @@ async def lifespan(app: FastAPI):
                 logger.info("All enrollment tasks cancelled successfully.")
             except asyncio.TimeoutError:
                 logger.warning("Timed out waiting for enrollment tasks to cancel.")
-            except Exception as e:
-                logger.error(f"Error during enrollment task cancellation: {e}")
+            except Exception as exc:
+                logger.error(
+                    "Enrollment-task cancellation failed "
+                    f"({type(exc).__name__})"
+                )
 
-        # Close all udemy clients
-        session_cache = getattr(app.state, "session_cache", None)
-        if session_cache:
-            clients = list(session_cache.items())
-            if clients:
-                logger.info(f"Closing {len(clients)} Udemy client sessions...")
-                for token, client in clients:
+    except Exception as exc:
+        logger.error(f"Unexpected error during shutdown ({type(exc).__name__})")
+    finally:
+        try:
+            # Close all udemy clients
+            session_cache = getattr(app.state, "session_cache", None)
+            if session_cache is not None:
+                try:
+                    clients = list(session_cache.items())
+                    if clients:
+                        logger.info(f"Closing {len(clients)} Udemy client sessions...")
+                        for _token, client in clients:
+                            try:
+                                await client.close()
+                            except Exception as exc:
+                                logger.error(
+                                    "Failed to close Udemy client session "
+                                    f"({type(exc).__name__})"
+                                )
+                        logger.info("Finished Udemy client session shutdown.")
+                finally:
                     try:
-                        await client.close()
-                    except Exception as e:
-                        logger.error(f"Error closing client {token}: {e}")
-                logger.info("All Udemy client sessions closed.")
-            await session_cache.stop_cleanup_task()
-
-    except Exception as e:
-        logger.error(f"Unexpected error during shutdown: {e}")
+                        await session_cache.stop_cleanup_task()
+                    except Exception as exc:
+                        logger.error(
+                            "Failed to stop session-cache cleanup task "
+                            f"({type(exc).__name__})"
+                        )
+        except Exception as exc:
+            logger.error(f"Unexpected error during shutdown ({type(exc).__name__})")
 
     logger.info("Shutting down Udemy Course Enroller API")
 
@@ -335,8 +353,11 @@ app.include_router(enrollment.router)
 app.include_router(public_deals.router)
 
 
-@app.get("/api/health")
-async def health_check(request: Request):
+@app.get(
+    "/api/health",
+    responses={503: {"description": "Database dependency unavailable"}},
+)
+async def health_check(request: Request, response: Response):
     """Health check endpoint with dependency checks."""
     db_status = "healthy"
     try:
@@ -344,11 +365,12 @@ async def health_check(request: Request):
 
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-    except Exception as e:
+    except Exception as exc:
         # Do not expose exception details publicly
-        logger.warning(f"Health check database probe failed: {e}")
+        logger.warning(f"Health check database probe failed ({type(exc).__name__})")
         db_status = "unhealthy"
 
+    response.status_code = 200 if db_status == "healthy" else 503
     return {
         "status": "healthy" if db_status == "healthy" else "degraded",
         "database": db_status,
@@ -356,19 +378,80 @@ async def health_check(request: Request):
     }
 
 
+_ALLOWED_ANALYTICS_EVENT_TYPES = frozenset(
+    {
+        "coupon_click",
+        "cta_click",
+        "enrollment_start",
+        "enrollment_stop",
+        "file_download",
+        "login",
+        "outbound_click",
+        "scroll_depth",
+    }
+)
+
+
+def _safe_analytics_event_type(value):
+    """Return an approved analytics category without logging arbitrary input."""
+    if not isinstance(value, str) or value not in _ALLOWED_ANALYTICS_EVENT_TYPES:
+        return "unknown"
+    return value
+
+
 @app.post("/api/analytics/event")
 async def track_analytics_event(request: Request):
-    """Privacy-friendly analytics endpoint for tracking CTA clicks and outbound links.
-    No PII is stored. Events are logged to the application log file only."""
+    """Accept analytics events without retaining submitted target details.
+
+    Only allowlisted event categories may be written at INFO level.
+    """
     analytics_rate_limiter.raise_if_limited(_client_key(request))
     try:
         body = await request.json()
-        event_type = str(body.get("type", "unknown"))[:64]
-        event_target = str(body.get("target", ""))[:200]
-        logger.info(f"[analytics] {event_type}: {event_target}")
+        if not isinstance(body, dict):
+            return {"status": "ok"}
+
+        event_type = _safe_analytics_event_type(body.get("type"))
+        target = body.get("target")
+        target_supplied = "true" if isinstance(target, str) and bool(target.strip()) else "false"
+        logger.info(f"[analytics] event received (type={event_type}, target_supplied={target_supplied})")
     except Exception:
         pass
     return {"status": "ok"}
+
+
+def _safe_csp_directive(value):
+    """Return a bounded CSP directive token, or None for unsafe input."""
+    if not isinstance(value, str) or not 1 <= len(value) <= 64:
+        return None
+    if not value.isascii() or not value[0].isalpha():
+        return None
+    if not all(character.isalnum() or character == "-" for character in value):
+        return None
+    return value.lower()
+
+
+def _csp_report_log_summary(report):
+    """Extract non-sensitive, validated fields from a legacy CSP report."""
+    report_body = report.get("csp-report") if isinstance(report, dict) else None
+    if not isinstance(report_body, dict):
+        return "unknown", "unknown", "unknown"
+
+    directive = _safe_csp_directive(report_body.get("effective-directive"))
+    if directive is None:
+        directive = _safe_csp_directive(report_body.get("violated-directive"))
+    if directive is None:
+        directive = "unknown"
+
+    disposition = report_body.get("disposition")
+    if not isinstance(disposition, str) or disposition not in {"enforce", "report"}:
+        disposition = "unknown"
+
+    status_code = report_body.get("status-code")
+    if type(status_code) is not int or not 0 <= status_code <= 599:
+        status_code = "unknown"
+
+    return directive, disposition, status_code
 
 
 @app.post("/api/csp-violation")
@@ -377,11 +460,12 @@ async def csp_violation(request: Request):
     csp_report_rate_limiter.raise_if_limited(_client_key(request))
     try:
         report = await request.json()
-        # Cap log size to avoid multi-MB report spam
-        raw = json.dumps(report)[:4000]
-        logger.warning(f"CSP violation: {raw}")
-    except Exception as e:
-        logger.warning(f"CSP violation (parse error): {e}")
+        directive, disposition, status_code = _csp_report_log_summary(report)
+        logger.warning(
+            f"CSP violation report received (directive={directive}, disposition={disposition}, status={status_code})"
+        )
+    except Exception as exc:
+        logger.warning(f"CSP violation report rejected ({type(exc).__name__})")
     return Response(status_code=204)
 
 

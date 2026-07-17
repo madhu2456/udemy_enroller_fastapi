@@ -112,6 +112,363 @@ class TestCsrfProtection:
         assert exc.value.status_code == 403
 
 
+# ── Analytics Event Logging ─────────────────────────────
+
+
+class _SyntheticAnalyticsRequest:
+    """Minimal request double for direct analytics-handler tests."""
+
+    def __init__(self, payload=None, error=None):
+        self.payload = payload
+        self.error = error
+        self.json_calls = 0
+        self.headers = {"cf-connecting-ip": "203.0.113.121"}
+        self.client = None
+
+    async def json(self):
+        self.json_calls += 1
+        if self.error is not None:
+            raise self.error
+        return self.payload
+
+
+class TestAnalyticsEventLogging:
+    """Analytics logs retain only approved categories and target presence."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "event_type",
+        [
+            "outbound_click",
+            "cta_click",
+            "file_download",
+            "scroll_depth",
+            "login",
+            "coupon_click",
+            "enrollment_start",
+            "enrollment_stop",
+        ],
+    )
+    async def test_known_event_categories_remain_available(self, monkeypatch, event_type):
+        import main as main_mod
+
+        info_messages = []
+        limiter = MagicMock()
+        request = _SyntheticAnalyticsRequest({"type": event_type})
+        monkeypatch.setattr(main_mod, "analytics_rate_limiter", limiter)
+        monkeypatch.setattr(main_mod.logger, "info", info_messages.append)
+
+        response = await main_mod.track_analytics_event(request)
+
+        assert response == {"status": "ok"}
+        assert info_messages == [f"[analytics] event received (type={event_type}, target_supplied=false)"]
+        limiter.raise_if_limited.assert_called_once_with("203.0.113.121")
+
+    @pytest.mark.asyncio
+    async def test_submitted_target_details_never_enter_log(self, monkeypatch):
+        import main as main_mod
+
+        info_messages = []
+        limiter = MagicMock()
+        private_target = "https://person@example.test/path?token=PRIVATE_TOKEN\nPRIVATE_INJECTED_LINE"
+        request = _SyntheticAnalyticsRequest({"type": "cta_click", "target": private_target})
+        monkeypatch.setattr(main_mod, "analytics_rate_limiter", limiter)
+        monkeypatch.setattr(main_mod.logger, "info", info_messages.append)
+
+        response = await main_mod.track_analytics_event(request)
+
+        assert response == {"status": "ok"}
+        assert info_messages == ["[analytics] event received (type=cta_click, target_supplied=true)"]
+        assert private_target not in "\n".join(info_messages)
+        assert "PRIVATE_" not in "\n".join(info_messages)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "event_type",
+        [
+            "custom_event",
+            "CTA_CLICK",
+            "cta_click\nPRIVATE_INJECTED_LINE",
+            "coupon_clické",
+            "x" * 65,
+            123,
+            ["cta_click"],
+            {"type": "cta_click"},
+            None,
+            "",
+        ],
+    )
+    async def test_unapproved_or_malformed_event_types_become_unknown(self, monkeypatch, event_type):
+        import main as main_mod
+
+        info_messages = []
+        monkeypatch.setattr(main_mod, "analytics_rate_limiter", MagicMock())
+        monkeypatch.setattr(main_mod.logger, "info", info_messages.append)
+        request = _SyntheticAnalyticsRequest({"type": event_type})
+
+        response = await main_mod.track_analytics_event(request)
+
+        assert response == {"status": "ok"}
+        assert info_messages == ["[analytics] event received (type=unknown, target_supplied=false)"]
+        assert "PRIVATE_" not in "\n".join(info_messages)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("target", "expected"),
+        [
+            (None, "false"),
+            ("", "false"),
+            ("   ", "false"),
+            (123, "false"),
+            ([], "false"),
+            ({}, "false"),
+            ("destination", "true"),
+        ],
+    )
+    async def test_target_presence_is_a_server_generated_boolean(self, monkeypatch, target, expected):
+        import main as main_mod
+
+        info_messages = []
+        monkeypatch.setattr(main_mod, "analytics_rate_limiter", MagicMock())
+        monkeypatch.setattr(main_mod.logger, "info", info_messages.append)
+        request = _SyntheticAnalyticsRequest({"type": "cta_click", "target": target})
+
+        response = await main_mod.track_analytics_event(request)
+
+        assert response == {"status": "ok"}
+        assert info_messages == [f"[analytics] event received (type=cta_click, target_supplied={expected})"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("payload", [None, [], "not-an-object"])
+    async def test_non_object_payload_preserves_quiet_success(self, monkeypatch, payload):
+        import main as main_mod
+
+        info_messages = []
+        monkeypatch.setattr(main_mod, "analytics_rate_limiter", MagicMock())
+        monkeypatch.setattr(main_mod.logger, "info", info_messages.append)
+        request = _SyntheticAnalyticsRequest(payload)
+
+        response = await main_mod.track_analytics_event(request)
+
+        assert response == {"status": "ok"}
+        assert info_messages == []
+
+    @pytest.mark.asyncio
+    async def test_parse_error_preserves_quiet_success(self, monkeypatch):
+        import main as main_mod
+
+        info_messages = []
+        detail = "PRIVATE_ANALYTICS_PARSE_DETAIL"
+        monkeypatch.setattr(main_mod, "analytics_rate_limiter", MagicMock())
+        monkeypatch.setattr(main_mod.logger, "info", info_messages.append)
+        request = _SyntheticAnalyticsRequest(error=RuntimeError(detail))
+
+        response = await main_mod.track_analytics_event(request)
+
+        assert response == {"status": "ok"}
+        assert info_messages == []
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_runs_before_body_parsing(self, monkeypatch):
+        import main as main_mod
+
+        info_messages = []
+        limiter = MagicMock()
+        limiter.raise_if_limited.side_effect = HTTPException(
+            status_code=429,
+            detail="Too many requests.",
+        )
+        request = _SyntheticAnalyticsRequest({"type": "cta_click", "target": "PRIVATE_TARGET"})
+        monkeypatch.setattr(main_mod, "analytics_rate_limiter", limiter)
+        monkeypatch.setattr(main_mod.logger, "info", info_messages.append)
+
+        with pytest.raises(HTTPException) as exc:
+            await main_mod.track_analytics_event(request)
+
+        assert exc.value.status_code == 429
+        assert request.json_calls == 0
+        assert info_messages == []
+        limiter.raise_if_limited.assert_called_once_with("203.0.113.121")
+
+
+# ── CSP Violation Logging ────────────────────────────────
+
+
+class _SyntheticCspRequest:
+    """Minimal request double for direct CSP handler tests."""
+
+    def __init__(self, payload=None, error=None):
+        self.payload = payload
+        self.error = error
+        self.json_calls = 0
+        self.headers = {"cf-connecting-ip": "203.0.113.120"}
+        self.client = None
+
+    async def json(self):
+        self.json_calls += 1
+        if self.error is not None:
+            raise self.error
+        return self.payload
+
+
+class TestCspViolationLogging:
+    """CSP reports retain safe diagnostics without logging submitted details."""
+
+    @pytest.mark.asyncio
+    async def test_csp_log_keeps_only_validated_summary(self, monkeypatch):
+        import main as main_mod
+
+        warning_messages = []
+        limiter = MagicMock()
+        request = _SyntheticCspRequest(
+            {
+                "csp-report": {
+                    "effective-directive": "script-src-elem",
+                    "disposition": "enforce",
+                    "status-code": 200,
+                    "document-uri": "https://example.test/?token=PRIVATE_DOCUMENT_URI",
+                    "blocked-uri": "https://user:PRIVATE_PASSWORD@blocked.test/PRIVATE_PATH?key=PRIVATE_QUERY",
+                    "source-file": "https://example.test/PRIVATE_SOURCE.js",
+                    "referrer": "https://example.test/PRIVATE_REFERRER",
+                    "original-policy": "script-src 'nonce-PRIVATE_NONCE'",
+                    "script-sample": "PRIVATE_SCRIPT_SAMPLE",
+                    "unknown-field": "PRIVATE_UNKNOWN_FIELD",
+                }
+            }
+        )
+        monkeypatch.setattr(main_mod, "csp_report_rate_limiter", limiter)
+        monkeypatch.setattr(main_mod.logger, "warning", warning_messages.append)
+
+        response = await main_mod.csp_violation(request)
+
+        assert response.status_code == 204
+        assert warning_messages == [
+            "CSP violation report received (directive=script-src-elem, disposition=enforce, status=200)"
+        ]
+        assert "PRIVATE_" not in "\n".join(str(message) for message in warning_messages)
+        limiter.raise_if_limited.assert_called_once_with("203.0.113.120")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "directive",
+        [
+            "script-src\nPRIVATE_CONTROL",
+            "x" * 65,
+            "script-src-é",
+            123,
+        ],
+    )
+    async def test_csp_log_rejects_unsafe_directive(self, monkeypatch, directive):
+        import main as main_mod
+
+        warning_messages = []
+        monkeypatch.setattr(main_mod, "csp_report_rate_limiter", MagicMock())
+        monkeypatch.setattr(main_mod.logger, "warning", warning_messages.append)
+        request = _SyntheticCspRequest(
+            {
+                "csp-report": {
+                    "effective-directive": directive,
+                    "disposition": "report",
+                    "status-code": 0,
+                }
+            }
+        )
+
+        response = await main_mod.csp_violation(request)
+
+        assert response.status_code == 204
+        assert warning_messages == ["CSP violation report received (directive=unknown, disposition=report, status=0)"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            None,
+            [],
+            {"csp-report": "not-an-object"},
+        ],
+    )
+    async def test_csp_log_handles_unexpected_report_shapes(self, monkeypatch, payload):
+        import main as main_mod
+
+        warning_messages = []
+        monkeypatch.setattr(main_mod, "csp_report_rate_limiter", MagicMock())
+        monkeypatch.setattr(main_mod.logger, "warning", warning_messages.append)
+
+        response = await main_mod.csp_violation(_SyntheticCspRequest(payload))
+
+        assert response.status_code == 204
+        assert warning_messages == [
+            "CSP violation report received (directive=unknown, disposition=unknown, status=unknown)"
+        ]
+
+    @pytest.mark.asyncio
+    async def test_csp_log_uses_safe_fallback_and_rejects_other_invalid_fields(self, monkeypatch):
+        import main as main_mod
+
+        warning_messages = []
+        monkeypatch.setattr(main_mod, "csp_report_rate_limiter", MagicMock())
+        monkeypatch.setattr(main_mod.logger, "warning", warning_messages.append)
+        request = _SyntheticCspRequest(
+            {
+                "csp-report": {
+                    "effective-directive": "script-src\nPRIVATE_EFFECTIVE",
+                    "violated-directive": "style-src-elem",
+                    "disposition": ["PRIVATE_DISPOSITION"],
+                    "status-code": True,
+                }
+            }
+        )
+
+        response = await main_mod.csp_violation(request)
+
+        assert response.status_code == 204
+        assert warning_messages == [
+            "CSP violation report received (directive=style-src-elem, disposition=unknown, status=unknown)"
+        ]
+        assert "PRIVATE_" not in "\n".join(str(message) for message in warning_messages)
+
+    @pytest.mark.asyncio
+    async def test_csp_parse_error_log_excludes_exception_detail(self, monkeypatch):
+        import main as main_mod
+
+        warning_messages = []
+        limiter = MagicMock()
+        detail = "PRIVATE_CSP_PARSE_DETAIL"
+        request = _SyntheticCspRequest(error=RuntimeError(detail))
+        monkeypatch.setattr(main_mod, "csp_report_rate_limiter", limiter)
+        monkeypatch.setattr(main_mod.logger, "warning", warning_messages.append)
+
+        response = await main_mod.csp_violation(request)
+
+        assert response.status_code == 204
+        assert warning_messages == ["CSP violation report rejected (RuntimeError)"]
+        assert detail not in "\n".join(str(message) for message in warning_messages)
+        limiter.raise_if_limited.assert_called_once_with("203.0.113.120")
+
+    @pytest.mark.asyncio
+    async def test_csp_rate_limit_still_runs_before_report_parsing(self, monkeypatch):
+        import main as main_mod
+
+        warning_messages = []
+        limiter = MagicMock()
+        limiter.raise_if_limited.side_effect = HTTPException(
+            status_code=429,
+            detail="Too many requests.",
+        )
+        request = _SyntheticCspRequest({"csp-report": {}})
+        monkeypatch.setattr(main_mod, "csp_report_rate_limiter", limiter)
+        monkeypatch.setattr(main_mod.logger, "warning", warning_messages.append)
+
+        with pytest.raises(HTTPException) as exc:
+            await main_mod.csp_violation(request)
+
+        assert exc.value.status_code == 429
+        assert request.json_calls == 0
+        assert warning_messages == []
+        limiter.raise_if_limited.assert_called_once_with("203.0.113.120")
+
+
 # ── Rate Limiting ─────────────────────────────────────────
 
 
@@ -237,6 +594,23 @@ class TestSessionCache:
         assert cache.get("b") == 2
         assert cache.get("c") == 3
 
+    def test_lru_eviction_log_excludes_session_token(self, monkeypatch):
+        info_messages = []
+        monkeypatch.setattr("app.core.cache.logger.info", info_messages.append)
+        session_token = "0123456789abcdef" * 4
+        replacement_token = "fedcba9876543210" * 4
+        cache = SessionCache(max_size=1)
+
+        cache.set(session_token, "first-client")
+        cache.set(replacement_token, "replacement-client")
+
+        assert cache.get(session_token) is None
+        assert cache.get(replacement_token) == "replacement-client"
+        assert info_messages == ["Evicted oldest session from cache (max entries=1)"]
+        logged = "\n".join(str(message) for message in info_messages)
+        assert session_token not in logged
+        assert session_token[:8] not in logged
+
     def test_lru_access_order(self):
         cache = SessionCache(max_size=2)
         cache.set("a", 1)
@@ -286,6 +660,51 @@ class TestSessionCache:
         asyncio.run(run_cleanup())
         assert cache.get("a") is None
         assert cache.get("b") == 2
+
+    def test_stop_cleanup_task_handles_its_own_cancellation(self):
+        async def run_cleanup():
+            cache = SessionCache()
+            cleanup_task = cache.start_cleanup_task()
+
+            await cache.stop_cleanup_task()
+
+            assert cleanup_task.cancelled()
+
+        asyncio.run(run_cleanup())
+
+    def test_stop_cleanup_task_propagates_caller_cancellation(self):
+        async def run_cleanup():
+            first_cancel_seen = asyncio.Event()
+
+            class DelayedCleanupCache(SessionCache):
+                async def cleanup_expired(self, interval=300):
+                    try:
+                        await asyncio.Event().wait()
+                    except asyncio.CancelledError:
+                        first_cancel_seen.set()
+                        await asyncio.Event().wait()
+
+            cache = DelayedCleanupCache()
+            cleanup_task = cache.start_cleanup_task()
+            stopper = asyncio.create_task(cache.stop_cleanup_task())
+
+            try:
+                await asyncio.wait_for(first_cancel_seen.wait(), timeout=1)
+                stopper.cancel()
+
+                with pytest.raises(asyncio.CancelledError):
+                    await stopper
+
+                assert stopper.cancelled()
+                assert cleanup_task.cancelled()
+            finally:
+                if not stopper.done():
+                    stopper.cancel()
+                if not cleanup_task.done():
+                    cleanup_task.cancel()
+                await asyncio.gather(stopper, cleanup_task, return_exceptions=True)
+
+        asyncio.run(run_cleanup())
 
     def test_items_values_keys(self):
         cache = SessionCache()
