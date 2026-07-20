@@ -16,10 +16,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements.lock
           python -m pip install ruff
           playwright install chromium
 
@@ -34,5 +34,29 @@ jobs:
       - name: Run migrations
         run: alembic upgrade head
 
-      - name: Run tests
+      - name: Run unit tests
         run: python -m pytest
+
+      # ── Accessibility and browser tests ──────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Start local server
+        run: |
+          python run.py &
+          sleep 5
+          curl -sf http://127.0.0.1:8000/api/health || (echo "Server failed to start" && exit 1)
+
+      - name: Run accessibility audit (axe-core)
+        run: BASE_URL=http://127.0.0.1:8000 npm run audit:wcag
+        continue-on-error: true
+
+      - name: Run browser smoke tests
+        run: BASE_URL=http://127.0.0.1:8000 BROWSERS=chromium npm run smoke:browsers
+        continue-on-error: true

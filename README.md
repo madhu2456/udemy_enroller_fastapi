@@ -28,6 +28,13 @@
 > "Udemy" is a registered trademark of Udemy, Inc. This is an independent, open-source tool created for educational purposes.  
 > Users are solely responsible for ensuring their use complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
 
+## ⚠️ Platform Risk Acknowledgment
+
+This tool uses **session-based Udemy enrollment endpoints**, not an official Udemy API.
+Automated access may conflict with Udemy's Terms of Use. The maintainers have reviewed
+this risk and determined it is acceptable for this open-source project. Users are solely
+responsible for ensuring their use complies with applicable terms and laws.
+
 ---
 
 ## What is Udemy Course Enroller?

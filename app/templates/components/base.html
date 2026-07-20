@@ -200,7 +200,7 @@
         </script>
 
         {% if request.url.path == '/' %}
-        <style>
+        <style nonce="{{ request.state.nonce }}">
             {% include 'components/tailwind-home.min.css' %}
         </style>
         {% else %}
@@ -460,7 +460,7 @@
                         type="button"
                         aria-label="Logout"
                         class="hidden flex items-center gap-1.5 min-h-[28px] px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                        onclick="logout()"
+                        data-action="logout"
                     >
                         <i data-lucide="log-out" class="w-3.5 h-3.5" aria-hidden="true"></i>
                         <span class="hidden sm:inline">Logout</span>
@@ -690,6 +690,11 @@
                             .getElementById("github-link")
                             ?.classList.remove("hidden");
                     });
+
+                // Logout button event listener
+                document.querySelectorAll('[data-action="logout"]').forEach(btn => {
+                    btn.addEventListener('click', () => logout());
+                });
             });
         </script>
         <!-- Cookie consent banner -->

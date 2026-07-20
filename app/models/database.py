@@ -284,17 +284,17 @@ def create_tables():
     
     # Auto-migrate new columns for seamless deployment
     try:
-        from sqlalchemy import text
+        from sqlalchemy import text, OperationalError
         with engine.begin() as conn:
             # Check if columns exist by selecting them. If not, it throws OperationalError
             try:
                 conn.execute(text("SELECT last_checked_at FROM enrolled_courses LIMIT 1"))
-            except Exception:
+            except OperationalError:
                 conn.execute(text("ALTER TABLE enrolled_courses ADD COLUMN last_checked_at DATETIME"))
                 
             try:
                 conn.execute(text("SELECT is_coupon_valid FROM enrolled_courses LIMIT 1"))
-            except Exception:
+            except OperationalError:
                 conn.execute(text("ALTER TABLE enrolled_courses ADD COLUMN is_coupon_valid BOOLEAN"))
     except Exception:
         # Just pass if it's Postgres or another DB that handles this via Alembic

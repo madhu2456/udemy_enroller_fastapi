@@ -40,7 +40,7 @@ def _get_fernet() -> Fernet:
         try:
             base64.urlsafe_b64decode(k)
             return len(k) == 44  # 32 bytes -> 44 base64 chars with padding
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
     if key and _is_valid_fernet_key(key):
@@ -87,7 +87,7 @@ def decrypt_cookies(encrypted: Any) -> Optional[dict]:
     if encrypted.strip().startswith(("{", "[")):
         try:
             return json.loads(encrypted)
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             pass
     try:
         f = _get_fernet()
@@ -196,7 +196,7 @@ def verify_password(
             plain_password.encode("utf-8"),
             hashed_password.encode("utf-8"),
         )
-    except Exception:
+    except (ValueError, TypeError):
         return False
 
 

@@ -18,7 +18,7 @@ def test_homepage_faq_disclosures_expose_keyboard_semantics():
     buttons = soup.select("button.faq-toggle")
 
     assert len(buttons) == 8
-    assert {control.name for control in soup.find_all(attrs={"onclick": "toggleFaq(this)"})} == {"button"}
+    assert {control.name for control in soup.find_all(attrs={"data-action": "toggle-faq"})} == {"button"}
 
     button_ids = [button.get("id") for button in buttons]
     panel_ids = [button.get("aria-controls") for button in buttons]

@@ -34,14 +34,14 @@ content %}
         <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
             <button
                 type="button"
-                onclick="resetSettings()"
+                data-action="reset-settings"
                 class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5" aria-hidden="true"></i> Reset
             </button>
             <button
                 type="button"
-                onclick="saveSettings()"
+                data-action="save-settings"
                 class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
                 <i data-lucide="save" class="w-3.5 h-3.5" aria-hidden="true"></i> Save Settings
@@ -266,7 +266,7 @@ content %}
                             aria-checked="false"
                             aria-labelledby="save-txt-desc"
                             data-switch-for="save-txt"
-                            onclick="toggleSwitch(this)"
+                            data-action="toggle-switch"
                             class="relative inline-flex items-center w-11 h-6 min-h-[24px] rounded-full transition-colors bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                         >
                             <span
@@ -300,7 +300,7 @@ content %}
                             aria-checked="false"
                             aria-labelledby="discounted-only-desc"
                             data-switch-for="discounted-only"
-                            onclick="toggleSwitch(this)"
+                            data-action="toggle-switch"
                             class="relative inline-flex items-center w-11 h-6 min-h-[24px] rounded-full transition-colors bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                         >
                             <span
@@ -344,7 +344,7 @@ content %}
                 </div>
                 <button
                     type="button"
-                    onclick="clearAllData()"
+                    data-action="clear-all-data"
                     class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
                 >
                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5" aria-hidden="true"></i>
@@ -367,6 +367,26 @@ content %}
         }
         setupTagInput("instructor-input", "instructor-tags");
         setupTagInput("title-input", "title-tags");
+
+        // Event listeners for data-action attributes
+        document.querySelectorAll('[data-action="reset-settings"]').forEach(btn => {
+            btn.addEventListener('click', () => resetSettings());
+        });
+        document.querySelectorAll('[data-action="save-settings"]').forEach(btn => {
+            btn.addEventListener('click', () => saveSettings());
+        });
+        document.querySelectorAll('[data-action="toggle-switch"]').forEach(btn => {
+            btn.addEventListener('click', () => toggleSwitch(btn));
+        });
+        document.querySelectorAll('[data-action="clear-all-data"]').forEach(btn => {
+            btn.addEventListener('click', () => clearAllData());
+        });
+        document.querySelectorAll('[data-action="remove-parent"]').forEach(btn => {
+            btn.addEventListener('click', () => btn.parentElement.remove());
+        });
+        document.querySelectorAll('[data-action="pill-change"]').forEach(input => {
+            input.addEventListener('change', () => onPillChange(input));
+        });
     });
 
     function formatSessionRemaining(seconds) {
@@ -522,7 +542,7 @@ content %}
             "inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium px-2 py-1 rounded-md";
         tag.innerHTML = `
         <span class="tag-text">${escapeHTML(text)}</span>
-        <button type="button" onclick="this.parentElement.remove()" class="hover:text-blue-900 ml-0.5">
+        <button type="button" data-action="remove-parent" class="hover:text-blue-900 ml-0.5">
             <i data-lucide="x" class="w-2.5 h-2.5"></i>
         </button>
     `;
@@ -604,7 +624,7 @@ content %}
                 const escapedKey = escapeHTML(key);
                 return `
         <label class="checkbox-pill inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm select-none ${val ? "bg-blue-50 border-blue-300 text-blue-800" : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"}">
-            <input type="checkbox" data-group="${containerId}" data-key="${escapedKey}" ${val ? "checked" : ""} onchange="onPillChange(this)" class="hidden">
+            <input type="checkbox" data-group="${containerId}" data-key="${escapedKey}" ${val ? "checked" : ""} data-action="pill-change" class="hidden">
             <div class="checkmark-box w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all ${val ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"}">
                 <svg class="${val ? "" : "hidden"} checkmark-svg" width="10" height="8" viewBox="0 0 10 8" fill="none">
                     <path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -655,7 +675,7 @@ content %}
     }
 
     async function saveSettings() {
-        const btn = document.querySelector('button[onclick="saveSettings()"]');
+        const btn = document.querySelector('button[data-action="save-settings"]');
         const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML =

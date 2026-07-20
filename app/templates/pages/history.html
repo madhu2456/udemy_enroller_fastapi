@@ -27,7 +27,7 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
         <div class="flex items-center">
             <button
                 type="button"
-                onclick="fetchHistory()"
+                data-action="fetch-history"
                 class="flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5" aria-hidden="true"></i> Sync Data
@@ -233,7 +233,7 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
                 <div class="bg-white border border-gray-200 rounded-xl transition-all duration-300 hover:border-gray-300 overflow-hidden shadow-sm" id="card-${run.run_id}">
                     <!-- Main Header (keyboard-expandable) -->
                     <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <button type="button" class="flex items-center gap-4 text-left flex-1 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" onclick="handleCardToggle(${run.run_id})" aria-expanded="false" aria-controls="expansion-${run.run_id}" id="toggle-run-${run.run_id}">
+                        <button type="button" class="flex items-center gap-4 text-left flex-1 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" data-action="toggle-card" data-run-id="${run.run_id}" aria-expanded="false" aria-controls="expansion-${run.run_id}" id="toggle-run-${run.run_id}">
                             <div class="hidden md:flex w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 items-center justify-center text-gray-500 flex-shrink-0" aria-hidden="true">
                                 <i data-lucide="terminal" class="w-5 h-5"></i>
                             </div>
@@ -262,10 +262,10 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
-                                <button type="button" onclick="requestDelete(${run.run_id})" class="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" aria-label="Delete run ${run.run_id}">
+                                <button type="button" data-action="delete-run" data-run-id="${run.run_id}" class="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" aria-label="Delete run ${run.run_id}">
                                     <i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i>
                                 </button>
-                                <button type="button" class="text-gray-600 transition-all duration-300 transform p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" id="chevron-${run.run_id}" onclick="handleCardToggle(${run.run_id})" aria-label="Expand or collapse run ${run.run_id}" aria-controls="expansion-${run.run_id}">
+                                <button type="button" class="text-gray-600 transition-all duration-300 transform p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" id="chevron-${run.run_id}" data-action="toggle-card" data-run-id="${run.run_id}" aria-label="Expand or collapse run ${run.run_id}" aria-controls="expansion-${run.run_id}">
                                     <i data-lucide="chevron-down" class="w-5 h-5" aria-hidden="true"></i>
                                 </button>
                             </div>
@@ -521,6 +521,17 @@ detailed activity logs from your dashboard.{% endblock %} {% block content %}
         const isAuthenticated = await checkAuth();
         if (!isAuthenticated) return;
         fetchHistory();
+
+        // Event listeners for data-action attributes
+        document.querySelectorAll('[data-action="fetch-history"]').forEach(btn => {
+            btn.addEventListener('click', () => fetchHistory());
+        });
+        document.querySelectorAll('[data-action="toggle-card"]').forEach(btn => {
+            btn.addEventListener('click', () => handleCardToggle(btn.dataset.runId));
+        });
+        document.querySelectorAll('[data-action="delete-run"]').forEach(btn => {
+            btn.addEventListener('click', () => requestDelete(btn.dataset.runId));
+        });
     }
 
     // Initial Kickoff

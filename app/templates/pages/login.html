@@ -842,7 +842,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-how-it-works-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">How does it work?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -864,7 +864,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-account-safety-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Is my account safe?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -886,7 +886,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-login-method-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Email or Cookie login?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -908,7 +908,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-open-source-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Really free?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -930,7 +930,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-course-filters-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Can I filter which courses get enrolled?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -952,7 +952,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-getting-started-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">How do I get started?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -974,7 +974,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-account-restrictions-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Will Udemy ban my account?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -996,7 +996,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                     style="text-align: left"
                                     aria-expanded="false"
                                     aria-controls="faq-current-support-panel"
-                                    onclick="toggleFaq(this)"
+                                    data-action="toggle-faq"
                                 >
                                     <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Does it still work in 2026?</span>
                                     <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1034,7 +1034,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                     </p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <style>
+                    <style nonce="{{ request.state.nonce }}">
                         @keyframes spin {
                             from {
                                 transform: rotate(0deg);
@@ -1074,7 +1074,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                             when you are ready. Success is not guaranteed.
                         </p>
                         <button
-                            onclick="window.location.reload()"
+                            data-action="reload-page"
                             class="mt-5 text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors"
                         >
                             Connect another account
@@ -1094,14 +1094,14 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                         <div class="flex border-b border-gray-200 mb-6">
                             <button
                                 id="tab-email"
-                                onclick="switchTab('email')"
+                                data-action="switch-tab" data-tab="email"
                                 class="pb-3 text-sm font-medium mr-6 border-b-2 -mb-[1px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-900 border-blue-600"
                             >
                                 Email Login
                             </button>
                             <button
                                 id="tab-cookie"
-                                onclick="switchTab('cookie')"
+                                data-action="switch-tab" data-tab="cookie"
                                 class="pb-3 text-sm font-medium mr-6 border-b-2 -mb-[1px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-gray-500 border-transparent hover:text-gray-700"
                             >
                                 Cookie Login
@@ -1116,7 +1116,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                                  Email login may trigger additional login prompts on some
                                  servers. If you see a CSRF error, switch to
                                 <button
-                                    onclick="switchTab('cookie')"
+                                    data-action="switch-tab" data-tab="cookie"
                                     class="text-blue-600 font-medium hover:underline"
                                 >
                                     Cookie Login</button
@@ -1191,7 +1191,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
                         {% if request.app.state.deployment_env != 'server' %}
                         <form
                             id="email-form"
-                            onsubmit="loginWithEmail(event)"
+                            data-action="login-email"
                             class="space-y-4"
                         >
                             <div>
@@ -1242,7 +1242,7 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
 
                         <form
                             id="cookie-form"
-                            onsubmit="loginWithCookies(event)"
+                            data-action="login-cookies"
                             class="{% if request.app.state.deployment_env == 'server' %}space-y-4{% else %}hidden space-y-4{% endif %}"
                         >
                             <div>
@@ -1427,6 +1427,23 @@ guaranteed. Not affiliated with Udemy.{% endblock %} {% block extra_head %}
 
     window.addEventListener("DOMContentLoaded", () => {
         switchTab(EMAIL_LOGIN_ENABLED ? "email" : "cookie");
+
+        // Event listeners for data-action attributes
+        document.querySelectorAll('[data-action="toggle-faq"]').forEach(btn => {
+            btn.addEventListener('click', () => toggleFaq(btn));
+        });
+        document.querySelectorAll('[data-action="reload-page"]').forEach(btn => {
+            btn.addEventListener('click', () => window.location.reload());
+        });
+        document.querySelectorAll('[data-action="switch-tab"]').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+        document.querySelectorAll('[data-action="login-email"]').forEach(form => {
+            form.addEventListener('submit', (e) => loginWithEmail(e));
+        });
+        document.querySelectorAll('[data-action="login-cookies"]').forEach(form => {
+            form.addEventListener('submit', (e) => loginWithCookies(e));
+        });
     });
 
     function isLoginSuccess(data) {

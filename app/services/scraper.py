@@ -204,6 +204,10 @@ class Scraper(ABC):
     async def playwright_get(self, url: str, wait_selector: str = None) -> str:
         """Fetch page content using Playwright with stealth patches.
 
+        Owner decision: playwright-stealth is used as a fallback for coupon aggregator
+        sites that use Cloudflare protection. This targets coupon sites, not Udemy.
+        The primary scraping method uses CloudScraper without stealth.
+
         Used as a fallback when CloudScraper cannot bypass Cloudflare protection
         on coupon aggregator sites. playwright-stealth applies browser fingerprint
         patches to reduce detection by anti-bot systems. The stealth library is
