@@ -80,6 +80,15 @@ fi
 echo "Running migrations (alembic upgrade head)..."
 alembic upgrade head
 
+# Seed persistent public_deals.json on the data volume from the image copy
+# (first boot / empty volume). Coupon-checker and enrollment keep it updated.
+PUBLIC_DEALS_PATH="${PUBLIC_DEALS_PATH:-}"
+if [ -n "$PUBLIC_DEALS_PATH" ] && [ ! -f "$PUBLIC_DEALS_PATH" ] && [ -f /app/public_deals.json ]; then
+    echo "Seeding $PUBLIC_DEALS_PATH from image public_deals.json..."
+    mkdir -p "$(dirname "$PUBLIC_DEALS_PATH")"
+    cp /app/public_deals.json "$PUBLIC_DEALS_PATH"
+fi
+
 echo "Starting application with uvicorn..."
 echo "------------------------------------------------"
 # Fix volume permissions and drop privileges

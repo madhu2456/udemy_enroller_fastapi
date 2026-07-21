@@ -13,7 +13,13 @@ services:
       - COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
       - DEPLOYMENT_ENV=server
       - DATABASE_URL=sqlite:////app/data/udemy_enroller.db
+      # Persist public coupon catalog on the data volume (survives image rebuilds)
+      - PUBLIC_DEALS_PATH=/app/data/public_deals.json
       - LOG_LEVEL=WARNING
+      - GOOGLE_SITE_VERIFICATION=${GOOGLE_SITE_VERIFICATION:-}
+      - BING_SITE_VERIFICATION=${BING_SITE_VERIFICATION:-}
+      - GTM_CONTAINER_ID=${GTM_CONTAINER_ID:-}
+      - GA4_MEASUREMENT_ID=${GA4_MEASUREMENT_ID:-}
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
@@ -25,6 +31,33 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  # Re-validates DB coupons and rewrites public_deals.json every 2 hours.
+  # Shares the same data volume as web so /udemycoupons stays current without
+  # local runs + git push.
+  coupon-checker:
+    build: .
+    container_name: udemy-enroller-coupon-checker
+    # Same uid as web appuser so public_deals.json stays writable by both services
+    user: "1001:1001"
+    entrypoint: ["python", "-u", "scripts/coupon_checker_loop.py"]
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
+      - DEPLOYMENT_ENV=server
+      - DATABASE_URL=sqlite:////app/data/udemy_enroller.db
+      - PUBLIC_DEALS_PATH=/app/data/public_deals.json
+      - COUPON_CHECKER_INTERVAL_SECONDS=${COUPON_CHECKER_INTERVAL_SECONDS:-7200}
+      - COUPON_CHECKER_RUN_ON_START=${COUPON_CHECKER_RUN_ON_START:-true}
+      - LOG_LEVEL=${COUPON_CHECKER_LOG_LEVEL:-INFO}
+      - PROXIES=${PROXIES:-}
+    volumes:
+      - app-data:/app/data
+      - app-logs:/app/logs
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   app-data:

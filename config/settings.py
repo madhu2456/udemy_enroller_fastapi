@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./udemy_enroller.db"
     AUTO_CREATE_TABLES: bool = False  # Use Alembic migrations by default
 
+    # Public coupons catalog ( /udemycoupons ). Empty = project-root public_deals.json.
+    # In Docker set to a path on the data volume so checker updates survive rebuilds:
+    #   PUBLIC_DEALS_PATH=/app/data/public_deals.json
+    PUBLIC_DEALS_PATH: str = ""
+
+    # Background coupon checker loop interval (seconds). Used by
+    # scripts/coupon_checker_loop.py / docker compose coupon-checker service.
+    COUPON_CHECKER_INTERVAL_SECONDS: int = 7200  # 2 hours
+
     # Redis (optional, for task queue)
     REDIS_URL: str = "redis://localhost:6379/0"
 

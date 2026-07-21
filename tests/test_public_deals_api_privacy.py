@@ -24,6 +24,11 @@ def _request_public_coupons(monkeypatch, export_path, query=""):
         str(export_path),
     )
     monkeypatch.setattr(
+        public_deals_export,
+        "get_public_deals_path",
+        lambda: str(export_path),
+    )
+    monkeypatch.setattr(
         public_deals_router,
         "public_coupons_api_limiter",
         RateLimiter(max_requests=50, window_seconds=60),

@@ -244,18 +244,49 @@ The application checks coupon listing validity for the public `/udemycoupons` pa
 
 `GET /sitemap.xml` always rebuilds from the current `public_deals.json` (valid slugs only). A disk snapshot is also written as `sitemap.generated.xml` / `sitemap.meta.json` after each export.
 
+**Important:** the checker reads coupons from the **server database** (`EnrolledCourse` rows). It does not scrape new deals by itself. Hosted enrollments populate that DB; the loop then keeps validity (and the public page) fresh.
+
 ### Running Locally
 From the project root:
 ```bash
 ./scripts/coupon_checker.sh
 ```
 
-### Running on Production Server (Docker)
-Run the checker *inside* the running container:
+### Production: automatic every 2 hours (recommended)
+
+`docker-compose.yml` includes a **`coupon-checker`** service that:
+
+- Shares the same `app-data` volume as `web` (SQLite DB + `public_deals.json`)
+- Runs `scripts/coupon_checker_loop.py` on an interval (default **7200s = 2 hours**)
+- Writes to `PUBLIC_DEALS_PATH=/app/data/public_deals.json` so updates **survive** `docker compose up --build`
+
+After deploy / restart:
+
 ```bash
-docker compose exec web bash ./scripts/coupon_checker.sh
+cd /opt/udemy-enroller   # or your app dir
+docker compose up -d --build
+docker compose ps        # web + coupon-checker should be up
+docker compose logs -f coupon-checker
 ```
-*(Optional: schedule this via cron if you want periodic re-checks without starting an enrollment run.)*
+
+Optional env (in `.env` on the server):
+
+```env
+COUPON_CHECKER_INTERVAL_SECONDS=7200
+COUPON_CHECKER_RUN_ON_START=true
+PUBLIC_DEALS_PATH=/app/data/public_deals.json
+```
+
+### One-shot on the server
+
+```bash
+# Immediate re-check without waiting for the next loop tick
+docker compose exec -T coupon-checker python -u scripts/coupon_checker.py
+# or:
+docker compose exec -T web python -u scripts/coupon_checker.py
+```
+
+You no longer need to run the checker locally and git-push `public_deals.json` for production freshness.
 
 ---
 

@@ -38,6 +38,24 @@ SITEMAP_DEAL_LIMIT = 500
 SITE_URL_DEFAULT = "https://udemyenroller.madhudadi.in"
 
 
+def get_public_deals_path() -> str:
+    """Resolved path for public_deals.json (settings override, else project root).
+
+    Docker/server deployments should set ``PUBLIC_DEALS_PATH`` to a file on the
+    persistent data volume (e.g. ``/app/data/public_deals.json``) so coupon-checker
+    updates survive image rebuilds.
+    """
+    try:
+        from config.settings import get_settings
+
+        configured = (get_settings().PUBLIC_DEALS_PATH or "").strip()
+        if configured:
+            return configured
+    except Exception:
+        pass
+    return DEFAULT_PUBLIC_DEALS_PATH
+
+
 def _atomic_write_text(path: str, content: str) -> None:
     """Publish text atomically through a writer-owned same-directory temp file."""
     target_path = os.path.abspath(path)
@@ -158,9 +176,16 @@ def assign_unique_slugs(deals: list[dict]) -> list[dict]:
 
 def load_public_deals(path: Optional[str] = None) -> list[dict]:
     """Load deals from public_deals.json and ensure SEO slugs are present."""
-    json_path = path or DEFAULT_PUBLIC_DEALS_PATH
+    json_path = path or get_public_deals_path()
     if not os.path.exists(json_path):
-        return []
+        # Fallback: image/repo copy when volume path is not seeded yet
+        if path is None and json_path != DEFAULT_PUBLIC_DEALS_PATH:
+            if os.path.exists(DEFAULT_PUBLIC_DEALS_PATH):
+                json_path = DEFAULT_PUBLIC_DEALS_PATH
+            else:
+                return []
+        else:
+            return []
     try:
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -276,7 +301,7 @@ def list_valid_deals_for_sitemap(
 
 def public_deals_freshness(path: Optional[str] = None) -> dict:
     """Hub freshness stats: valid count + last updated (file mtime / latest check)."""
-    json_path = path or DEFAULT_PUBLIC_DEALS_PATH
+    json_path = path or get_public_deals_path()
     deals = list_valid_deals(path)
     last_file = None
     if os.path.exists(json_path):
@@ -391,9 +416,19 @@ def build_sitemap_xml(
     Returns ``(xml_text, deal_url_count)``. Called on every ``GET /sitemap.xml``
     and after each deals export so listings stay in sync.
     """
-    json_path = deals_path or DEFAULT_PUBLIC_DEALS_PATH
+    json_path = deals_path or get_public_deals_path()
     deals_lastmod = None
     if os.path.exists(json_path):
+        try:
+            mtime = os.path.getmtime(json_path)
+            deals_lastmod = datetime.datetime.fromtimestamp(
+                mtime, tz=datetime.UTC
+            ).strftime("%Y-%m-%d")
+        except Exception:
+            pass
+    elif deals_path is None and os.path.exists(DEFAULT_PUBLIC_DEALS_PATH):
+        # Volume path not seeded yet — use image/repo snapshot for lastmod
+        json_path = DEFAULT_PUBLIC_DEALS_PATH
         try:
             mtime = os.path.getmtime(json_path)
             deals_lastmod = datetime.datetime.fromtimestamp(
@@ -490,7 +525,7 @@ def write_sitemap_files(
             .replace("+00:00", "Z"),
             "deal_urls": deal_count,
             "total_urls": xml.count("<url>"),
-            "deals_path": deals_path or DEFAULT_PUBLIC_DEALS_PATH,
+            "deals_path": deals_path or get_public_deals_path(),
             "sitemap_path": out,
         }
         _atomic_write_text(meta_out, json.dumps(meta, indent=2))
@@ -524,7 +559,7 @@ def export_public_deals_json(
     if owns_db:
         db = SessionLocal()
 
-    json_path = path or DEFAULT_PUBLIC_DEALS_PATH
+    json_path = path or get_public_deals_path()
     try:
         valid_courses = (
             db.query(EnrolledCourse)
@@ -536,6 +571,30 @@ def export_public_deals_json(
             .limit(limit)
             .all()
         )
+
+        # Safety: never wipe a populated public catalog when the DB has no
+        # coupon rows at all (fresh volume / wrong DATABASE_URL). If the DB
+        # has coupon rows but none are valid, an empty export is intentional.
+        if not valid_courses:
+            coupon_rows = (
+                db.query(EnrolledCourse.id)
+                .filter(EnrolledCourse.coupon_code.isnot(None))
+                .limit(1)
+                .first()
+            )
+            if coupon_rows is None and os.path.exists(json_path):
+                try:
+                    with open(json_path, "r", encoding="utf-8") as f:
+                        existing = json.load(f)
+                    if isinstance(existing, list) and len(existing) > 0:
+                        logger.warning(
+                            "Skipping public_deals export: DB has no coupon "
+                            f"rows but {json_path} already has {len(existing)} "
+                            "deals (preserving file)."
+                        )
+                        return len(existing)
+                except Exception:
+                    pass
 
         export_data = []
         for c in valid_courses:
@@ -561,6 +620,11 @@ def export_public_deals_json(
             )
 
         assign_unique_slugs(export_data)
+
+        # Ensure parent dir exists (e.g. first write to /app/data/...)
+        parent = os.path.dirname(os.path.abspath(json_path))
+        if parent:
+            os.makedirs(parent, exist_ok=True)
 
         _atomic_write_text(
             json_path,

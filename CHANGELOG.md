@@ -11,6 +11,8 @@ Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
 ### Added
 
+- **Production coupon checker every 2 hours** — Docker Compose `coupon-checker` service runs `scripts/coupon_checker_loop.py`, shares the data volume with `web`, and rewrites `PUBLIC_DEALS_PATH` (`/app/data/public_deals.json`) so `/udemycoupons` stays fresh without local runs + git push.
+- `PUBLIC_DEALS_PATH` / `COUPON_CHECKER_INTERVAL_SECONDS` settings; empty-DB export safety (won't wipe an existing catalog when the DB has no coupon rows).
 - `CONTRIBUTING.md` — setup, tests, PR expectations, and contribution safety rules.
 - GitHub issue templates (bug/feature) and pull request template under `.github/`.
 - Issue template config links to `SECURITY.md` / security.txt.
