@@ -1,14 +1,6 @@
-{% extends "components/base.html" %} {% block title %}Frequently Asked Questions
-- Udemy Enroller Automation Tool{% endblock %} {% block meta_title %}Frequently Asked Questions
-- Udemy Enroller Automation Tool{% endblock %} {% block meta_description %}FAQ for Udemy Enroller: how runs work, security,
-privacy, filters, cookie login, and free coupons. Not affiliated with Udemy.
-Enrollment is not guaranteed.{% endblock %} {% block og_type
+{% extends "components/base.html" %} {% block title %}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block meta_title %}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block meta_description %}FAQ for Udemy Enroller: how runs work, security, privacy, filters, cookie login, and free coupons. Not affiliated with Udemy. Enrollment is not guaranteed.{% endblock %} {% block og_type
 %}article{% endblock %} {% block og_title
-%}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}FAQ for Udemy Enroller: how it works, security, privacy,
-filters, and login. Not affiliated with Udemy. Enrollment not guaranteed.{% endblock %} {% block twitter_title %}Frequently Asked Questions - Udemy
-Enroller Automation Tool{% endblock %} {% block twitter_description %}FAQ for
-Udemy Enroller: how it works, security, privacy, and login. Not affiliated with
-Udemy.{% endblock %} {% block content %}
+%}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}FAQ for Udemy Enroller: how it works, security, privacy, filters, and login. Not affiliated with Udemy. Enrollment not guaranteed.{% endblock %} {% block twitter_title %}Frequently Asked Questions - Udemy Enroller Automation Tool{% endblock %} {% block twitter_description %}FAQ for Udemy Enroller: how it works, security, privacy, and login. Not affiliated with Udemy.{% endblock %} {% block content %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -104,6 +96,14 @@ Udemy.{% endblock %} {% block content %}
                 "acceptedAnswer": {
                     "@type": "Answer",
                     "text": "The app stores encrypted Udemy session cookies and your preferences in the database on your instance (or the hosted demo server). Passwords are never stored. Anonymous usage analytics (GTM/GA4) run only after you accept cookies. You can delete stored data from Settings."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How are session credentials stored, scoped, and deleted?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Scope: only the session tokens needed for enrollment (for example access_token, client_id, csrftoken) plus run history and filter preferences. Storage: tokens are Fernet-encrypted (AES) at rest in the instance SQLite database — self-hosted on your machine, or on the hosted demo server if you use that demo. Passwords are never written to disk. Deletion: use Settings to clear the session and history, or delete the local database file when self-hosting; hosted-demo data can also be cleared from Settings. Full detail is on /privacy."
                 }
             },
             {
@@ -505,6 +505,40 @@ Udemy.{% endblock %} {% block content %}
                                     analytics (GTM/GA4) run only after you
                                     accept cookies. You can delete stored data
                                     from Settings.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="px-6 py-5">
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                            >
+                                How are session credentials stored, scoped, and
+                                deleted?
+                            </h3>
+                            <div>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                >
+                                    <strong class="text-gray-700">Scope:</strong>
+                                    only session tokens needed for enrollment
+                                    (for example access_token, client_id,
+                                    csrftoken), plus run history and filter
+                                    preferences.
+                                    <strong class="text-gray-700">Storage:</strong>
+                                    tokens are Fernet-encrypted (AES) at rest in
+                                    the instance SQLite database — on your
+                                    machine when self-hosting, or on the hosted
+                                    demo server if you use that demo. Passwords
+                                    are never written to disk.
+                                    <strong class="text-gray-700">Deletion:</strong>
+                                    use Settings → Clear All Data, or delete the
+                                    local database file when self-hosting. Full
+                                    detail is on
+                                    <a
+                                        href="/privacy"
+                                        class="text-[#2563EB] hover:underline"
+                                        >/privacy</a
+                                    >.
                                 </p>
                             </div>
                         </div>

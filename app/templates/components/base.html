@@ -3,10 +3,8 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>
-            {% block title %}Free Udemy Courses Automation | Udemy Enroller by
-            Madhu Dadi{% endblock %}
-        </title>
+        {# Single-line title only — whitespace inside <title> becomes Google SERP noise #}
+        <title>{%- block title -%}Free Udemy Courses Automation | Udemy Enroller by Madhu Dadi{%- endblock -%}</title>
 
         <!-- Primary Meta Tags -->
         <meta

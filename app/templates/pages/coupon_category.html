@@ -3,7 +3,8 @@
 {% block meta_title %}Free {{ category_name }} Udemy Coupons | Udemy Enroller{% endblock %}
 {% block meta_description %}Browse {{ deal_count }} free Udemy coupon listing{% if deal_count != 1 %}s{% endif %} in {{ category_name }}. Validity can change. Not affiliated with Udemy. Open-source Udemy Enroller by Madhu Dadi.{% endblock %}
 {% block meta_keywords %}free udemy coupons, {{ category_name }}, 100% off udemy, free {{ category_name }} courses, udemy enroller{% endblock %}
-{% block robots %}index, follow{% endblock %}
+{# Thin category hubs (<5 listings) are noindex to avoid near-duplicate SERP noise #}
+{% block robots %}{% if deal_count is defined and deal_count < 5 %}noindex, follow{% else %}index, follow{% endif %}{% endblock %}
 {% block og_title %}Free {{ category_name }} Udemy Coupons{% endblock %}
 {% block og_description %}{{ deal_count }} free coupon listings in {{ category_name }}. Validity can change. Not affiliated with Udemy.{% endblock %}
 {% block twitter_title %}Free {{ category_name }} Udemy Coupons{% endblock %}
