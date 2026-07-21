@@ -383,17 +383,17 @@ class EnrollmentManager:
             _health = self.udemy.get_session_health_report()
             logger.info(f"Enrollment pipeline completed. Enrolled: {self.udemy.successfully_enrolled_c}")
 
-            # Refresh public coupon listing + sitemap (same as scripts/coupon_checker)
+            # Merge free coupons from this run into the public catalog (does not
+            # replace the whole file from the multi-tenant user DB). Validity
+            # re-checks are owned by scripts/coupon_checker.py.
             try:
-                from app.services.public_deals_export import export_public_deals_json
-
-                n = export_public_deals_json(db)  # also rebuilds sitemap deal URLs
+                n = self._merge_run_into_public_catalog(db)
                 logger.info(
-                    f"Updated public_deals.json + sitemap after enrollment "
-                    f"({n} valid coupons)"
+                    f"Merged this run into public_deals.json + sitemap "
+                    f"({n} catalog deals total)"
                 )
             except Exception as e:
-                logger.warning(f"Could not update public_deals/sitemap after enrollment: {e}")
+                logger.warning(f"Could not merge public_deals after enrollment: {e}")
 
         except asyncio.CancelledError:
             logger.info(f"Enrollment pipeline {self.run_id} cancelled")
@@ -404,13 +404,10 @@ class EnrollmentManager:
                     run.status = "cancelled"
                     run.completed_at = _utcnow_naive()
                     cleanup_db.commit()
-                # Still refresh deals from DB (partial coupon checks during the run)
                 try:
-                    from app.services.public_deals_export import export_public_deals_json
-
-                    export_public_deals_json(cleanup_db)
+                    self._merge_run_into_public_catalog(cleanup_db)
                 except Exception as exp:
-                    logger.warning(f"public_deals export on cancel failed: {exp}")
+                    logger.warning(f"public_deals merge on cancel failed: {exp}")
             finally:
                 cleanup_db.close()
             raise
@@ -424,11 +421,9 @@ class EnrollmentManager:
                     run.completed_at = _utcnow_naive()
                     db.commit()
                 try:
-                    from app.services.public_deals_export import export_public_deals_json
-
-                    export_public_deals_json(db)
+                    self._merge_run_into_public_catalog(db)
                 except Exception as exp:
-                    logger.warning(f"public_deals export on failure failed: {exp}")
+                    logger.warning(f"public_deals merge on failure failed: {exp}")
             except Exception:
                 pass
         finally:
@@ -442,6 +437,47 @@ class EnrollmentManager:
                     logger.warning(f"Error closing scraper HTTP client: {e}")
             if self.close_client:
                 await self.udemy.close()
+
+    def _merge_run_into_public_catalog(self, db: Session) -> int:
+        """Upsert free coupons from this run into public_deals.json (no full DB replace)."""
+        from app.services.public_deals_export import merge_deals_into_public_catalog
+
+        rows = (
+            db.query(EnrolledCourse)
+            .filter(
+                EnrolledCourse.enrollment_run_id == self.run_id,
+                EnrolledCourse.coupon_code.isnot(None),
+                EnrolledCourse.is_coupon_valid.is_(True),
+            )
+            .all()
+        )
+        if not rows:
+            return 0
+
+        payload = []
+        for c in rows:
+            payload.append(
+                {
+                    "id": c.id,
+                    "title": c.title,
+                    "url": c.url,
+                    "slug": c.slug,
+                    "course_id": c.course_id,
+                    "coupon_code": c.coupon_code,
+                    "price": c.price,
+                    "category": c.category,
+                    "language": c.language,
+                    "rating": c.rating,
+                    "is_coupon_valid": True,
+                    "enrolled_at": c.enrolled_at.isoformat() + "Z"
+                    if c.enrolled_at
+                    else None,
+                    "last_checked_at": c.last_checked_at.isoformat() + "Z"
+                    if c.last_checked_at
+                    else None,
+                }
+            )
+        return merge_deals_into_public_catalog(payload)
 
     async def _update_run_stats(self, db: Session, run: EnrollmentRun):
         """Flush in-memory counters to the run record."""

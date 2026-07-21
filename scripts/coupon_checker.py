@@ -1,17 +1,35 @@
+"""Re-validate public coupon catalog (public_deals.json) — no user DB.
+
+Loads deals from PUBLIC_DEALS_PATH (or project-root public_deals.json), checks
+each coupon against Udemy's unauthenticated pricing API, drops confirmed
+expired deals, preserves deals that could not be checked, then rewrites the
+JSON and refreshes sitemap deal URLs.
+
+Used by:
+  ./scripts/coupon_checker.sh
+  scripts/coupon_checker_loop.py (Docker coupon-checker service, every 2h)
+"""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
 import random
+import re
 import sys
 from datetime import UTC, datetime
+from typing import Any, Optional
 
 # Add project root to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import desc
-
-from app.models.database import EnrolledCourse, SessionLocal
 from app.services.http_client import AsyncHTTPClient
+from app.services.public_deals_export import (
+    get_public_deals_path,
+    load_public_deals,
+    save_public_deals,
+)
 from config.settings import get_settings
 
 logging.basicConfig(
@@ -19,134 +37,200 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_COURSE_ID_PATTERNS = (
+    re.compile(r'data-course-id="(\d+)"'),
+    re.compile(r'"id"\s*:\s*(\d{3,})\s*,\s*"title"'),
+    re.compile(r"course_id=(\d+)"),
+    re.compile(r"/course/(\d{3,})/"),
+)
 
-async def get_course_id_and_check(http, course):
-    """Fetch the course page to find the ID and validate the coupon."""
-    url = course.url
-    coupon = course.coupon_code
 
-    if not coupon:
-        return
+def _utcnow_iso() -> str:
+    return (
+        datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def _course_id_from_deal(deal: dict) -> Optional[str]:
+    raw = deal.get("course_id")
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    return text if text.isdigit() else None
+
+
+async def _resolve_course_id(http: AsyncHTTPClient, url: str) -> Optional[str]:
+    resp = await http.get(url, use_cloudscraper=True, log_failures=False)
+    if not resp or not getattr(resp, "text", None):
+        return None
+    html = resp.text
+    for pattern in _COURSE_ID_PATTERNS:
+        match = pattern.search(html)
+        if match:
+            return match.group(1)
+    return None
+
+
+async def check_deal(http: AsyncHTTPClient, deal: dict[str, Any]) -> str:
+    """Validate one public deal. Mutates deal in place.
+
+    Returns one of: ``valid``, ``expired``, ``skipped``, ``error``.
+    """
+    url = (deal.get("url") or "").strip()
+    coupon = (deal.get("coupon_code") or "").strip()
+    title = deal.get("title") or url or "?"
+
+    if not url or not coupon:
+        return "skipped"
 
     try:
-        # First, we need the course_id.
-        if not course.course_id:
-            # We can get course_id from the course page HTML
-            resp = await http.get(url, use_cloudscraper=True)
-            if not resp or not resp.text:
-                logger.warning(f"Failed to load course page for {url}")
-                return
-
-            # Simple regex or string search for course id
-            import re
-
-            match = re.search(r'data-course-id="(\d+)"', resp.text)
-            if not match:
-                match = re.search(r"course_id=(\d+)", resp.text)
-            if match:
-                course.course_id = match.group(1)
+        course_id = _course_id_from_deal(deal)
+        if not course_id:
+            course_id = await _resolve_course_id(http, url)
+            if course_id:
+                deal["course_id"] = course_id
             else:
-                logger.warning(f"Could not find course_id for {url}")
-                return
+                logger.warning("Could not find course_id for %s", title)
+                return "error"
 
-        # Now check the pricing API unauthenticated.
-        # DO NOT use any authorization headers to avoid WAF flags.
-        api_url = f"https://www.udemy.com/api-2.0/course-landing-components/{course.course_id}/me/?components=purchase,redeem_coupon&discountCode={coupon}"
-
-        raw_resp = await http.get(api_url, use_cloudscraper=True)
+        api_url = (
+            f"https://www.udemy.com/api-2.0/course-landing-components/"
+            f"{course_id}/me/?components=purchase,redeem_coupon"
+            f"&discountCode={coupon}"
+        )
+        # Unauthenticated pricing check — no auth headers (WAF-friendly).
+        raw_resp = await http.get(api_url, use_cloudscraper=True, log_failures=False)
         resp = await http.safe_json(raw_resp)
         if not resp:
-            logger.warning(f"Failed to get pricing data for {url}")
-            return
+            logger.warning("No pricing JSON for %s", title)
+            return "error"
 
         purchase = resp.get("purchase") or resp.get("cacheable_purchase")
         if not purchase:
-            logger.warning(f"No purchase data returned for {url}")
-            return
+            logger.warning("No purchase data for %s", title)
+            return "error"
 
-        purchase_data = purchase.get("data", {})
-        pricing_result = purchase_data.get("pricing_result", {})
-
-        # Track list price for "amount saved" stats
-        lp = purchase_data.get("list_price", {}).get("amount") or 0
+        purchase_data = purchase.get("data") or {}
+        pricing_result = purchase_data.get("pricing_result") or {}
+        lp = (purchase_data.get("list_price") or {}).get("amount") or 0
 
         price_obj = pricing_result.get("price")
         if price_obj is None:
-            # If there's no price object, only trust explicit is_free flag
-            is_free_result = pricing_result.get("is_free", False)
-            final_price = 0 if is_free_result else 9999.0
+            is_free = bool(pricing_result.get("is_free", False))
+            final_price = 0.0 if is_free else 9999.0
         else:
-            final_price = price_obj.get("amount") or 0
-            is_free_result = pricing_result.get("is_free", False) or final_price == 0
+            final_price = float(price_obj.get("amount") or 0)
+            is_free = bool(pricing_result.get("is_free", False) or final_price == 0)
 
-        course.is_coupon_valid = is_free_result
+        deal["last_checked_at"] = _utcnow_iso()
+        if lp:
+            try:
+                deal["price"] = float(lp)
+            except (TypeError, ValueError):
+                pass
 
-        course.price = float(lp) if lp else course.price
-        status_text = "VALID" if is_free_result else "EXPIRED"
-        logger.info(f"[{status_text}] {course.title} - Price: {final_price}")
+        if is_free:
+            deal["is_coupon_valid"] = True
+            logger.info("[VALID] %s (price=%s)", title, final_price)
+            return "valid"
 
-    except Exception as e:
-        logger.error(f"Error checking {url}: {e}")
+        deal["is_coupon_valid"] = False
+        logger.info("[EXPIRED] %s (price=%s)", title, final_price)
+        return "expired"
+
+    except Exception as exc:
+        logger.error("Error checking %s: %s", title, exc)
+        return "error"
 
 
-async def main():
-    logger.info("Starting Coupon Checker...")
-    db = SessionLocal()
+async def main() -> None:
+    logger.info("Starting Coupon Checker (public_deals.json catalog)...")
     settings = get_settings()
+    # Write target (volume path in Docker). load_public_deals() falls back to the
+    # image/repo copy when the volume file is not seeded yet.
+    json_path = get_public_deals_path()
+    deals = load_public_deals()
+
+    logger.info("Loaded %s deals (write path: %s)", len(deals), json_path)
+
+    if not deals:
+        logger.warning("No deals to check — public_deals.json empty or missing.")
+        return
+
+    proxy_url = None
+    if settings.PROXIES:
+        proxies = [p.strip() for p in settings.PROXIES.split(",") if p.strip()]
+        if proxies:
+            proxy_url = random.choice(proxies)
+            logger.info("Using proxy for network configuration.")
+
+    http = AsyncHTTPClient(proxy=proxy_url)
+    stats = {"valid": 0, "expired": 0, "error": 0, "skipped": 0}
 
     try:
-        courses = (
-            db.query(EnrolledCourse)
-            .filter(EnrolledCourse.coupon_code.isnot(None))
-            .order_by(desc(EnrolledCourse.enrolled_at))
-            .limit(1000)
-            .all()
-        )
-
-        logger.info(
-            f"Found {len(courses)} recent courses to check (limited to latest 1000)."
-        )
-
-        # Setup proxy if available in settings for network configuration
-        proxy_url = None
-        if settings.PROXIES:
-            proxies = [p.strip() for p in settings.PROXIES.split(",") if p.strip()]
-            if proxies:
-                proxy_url = random.choice(proxies)
-                logger.info("Using proxy for network configuration.")
-
-        http = AsyncHTTPClient(proxy=proxy_url)
-
-        # Process in small batches
         batch_size = 5
-        for i in range(0, len(courses), batch_size):
-            batch = courses[i : i + batch_size]
-            tasks = [get_course_id_and_check(http, c) for c in batch]
-            await asyncio.gather(*tasks)
+        total = len(deals)
+        for i in range(0, total, batch_size):
+            batch = deals[i : i + batch_size]
+            results = await asyncio.gather(*[check_deal(http, d) for d in batch])
+            for status in results:
+                stats[status] = stats.get(status, 0) + 1
 
-            for c in batch:
-                c.last_checked_at = datetime.now(UTC).replace(tzinfo=None)
-
-            db.commit()
+            done = min(i + batch_size, total)
             logger.info(
-                f"Processed batch {i // batch_size + 1}/{(len(courses) + batch_size - 1) // batch_size}"
+                "Processed batch %s/%s (%s/%s deals)",
+                i // batch_size + 1,
+                (total + batch_size - 1) // batch_size,
+                done,
+                total,
             )
-
-            # Conservative rate limiting sleep to protect IP
-            await asyncio.sleep(3)
-
+            # Rate limit between batches
+            if done < total:
+                await asyncio.sleep(3)
     finally:
-        # Same export used after enrollment runs — public_deals.json + sitemap
-        logger.info("Exporting valid coupons to public_deals.json + sitemap...")
         try:
-            from app.services.public_deals_export import export_public_deals_json
+            await http.close()
+        except Exception:
+            pass
 
-            n = export_public_deals_json(db)  # writes JSON and refreshes sitemap
-            logger.info(f"Export complete ({n} valid coupons; sitemap refreshed)")
-        except Exception as e:
-            logger.error(f"public_deals/sitemap export failed: {e}")
-        db.close()
-        logger.info("Coupon Check Completed.")
+    # Keep valid deals + deals we could not verify (retry next cycle).
+    # Drop confirmed expired so /udemycoupons stays accurate.
+    kept: list[dict] = []
+    for deal in deals:
+        if deal.get("is_coupon_valid") is False:
+            continue
+        # Normalize flag for catalog consumers
+        deal["is_coupon_valid"] = True
+        kept.append(deal)
+
+    logger.info(
+        "Results: valid=%s expired=%s error=%s skipped=%s → keeping %s deals",
+        stats["valid"],
+        stats["expired"],
+        stats["error"],
+        stats["skipped"],
+        len(kept),
+    )
+
+    # Never write an empty catalog after a total failure wave
+    if not kept and deals:
+        still_marked_valid = sum(1 for d in deals if d.get("is_coupon_valid") is not False)
+        if stats["error"] > 0 and stats["valid"] == 0 and stats["expired"] == 0:
+            logger.error(
+                "All checks failed and none expired — preserving existing catalog "
+                "(%s deals) without rewrite.",
+                len(deals),
+            )
+            return
+        if still_marked_valid == 0 and stats["expired"] == len(deals):
+            logger.warning("All coupons confirmed expired — writing empty catalog.")
+
+    n = save_public_deals(kept, path=json_path, refresh_sitemap=True)
+    logger.info("Wrote %s deals to %s (+ sitemap refreshed)", n, json_path)
+    logger.info("Coupon Check Completed.")
 
 
 if __name__ == "__main__":

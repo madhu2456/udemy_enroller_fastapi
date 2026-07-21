@@ -540,6 +540,109 @@ def write_sitemap_files(
         return -1
 
 
+def save_public_deals(
+    deals: list[dict],
+    *,
+    path: Optional[str] = None,
+    refresh_sitemap: bool = True,
+    only_valid: bool = True,
+) -> int:
+    """Atomically write the public coupon catalog and optionally refresh sitemap.
+
+    Primary writer for the coupon checker (catalog-owned, not user-DB-owned).
+    """
+    json_path = path or get_public_deals_path()
+    try:
+        export_data = []
+        for c in deals:
+            if only_valid and not c.get("is_coupon_valid"):
+                continue
+            if only_valid and not c.get("coupon_code"):
+                continue
+            export_data.append(dict(c))
+
+        assign_unique_slugs(export_data)
+
+        parent = os.path.dirname(os.path.abspath(json_path))
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+
+        _atomic_write_text(
+            json_path,
+            json.dumps(export_data, ensure_ascii=False, indent=2),
+        )
+        logger.info(f"Saved {len(export_data)} deals to {json_path}")
+
+        if refresh_sitemap:
+            write_sitemap_files(deals_path=json_path)
+
+        return len(export_data)
+    except Exception as e:
+        logger.error(f"Failed to save public_deals.json: {e}")
+        return 0
+
+
+def _deal_merge_key(deal: dict) -> str:
+    """Stable key for upserting deals (slug, else course path + coupon)."""
+    slug = (deal.get("slug") or "").strip().lower()
+    if slug:
+        return f"slug:{slug}"
+    url = (deal.get("url") or "").strip().lower()
+    coupon = (deal.get("coupon_code") or "").strip().upper()
+    path = urlparse(url).path.rstrip("/") if url else ""
+    return f"url:{path}|{coupon}"
+
+
+def merge_deals_into_public_catalog(
+    new_deals: list[dict],
+    *,
+    path: Optional[str] = None,
+    refresh_sitemap: bool = True,
+    limit: int = 500,
+) -> int:
+    """Upsert free deals into the existing public catalog (does not wipe it).
+
+    Used after enrollment runs so newly found free coupons appear on
+    /udemycoupons without replacing the whole catalog from the user DB.
+    """
+    json_path = path or get_public_deals_path()
+    existing = load_public_deals(json_path)
+    by_key: dict[str, dict] = {}
+    for d in existing:
+        by_key[_deal_merge_key(d)] = dict(d)
+
+    added = 0
+    for raw in new_deals:
+        if not raw.get("coupon_code"):
+            continue
+        if raw.get("is_coupon_valid") is False:
+            continue
+        deal = dict(raw)
+        deal["is_coupon_valid"] = True
+        key = _deal_merge_key(deal)
+        if key not in by_key:
+            added += 1
+        # Prefer newer metadata when updating an existing key
+        prev = by_key.get(key) or {}
+        merged = {**prev, **{k: v for k, v in deal.items() if v is not None}}
+        by_key[key] = merged
+
+    combined = list(by_key.values())
+    combined.sort(
+        key=lambda c: c.get("last_checked_at") or c.get("enrolled_at") or "",
+        reverse=True,
+    )
+    if limit is not None:
+        combined = combined[:limit]
+
+    n = save_public_deals(
+        combined, path=json_path, refresh_sitemap=refresh_sitemap, only_valid=True
+    )
+    if added:
+        logger.info(f"Merged {added} new deal(s) into public catalog ({n} total)")
+    return n
+
+
 def export_public_deals_json(
     db: Optional[Session] = None,
     *,
@@ -547,13 +650,10 @@ def export_public_deals_json(
     limit: int = 500,
     refresh_sitemap: bool = True,
 ) -> int:
-    """Write currently valid coupons to public_deals.json and refresh sitemap.
+    """Legacy DB→JSON export. Prefer coupon_checker + merge_deals_into_public_catalog.
 
-    Returns the number of courses exported. Safe to call from enrollment
-    completion or the coupon checker; uses atomic replace via .tmp file.
-
-    When ``refresh_sitemap`` is True (default), also regenerates the sitemap
-    snapshot from the new JSON so /sitemap.xml deal URLs stay current.
+    Still used by tests. Production catalog is owned by public_deals.json and
+    refreshed by scripts/coupon_checker.py (not the multi-tenant user DB).
     """
     owns_db = db is None
     if owns_db:
@@ -573,8 +673,7 @@ def export_public_deals_json(
         )
 
         # Safety: never wipe a populated public catalog when the DB has no
-        # coupon rows at all (fresh volume / wrong DATABASE_URL). If the DB
-        # has coupon rows but none are valid, an empty export is intentional.
+        # coupon rows at all (fresh volume / wrong DATABASE_URL).
         if not valid_courses:
             coupon_rows = (
                 db.query(EnrolledCourse.id)
@@ -603,7 +702,7 @@ def export_public_deals_json(
                     "id": c.id,
                     "title": c.title,
                     "url": c.url,
-                    "slug": c.slug,  # may be None; assign_unique_slugs fills SEO slug
+                    "slug": c.slug,
                     "coupon_code": c.coupon_code,
                     "price": c.price,
                     "category": c.category,
@@ -619,27 +718,12 @@ def export_public_deals_json(
                 }
             )
 
-        assign_unique_slugs(export_data)
-
-        # Ensure parent dir exists (e.g. first write to /app/data/...)
-        parent = os.path.dirname(os.path.abspath(json_path))
-        if parent:
-            os.makedirs(parent, exist_ok=True)
-
-        _atomic_write_text(
-            json_path,
-            json.dumps(export_data, ensure_ascii=False, indent=2),
+        return save_public_deals(
+            export_data,
+            path=json_path,
+            refresh_sitemap=refresh_sitemap,
+            only_valid=True,
         )
-
-        logger.info(
-            f"Exported {len(export_data)} valid coupons to {json_path}"
-        )
-
-        # Keep sitemap deal URLs in lockstep with this JSON write
-        if refresh_sitemap:
-            write_sitemap_files(deals_path=json_path)
-
-        return len(export_data)
     except Exception as e:
         logger.error(f"Failed to export public_deals.json: {e}")
         return 0

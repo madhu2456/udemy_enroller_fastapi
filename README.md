@@ -237,14 +237,12 @@ There is nothing to uninstall for the public demo. Use **Logout** and/or **Clear
 
 The application checks coupon listing validity for the public `/udemycoupons` page (`public_deals.json`). Prefer mocks/fixtures in development; be mindful of third-party rate limits and terms.
 
-**Either process updates `public_deals.json` and the coupon entries in `/sitemap.xml`:**
+**How the public catalog is maintained:**
 
-1. **Enrollment run** (Start Enrollment) — coupons are checked in the pipeline; when the run finishes, the JSON is rebuilt from DB rows with `is_coupon_valid=true`, then the sitemap deal URLs are refreshed.
-2. **Standalone checker** — re-validates existing DB coupons and rebuilds the same JSON + sitemap.
+1. **Standalone checker (source of truth for validity)** — reads `public_deals.json`, re-checks each coupon on Udemy, drops expired deals, rewrites the file + sitemap. **Does not use the user/enrollment database.**
+2. **Enrollment run** — may **merge** newly found free coupons from that run into the catalog (upsert); it does **not** replace the whole file from the multi-tenant DB.
 
 `GET /sitemap.xml` always rebuilds from the current `public_deals.json` (valid slugs only). A disk snapshot is also written as `sitemap.generated.xml` / `sitemap.meta.json` after each export.
-
-**Important:** the checker reads coupons from the **server database** (`EnrolledCourse` rows). It does not scrape new deals by itself. Hosted enrollments populate that DB; the loop then keeps validity (and the public page) fresh.
 
 ### Running Locally
 From the project root:
@@ -256,9 +254,9 @@ From the project root:
 
 `docker-compose.yml` includes a **`coupon-checker`** service that:
 
-- Shares the same `app-data` volume as `web` (SQLite DB + `public_deals.json`)
+- Shares the same `app-data` volume as `web` (`public_deals.json` on the volume)
 - Runs `scripts/coupon_checker_loop.py` on an interval (default **7200s = 2 hours**)
-- Writes to `PUBLIC_DEALS_PATH=/app/data/public_deals.json` so updates **survive** `docker compose up --build`
+- Re-validates the **catalog file** (not user DB rows) and writes to `PUBLIC_DEALS_PATH=/app/data/public_deals.json` so updates **survive** rebuilds
 
 After deploy / restart:
 

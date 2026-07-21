@@ -2,14 +2,14 @@
 """Run coupon validation on an interval and refresh /udemycoupons.
 
 Intended for production (Docker ``coupon-checker`` service). Each cycle:
-1. Re-validates coupon codes on recent EnrolledCourse rows (Udemy pricing API)
-2. Rebuilds public_deals.json + sitemap deal URLs
+1. Loads public_deals.json (catalog file — not the multi-tenant user DB)
+2. Re-validates each coupon via Udemy's unauthenticated pricing API
+3. Drops confirmed expired deals, rewrites JSON + sitemap
 
 Environment:
   COUPON_CHECKER_INTERVAL_SECONDS  sleep between cycles (default 7200 = 2h)
   COUPON_CHECKER_RUN_ON_START      if "1"/"true" (default), run once immediately
-  PUBLIC_DEALS_PATH                write path for public_deals.json (persistent volume)
-  DATABASE_URL                     same DB as the web service
+  PUBLIC_DEALS_PATH                path for public_deals.json (persistent volume)
 """
 
 from __future__ import annotations

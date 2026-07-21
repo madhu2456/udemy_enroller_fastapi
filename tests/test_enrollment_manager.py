@@ -43,6 +43,10 @@ def override_get_db():
 def isolate_side_effects_and_cleanup_db(monkeypatch):
     """Prevent public exports and clean up database state after each test."""
     monkeypatch.setattr(
+        "app.services.public_deals_export.merge_deals_into_public_catalog",
+        lambda *args, **kwargs: 0,
+    )
+    monkeypatch.setattr(
         "app.services.public_deals_export.export_public_deals_json",
         lambda *args, **kwargs: 0,
     )
