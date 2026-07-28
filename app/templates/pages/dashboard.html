@@ -1169,7 +1169,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         const origText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML =
-            '<i class="fas fa-spinner fa-spin mr-2"></i>Starting...';
+            '<span class="spinner mr-2" aria-hidden="true"></span>Starting...';
 
         try {
             const resp = await apiFetch("/api/enrollment/start", {
@@ -1199,7 +1199,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         const origText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML =
-            '<i class="fas fa-spinner fa-spin mr-2"></i>Stopping...';
+            '<span class="spinner mr-2" aria-hidden="true"></span>Stopping...';
 
         try {
             const resp = await apiFetch("/api/enrollment/stop", {
@@ -1632,7 +1632,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 }
             } else {
                 scrapingContainer.innerHTML =
-                    '<div class="col-span-full py-6 text-center text-gray-400 text-xs font-light"><i class="fas fa-spinner fa-spin mr-2"></i>Initializing scrapers...</div>';
+                    '<div class="col-span-full py-6 text-center text-gray-400 text-xs font-light"><span class="spinner mr-2" aria-hidden="true"></span>Initializing scrapers...</div>';
             }
         } else {
             scrapingContainer.innerHTML = "";

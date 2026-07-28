@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -75,13 +75,6 @@
         />
         <link rel="preload" href="/static/images/icon-512.webp" as="image" />
         <link rel="stylesheet" href="/static/fonts/inter.css" />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-            integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
-            crossorigin="anonymous"
-            referrerpolicy="no-referrer"
-        />
         <link rel="preconnect" href="https://madhudadi.in" crossorigin />
         <link rel="dns-prefetch" href="https://madhudadi.in" />
 
@@ -215,7 +208,7 @@
         {% endif %}
 
         <!-- Lucide Icons CDN -->
-        <script defer src="https://unpkg.com/lucide@0.469.0" nonce="{{ request.state.nonce }}"></script>
+        <script defer src="/static/js/lucide.min.js" nonce="{{ request.state.nonce }}"></script>
         <link rel="stylesheet" href="/static/css/site.css" />
 
         {% block extra_head %}{% endblock %}
@@ -704,10 +697,10 @@
                     <a href="/privacy" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Read our privacy policy</a>.
                 </p>
                 <div class="flex gap-2 flex-shrink-0">
-                    <button id="cookie-decline" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <button id="cookie-decline" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors min-h-[44px]">
                         Decline
                     </button>
-                    <button id="cookie-accept" class="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                    <button id="cookie-accept" class="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors min-h-[44px]">
                         Accept
                     </button>
                 </div>

@@ -57,7 +57,7 @@ content %}
                 <div
                     class="w-full py-4 text-center text-gray-400 text-xs italic"
                 >
-                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading sites...
+                    <span class="spinner mr-2" aria-hidden="true"></span>Loading sites...
                 </div>
             </div>
         </div>
@@ -78,7 +78,7 @@ content %}
                 <div
                     class="w-full py-4 text-center text-gray-400 text-xs italic"
                 >
-                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading
+                    <span class="spinner mr-2" aria-hidden="true"></span>Loading
                     languages...
                 </div>
             </div>
@@ -100,7 +100,7 @@ content %}
                 <div
                     class="w-full py-4 text-center text-gray-400 text-xs italic"
                 >
-                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading
+                    <span class="spinner mr-2" aria-hidden="true"></span>Loading
                     categories...
                 </div>
             </div>
@@ -672,7 +672,7 @@ content %}
         const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML =
-            '<span class="flex items-center gap-1.5"><i class="fas fa-spinner fa-spin"></i> Saving...</span>';
+            '<span class="flex items-center gap-1.5"><span class="spinner" aria-hidden="true"></span> Saving...</span>';
 
         const settings = gatherSettings();
         try {
