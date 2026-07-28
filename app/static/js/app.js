@@ -209,6 +209,21 @@ function showToast(message, type = "info") {
 
   document.body.appendChild(toast);
 
+  // Announce to screen readers via live region (WCAG 4.1.3)
+  const liveRegion = document.getElementById("toast-region");
+  if (liveRegion) {
+    // Clear first, then set — some screen readers need a content change to re-announce
+    liveRegion.textContent = "";
+    // Small delay ensures the DOM update triggers the aria-live announcement
+    setTimeout(() => {
+      liveRegion.textContent = message;
+    }, 50);
+    // Clear after announcement so repeated messages still trigger
+    setTimeout(() => {
+      liveRegion.textContent = "";
+    }, 4500);
+  }
+
   if (window.lucide) {
     lucide.createIcons({
       attrs: {

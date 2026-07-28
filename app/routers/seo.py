@@ -432,11 +432,11 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 },
                 "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock"},
                 "provider": {
-                    "@type": "Organization",
-                    "@id": "https://adticks.com/#organization",
-                    "name": "Adticks",
-                    "url": "https://adticks.com",
-                    "description": "Real-time AI Visibility & SERP Intelligence Platform. Crawls 10,000+ pages in parallel for SEO, AEO, and GEO auditing.",
+                    "@type": "Person",
+                    "@id": "https://madhudadi.in/#person",
+                    "name": "Madhu Dadi",
+                    "url": "https://madhudadi.in",
+                    "description": "AI & Analytics Engineer. Builder of open-source tools and platforms.",
                 },
                 "hasPart": [
                     {
@@ -537,13 +537,6 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                     "https://x.com/madhu245",
                     "https://www.wikidata.org/wiki/Q139807441",
                 ],
-            },
-            {
-                "@type": "Organization",
-                "@id": "https://adticks.com/#organization",
-                "name": "Adticks",
-                "url": "https://adticks.com",
-                "description": "Real-time AI Visibility & SERP Intelligence Platform. Crawls 10,000+ pages in parallel with Playwright. Compares server HTML to rendered DOM and returns a ranked fix list for SEO, AEO, and GEO.",
             },
             {
                 "@type": "WebPage",

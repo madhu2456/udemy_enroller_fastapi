@@ -315,6 +315,9 @@ async def add_security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains; preload"
         )
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    response.headers["Cross-Origin-Embedder-Policy"] = "unsafe-none"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-site"
     # CSP with per-request nonce + strict-dynamic (modern XSS protection)
     # - 'strict-dynamic' propagates trust to scripts loaded by nonced scripts
     # - Domain allowlists are fallbacks for CSP level 2 browsers

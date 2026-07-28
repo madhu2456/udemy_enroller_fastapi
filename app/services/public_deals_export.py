@@ -271,6 +271,19 @@ def is_sitemap_quality_deal(course: dict) -> bool:
     safe = slug.strip().strip("/")
     if not safe or "/" in safe or ".." in safe:
         return False
+    # Reject generic / low-quality slugs that produce thin pages
+    _BLOCKED_SLUG_PATTERNS = [
+        "valid", "course", "coupon", "free", "deal", "udemy",
+        "best", "top", "new", "offer", "discount",
+    ]
+    safe_lower = safe.lower()
+    if safe_lower in _BLOCKED_SLUG_PATTERNS:
+        return False
+    # Reject slugs that are purely numeric or match generic-invalid patterns like "valid-14768"
+    if safe_lower.isdigit():
+        return False
+    if re.match(r"^(valid|coupon|course|free|deal)-\d+$", safe_lower):
+        return False
     title = (course.get("title") or "").strip()
     if len(title) < SITEMAP_MIN_TITLE_LEN:
         return False
