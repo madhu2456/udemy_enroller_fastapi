@@ -3,6 +3,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from app.core.coupon_content import build_coupon_answer_block
+from app.core.seo_meta import coupon_serp_description, coupon_serp_title
 from app.security import _client_key, public_coupons_api_limiter
 from app.services.public_deals_export import (
     category_slug as category_slug_fn,
@@ -98,8 +100,28 @@ def coupon_detail_page(request: Request, slug: str):
             status_code=301,
         )
 
+    # Normalize empty/whitespace coupon codes so templates never render "None"
+    course = dict(course)
+    code = (course.get("coupon_code") or "").strip()
+    course["coupon_code"] = code or None
+
     related = related_deals(course)
     cat_name = (course.get("category") or "Other").strip() or "Other"
+    title = course.get("title") or ""
+    seo_title = coupon_serp_title(title)
+    seo_description = coupon_serp_description(
+        title,
+        cat_name,
+        code or None,
+        course.get("language"),
+    )
+    coupon_content = build_coupon_answer_block(course, cat_name)
+
+    wp_parts = [f"Free Udemy coupon listing for {title} in {cat_name}."]
+    if code:
+        wp_parts.append(f" Code {code}.")
+    wp_parts.append(" Validity can change. Not affiliated with Udemy.")
+    webpage_description = "".join(wp_parts)
 
     return templates.TemplateResponse(
         request,
@@ -109,6 +131,10 @@ def coupon_detail_page(request: Request, slug: str):
             "related": related,
             "category_name": cat_name,
             "category_slug": category_slug_fn(cat_name),
+            "seo_title": seo_title,
+            "seo_description": seo_description,
+            "coupon_content": coupon_content,
+            "webpage_description": webpage_description,
         },
     )
 

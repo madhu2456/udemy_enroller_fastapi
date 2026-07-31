@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.cache import get_cached_or_compute
-from app.models.database import User
+from app.models.database import User, UserSettings
 
 _platform_stats_cache: Dict[str, Any] = {}
 
@@ -71,7 +71,17 @@ def format_savings_inr_full(total_amount_saved: float) -> str:
     return f"₹{_format_indian_number(rounded)}+"
 
 
-def get_platform_impact_display(db: Session) -> Dict[str, str | int | float]:
+def _public_coupon_count() -> int:
+    """Count entries in the public deals list; 0 if load fails."""
+    try:
+        from app.services.public_deals_export import load_public_deals
+
+        return len(load_public_deals())
+    except Exception:
+        return 0
+
+
+def get_platform_impact_display(db: Session) -> Dict[str, str | int | float | bool]:
     """Return raw totals and formatted strings for templates and SEO endpoints."""
     stats = get_cached_or_compute(
         _platform_stats_cache,
@@ -81,11 +91,28 @@ def get_platform_impact_display(db: Session) -> Dict[str, str | int | float]:
     )
     total_enrolled = stats["total_enrolled"]
     total_amount_saved = stats["total_amount_saved"]
+    has_impact = total_enrolled > 0
+    has_savings = total_amount_saved > 0
+    # Conservative floor for schema: exact under 100, else nearest 100 down.
+    # Never publish "0" when enrollments exist (e.g. 42 → "42", 1551 → "1500").
+    enrolled_schema_value = (
+        total_enrolled if total_enrolled < 100 else (total_enrolled // 100) * 100
+    )
+    source_count = len(UserSettings.default_sites())
+    public_coupon_count = _public_coupon_count()
     return {
         "total_enrolled": total_enrolled,
         "total_amount_saved": total_amount_saved,
         "enrolled_display": format_enrolled_impact(total_enrolled),
         "saved_display_lakh": format_savings_lakh_inr(total_amount_saved),
         "saved_display_full": format_savings_inr_full(total_amount_saved),
-        "enrolled_schema_value": str((total_enrolled // 100) * 100),
+        "enrolled_schema_value": enrolled_schema_value,
+        "has_impact": has_impact,
+        "has_savings": has_savings,
+        "source_count": source_count,
+        "source_count_display": str(source_count),
+        "public_coupon_count": public_coupon_count,
+        "public_coupon_display": (
+            f"{public_coupon_count:,}" if public_coupon_count > 0 else "—"
+        ),
     }

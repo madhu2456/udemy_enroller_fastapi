@@ -54,8 +54,8 @@ def _seed_isolated_db():
 
     valid = EnrolledCourse(
         enrollment_run_id=run.id,
-        title="Valid Free Course",
-        url="https://www.udemy.com/course/valid/?couponCode=FREE",
+        title="Python Basics",
+        url="https://www.udemy.com/course/python-basics/?couponCode=FREE",
         coupon_code="FREE",
         price=19.99,
         is_coupon_valid=True,
@@ -97,7 +97,7 @@ def test_export_only_valid_with_coupon_code():
             assert n == 1
             data = json.loads(out.read_text(encoding="utf-8"))
             assert len(data) == 1
-            assert data[0]["title"] == "Valid Free Course"
+            assert data[0]["title"] == "Python Basics"
             assert data[0]["coupon_code"] == "FREE"
             assert data[0]["is_coupon_valid"] is True
             assert data[0]["id"] == valid.id
@@ -117,7 +117,7 @@ def test_export_atomic_replace():
             assert isinstance(data, list)
             assert len(data) == 1
             assert data[0].get("slug")
-            assert "web-development" in data[0]["slug"] or "valid" in data[0]["slug"]
+            assert data[0]["slug"] == "python-basics"
     finally:
         db.close()
 

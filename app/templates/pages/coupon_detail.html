@@ -1,13 +1,13 @@
 {% extends "components/base.html" %}
-{% block title %}{{ course.title }} — Free Udemy Coupon ({{ category_name }}) | Udemy Enroller{% endblock %}
-{% block meta_title %}{{ course.title }} — Free Udemy Coupon ({{ category_name }}) | Udemy Enroller{% endblock %}
-{% block meta_description %}Free Udemy coupon for “{{ course.title }}” ({{ category_name }}{% if course.language %}, {{ course.language }}{% endif %}). Code {{ course.coupon_code }}. Validity can change — confirm price on Udemy. Not affiliated with Udemy.{% endblock %}
-{% block meta_keywords %}free udemy coupon, {{ course.coupon_code }}, {{ course.category or 'udemy course' }}, free udemy courses, udemy enroller{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
+{% block meta_title %}{{ seo_title }}{% endblock %}
+{% block meta_description %}{{ seo_description }}{% endblock %}
+{% block meta_keywords %}free udemy coupon{% if course.coupon_code %}, {{ course.coupon_code }}{% endif %}, {{ course.category or 'udemy course' }}, free udemy courses, udemy enroller{% endblock %}
 {% block robots %}index, follow{% endblock %}
-{% block og_title %}{{ course.title }} — Free Udemy Coupon{% endblock %}
-{% block og_description %}{{ category_name }} coupon code {{ course.coupon_code }}. Validity can change. Not affiliated with Udemy.{% endblock %}
-{% block twitter_title %}{{ course.title }} — Free Udemy Coupon{% endblock %}
-{% block twitter_description %}{{ category_name }} coupon code {{ course.coupon_code }}. Validity can change. Not affiliated with Udemy.{% endblock %}
+{% block og_title %}{{ seo_title }}{% endblock %}
+{% block og_description %}{{ seo_description }}{% endblock %}
+{% block twitter_title %}{{ seo_title }}{% endblock %}
+{% block twitter_description %}{{ seo_description }}{% endblock %}
 {% block extra_head %}
 <script type="application/ld+json">
 {
@@ -26,7 +26,7 @@
   "@context": "https://schema.org",
   "@type": "WebPage",
   "name": {{ course.title | tojson }},
-  "description": {{ ("Free Udemy coupon listing for " ~ course.title ~ " in " ~ category_name ~ ". Code " ~ course.coupon_code ~ ". Validity can change. Not affiliated with Udemy.") | tojson }},
+  "description": {{ webpage_description | tojson }},
   "url": "https://udemyenroller.madhudadi.in/udemycoupons/c/{{ course.slug }}",
   "isPartOf": { "@id": "https://udemyenroller.madhudadi.in/#website" },
   "about": {
@@ -42,7 +42,7 @@
   "mainEntity": {
     "@type": "Offer",
     "name": {{ course.title | tojson }},
-    "price": "0",
+    "price": 0,
     "priceCurrency": "USD",
     "availability": "https://schema.org/LimitedAvailability",
     "url": "https://udemyenroller.madhudadi.in/udemycoupons/c/{{ course.slug }}",
@@ -56,22 +56,16 @@
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
+    {% for faq in coupon_content.faqs %}
     {
       "@type": "Question",
-      "name": {{ ("How do I use the free coupon for " ~ course.title ~ "?") | tojson }},
+      "name": {{ faq.question | tojson }},
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Copy the coupon code on this page (or open the Udemy link with the code applied), sign in on Udemy, and confirm the cart shows free or the expected discount before completing enrollment. Udemy checkout is the source of truth."
+        "text": {{ faq.answer | tojson }}
       }
-    },
-    {
-      "@type": "Question",
-      "name": "Is this coupon guaranteed to work?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "No. Coupon validity and inventory can change at any time. Always confirm pricing on Udemy. Udemy Enroller is not affiliated with Udemy."
-      }
-    }
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
   ]
 }
 </script>
@@ -100,24 +94,23 @@
         {{ course.title }}
       </h1>
 
-      <p class="text-sm text-gray-600 leading-relaxed mb-4">
-        Free-coupon listing for <strong class="font-semibold text-gray-800">{{ course.title }}</strong>
-        in the <a href="/udemycoupons/category/{{ category_slug }}" class="text-blue-700 underline underline-offset-2">{{ category_name }}</a>
-        category{% if course.language %} ({{ course.language }}){% endif %}.
-        This page is published by Udemy Enroller, an independent open-source tool —
-        <strong class="font-semibold text-gray-800">not affiliated with Udemy</strong>.
-      </p>
-      <p class="text-sm text-gray-600 leading-relaxed mb-4">
-        Promotional codes for this course appear on aggregator sites and instructor campaigns.
-        Use the code below (or the Udemy link) to see whether enrollment is free at checkout.
-        Coupon validity can change at any time; Udemy’s checkout is the source of truth.
-      </p>
+      <section class="mb-6 rounded-xl border border-blue-100 bg-blue-50/40 p-4 sm:p-5" aria-labelledby="coupon-answer-heading">
+        <h2 id="coupon-answer-heading" class="text-base font-semibold text-gray-900 mb-2">{{ coupon_content.answer_heading }}</h2>
+        <p class="text-sm text-gray-700 leading-relaxed">{{ coupon_content.lead }}</p>
+        <ul class="mt-3 space-y-1 text-sm text-gray-600">
+          {% for fact in coupon_content.facts %}
+          <li class="flex gap-2"><span class="text-blue-600" aria-hidden="true">•</span><span>{{ fact }}</span></li>
+          {% endfor %}
+        </ul>
+      </section>
+
       <p class="text-sm text-gray-600 leading-relaxed mb-6">
         New to free coupons?
         Read
         <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2">how free Udemy coupons work</a>
         or
         <a href="/udemycoupons" class="text-blue-700 underline underline-offset-2">browse all free listings</a>.
+        Confirm the final price on Udemy before enrolling.
       </p>
 
       <div class="flex flex-wrap items-center gap-3 mb-6">
@@ -130,6 +123,7 @@
         {% endif %}
       </div>
 
+      {% if course.coupon_code %}
       <div class="bg-[#F9FAFB] border border-gray-200 rounded-xl p-4 mb-6">
         <p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Coupon code for {{ course.title }}</p>
         <div class="flex items-center justify-between gap-3">
@@ -145,14 +139,30 @@
         <p class="text-xs text-gray-500 mt-3">Last checked by Udemy Enroller: {{ course.last_checked_at[:10] }}</p>
         {% endif %}
       </div>
+      {% else %}
+      <div class="bg-[#F9FAFB] border border-gray-200 rounded-xl p-4 mb-6">
+        <p class="text-sm text-gray-700 leading-relaxed">
+          No separate coupon code is listed for this offer. Use
+          <strong class="font-semibold text-gray-900">Open on Udemy</strong>
+          below — the free price may be applied via the special link.
+        </p>
+        {% if course.last_checked_at %}
+        <p class="text-xs text-gray-500 mt-3">Last checked by Udemy Enroller: {{ course.last_checked_at[:10] }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
 
       <section class="mb-6" aria-labelledby="how-to-use-heading">
         <h2 id="how-to-use-heading" class="text-base font-semibold text-gray-900 mb-3">How to use this coupon</h2>
         <ol class="list-decimal list-inside space-y-2 text-sm text-gray-600 leading-relaxed">
+          {% if course.coupon_code %}
           <li>Copy the code <code class="font-mono text-gray-800 bg-gray-100 px-1 rounded">{{ course.coupon_code }}</code> (or open the Udemy link below).</li>
+          {% else %}
+          <li>Open the Udemy link below — the free price may be applied via the special offer URL.</li>
+          {% endif %}
           <li>Sign in to your Udemy account in the browser.</li>
           <li>Confirm the cart shows free (or the expected discount) before completing enrollment.</li>
-          <li>If the code fails, the offer may have expired — try another listing from <a href="/udemycoupons/category/{{ category_slug }}" class="text-blue-700 underline underline-offset-2">{{ category_name }}</a>.</li>
+          <li>If the {% if course.coupon_code %}code{% else %}offer{% endif %} fails, the offer may have expired — try another listing from <a href="/udemycoupons/category/{{ category_slug }}" class="text-blue-700 underline underline-offset-2">{{ category_name }}</a>.</li>
         </ol>
       </section>
 
@@ -180,6 +190,16 @@
         </a>
       </div>
     </article>
+
+    <section class="mt-10" aria-labelledby="coupon-faq-heading">
+      <h2 id="coupon-faq-heading" class="text-lg font-semibold text-gray-900 mb-4">FAQ</h2>
+      {% for faq in coupon_content.faqs %}
+      <div class="mb-4">
+        <h3 class="text-sm font-semibold text-gray-900">{{ faq.question }}</h3>
+        <p class="mt-1 text-sm text-gray-600 leading-relaxed">{{ faq.answer }}</p>
+      </div>
+      {% endfor %}
+    </section>
 
     {% if related %}
     <section class="mt-10" aria-labelledby="related-heading">

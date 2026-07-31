@@ -43,7 +43,14 @@ from fastapi.templating import Jinja2Templates
 from loguru import logger
 
 from app.logging_config import setup_logging
-from app.models.database import create_tables, engine
+from app.models.database import (
+    SessionLocal,
+    User,
+    UserSession,
+    _utcnow_naive,
+    create_tables,
+    engine,
+)
 from app.routers import auth, dashboard, enrollment, public_deals, seo, settings
 from app.security import (
     _client_key,
@@ -245,6 +252,49 @@ async def head_to_get(request: Request, call_next):
 
 
 @app.middleware("http")
+async def attach_nav_auth(request: Request, call_next):
+    """Attach lightweight nav auth flags for SSR header state (HTML pages only)."""
+    request.state.nav_authenticated = False
+    request.state.nav_display_name = ""
+    path = request.url.path
+    try:
+        if (
+            not path.startswith("/static/")
+            and not path.startswith("/api/")
+        ):
+            token = request.cookies.get("session_id")
+            if token:
+                db = SessionLocal()
+                try:
+                    session = (
+                        db.query(UserSession)
+                        .filter(UserSession.token == token)
+                        .first()
+                    )
+                    if session and (
+                        not session.expires_at
+                        or session.expires_at >= _utcnow_naive()
+                    ):
+                        user = (
+                            db.query(User)
+                            .filter(User.id == session.user_id)
+                            .first()
+                        )
+                        # Only personalize nav when the user row still exists
+                        if user:
+                            request.state.nav_authenticated = True
+                            name = user.udemy_display_name or ""
+                            request.state.nav_display_name = name or "User"
+                finally:
+                    db.close()
+    except Exception:
+        # Never break page renders due to nav auth lookup failures
+        request.state.nav_authenticated = False
+        request.state.nav_display_name = ""
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
     """Add central cache control headers to satisfy proxy policies and optimize page speed."""
     response = await call_next(request)
@@ -261,39 +311,100 @@ async def add_cache_headers(request: Request, call_next):
         logger.info(f"[pageview] {path}")
 
     if path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    elif path in {
-        # Fully public, non-personalized content — short CDN/browser cache
-        "/faq",
-        "/about",
-        "/guides",
-        "/privacy",
-        "/robots.txt",
-        "/sitemap.xml",
-        "/humans.txt",
-        "/llms.txt",
-        "/ai-profile.json",
-        "/.well-known/security.txt",
-        "/security.txt",
-    }:
-        # max-age=120: up to 2 minutes stale after deploy; SWR keeps serving while revalidating
-        response.headers["Cache-Control"] = (
-            "public, max-age=120, stale-while-revalidate=600"
-        )
-    elif path in {
-        # Personalized or frequently changing — do not store
-        "/",
-        "/udemycoupons",
-        "/dashboard",
-        "/settings",
-        "/history",
-    } or path.startswith("/api/"):
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+    elif path == "/sitemap.xml":
+        # Longer TTL for crawlers (align with seo.py intent)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = (
+                "public, max-age=21600, s-maxage=21600"
+            )
+        else:
+            response.headers["Cache-Control"] = (
+                "no-cache, no-store, must-revalidate"
+            )
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+    elif path in {"/feed.xml", "/rss.xml"}:
+        # RSS coupon feed — 15 min (align with seo.py intent)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = (
+                "public, max-age=900, s-maxage=900, stale-while-revalidate=3600"
+            )
+        else:
+            response.headers["Cache-Control"] = (
+                "no-cache, no-store, must-revalidate"
+            )
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+    elif (
+        path
+        in {
+            "/",
+            "/faq",
+            "/about",
+            "/guides",
+            "/privacy",
+            "/udemycoupons",
+            "/robots.txt",
+            "/humans.txt",
+            "/llms.txt",
+            "/ai-profile.json",
+            "/.well-known/security.txt",
+            "/security.txt",
+        }
+        or path.startswith("/guides/")
+        or path.startswith("/udemycoupons/c/")
+        or path.startswith("/udemycoupons/category/")
+    ):
+        # Public marketing / listing HTML — short CDN + browser cache on 200 only
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = (
+                "public, max-age=120, s-maxage=300, stale-while-revalidate=600"
+            )
+        else:
+            response.headers["Cache-Control"] = (
+                "no-cache, no-store, must-revalidate"
+            )
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        if path == "/":
+            # Anonymous marketing HTML vs authed 303 → /dashboard
+            existing = response.headers.get("Vary", "")
+            parts = [p.strip() for p in existing.split(",") if p.strip()]
+            if "Cookie" not in parts:
+                parts.append("Cookie")
+            response.headers["Vary"] = ", ".join(parts)
+    elif (
+        path in {"/dashboard", "/settings", "/history", "/login"}
+        or path.startswith("/api/")
+        or path.startswith("/udemycoupons/api/")
+    ):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
-        if path == "/":
-            # Homepage may vary by session cookie (redirect vs marketing)
-            response.headers["Vary"] = "Cookie"
+
+    # Personalized nav chrome (display name / logout) must never be shared at CDN
+    if getattr(request.state, "nav_authenticated", False):
+        if response.status_code == 200 and "text/html" in response.headers.get(
+            "content-type", ""
+        ):
+            response.headers["Cache-Control"] = (
+                "private, no-cache, no-store, must-revalidate"
+            )
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            # Keep/merge Vary Cookie
+            existing = response.headers.get("Vary", "")
+            parts = [p.strip() for p in existing.split(",") if p.strip()]
+            if "Cookie" not in parts:
+                parts.append("Cookie")
+            if parts:
+                response.headers["Vary"] = ", ".join(parts)
 
     return response
 

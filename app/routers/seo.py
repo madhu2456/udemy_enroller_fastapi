@@ -1,7 +1,9 @@
 """SEO, AEO, and GEO router - serves robots.txt, sitemap.xml, llms.txt, ai-profile.json, humans.txt, and public content pages."""
 
 import datetime
+import html
 import os
+from email.utils import format_datetime
 
 from config.settings import get_settings
 
@@ -40,6 +42,8 @@ async def robots_txt():
 # Canonical: {SITE_URL}
 # Author: Madhu Dadi ({PORTFOLIO_URL})
 # SEO/AEO/GEO: Adticks (https://adticks.com)
+# Policy: allow traditional + AI search/citation crawlers; disallow model-training crawlers.
+# Aligned with portfolio/blog robots (madhudadi.in) — training out, citation in.
 # ────────────────────────────────────────────────────────────────────────────
 
 # Default rules for all crawlers
@@ -64,13 +68,19 @@ Disallow: /settings
 Disallow: /api/
 Disallow: /dashboard
 
-# AI search and citation crawlers — permitted for AEO/GEO discoverability
+# AI search, citation, and user-triggered fetchers — ALLOW (AEO/GEO)
+# GPTBot still blocked (training); OAI-SearchBot/ChatGPT-User allowed (search/citation).
+# ClaudeBot blocked (training); Claude-SearchBot/Claude-User/Claude-Web allowed (citation).
+# Google-Extended allowed for Gemini citations (aligned with portfolio 2026-07-27).
 User-agent: OAI-SearchBot
 User-agent: ChatGPT-User
 User-agent: PerplexityBot
-User-agent: ClaudeBot
+User-agent: Perplexity-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
 User-agent: Claude-Web
 User-agent: Applebot
+User-agent: Google-Extended
 User-agent: Google-Cloud-Services-Crawler
 User-agent: Google-Cloud-Services-Crawler-Sandbox
 Allow: /
@@ -79,12 +89,13 @@ Disallow: /settings
 Disallow: /api/
 Disallow: /dashboard
 
-# Training crawlers — explicitly blocked
+# Model-training crawlers — DISALLOW (opt out of training use)
+# Does NOT block Google-Extended (moved to allow for Gemini grounding/citations).
 User-agent: GPTBot
-User-agent: Google-Extended
-User-agent: Applebot-Extended
-User-agent: CCBot
+User-agent: ClaudeBot
 User-agent: anthropic-ai
+User-agent: CCBot
+User-agent: Applebot-Extended
 User-agent: FacebookBot
 Disallow: /
 
@@ -116,6 +127,85 @@ async def sitemap_xml():
     )
 
 
+def _rss_rfc822(value: object | None) -> str | None:
+    """Parse ISO-ish timestamps to RFC 822 for RSS pubDate; None if unusable."""
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    try:
+        normalized = raw.replace("Z", "+00:00")
+        dt = datetime.datetime.fromisoformat(normalized)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.UTC)
+        return format_datetime(dt)
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+@router.get("/feed.xml", response_class=Response)
+@router.get("/rss.xml", response_class=Response)
+async def coupons_rss_feed():
+    """RSS 2.0 feed of latest valid free Udemy coupon listings."""
+    from app.services.public_deals_export import list_valid_deals
+
+    deals = list_valid_deals(limit=50)
+    items: list[str] = []
+    for d in deals:
+        title_raw = str(d.get("title") or "Free Udemy coupon")
+        cat_raw = str(d.get("category") or "Other")
+        code_raw = str(d.get("coupon_code") or "")
+        slug = str(d.get("slug") or "").strip()
+        if not slug:
+            continue
+        link = f"{SITE_URL}/udemycoupons/c/{slug}"
+        desc_raw = (
+            f"Free Udemy coupon listing for {title_raw} ({cat_raw}). "
+            f"Code: {code_raw}. Validity can change — confirm on Udemy. "
+            f"Not affiliated with Udemy."
+        )
+        title = html.escape(title_raw, quote=True)
+        cat = html.escape(cat_raw, quote=True)
+        desc = html.escape(desc_raw, quote=True)
+        guid = html.escape(link, quote=True)
+        link_esc = guid
+        pub = _rss_rfc822(d.get("last_checked_at") or d.get("enrolled_at"))
+        pub_line = f"\n      <pubDate>{html.escape(pub, quote=True)}</pubDate>" if pub else ""
+        items.append(
+            f"""    <item>
+      <title>{title}</title>
+      <link>{link_esc}</link>
+      <guid isPermaLink="true">{guid}</guid>
+      <description>{desc}</description>
+      <category>{cat}</category>{pub_line}
+    </item>"""
+        )
+
+    items_block = "\n".join(items)
+    channel = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Free Udemy Coupons — Udemy Enroller</title>
+    <link>{SITE_URL}/udemycoupons</link>
+    <description>Latest free (100% off) Udemy coupon listings from Udemy Enroller by Madhu Dadi. Validity can change. Not affiliated with Udemy.</description>
+    <language>en-in</language>
+    <atom:link href="{SITE_URL}/feed.xml" rel="self" type="application/rss+xml"/>
+{items_block}
+  </channel>
+</rss>
+"""
+    return Response(
+        content=channel,
+        media_type="application/rss+xml; charset=utf-8",
+        headers={
+            "Cache-Control": (
+                "public, max-age=900, s-maxage=900, stale-while-revalidate=3600"
+            ),
+        },
+    )
+
+
 @router.get("/humans.txt", response_class=Response)
 async def humans_txt():
     content = f"""/* TEAM */
@@ -136,7 +226,7 @@ Case Study: {CASE_STUDY_URL}
 Application: Udemy Course Enroller
 Domain: {SITE_URL}
 Last update: {datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
-Language: English
+Language: English (en-IN)
 Standards: HTML5, CSS3, JSON-LD, Schema.org, WAI-ARIA; accessibility target WCAG 2.2 AA (not a formal conformance claim)
 
 /* TECH STACK */
@@ -188,6 +278,64 @@ async def llms_txt(db: Session = Depends(get_db)):
     impact = get_platform_impact_display(db)
     enrolled_str = impact["enrolled_display"]
     saved_str = impact["saved_display_full"]
+    has_impact = impact["has_impact"]
+    has_savings = impact["has_savings"]
+    source_count = impact["source_count"]
+
+    if has_impact:
+        content_stats_lines = [
+            f"- **Courses enrolled via automation (this deployment):** {enrolled_str}",
+        ]
+        if has_savings:
+            content_stats_lines.append(
+                f"- **Estimated cost savings recorded (aggregate list prices):** {saved_str}"
+            )
+        content_stats_impact = "\n".join(content_stats_lines) + "\n"
+
+        impact_lines = [
+            "- Designed to reduce repetitive coupon hunting by monitoring sources and automating enrollment steps you would otherwise do manually when you start a run.",
+            f"- **{enrolled_str} courses** enrolled via automation on this deployment (from its database totals).",
+        ]
+        if has_savings:
+            impact_lines.append(
+                f"- Estimated cost savings of {saved_str} based on list prices of enrolled courses where recorded."
+            )
+        impact_lines.append(
+            "- Enrollment success and coupon validity are not guaranteed."
+        )
+        impact_section = "## Impact\n\n" + "\n".join(impact_lines) + "\n"
+
+        impact_faq = (
+            f"The platform is designed to reduce repetitive coupon hunting by monitoring sources "
+            f"and automating enrollment steps you would otherwise do manually when you start a run. "
+            f"To date, {enrolled_str} courses have been enrolled via automation on this deployment "
+            f"(from its own database totals)"
+        )
+        if has_savings:
+            impact_faq += (
+                f", with estimated cost savings of {saved_str} based on "
+                f"course list prices where recorded."
+            )
+        else:
+            impact_faq += "."
+    else:
+        content_stats_impact = (
+            "- **Enrollment impact on this deployment:** No enrollments recorded yet "
+            "(stats are deployment-local and only shown when > 0).\n"
+        )
+        impact_section = f"""## Impact
+
+- Designed to reduce repetitive coupon hunting by monitoring sources and automating enrollment steps you would otherwise do manually when you start a run.
+- Enrollment success and coupon validity are not guaranteed.
+- Browse public free-coupon listings at {SITE_URL}/udemycoupons (validity can change).
+"""
+        impact_faq = (
+            f"The platform is designed to reduce repetitive coupon hunting by monitoring sources "
+            f"and automating enrollment steps when you start a run. This deployment has no recorded "
+            f"enrollments yet (impact stats are deployment-local and only published when greater than zero). "
+            f"Browse free coupons at {SITE_URL}/udemycoupons; enrollment success is not guaranteed."
+        )
+
     content = f"""# Udemy Course Enroller — AI Profile
 
 > Authoritative, machine-readable profile for AI systems, search engines, and generative engines.
@@ -229,14 +377,12 @@ Udemy Course Enroller is an open-source FastAPI tool that monitors coupon aggreg
 - **SEO/AEO/GEO:** https://adticks.com
 - **Target Audience:** Udemy learners, self-education enthusiasts, budget-conscious students, developers seeking automated learning workflows
 - **Content Type:** Open-source automation tool, learning helper, public free-coupon listing
-- **Language:** en-US
+- **Language:** en-IN
 - **Platform Purpose:** Help discover free Udemy coupons and optionally attempt enrollment when the user starts a run
 
 ## Content Statistics
 
-- **Courses enrolled via automation (this deployment):** {enrolled_str}
-- **Estimated cost savings recorded (aggregate list prices):** {saved_str}
-- **Coupon sources configured:** multiple aggregator sites (e.g. Real.Discount, FreeCourseSites, FreeWebCart, and others in the app registry)
+{content_stats_impact}- **Coupon sources configured:** {source_count} aggregator sites (e.g. Real.Discount, FreeCourseSites, FreeWebCart, and others in the app registry)
 - **Listing refresh:** When an enrollment run finishes or the coupon checker runs — not a guaranteed cadence
 - **Public free-coupon list:** {SITE_URL}/udemycoupons (validity can change)
 - **Open-source license:** MIT
@@ -291,18 +437,13 @@ This platform includes the following capabilities for assisted learning workflow
 - **Bulk Enrollment Attempts:** Batches enrollment-related requests with delays; users remain responsible for platform compliance.
 - **Analytics Dashboard:** Progress tracking, totals, and estimated savings from recorded enrollments.
 
-## Impact
-
-- Designed to reduce repetitive coupon hunting by monitoring sources and automating enrollment steps you would otherwise do manually when you start a run.
-- **{enrolled_str} courses** enrolled via automation on this deployment (from its database totals).
-- Estimated cost savings of {saved_str} based on list prices of enrolled courses where recorded.
-- Enrollment success and coupon validity are not guaranteed.
-
+{impact_section}
 ## Machine-readable Endpoints
 
 - **AI profile JSON:** {SITE_URL}/ai-profile.json
 - **LLMs profile feed:** {SITE_URL}/llms.txt
 - **XML sitemap:** {SITE_URL}/sitemap.xml
+- **RSS feed (free coupons):** {SITE_URL}/feed.xml
 - **Humans.txt:** {SITE_URL}/humans.txt
 - **Robots.txt:** {SITE_URL}/robots.txt
 
@@ -380,7 +521,7 @@ The application is built with Python 3.11+, FastAPI for the async backend, SQLAl
 Detailed guides, case studies, and technical deep-dives are published on Madhu Dadi's blog at {BLOG_URL}. The case study for this project is available at {CASE_STUDY_URL}. You can also find setup guides directly on the application at {SITE_URL}/guides.
 
 ### What is the impact of using the Udemy Course Enroller?
-The platform is designed to reduce repetitive coupon hunting by monitoring sources and automating enrollment steps you would otherwise do manually when you start a run. To date, {enrolled_str} courses have been enrolled via automation on this deployment (from its own database totals), with estimated cost savings of {saved_str} based on course list prices where recorded.
+{impact_faq}
 
 ### Does the Udemy Enroller work with Docker?
 Yes. The application includes a docker-compose.yml for containerized deployment. The Docker configuration enforces strict production security — you need to set a strong SECRET_KEY via environment variables. Full deployment scripts are included in the repository.
@@ -395,173 +536,189 @@ Yes. The tool is designed for self-hosting. You can run it locally with Python 3
 async def ai_profile_json(db: Session = Depends(get_db)):
     now = datetime.datetime.now(datetime.UTC)
     impact = get_platform_impact_display(db)
-    return {
-        "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "SoftwareApplication",
-                "@id": f"{SITE_URL}/#softwareapplication",
-                "name": "Udemy Course Enroller",
-                "alternateName": "Udemy Enroller",
-                "applicationCategory": "EducationalApplication",
-                "operatingSystem": "Web, Linux, macOS, Windows",
-                "url": SITE_URL,
-                "description": "An asynchronous FastAPI application by Madhu Dadi that helps find free Udemy coupons and attempt enrollment when you start a run. Not affiliated with Udemy. Enrollment is not guaranteed.",
-                "screenshot": f"{SITE_URL}/static/images/icon-512.webp",
-                "applicationSubCategory": "Automation Tool",
-                "downloadUrl": "https://github.com/madhu2456/udemy_enroller_fastapi",
-                "softwareVersion": get_settings().APP_VERSION,
-                "releaseNotes": f"{CASE_STUDY_URL}",
-                "author": {
-                    "@type": "Person",
-                    "@id": "https://madhudadi.in/#person",
-                    "name": "Madhu Dadi",
-                    "url": PORTFOLIO_URL,
-                    "jobTitle": "AI Developer & Marketing Analytics Leader",
-                    "description": "AI consultant and ML engineer with 9+ years of experience in LLM applications, RAG, AI agents, and full-stack AI product development.",
-                    "subjectOf": [
-                        {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
-                        {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL},
-                    ],
-                    "sameAs": [
-                        BLOG_URL,
-                        "https://github.com/madhu2456",
-                        "https://www.linkedin.com/in/madhu-dadi-54684531",
-                        "https://x.com/madhu245",
-                    ],
-                },
-                "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock"},
-                "provider": {
-                    "@type": "Person",
-                    "@id": "https://madhudadi.in/#person",
-                    "name": "Madhu Dadi",
-                    "url": "https://madhudadi.in",
-                    "description": "AI & Analytics Engineer. Builder of open-source tools and platforms.",
-                },
-                "hasPart": [
-                    {
-                        "@type": "WebPage",
-                        "name": "Free Udemy Coupons Listings",
-                        "url": f"{SITE_URL}/udemycoupons",
-                        "description": "A public listing of free Udemy course coupons for manual discovery (validity can change).",
-                    },
-                    {
-                        "@type": "WebPage",
-                        "name": "How Free Udemy Coupons Work",
-                        "url": f"{SITE_URL}/guides/free-udemy-coupons",
-                        "description": "Guide to free Udemy coupons, claiming them, and optional automation with Udemy Enroller.",
-                    },
-                    {
-                        "@type": "WebPage",
-                        "name": "Guides & Walkthroughs",
-                        "url": f"{SITE_URL}/guides",
-                        "description": "Step-by-step setup guides for the Udemy Enroller automation tool.",
-                    },
-                    {
-                        "@type": "WebPage",
-                        "name": "Frequently Asked Questions",
-                        "url": f"{SITE_URL}/faq",
-                        "description": "Comprehensive FAQ about the Udemy Enroller project.",
-                    },
-                ],
-                "featureList": [
-                    "Coupon monitoring when you start an enrollment run",
-                    "Course filtering by category, language, rating",
-                    "Cookie-based session connect — passwords not stored by default",
-                    "Batch enrollment attempts with request pacing",
-                    "Dashboard progress and estimated savings tracking",
-                    "Docker support for self-hosted deployment",
-                    "Public free-coupon listings at /udemycoupons",
-                ],
-                "technologyStack": [
-                    "Python 3.11+",
-                    "FastAPI",
-                    "SQLAlchemy",
-                    "CloudScraper",
-                    "Playwright",
-                    "Tailwind CSS",
-                    "SQLite",
-                    "Alembic",
-                    "Docker",
-                ],
-                "relatedProfiles": [
-                    f"{PORTFOLIO_URL}/ai-profile.json",
-                    f"{BLOG_URL}/ai-profile.json",
-                ],
-                "endpoints": {
-                    "llmsFeed": f"{SITE_URL}/llms.txt",
-                    "sitemap": f"{SITE_URL}/sitemap.xml",
-                    "humans": f"{SITE_URL}/humans.txt",
-                    "robots": f"{SITE_URL}/robots.txt",
-                },
-                "isPartOf": {
-                    "@type": "WebSite",
-                    "@id": f"{PORTFOLIO_URL}/#website",
-                    "url": PORTFOLIO_URL,
-                    "name": "Madhu Dadi — Portfolio",
-                },
-                "mainEntityOfPage": {
-                    "@type": "WebPage",
-                    "@id": f"{CASE_STUDY_URL}",
-                },
-                "lastUpdated": now.isoformat() + "Z",
-                "dateModified": now.strftime("%Y-%m-%d"),
-            },
-            {
+    graph = [
+        {
+            "@type": "SoftwareApplication",
+            "@id": f"{SITE_URL}/#softwareapplication",
+            "name": "Udemy Course Enroller",
+            "alternateName": "Udemy Enroller",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web, Linux, macOS, Windows",
+            "url": SITE_URL,
+            "description": "An asynchronous FastAPI application by Madhu Dadi that helps find free Udemy coupons and attempt enrollment when you start a run. Not affiliated with Udemy. Enrollment is not guaranteed.",
+            "screenshot": f"{SITE_URL}/static/images/og-default.png",
+            "applicationSubCategory": "Automation Tool",
+            "downloadUrl": "https://github.com/madhu2456/udemy_enroller_fastapi",
+            "softwareVersion": get_settings().APP_VERSION,
+            "releaseNotes": f"{CASE_STUDY_URL}",
+            "author": {
                 "@type": "Person",
                 "@id": "https://madhudadi.in/#person",
                 "name": "Madhu Dadi",
-                "givenName": "Madhu",
-                "familyName": "Dadi",
                 "url": PORTFOLIO_URL,
                 "jobTitle": "AI Developer & Marketing Analytics Leader",
-                "description": "AI consultant and ML engineer with 9+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
-                "alumniOf": [
-                    {"@type": "CollegeOrUniversity", "name": "Indian Institute of Management (IIM), Amritsar"},
-                    {"@type": "CollegeOrUniversity", "name": "MVGR College of Engineering"}
-                ],
-                "knowsAbout": [
-                    "Python", "FastAPI", "Next.js", "LLM", "RAG", "AI Agents",
-                    "PostgreSQL", "Docker", "CloudScraper", "Playwright",
-                    "Marketing Analytics", "GA4", "BigQuery", "Machine Learning"
-                ],
+                "description": "AI consultant and ML engineer with 9+ years of experience in LLM applications, RAG, AI agents, and full-stack AI product development.",
                 "subjectOf": [
                     {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
                     {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL},
-                    {"@type": "CreativeWork", "name": "Case Study: Udemy Enroller", "url": CASE_STUDY_URL},
                 ],
                 "sameAs": [
                     BLOG_URL,
                     "https://github.com/madhu2456",
                     "https://www.linkedin.com/in/madhu-dadi-54684531",
                     "https://x.com/madhu245",
-                    "https://www.wikidata.org/wiki/Q139807441",
                 ],
             },
-            {
+            "offers": {"@type": "Offer", "price": 0, "priceCurrency": "USD", "availability": "https://schema.org/InStock"},
+            "provider": {
+                "@type": "Person",
+                "@id": "https://madhudadi.in/#person",
+                "name": "Madhu Dadi",
+                "url": "https://madhudadi.in",
+                "description": "AI & Analytics Engineer. Builder of open-source tools and platforms.",
+            },
+            "hasPart": [
+                {
+                    "@type": "WebPage",
+                    "name": "Free Udemy Coupons Listings",
+                    "url": f"{SITE_URL}/udemycoupons",
+                    "description": "A public listing of free Udemy course coupons for manual discovery (validity can change).",
+                },
+                {
+                    "@type": "WebPage",
+                    "name": "How Free Udemy Coupons Work",
+                    "url": f"{SITE_URL}/guides/free-udemy-coupons",
+                    "description": "Guide to free Udemy coupons, claiming them, and optional automation with Udemy Enroller.",
+                },
+                {
+                    "@type": "WebPage",
+                    "name": "Guides & Walkthroughs",
+                    "url": f"{SITE_URL}/guides",
+                    "description": "Step-by-step setup guides for the Udemy Enroller automation tool.",
+                },
+                {
+                    "@type": "WebPage",
+                    "name": "Frequently Asked Questions",
+                    "url": f"{SITE_URL}/faq",
+                    "description": "Comprehensive FAQ about the Udemy Enroller project.",
+                },
+            ],
+            "featureList": [
+                "Coupon monitoring when you start an enrollment run",
+                "Course filtering by category, language, rating",
+                "Cookie-based session connect — passwords not stored by default",
+                "Batch enrollment attempts with request pacing",
+                "Dashboard progress and estimated savings tracking",
+                "Docker support for self-hosted deployment",
+                "Public free-coupon listings at /udemycoupons",
+            ],
+            "technologyStack": [
+                "Python 3.11+",
+                "FastAPI",
+                "SQLAlchemy",
+                "CloudScraper",
+                "Playwright",
+                "Tailwind CSS",
+                "SQLite",
+                "Alembic",
+                "Docker",
+            ],
+            "relatedProfiles": [
+                f"{PORTFOLIO_URL}/ai-profile.json",
+                f"{BLOG_URL}/ai-profile.json",
+            ],
+            "endpoints": {
+                "llmsFeed": f"{SITE_URL}/llms.txt",
+                "sitemap": f"{SITE_URL}/sitemap.xml",
+                "humans": f"{SITE_URL}/humans.txt",
+                "robots": f"{SITE_URL}/robots.txt",
+            },
+            "isPartOf": {
+                "@type": "WebSite",
+                "@id": f"{PORTFOLIO_URL}/#website",
+                "url": PORTFOLIO_URL,
+                "name": "Madhu Dadi — Portfolio",
+            },
+            "mainEntityOfPage": {
                 "@type": "WebPage",
-                "@id": f"{SITE_URL}/#webpage",
-                "name": "Udemy Enroller",
-                "url": SITE_URL,
-                "description": "Free, open-source automation tool for 100% off Udemy course enrollment.",
-                "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
-                "about": {
-                    "@type": "Thing",
-                    "name": "Automated Udemy Course Enrollment",
-                    "description": "Free, open-source tool to discover 100% off Udemy coupons and attempt enrollment when you start a run."
-                },
-                "audience": {
-                    "@type": "Audience",
-                    "audienceType": ["Students", "Self-learners", "Developers", "Online education enthusiasts"]
-                },
-                "primaryImageOfPage": {"@type": "ImageObject", "url": f"{SITE_URL}/static/images/icon-512.webp"},
-                "significantLink": [
-                    f"{SITE_URL}",
-                    f"{SITE_URL}/udemycoupons",
-                    "https://github.com/madhu2456/udemy_enroller_fastapi",
-                    CASE_STUDY_URL,
-                ],
+                "@id": f"{CASE_STUDY_URL}",
             },
+            "lastUpdated": now.isoformat() + "Z",
+            "dateModified": now.isoformat() + "Z",
+        },
+        {
+            "@type": "Person",
+            "@id": "https://madhudadi.in/#person",
+            "name": "Madhu Dadi",
+            "givenName": "Madhu",
+            "familyName": "Dadi",
+            "url": PORTFOLIO_URL,
+            "jobTitle": "AI Developer & Marketing Analytics Leader",
+            "description": "AI consultant and ML engineer with 9+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
+            "alumniOf": [
+                {"@type": "CollegeOrUniversity", "name": "Indian Institute of Management (IIM), Amritsar"},
+                {"@type": "CollegeOrUniversity", "name": "MVGR College of Engineering"}
+            ],
+            "knowsAbout": [
+                "Python", "FastAPI", "Next.js", "LLM", "RAG", "AI Agents",
+                "PostgreSQL", "Docker", "CloudScraper", "Playwright",
+                "Marketing Analytics", "GA4", "BigQuery", "Machine Learning"
+            ],
+            "subjectOf": [
+                {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
+                {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL},
+                {"@type": "CreativeWork", "name": "Case Study: Udemy Enroller", "url": CASE_STUDY_URL},
+            ],
+            "sameAs": [
+                BLOG_URL,
+                "https://github.com/madhu2456",
+                "https://www.linkedin.com/in/madhu-dadi-54684531",
+                "https://x.com/madhu245",
+                "https://www.wikidata.org/wiki/Q139807441",
+            ],
+        },
+        {
+            "@type": "WebPage",
+            "@id": f"{SITE_URL}/#webpage",
+            "name": "Udemy Enroller",
+            "url": SITE_URL,
+            "description": "Free, open-source automation tool for 100% off Udemy course enrollment.",
+            "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+            "about": {
+                "@type": "Thing",
+                "name": "Automated Udemy Course Enrollment",
+                "description": "Free, open-source tool to discover 100% off Udemy coupons and attempt enrollment when you start a run."
+            },
+            "audience": {
+                "@type": "Audience",
+                "audienceType": ["Students", "Self-learners", "Developers", "Online education enthusiasts"]
+            },
+            "primaryImageOfPage": {"@type": "ImageObject", "url": f"{SITE_URL}/static/images/og-default.png"},
+            "significantLink": [
+                f"{SITE_URL}",
+                f"{SITE_URL}/udemycoupons",
+                "https://github.com/madhu2456/udemy_enroller_fastapi",
+                CASE_STUDY_URL,
+            ],
+        },
+    ]
+    if impact["has_impact"]:
+        additional_property = []
+        if impact["has_savings"]:
+            additional_property.append(
+                {
+                    "@type": "PropertyValue",
+                    "name": "Estimated cost savings",
+                    "value": impact["saved_display_full"],
+                }
+            )
+        additional_property.extend(
+            [
+                {"@type": "PropertyValue", "name": "Open source", "value": "True"},
+                {"@type": "PropertyValue", "name": "Price", "value": "Free"},
+            ]
+        )
+        graph.append(
             {
                 "@type": "InteractionCounter",
                 "interactionType": "https://schema.org/EnrollAction",
@@ -569,19 +726,14 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                     "@type": "QuantitativeValue",
                     "name": "Courses enrolled",
                     "value": impact["enrolled_schema_value"],
-                    "unitText": "courses"
+                    "unitText": "courses",
                 },
-                "additionalProperty": [
-                    {
-                        "@type": "PropertyValue",
-                        "name": "Estimated cost savings",
-                        "value": impact["saved_display_full"],
-                    },
-                    {"@type": "PropertyValue", "name": "Open source", "value": "True"},
-                    {"@type": "PropertyValue", "name": "Price", "value": "Free"},
-                ],
-            },
-        ],
+                "additionalProperty": additional_property,
+            }
+        )
+    return {
+        "@context": "https://schema.org",
+        "@graph": graph,
     }
 
 

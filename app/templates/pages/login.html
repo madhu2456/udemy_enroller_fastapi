@@ -197,12 +197,13 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
                         <p
                             class="text-lg font-semibold text-gray-900 tracking-tight"
                         >
-                            13
+                            {{ platform_stats.source_count_display }}
                         </p>
                         <p class="text-xs text-gray-500 mt-0.5">
                             Coupon sources monitored
                         </p>
                     </div>
+                    {% if platform_stats.has_impact %}
                     <div class="text-center">
                         <p
                             class="text-lg font-semibold text-gray-900 tracking-tight"
@@ -213,6 +214,7 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
                             Courses enrolled via automation
                         </p>
                     </div>
+                    {% if platform_stats.has_savings %}
                     <div class="text-center">
                         <p
                             class="text-lg font-semibold text-gray-900 tracking-tight"
@@ -223,6 +225,19 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
                             Estimated savings (aggregate)
                         </p>
                     </div>
+                    {% endif %}
+                    {% elif platform_stats.public_coupon_count > 0 %}
+                    <div class="text-center">
+                        <p
+                            class="text-lg font-semibold text-gray-900 tracking-tight"
+                        >
+                            {{ platform_stats.public_coupon_display }}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Free coupons listed
+                        </p>
+                    </div>
+                    {% endif %}
                     <div class="text-center">
                         <p
                             class="text-lg font-semibold text-gray-900 tracking-tight"
@@ -1236,6 +1251,7 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
                         <form
                             id="cookie-form"
                             data-action="login-cookies"
+                            autocomplete="off"
                             class="{% if request.app.state.deployment_env == 'server' %}space-y-4{% else %}hidden space-y-4{% endif %}"
                         >
                             <div>
@@ -1246,9 +1262,18 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
                                 >
                                 <input
                                     id="access_token"
-                                    type="text"
+                                    type="password"
+                                    name="udemy_session_access_token"
                                     placeholder="Paste your access_token cookie"
                                     required
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    autocapitalize="off"
+                                    autocorrect="off"
+                                    inputmode="text"
+                                    data-1p-ignore="true"
+                                    data-lpignore="true"
+                                    data-form-type="other"
                                     class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
                                 />
                             </div>
@@ -1260,10 +1285,19 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
                                 >
                                 <input
                                     id="client_id"
-                                    type="text"
+                                    type="password"
+                                    name="udemy_session_client_id"
                                     placeholder="Paste your client_id cookie"
                                     required
                                     aria-describedby="cookie-error"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    autocapitalize="off"
+                                    autocorrect="off"
+                                    inputmode="text"
+                                    data-1p-ignore="true"
+                                    data-lpignore="true"
+                                    data-form-type="other"
                                     class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
                                 />
                             </div>
@@ -1275,13 +1309,26 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
                                 >
                                 <input
                                     id="csrftoken"
-                                    type="text"
+                                    type="password"
+                                    name="udemy_session_csrftoken"
                                     placeholder="Paste your csrftoken cookie"
                                     required
                                     aria-describedby="cookie-error"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    autocapitalize="off"
+                                    autocorrect="off"
+                                    inputmode="text"
+                                    data-1p-ignore="true"
+                                    data-lpignore="true"
+                                    data-form-type="other"
                                     class="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 focus:border-transparent transition-all duration-150"
                                 />
                             </div>
+                            <label class="inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+                                <input type="checkbox" id="show-cookie-tokens" class="rounded border-gray-300 text-blue-600 focus:ring-blue-600" />
+                                Show tokens
+                            </label>
                             <div
                                 id="cookie-error"
                                 class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg"
@@ -1439,6 +1486,16 @@ block twitter_title %}Free Udemy Courses Automation | Udemy Enroller by Madhu Da
         document.querySelectorAll('[data-action="login-cookies"]').forEach(form => {
             form.addEventListener('submit', (e) => loginWithCookies(e));
         });
+        const showTokens = document.getElementById("show-cookie-tokens");
+        if (showTokens) {
+            showTokens.addEventListener("change", () => {
+                const t = showTokens.checked ? "text" : "password";
+                ["access_token", "client_id", "csrftoken"].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.type = t;
+                });
+            });
+        }
     });
 
     function isLoginSuccess(data) {

@@ -64,6 +64,12 @@
             href="/ai-profile.json"
             title="AI profile JSON"
         />
+        <link
+            rel="alternate"
+            type="application/rss+xml"
+            title="Free Udemy Coupons RSS"
+            href="https://udemyenroller.madhudadi.in/feed.xml"
+        />
 
         <!-- Self-hosted Inter font -->
         <link
@@ -94,12 +100,12 @@
         />
         <meta
             property="og:image"
-            content="https://udemyenroller.madhudadi.in/static/images/icon-512.webp"
+            content="https://udemyenroller.madhudadi.in/static/images/og-default.png"
         />
-        <meta property="og:image:width" content="512" />
-        <meta property="og:image:height" content="512" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="Udemy Enroller Logo - Free Udemy Course Automation Tool" />
-        <meta property="og:locale" content="en_US" />
+        <meta property="og:locale" content="en_IN" />
         <meta property="og:site_name" content="Udemy Enroller" />
         <meta property="article:author" content="https://madhudadi.in" />
         <meta property="article:publisher" content="https://madhudadi.in" />
@@ -120,7 +126,7 @@
         />
         <meta
             name="twitter:image"
-            content="https://udemyenroller.madhudadi.in/static/images/icon-512.webp"
+            content="https://udemyenroller.madhudadi.in/static/images/og-default.png"
         />
         <meta name="twitter:site" content="@madhu245" />
 
@@ -144,7 +150,7 @@
                         "url": "https://udemyenroller.madhudadi.in",
                         "name": "Udemy Enroller",
                         "description": "Open-source tool that can attempt free Udemy enrollments when you start a run. Not affiliated with Udemy.",
-                        "inLanguage": "en",
+                        "inLanguage": "en-IN",
                         "isPartOf": { "@id": "https://madhudadi.in/#website" },
                         "publisher": { "@id": "https://madhudadi.in/#person" },
                         "potentialAction": {
@@ -173,13 +179,13 @@
                         "description": "Open-source FastAPI helper for free Udemy coupons. Not affiliated with Udemy. Enrollment not guaranteed.",
                         "offers": {
                             "@type": "Offer",
-                            "price": "0",
+                            "price": 0,
                             "priceCurrency": "USD"
                         },
                         "author": { "@id": "https://madhudadi.in/#person" },
                         "codeRepository": "https://github.com/madhu2456/udemy_enroller_fastapi",
                         "license": "https://opensource.org/licenses/MIT"
-                    },
+                    }
                 ]
             }
         </script>
@@ -317,6 +323,8 @@
         </div>
 
         <!-- Navigation -->
+        {% set nav_auth = request.state.nav_authenticated | default(false) %}
+        {% set nav_name = request.state.nav_display_name | default('') %}
          <header
             role="banner"
             class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm overflow-hidden"
@@ -373,17 +381,17 @@
                     <!-- Authenticated Links -->
                     <a
                         href="/dashboard"
-                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/dashboard' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="auth-only {% if not nav_auth %}hidden{% endif %} px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/dashboard' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
                         >Dashboard</a
                     >
                     <a
                         href="/settings"
-                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/settings' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="auth-only {% if not nav_auth %}hidden{% endif %} px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/settings' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
                         >Settings</a
                     >
                     <a
                         href="/history"
-                        class="auth-only hidden px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/history' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        class="auth-only {% if not nav_auth %}hidden{% endif %} px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/history' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
                         >History</a
                     >
                     <a
@@ -400,7 +408,7 @@
                         href="https://github.com/madhu2456/udemy_enroller_fastapi"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700 hover:border-gray-300 hover:bg-[#F9FAFB] transition-colors duration-150"
+                        class="{% if nav_auth %}hidden{% else %}inline-flex{% endif %} items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-700 hover:border-gray-300 hover:bg-[#F9FAFB] transition-colors duration-150"
                         aria-label="Star on GitHub"
                     >
                         <svg
@@ -419,7 +427,7 @@
                     <a
                         id="get-started-btn"
                         href="/#connect"
-                        class="inline-flex items-center bg-[#2563EB] text-white rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150 whitespace-nowrap"
+                        class="{% if nav_auth %}hidden{% else %}inline-flex{% endif %} items-center bg-[#2563EB] text-white rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150 whitespace-nowrap"
                     >
                         Get Started
                     </a>
@@ -427,7 +435,7 @@
                     <!-- Stored User info (authenticated) -->
                     <div
                         id="profile-badge"
-                        class="hidden flex items-center gap-2 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full"
+                        class="{% if nav_auth %}inline-flex{% else %}hidden{% endif %} items-center gap-2 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full"
                     >
                         <div
                             class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center"
@@ -440,7 +448,7 @@
                         <span
                             id="user-info"
                             class="text-xs font-medium text-gray-700"
-                        ></span>
+                        >{{ nav_name }}</span>
                     </div>
 
                     <!-- Logout -->
@@ -448,7 +456,7 @@
                         id="logout-btn"
                         type="button"
                         aria-label="Logout"
-                        class="hidden flex items-center gap-1.5 min-h-[28px] px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        class="{% if nav_auth %}inline-flex{% else %}hidden{% endif %} items-center gap-1.5 min-h-[28px] px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                         data-action="logout"
                     >
                         <i data-lucide="log-out" class="w-3.5 h-3.5" aria-hidden="true"></i>
@@ -627,47 +635,63 @@
                     lucide.createIcons();
                 }
 
-                // Check auth to render correct header state
+                // Toggle display helpers — never combine Tailwind `hidden` with `flex`/`inline-flex`
+                function showInlineFlex(el) {
+                    if (!el) return;
+                    el.classList.remove("hidden");
+                    if (
+                        !el.classList.contains("inline-flex") &&
+                        !el.classList.contains("flex")
+                    ) {
+                        el.classList.add("inline-flex");
+                    }
+                    el.style.display = "";
+                }
+                function hideEl(el) {
+                    if (!el) return;
+                    el.classList.add("hidden");
+                    el.classList.remove("inline-flex");
+                    el.style.display = "";
+                }
+
+                // Check auth to render correct header state (defense-in-depth after SSR)
                 fetch("/api/auth/status")
                     .then((r) => r.json())
                     .then((data) => {
+                        const profileBadge =
+                            document.getElementById("profile-badge");
+                        const logoutBtn =
+                            document.getElementById("logout-btn");
+                        const githubLink =
+                            document.getElementById("github-link");
+                        const getStartedBtn =
+                            document.getElementById("get-started-btn");
+
                         if (data.authenticated) {
                             document
                                 .getElementById("status-badge")
                                 ?.classList.remove("hidden");
-                            document
-                                .getElementById("profile-badge")
-                                ?.classList.remove("hidden");
+                            showInlineFlex(profileBadge);
                             const info = document.getElementById("user-info");
-                            if (info) info.textContent = data.display_name;
-                            document
-                                .getElementById("logout-btn")
-                                ?.classList.remove("hidden");
+                            if (info)
+                                info.textContent = data.display_name || "";
+                            showInlineFlex(logoutBtn);
 
-                            // Hide github-link using style.display to override Tailwind responsive classes
-                            const githubLink =
-                                document.getElementById("github-link");
-                            if (githubLink) githubLink.style.display = "none";
+                            hideEl(githubLink);
+                            hideEl(getStartedBtn);
 
-                            // Show all auth-only nav links
+                            // Auth-only nav links: toggle hidden only (not flex)
                             document
                                 .querySelectorAll(".auth-only")
                                 .forEach((el) => {
                                     el.classList.remove("hidden");
                                 });
-                            const getStartedBtn =
-                                document.getElementById("get-started-btn");
-                            if (getStartedBtn)
-                                getStartedBtn.style.display = "none";
                         } else {
-                            const githubLink =
-                                document.getElementById("github-link");
-                            if (githubLink) githubLink.style.display = "";
-                            const getStartedBtn =
-                                document.getElementById("get-started-btn");
-                            if (getStartedBtn) getStartedBtn.style.display = "";
+                            hideEl(profileBadge);
+                            hideEl(logoutBtn);
+                            showInlineFlex(githubLink);
+                            showInlineFlex(getStartedBtn);
 
-                            // Hide all auth-only nav links
                             document
                                 .querySelectorAll(".auth-only")
                                 .forEach((el) => {
@@ -676,9 +700,9 @@
                         }
                     })
                     .catch(() => {
-                        document
-                            .getElementById("github-link")
-                            ?.classList.remove("hidden");
+                        const githubLink =
+                            document.getElementById("github-link");
+                        showInlineFlex(githubLink);
                     });
 
                 // Logout button event listener
@@ -743,7 +767,7 @@
         <!-- Accessible confirm dialog (replaces window.confirm where used) -->
         <div
             id="a11y-confirm-root"
-            class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+            class="hidden fixed inset-0 z-[100] items-center justify-center p-4"
             role="presentation"
         >
             <div
@@ -806,6 +830,7 @@
 
                 function close(result) {
                     root.classList.add("hidden");
+                    root.classList.remove("flex");
                     document.body.classList.remove("overflow-hidden");
                     document.removeEventListener("keydown", onKeydown, true);
                     if (lastFocus && typeof lastFocus.focus === "function") {
@@ -869,6 +894,7 @@
                                 "px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2";
                         }
                         root.classList.remove("hidden");
+                        root.classList.add("flex");
                         document.body.classList.add("overflow-hidden");
                         document.addEventListener("keydown", onKeydown, true);
                         setTimeout(function () {
