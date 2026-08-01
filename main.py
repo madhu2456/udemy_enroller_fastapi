@@ -424,7 +424,7 @@ async def add_security_headers(request: Request, call_next):
     settings = get_settings()
     if settings.DEPLOYMENT_ENV == "server":
         response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains; preload"
+            "max-age=63072000; includeSubDomains; preload"
         )
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     response.headers["Cross-Origin-Embedder-Policy"] = "unsafe-none"
@@ -433,15 +433,16 @@ async def add_security_headers(request: Request, call_next):
     # - 'strict-dynamic' propagates trust to scripts loaded by nonced scripts
     # - Domain allowlists are fallbacks for CSP level 2 browsers
     # - JSON-LD (application/ld+json) scripts are data, not governed by script-src
-    # - script-src-attr 'unsafe-inline' allows onclick/onload handlers without
-    #   compromising script-src nonce enforcement on <script> elements
+    # - script-src-attr 'none' + style-src-attr 'none': inline event handlers and
+    #   inline style attributes are disallowed; templates use nonce'd <script>
+    #   blocks and Tailwind classes instead (matches portfolio/blog posture)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' "
         "https://www.googletagmanager.com; "
-        "script-src-attr 'unsafe-inline'; "
+        "script-src-attr 'none'; "
         f"style-src 'self' 'nonce-{nonce}'; "
-        "style-src-attr 'unsafe-inline'; "
+        "style-src-attr 'none'; "
         "img-src 'self' data: https://*.udemy.com https://www.google-analytics.com; "
         "font-src 'self'; "
         "connect-src 'self' https://www.google-analytics.com; "

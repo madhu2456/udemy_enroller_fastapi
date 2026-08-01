@@ -130,3 +130,47 @@ def test_api_health_is_not_stored():
     cc = response.headers.get("cache-control", "")
     assert "no-store" in cc
     assert "no-cache" in cc
+
+
+def test_manifest_webmanifest_served_at_root():
+    """Fix H3: PWA manifest is served at /manifest.webmanifest with the W3C media type."""
+    client = TestClient(app)
+    try:
+        response = client.get("/manifest.webmanifest", follow_redirects=False)
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    assert response.headers.get("content-type", "").startswith("application/manifest+json")
+    import json
+
+    data = response.json()
+    assert data["name"] == "Udemy Enroller"
+    assert data["short_name"] == "Udemy Enroller"
+    assert data["start_url"] == "/"
+    assert data["theme_color"] == "#ffffff"
+    assert any(i.get("purpose") == "maskable" for i in data["icons"])
+
+
+def test_hsts_max_age_matches_network(monkeypatch):
+    """M1: HSTS in server mode must use the 2-year max-age used across the network."""
+    from config.settings import Settings
+    from cryptography.fernet import Fernet
+
+    settings = Settings(
+        DEPLOYMENT_ENV="server",
+        SECRET_KEY="test-secret-key-0123456789abcdefghijklmnop",
+        COOKIE_ENCRYPTION_KEY=Fernet.generate_key().decode(),
+    )
+    monkeypatch.setattr("main.get_settings", lambda: settings)
+
+    client = TestClient(app)
+    try:
+        response = client.get("/", follow_redirects=False)
+    finally:
+        client.close()
+
+    hsts = response.headers.get("strict-transport-security", "")
+    assert "max-age=63072000" in hsts
+    assert "includeSubDomains" in hsts
+    assert "preload" in hsts

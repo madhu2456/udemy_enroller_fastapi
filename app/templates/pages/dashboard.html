@@ -402,7 +402,6 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                     <div
                         id="progress-bar"
                         class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style="width: 0%"
                     ></div>
                 </div>
 
@@ -1097,7 +1096,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                             <a href="/api/enrollment/run/${escapeAttr(String(run.run_id))}/export" class="inline-flex items-center justify-center min-h-[32px] min-w-[32px] p-1.5 text-gray-600 hover:text-gray-900 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" title="Export CSV" aria-label="Export run ${escapeAttr(String(run.run_id))} as CSV">
                                 <i data-lucide="file-output" class="w-4 h-4" aria-hidden="true"></i>
                             </a>
-                            <button type="button" data-action="delete-run" data-run-id="${escapeAttr(String(run.run_id))}" class="inline-flex items-center justify-center min-h-[32px] min-w-[32px] p-1.5 text-gray-600 hover:text-red-500 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" title="Delete Run" aria-label="Delete run ${escapeAttr(String(run.run_id))}" ${["pending", "scraping", "enrolling"].includes(run.status) ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ""}>
+                            <button type="button" data-action="delete-run" data-run-id="${escapeAttr(String(run.run_id))}" class="inline-flex items-center justify-center min-h-[32px] min-w-[32px] p-1.5 text-gray-600 hover:text-red-500 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 disabled:opacity-30 disabled:cursor-not-allowed" title="Delete Run" aria-label="Delete run ${escapeAttr(String(run.run_id))}" ${["pending", "scraping", "enrolling"].includes(run.status) ? 'disabled' : ""}>
                                 <i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i>
                             </button>
                         </div>

@@ -1,0 +1,31 @@
+{
+  "name": "Udemy Enroller",
+  "short_name": "Udemy Enroller",
+  "description": "Free Udemy Courses Automation by Madhu Dadi. Open-source helper for 100% off Udemy coupons. Not affiliated with Udemy.",
+  "start_url": "/",
+  "display": "minimal-ui",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "en-IN",
+  "categories": ["education", "productivity", "developer"],
+  "icons": [
+    {
+      "src": "/static/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/images/icon-512.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}

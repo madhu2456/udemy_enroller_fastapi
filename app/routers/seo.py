@@ -24,6 +24,13 @@ async def favicon():
     favicon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "images", "icon-512.png")
     return FileResponse(favicon_path, media_type="image/png")
 
+
+@router.get("/manifest.webmanifest", response_class=FileResponse)
+async def manifest():
+    """Web app manifest served at site root (matches portfolio/blog/deals convention)."""
+    manifest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "manifest.webmanifest")
+    return FileResponse(manifest_path, media_type="application/manifest+json")
+
 SITE_URL = "https://udemyenroller.madhudadi.in"
 BLOG_URL = "https://madhudadi.in/blog"
 PORTFOLIO_URL = "https://madhudadi.in"

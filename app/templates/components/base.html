@@ -44,6 +44,7 @@
             content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}"
         />
         <meta name="theme-color" content="#ffffff" />
+        <link rel="manifest" href="/manifest.webmanifest" />
         <link
             rel="canonical"
             href="https://udemyenroller.madhudadi.in{{ request.url.path }}"
@@ -200,11 +201,14 @@
             href="/static/css/tailwind.min.css"
             rel="stylesheet"
             media="print"
-            onload="this.media = 'all'"
+            id="tailwind-async-css"
         />
         <noscript
             ><link href="/static/css/tailwind.min.css" rel="stylesheet"
         /></noscript>
+        <script nonce="{{ request.state.nonce }}">
+            document.getElementById('tailwind-async-css').media = 'all';
+        </script>
         {% endif %}
 
         <!-- Lucide Icons CDN -->
@@ -270,7 +274,7 @@
                 src="https://www.googletagmanager.com/ns.html?id={{ request.app.state.gtm_container_id }}"
                 height="0"
                 width="0"
-                style="display: none; visibility: hidden"
+                class="hidden invisible"
             ></iframe
         ></noscript>
         {% endif %}
@@ -530,14 +534,14 @@
                         <a
                             href="https://madhudadi.in/blog"
                             target="_blank"
-                            rel="noopener noreferrer"
+                            rel="noopener noreferrer me"
                             class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Blog</a
                         >
                         <a
                             href="https://madhudadi.in"
                             target="_blank"
-                            rel="noopener noreferrer"
+                            rel="noopener noreferrer me"
                             class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Madhu Dadi</a
                         >
