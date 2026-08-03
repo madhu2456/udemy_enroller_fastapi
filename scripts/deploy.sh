@@ -36,16 +36,19 @@ else
 fi
 
 echo "6. Creating .env file (if not exists)..."
+# Fernet key generation below runs on the droplet host, so install cryptography there
+apt-get install -y python3-cryptography
 if [ ! -f .env ]; then
     cat > .env <<EOF
 SECRET_KEY=$(openssl rand -hex 32)
+COOKIE_ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 DATABASE_URL=sqlite:////app/data/udemy_enroller.db
 DEBUG=false
 LOG_LEVEL=WARNING
 HOST=0.0.0.0
 PORT=8000
 EOF
-    echo "   .env file created with random SECRET_KEY"
+    echo "   .env file created with random SECRET_KEY and COOKIE_ENCRYPTION_KEY"
 fi
 
 echo "7. Building and starting containers..."

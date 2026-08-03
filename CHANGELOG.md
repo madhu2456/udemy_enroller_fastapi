@@ -56,6 +56,10 @@ Work in the working tree since `e6bc1c2` (not necessarily committed yet).
   - `/login` compatibility redirect to `/#connect`.
   - humans.txt: accessibility **target** WCAG 2.2 AA (not a conformance claim).
 
+### Removed
+
+- **Removed**: stale, non-bootable `.do/app.yaml`.
+
 ### Fixed
 
 - Misleading privacy claim that Clear All Data deleted account/settings/cookies without doing so (behavior + copy aligned).
@@ -73,11 +77,18 @@ Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 - Sitemap deal URLs rebuild whenever enrollment or coupon_checker exports `public_deals.json` (`write_sitemap_files` + live `GET /sitemap.xml`).
 - SEO/AEO/GEO: hub freshness + categories, `/udemycoupons/category/{slug}`, pillar guide `/guides/free-udemy-coupons`, related deals + BreadcrumbList on deal pages, softened `llms.txt` Key facts, no Crawl-delay for major bots.
 - Residual SEO code pass: claim/copy sweep (FAQ schema+body, about, login, README, base banner, guides, llms); deal pages with unique how-to + FAQ JSON-LD + LimitedAvailability; sitemap quality filter (title length, 30-day freshness); hub Breadcrumb/CollectionPage; footer link to coupon guide; `docs/seo-residual-checklist.md` for remaining GSC/legal/ops items.
+- **Fixed**: fonts and webp images were served as `application/octet-stream` on the slim production image (blocked by `nosniff`); MIME types now registered at startup and static asset URLs cache-busted (`?v=2`).
 
 ### Security
 
 - See `SECURITY.md` and `/.well-known/security.txt`.
 - Hosted multi-tenant cookie storage remains a residual risk; prefer self-hosting for full control. Stealth/Playwright and CloudScraper enrollment posture unchanged by explicit owner decision.
+- **Security**: server-mode `SECRET_KEY` validation now rejects known placeholder and low-entropy values; `COOKIE_ENCRYPTION_KEY` must be a valid Fernet key in server mode (fail-closed at boot with actionable errors).
+- **Security**: removed the unconditional GTM `<noscript>` analytics iframe (pre-consent tracking for no-JS visitors); direct GA4 loader now only renders when no GTM container is configured (fixes duplicate pageviews).
+
+### Ops
+
+- **Ops**: `scripts/deploy.sh` now generates a Fernet `COOKIE_ENCRYPTION_KEY`; coupon-checker fails fast on invalid settings; see `docs/security-trio-fix.md` for the SECRET_KEY rotation runbook.
 
 ## [2026-07-06] — baseline `e6bc1c2`
 

@@ -2,6 +2,7 @@
 
 import pytest
 import datetime
+import secrets
 from unittest.mock import MagicMock, AsyncMock, patch
 
 from config.settings import Settings
@@ -58,6 +59,82 @@ class TestProductionSettingsValidation:
             COOKIE_SECURE=False  # Try setting it to False
         )
         assert settings.COOKIE_SECURE is True
+
+    def test_server_env_rejects_default_47char_secret_key(self):
+        """Server mode rejects the 47-char default placeholder SECRET_KEY."""
+        with pytest.raises(ValueError, match="known placeholder or low-entropy"):
+            Settings(
+                DEPLOYMENT_ENV="server",
+                SECRET_KEY="change-me-in-production-use-a-strong-secret-key",
+            )
+
+    def test_server_env_rejects_env_example_42char_secret_key(self):
+        """Server mode rejects the 42-char .env.example placeholder SECRET_KEY."""
+        with pytest.raises(ValueError, match="known placeholder or low-entropy"):
+            Settings(
+                DEPLOYMENT_ENV="server",
+                SECRET_KEY="change-me-to-a-random-string-in-production",
+            )
+
+    @pytest.mark.parametrize(
+        "insecure_key",
+        ["change-me", "change-me-in-production", ""],
+    )
+    def test_server_env_rejects_short_placeholder_secret_keys(self, insecure_key):
+        """Short placeholder keys are rejected; the <32 length gate fires first.
+
+        "change-me" (9) and "change-me-in-production" (22) are in the insecure
+        set but never reach the low-entropy branch because the length check
+        raises first. The low-entropy branch is exercised by the 47/42-char
+        placeholder and all-same-char cases above/below.
+        """
+        with pytest.raises(ValueError, match="SECRET_KEY must be at least 32"):
+            Settings(DEPLOYMENT_ENV="server", SECRET_KEY=insecure_key)
+
+    def test_server_env_rejects_all_same_char_secret_key(self):
+        """Server mode rejects 64 chars of the same character (low entropy)."""
+        with pytest.raises(ValueError, match="known placeholder or low-entropy"):
+            Settings(DEPLOYMENT_ENV="server", SECRET_KEY="a" * 64)
+
+    def test_server_env_accepts_random_hex_secret_and_valid_fernet_key(self):
+        """server + secrets.token_hex(32) + valid Fernet key passes and forces secure cookies."""
+        from cryptography.fernet import Fernet
+
+        settings = Settings(
+            DEPLOYMENT_ENV="server",
+            SECRET_KEY=secrets.token_hex(32),
+            COOKIE_ENCRYPTION_KEY=Fernet.generate_key().decode(),
+        )
+        assert settings.COOKIE_SECURE is True
+
+    def test_server_env_rejects_short_cookie_encryption_key(self):
+        """Server mode requires a Fernet-format COOKIE_ENCRYPTION_KEY."""
+        with pytest.raises(ValueError, match="Fernet"):
+            Settings(
+                DEPLOYMENT_ENV="server",
+                SECRET_KEY=secrets.token_hex(32),
+                COOKIE_ENCRYPTION_KEY="short-key",
+            )
+
+    def test_server_env_rejects_empty_cookie_encryption_key(self):
+        """Server mode rejects a missing COOKIE_ENCRYPTION_KEY (no derived fallback)."""
+        with pytest.raises(ValueError, match="Fernet"):
+            Settings(
+                DEPLOYMENT_ENV="server",
+                SECRET_KEY=secrets.token_hex(32),
+                COOKIE_ENCRYPTION_KEY="",
+            )
+
+    def test_local_env_keeps_env_example_placeholder_stable(self):
+        """Local mode keeps the 42-char .env.example placeholder stable (no autogen)."""
+        settings = Settings(
+            DEPLOYMENT_ENV="local",
+            SECRET_KEY="change-me-to-a-random-string-in-production",
+            COOKIE_SECURE=False,
+        )
+        assert settings.SECRET_KEY == "change-me-to-a-random-string-in-production"
+        assert len(settings.SECRET_KEY) == 42
+        assert settings.COOKIE_SECURE is False
 
 
 # ==========================================

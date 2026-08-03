@@ -43,6 +43,7 @@ from fastapi.templating import Jinja2Templates
 from loguru import logger
 
 from app.logging_config import setup_logging
+from app.mime import register_extra_mimetypes
 from app.models.database import (
     SessionLocal,
     User,
@@ -349,6 +350,8 @@ async def add_cache_headers(request: Request, call_next):
             "/about",
             "/guides",
             "/privacy",
+            "/contact",
+            "/terms",
             "/udemycoupons",
             "/robots.txt",
             "/humans.txt",
@@ -443,9 +446,9 @@ async def add_security_headers(request: Request, call_next):
         "script-src-attr 'none'; "
         f"style-src 'self' 'nonce-{nonce}'; "
         "style-src-attr 'none'; "
-        "img-src 'self' data: https://*.udemy.com https://www.google-analytics.com; "
+        "img-src 'self' data: https://*.udemy.com https://www.google-analytics.com https://*.google-analytics.com; "
         "font-src 'self'; "
-        "connect-src 'self' https://www.google-analytics.com; "
+        "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com; "
         "frame-src https://www.googletagmanager.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
@@ -456,6 +459,7 @@ async def add_security_headers(request: Request, call_next):
 
 
 # Static files
+register_extra_mimetypes()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Template renderer for error pages

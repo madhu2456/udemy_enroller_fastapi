@@ -97,6 +97,21 @@ async def _run_one_cycle() -> None:
 
 
 def main() -> None:
+    # Fail fast on invalid settings (bad SECRET_KEY / COOKIE_ENCRYPTION_KEY /
+    # DEPLOYMENT_ENV) instead of silently retrying forever with a stale catalog.
+    try:
+        from config.settings import get_settings
+
+        get_settings()
+    except Exception as exc:
+        logger.error("Settings validation failed: %s", exc)
+        print(
+            "Coupon checker aborting: settings validation failed "
+            "— check SECRET_KEY/COOKIE_ENCRYPTION_KEY/DEPLOYMENT_ENV",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     interval = _interval_seconds()
     logger.info(
         "Coupon checker loop starting (interval=%ss, run_on_start=%s)",

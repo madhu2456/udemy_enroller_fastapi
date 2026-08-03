@@ -75,13 +75,13 @@
         <!-- Self-hosted Inter font -->
         <link
             rel="preload"
-            href="/static/fonts/inter-latin.woff2"
+            href="/static/fonts/inter-latin.woff2?v=2"
             as="font"
             type="font/woff2"
             crossorigin
         />
-        <link rel="preload" href="/static/images/icon-512.webp" as="image" />
-        <link rel="stylesheet" href="/static/fonts/inter.css" />
+        <link rel="preload" href="/static/images/icon-512.webp?v=2" as="image" />
+        <link rel="stylesheet" href="/static/fonts/inter.css?v=2" />
         <link rel="preconnect" href="https://madhudadi.in" crossorigin />
         <link rel="dns-prefetch" href="https://madhudadi.in" />
 
@@ -136,9 +136,9 @@
             rel="icon"
             type="image/webp"
             sizes="512x512"
-            href="/static/images/icon-512.webp"
+            href="/static/images/icon-512.webp?v=2"
         />
-        <link rel="apple-touch-icon" href="/static/images/icon-512.webp" />
+        <link rel="apple-touch-icon" href="/static/images/icon-512.webp?v=2" />
 
         <!-- JSON-LD site graph (compact @id references; single SoftwareApplication) -->
         <script type="application/ld+json">
@@ -165,9 +165,16 @@
                         "@id": "https://madhudadi.in/#person",
                         "name": "Madhu Dadi",
                         "url": "https://madhudadi.in",
+                        {# Fix #8: Person identity anchors only — blog/portfolio/deals link via subjectOf/isPartOf, never sameAs #}
                         "sameAs": [
+                            "https://www.wikidata.org/wiki/Q139807441",
                             "https://github.com/madhu2456",
-                            "https://www.linkedin.com/in/madhu-dadi-54684531"
+                            "https://www.linkedin.com/in/madhu-dadi-54684531",
+                            "https://x.com/madhu245",
+                            "https://medium.com/@madhu.kumar245",
+                            "https://dev.to/madhudadi",
+                            "https://www.youtube.com/@madhukumar245",
+                            "https://maps.google.com/?cid=CXaUijPkQhVkEBM"
                         ]
                     },
                     {
@@ -241,8 +248,9 @@
             function gtag(){dataLayer.push(arguments);}
         </script>
         {% endif %}
-        {% if request.app.state.ga4_measurement_id %}
+        {% if request.app.state.ga4_measurement_id and not request.app.state.gtm_container_id %}
         <!-- Google Analytics 4 (consent-gated) -->
+        <!-- GTM container fires the GA4 config tag; direct loader would double-count pageviews. -->
         <script nonce="{{ request.state.nonce }}">
             function loadGA4() {
                 var s=document.createElement('script');
@@ -267,17 +275,6 @@
         {% endif %}
     </head>
     <body class="min-h-screen flex flex-col">
-        {% if request.app.state.gtm_container_id %}
-        <!-- Google Tag Manager (noscript) -->
-        <noscript id="gtm-noscript"
-            ><iframe
-                src="https://www.googletagmanager.com/ns.html?id={{ request.app.state.gtm_container_id }}"
-                height="0"
-                width="0"
-                class="hidden invisible"
-            ></iframe
-        ></noscript>
-        {% endif %}
         <!-- Skip link for keyboard accessibility (WCAG 2.4.1) -->
         <a
             href="#main-content"
@@ -345,7 +342,7 @@
                     class="flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
                 >
                     <img
-                        src="/static/images/icon-512.webp"
+                        src="/static/images/icon-512.webp?v=2"
                         alt="Udemy Enroller Logo"
                         class="w-6 h-6 rounded-md"
                         width="24"
@@ -484,7 +481,7 @@
                     <!-- Brand -->
                     <div class="flex items-center gap-2 h-7">
                         <img
-                            src="/static/images/icon-512.webp"
+                            src="/static/images/icon-512.webp?v=2"
                             alt="Udemy Enroller Logo"
                             class="w-5 h-5 rounded-md grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all"
                             width="20"
@@ -530,6 +527,16 @@
                             href="/privacy"
                             class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Privacy</a
+                        >
+                        <a
+                            href="/terms"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                            >Terms</a
+                        >
+                        <a
+                            href="/contact"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                            >Contact</a
                         >
                         <a
                             href="https://madhudadi.in/blog"

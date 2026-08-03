@@ -55,3 +55,6 @@ htmlcov/
 .pytest_cache/
 .coverage
 test_err.log
+
+# Ops runbooks (local-only; survive git clean -fd without -x)
+docs/ops/

@@ -120,7 +120,7 @@ The application will be available at `http://localhost:8000`.
 
 ### Option 2: Docker
 
-By default, containerized deployments run in `DEPLOYMENT_ENV=server` mode to enforce strict production security. **The container will fail to start if you do not configure a strong, unique `SECRET_KEY`**.
+By default, containerized deployments run in `DEPLOYMENT_ENV=server` mode to enforce strict production security. **The container will fail to start if you do not configure a strong, unique `SECRET_KEY`** — placeholder/`change-me` values and a missing or invalid `COOKIE_ENCRYPTION_KEY` (must be a valid Fernet key) are rejected at boot with an actionable error. `scripts/deploy.sh` now generates both keys automatically (requires `python3` + `python3-cryptography` on the host). See [docs/security-trio-fix.md](docs/security-trio-fix.md) for the key-rotation runbook.
 
 1. Clone and navigate to the directory:
    ```bash

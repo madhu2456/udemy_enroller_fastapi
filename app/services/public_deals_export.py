@@ -467,6 +467,8 @@ def build_sitemap_xml(
         ("/about", None, "0.80", "monthly"),
         ("/guides", None, "0.80", "weekly"),
         ("/privacy", None, "0.30", "monthly"),
+        ("/contact", None, "0.30", "monthly"),
+        ("/terms", None, "0.30", "monthly"),
     ]
 
     # Category hub pages (only categories that currently have valid deals)

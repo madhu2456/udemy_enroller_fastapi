@@ -3,7 +3,33 @@
 import secrets
 from functools import lru_cache
 
+from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Known placeholder / example secret keys that must never pass server validation.
+# Used ONLY by the server-mode gate.
+_INSECURE_SECRET_KEYS: frozenset[str] = frozenset(
+    {
+        "change-me-in-production-use-a-strong-secret-key",
+        "change-me-to-a-random-string-in-production",
+        "change-me-in-production",
+        "change-me",
+        "",
+    }
+)
+
+# Legacy local-mode blocklist: local mode auto-generates a fresh SECRET_KEY only
+# for these markers. Deliberately EXCLUDES the 42-char .env.example placeholder
+# ("change-me-to-a-random-string-in-production") so local development keeps a
+# stable SECRET_KEY — and thus a stable derived cookie key — across restarts.
+_INSECURE_LOCAL_AUTOGEN_KEYS: frozenset[str] = frozenset(
+    {
+        "change-me-in-production-use-a-strong-secret-key",
+        "change-me-in-production",
+        "change-me",
+        "",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -87,22 +113,27 @@ class Settings(BaseSettings):
                     "SECRET_KEY must be at least 32 characters long in server mode. "
                     "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
                 )
-            # Require explicit encryption key in production (no fallback to derived key)
-            if not self.COOKIE_ENCRYPTION_KEY:
+            # minimum-entropy gate, not a strength guarantee
+            if (
+                self.SECRET_KEY in _INSECURE_SECRET_KEYS
+                or len(set(self.SECRET_KEY)) == 1
+            ):
                 raise ValueError(
-                    "COOKIE_ENCRYPTION_KEY must be set in server mode. "
-                    "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+                    "SECRET_KEY is a known placeholder or low-entropy value in server mode. "
+                    'Generate a strong random key with: python -c "import secrets; print(secrets.token_hex(32))"'
+                )
+            # Require explicit Fernet-format encryption key in production (no fallback to derived key)
+            try:
+                Fernet(self.COOKIE_ENCRYPTION_KEY)
+            except (ValueError, TypeError):
+                raise ValueError(
+                    "COOKIE_ENCRYPTION_KEY must be a valid Fernet key (44-char urlsafe base64) in server mode. "
+                    'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
                 )
             self.COOKIE_SECURE = True
         else:
             # Local development: auto-generate on insecure defaults for convenience
-            _insecure_keys = (
-                "change-me-in-production-use-a-strong-secret-key",
-                "change-me-in-production",
-                "change-me",
-                "",
-            )
-            if self.SECRET_KEY in _insecure_keys:
+            if self.SECRET_KEY in _INSECURE_LOCAL_AUTOGEN_KEYS:
                 self.SECRET_KEY = secrets.token_hex(32)
         return self
 

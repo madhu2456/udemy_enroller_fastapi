@@ -34,7 +34,7 @@ endblock %} {% block content %}
                         "position": 1,
                         "name": "Quick Start Guide",
                         "url": "https://udemyenroller.madhudadi.in/guides#quickstart",
-                        "description": "Set up the Udemy Enroller in minutes and start an enrollment run for free coupons."
+                        "description": "Set up the Udemy Enroller in minutes (cookie login on the hosted demo)."
                     },
                     {
                         "@type": "ListItem",
@@ -176,15 +176,18 @@ endblock %} {% block content %}
                                 <p
                                     class="text-sm font-semibold text-gray-900 mb-1"
                                 >
-                                    Choose Email Login
+                                    Choose Cookie Login
                                 </p>
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed mb-2"
                                 >
-                                    For the quickest setup, enter your Udemy
-                                    email and password. If you encounter a
-                                    CAPTCHA or CSRF error, switch to Cookie
-                                    Login (see the Cookie Login guide below).
+                                    On the Connect form, switch to the Cookie Login tab (on the
+                                    hosted demo it is shown by default). Log in to udemy.com in
+                                    your browser, then copy your three session cookies
+                                    (access_token, client_id, csrftoken) into the form &mdash; see
+                                    the Cookie Login guide below for the full extraction steps.
+                                    Email Login is available only when you self-host &mdash; and
+                                    may hit CAPTCHA or CSRF errors from server IPs.
                                 </p>
                             </div>
                         </li>
@@ -386,10 +389,9 @@ csrftoken</pre
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed mb-2"
                                 >
-                                    Switch to the Cookie Login tab on the
-                                    Connect form. Paste each value into its
-                                    corresponding field and click Connect
-                                    Account.
+                                    Switch to the Cookie Login tab on the Connect form. Paste each
+                                    value into its corresponding field and click Connect Account.
+                                    Cookie Login is the only login option on the hosted demo.
                                 </p>
                             </div>
                         </li>
@@ -775,7 +777,9 @@ uvicorn main:app --host 0.0.0.0 --port 8000</pre
                                     flags the login from a server IP. Fix:
                                     switch to Cookie Login, which uses a token
                                     already issued by Udemy to your real browser
-                                    session.
+                                    session. Email Login is only available when
+                                    self-hosting; on the hosted demo use Cookie
+                                    Login.
                                 </p>
                             </div>
                         </li>

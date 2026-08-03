@@ -1,0 +1,480 @@
+{% extends "components/base.html" %} {% block title %}Terms of Use - Udemy Enroller Automation Tool{% endblock %} {% block meta_title %}Terms of Use - Udemy Enroller Automation Tool{% endblock %} {% block meta_description %}Udemy Enroller terms: independent open-source project, not affiliated with Udemy. Platform compliance, credential safety, rate limits, and no-warranty terms.{% endblock %} {% block og_type
+%}website{% endblock %} {% block og_title %}Terms of Use - Udemy Enroller Automation Tool{% endblock %} {% block og_description %}Terms of Use for Udemy Enroller: independent educational tool, not affiliated with Udemy. Credential safety, respectful rate limits, and known limitations.{% endblock %} {% block twitter_title %}Terms of Use - Udemy Enroller Automation Tool{% endblock %} {% block twitter_description %}Terms of Use for Udemy Enroller: independent educational tool, not affiliated with Udemy. Credential safety, respectful rate limits, and known limitations.{%
+endblock %} {% block content %}
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://udemyenroller.madhudadi.in/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Terms of Use",
+                        "item": "https://udemyenroller.madhudadi.in/terms"
+                    }
+                ]
+            },
+            {
+                "@type": "WebPage",
+                "@id": "https://udemyenroller.madhudadi.in/terms",
+                "name": "Terms of Use - Udemy Enroller",
+                "description": "Terms of Use for Udemy Enroller: acceptance, affiliation disclaimer, platform compliance, credential safety, rate limiting, known limitations, and no warranty.",
+                "isPartOf": {
+                    "@type": "WebSite",
+                    "@id": "https://udemyenroller.madhudadi.in/#website"
+                },
+                "about": {
+                    "@type": "Thing",
+                    "name": "Terms of Use and Platform Compliance"
+                }
+            }
+        ]
+    }
+</script>
+<div class="min-h-screen bg-white text-gray-900">
+    <div>
+        <!-- Hero -->
+        <section
+            class="max-w-3xl mx-auto px-6 pt-14 pb-10"
+            aria-labelledby="terms-heading"
+        >
+            <div>
+                <span
+                    class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1 text-xs font-medium mb-4"
+                >
+                    Legal
+                </span>
+                <h1
+                    id="terms-heading"
+                    class="text-3xl font-semibold text-gray-900 tracking-tight mb-3"
+                >
+                    Terms of Use
+                </h1>
+                <p class="text-sm text-gray-500 leading-relaxed">
+                    The terms that apply when you use Udemy Enroller. Last
+                    updated: August 2026.
+                </p>
+            </div>
+        </section>
+
+        <!-- Content -->
+        <section class="max-w-3xl mx-auto px-6 pb-20">
+            <div class="space-y-10">
+                <!-- Acceptance -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Acceptance
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            Udemy Enroller is an
+                            <strong class="text-gray-700"
+                                >independent, open-source project</strong
+                            >
+                            built for educational purposes. By using the
+                            application — locally, self-hosted, or on the
+                            hosted demo — you agree to these terms. The project
+                            does not guarantee enrollment success or coupon
+                            validity.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Not affiliated with Udemy -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Not Affiliated with Udemy
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            Udemy Enroller is
+                            <strong class="text-gray-700"
+                                >not affiliated with, endorsed by, or connected
+                                with Udemy, Inc.</strong
+                            >
+                            "Udemy" is a registered trademark of Udemy, Inc.
+                            This is an independent, open-source tool built for
+                            educational purposes. Users are solely responsible
+                            for ensuring their use complies with
+                            <a
+                                href="https://www.udemy.com/terms/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                                >Udemy's Terms of Use</a
+                            >.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Platform compliance -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Platform Compliance
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            The tool interacts with Udemy's enrollment
+                            endpoints using
+                            <strong class="text-gray-700"
+                                >your own session tokens</strong
+                            >. Automated activity on Udemy may face rate
+                            limits, CAPTCHAs, or other restrictions imposed by
+                            the platform. The maintainers cannot guarantee that
+                            any feature remains available.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Credential safety -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Credential Safety
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <ul
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Session cookies are
+                                    <strong class="text-gray-700"
+                                        >encrypted with Fernet</strong
+                                    >
+                                    before storage.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Your Udemy password is
+                                    <strong class="text-gray-700"
+                                        >never stored</strong
+                                    >
+                                    — not even as a hash.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Credentials are sent only to Udemy's
+                                    enrollment endpoints and are
+                                    <strong class="text-gray-700"
+                                        >never sold or shared</strong
+                                    >
+                                    with third parties.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >The hosted demo uses
+                                    <strong class="text-gray-700"
+                                        >Cookie Login only</strong
+                                    >
+                                    — email-and-password login is available
+                                    only when self-hosting.</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Rate limiting & respectful use -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Rate Limiting &amp; Respectful Use
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            Enrollment requests are deliberately paced to be
+                            respectful of Udemy's platform: 6–15 seconds
+                            between requests in server mode and 3–8 seconds in
+                            local mode. Circuit breakers trip on repeated 403
+                            responses to protect your account.
+                        </p>
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            Do not reduce these delays. The pacing is a
+                            technical choice, not a guarantee against account
+                            limits, and users remain responsible for their own
+                            usage.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Known limitations -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Known Limitations
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <ul
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Coupons
+                                    <strong class="text-gray-700"
+                                        >expire rapidly</strong
+                                    >
+                                    and may already be gone when a listing is
+                                    published.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Not all 100%-off coupons
+                                    <strong class="text-gray-700"
+                                        >successfully enroll</strong
+                                    >
+                                    — some are invalid, regional, or already
+                                    claimed.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Udemy may
+                                    <strong class="text-gray-700"
+                                        >change its flow</strong
+                                    >
+                                    at any time, breaking parts of the
+                                    automation.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Impact metrics use
+                                    <strong class="text-gray-700"
+                                        >list prices</strong
+                                    >
+                                    — actual savings depend on the prices Udemy
+                                    shows at enrollment time.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >There is
+                                    <strong class="text-gray-700"
+                                        >no guarantee</strong
+                                    >
+                                    for any course or coupon.</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Data stored vs never stored -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Data Stored vs. Never Stored
+                    </h2>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
+                    >
+                        <p class="text-sm font-semibold text-gray-700">
+                            Stored
+                        </p>
+                        <ul
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Encrypted session cookies (Fernet), used
+                                    only to communicate with Udemy.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Your preferences and aggregate enrollment
+                                    history for the dashboard.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Session expiration metadata so old
+                                    sessions can be cleaned up. Hosted demo
+                                    sessions expire after about 24 hours.</span
+                                >
+                            </li>
+                        </ul>
+                        <p class="text-sm font-semibold text-gray-700">
+                            Never Stored
+                        </p>
+                        <ul
+                            class="space-y-2 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Your password — not even a hash. It is
+                                    sent directly to Udemy and discarded.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Payment information — Udemy Enroller never
+                                    handles or stores any payment details.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    >Browsing history or any tracking of
+                                    activity outside the app itself.</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Browser automation -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Browser Automation
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            Coupon aggregator sources are accessed with
+                            CloudScraper (HTTP) or Playwright (browser
+                            fallback) using respectful rate limits.
+                        </p>
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            Udemy Enroller does not bypass CAPTCHAs, rotate
+                            proxies, or mass-scrape. A circuit breaker
+                            self-blocks the source after consecutive errors to
+                            avoid hammering sites.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- No warranty / liability -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        No Warranty / Liability
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            Udemy Enroller is provided
+                            <strong class="text-gray-700">"as is"</strong>
+                            under the
+                            <a
+                                href="https://github.com/madhu2456/udemy_enroller_fastapi/blob/main/LICENSE"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                                >MIT License</a
+                            >. There is no guarantee of availability or
+                            results. To the maximum extent permitted by law,
+                            the maintainers accept no liability for any loss
+                            arising from use of the application.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Contact -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Contact
+                    </h2>
+                    <div class="bg-white rounded-xl border border-gray-200 p-6">
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            Questions about these terms? Email
+                            <a
+                                href="mailto:hello@madhudadi.in"
+                                class="text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                                >hello@madhudadi.in</a
+                            >
+                            or open an issue on
+                            <a
+                                href="https://github.com/madhu2456/udemy_enroller_fastapi/issues"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                                >GitHub</a
+                            >.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div
+                class="mt-12 bg-[#F9FAFB] rounded-xl border border-gray-200 p-8 text-center"
+            >
+                <p class="text-sm font-semibold text-gray-900 mb-1">
+                    Questions about these terms?
+                </p>
+                <p class="text-sm text-gray-500 mb-5">
+                    Open an issue on GitHub or check the FAQ for more
+                    information.
+                </p>
+                <div
+                    class="flex flex-col sm:flex-row items-center justify-center gap-3"
+                >
+                    <a
+                        href="https://github.com/madhu2456/udemy_enroller_fastapi/issues"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-4 py-2 text-xs font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors duration-150"
+                        >Open a GitHub Issue</a
+                    >
+                    <a
+                        href="/faq"
+                        class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-xs font-semibold hover:bg-blue-700 transition-colors duration-150"
+                        >Browse FAQ</a
+                    >
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -20,6 +20,36 @@ def test_public_faq_allows_short_cdn_cache():
     assert "stale-while-revalidate=600" in cc
 
 
+def test_public_contact_allows_short_cdn_cache():
+    client = TestClient(app)
+    try:
+        response = client.get("/contact")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    cc = response.headers.get("cache-control", "")
+    assert "public" in cc
+    assert "max-age=120" in cc
+    assert "s-maxage=300" in cc
+    assert "stale-while-revalidate=600" in cc
+
+
+def test_public_terms_allows_short_cdn_cache():
+    client = TestClient(app)
+    try:
+        response = client.get("/terms")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    cc = response.headers.get("cache-control", "")
+    assert "public" in cc
+    assert "max-age=120" in cc
+    assert "s-maxage=300" in cc
+    assert "stale-while-revalidate=600" in cc
+
+
 def test_public_udemycoupons_allows_short_cdn_cache():
     client = TestClient(app)
     try:
@@ -142,7 +172,6 @@ def test_manifest_webmanifest_served_at_root():
 
     assert response.status_code == 200
     assert response.headers.get("content-type", "").startswith("application/manifest+json")
-    import json
 
     data = response.json()
     assert data["name"] == "Udemy Enroller"

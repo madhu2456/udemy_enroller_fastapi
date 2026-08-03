@@ -36,6 +36,19 @@ BLOG_URL = "https://madhudadi.in/blog"
 PORTFOLIO_URL = "https://madhudadi.in"
 CASE_STUDY_URL = "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
 
+# Fix #8: Person identity anchors only (exact set & order). Sites/products
+# (blog, portfolio) link via subjectOf, never sameAs.
+PERSON_SAME_AS = [
+    "https://www.wikidata.org/wiki/Q139807441",
+    "https://github.com/madhu2456",
+    "https://www.linkedin.com/in/madhu-dadi-54684531",
+    "https://x.com/madhu245",
+    "https://medium.com/@madhu.kumar245",
+    "https://dev.to/madhudadi",
+    "https://www.youtube.com/@madhukumar245",
+    "https://maps.google.com/?cid=CXaUijPkQhVkEBM",
+]
+
 
 # ---------------------------------------------------------------------------
 # Plain-text / machine-readable endpoints
@@ -569,12 +582,7 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                     {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
                     {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL},
                 ],
-                "sameAs": [
-                    BLOG_URL,
-                    "https://github.com/madhu2456",
-                    "https://www.linkedin.com/in/madhu-dadi-54684531",
-                    "https://x.com/madhu245",
-                ],
+                "sameAs": PERSON_SAME_AS,
             },
             "offers": {"@type": "Offer", "price": 0, "priceCurrency": "USD", "availability": "https://schema.org/InStock"},
             "provider": {
@@ -676,13 +684,7 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL},
                 {"@type": "CreativeWork", "name": "Case Study: Udemy Enroller", "url": CASE_STUDY_URL},
             ],
-            "sameAs": [
-                BLOG_URL,
-                "https://github.com/madhu2456",
-                "https://www.linkedin.com/in/madhu-dadi-54684531",
-                "https://x.com/madhu245",
-                "https://www.wikidata.org/wiki/Q139807441",
-            ],
+            "sameAs": PERSON_SAME_AS,
         },
         {
             "@type": "WebPage",
@@ -773,3 +775,13 @@ async def free_udemy_coupons_guide(request: Request):
 @router.get("/privacy", response_class=HTMLResponse)
 async def privacy_page(request: Request):
     return templates.TemplateResponse(request, "pages/privacy.html")
+
+
+@router.get("/contact", response_class=HTMLResponse)
+async def contact_page(request: Request):
+    return templates.TemplateResponse(request, "pages/contact.html")
+
+
+@router.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    return templates.TemplateResponse(request, "pages/terms.html")

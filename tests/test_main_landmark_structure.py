@@ -10,13 +10,15 @@ from main import app
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_ROUTES = ("/", "/about", "/faq", "/guides", "/privacy")
+PUBLIC_ROUTES = ("/", "/about", "/faq", "/guides", "/privacy", "/contact", "/terms")
 CHILD_TEMPLATES = (
     "app/templates/pages/login.html",
     "app/templates/pages/about.html",
     "app/templates/pages/faq.html",
     "app/templates/pages/guides.html",
     "app/templates/pages/privacy.html",
+    "app/templates/pages/contact.html",
+    "app/templates/pages/terms.html",
     "app/templates/pages/settings.html",
 )
 
