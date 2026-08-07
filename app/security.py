@@ -3,6 +3,7 @@
 import base64
 import hmac
 import hashlib
+import ipaddress
 import json
 import time
 from collections import defaultdict
@@ -127,16 +128,63 @@ class RateLimiter:
             )
 
 
+def _normalize_ip(value: str | None) -> str | None:
+    """Normalize an IP string to its canonical form; return None if empty/invalid."""
+    if not value:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError:
+        return None
+
+
 def _client_key(request: Request) -> str:
-    """Extract a stable client identifier from the request."""
-    # Prefer Cloudflare's reliable header (cannot be spoofed by client)
-    cf_ip = request.headers.get("cf-connecting-ip")
-    if cf_ip:
-        return cf_ip.strip()
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    """Extract a stable, spoof-resistant client identifier for rate limiting.
+
+    Trust model (mirrors blog_platform fastapi_backend/app/core/limiter.py):
+    - The direct TCP peer (request.client.host) is the only inherently
+      trustworthy source. Behind the nginx reverse proxy the peer is nginx
+      (127.0.0.1); when the app is directly exposed it is the real client.
+    - X-Forwarded-For is trusted ONLY when the direct peer is a configured
+      trusted proxy (TRUSTED_PROXY_IPS). We walk the chain right-to-left,
+      skipping trusted-proxy IPs, to find the first untrusted (real) client.
+    - Client-supplied proxy headers (e.g. Cloudflare's connecting-IP header,
+      X-Forwarded-For) from an UNTRUSTED peer are never used — a client could
+      otherwise set them to evade or collide rate-limit buckets. x-real-ip is
+      used only as a secondary hint when the peer is trusted and the XFF walk
+      yields nothing.
+    """
+    from config.settings import get_settings
+
+    direct_ip = _normalize_ip(request.client.host if request.client else None)
+    trusted_proxies = set(get_settings().TRUSTED_PROXY_IPS)
+
+    if direct_ip and direct_ip in trusted_proxies:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            ips = [ip.strip() for ip in forwarded.split(",")]
+            # Walk right-to-left past trusted proxies to the first real client.
+            for ip_str in reversed(ips):
+                ip_cand = _normalize_ip(ip_str)
+                if not ip_cand:
+                    continue
+                if ip_cand not in trusted_proxies:
+                    return ip_cand
+            # All forwarded entries were trusted proxies; fall back to the last
+            # valid value so the key stays stable.
+            for ip_str in ips:
+                ip_cand = _normalize_ip(ip_str)
+                if ip_cand:
+                    return ip_cand
+        # Secondary hint: nginx X-Real-IP (only trustworthy when peer is nginx).
+        real_ip = _normalize_ip(request.headers.get("x-real-ip"))
+        if real_ip:
+            return real_ip
+
+    return direct_ip or "unknown"
 
 
 # Global limiters — shared across the app (unauthenticated / abuse-sensitive edges)

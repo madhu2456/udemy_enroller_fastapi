@@ -91,6 +91,41 @@ fi
 
 echo "Starting application with uvicorn..."
 echo "------------------------------------------------"
+# ---------------------------------------------------------------------------
+# Resolve the Docker bridge gateway and export TRUSTED_PROXY_IPS with it.
+# Compose publishes "127.0.0.1:8000:8000", so the app's TCP peer is the bridge
+# gateway (e.g. 172.18.0.1), which varies per compose network (172.17/18/19.x.0.1).
+# Without trusting it, _client_key() ignores X-Forwarded-For and keys EVERY
+# request on the gateway IP -> one global bucket per limiter (an attacker
+# exhausting login_rate_limiter would lock out every user).
+# Fail-safe: if the gateway cannot be resolved, keep the loopback-only default
+# (no spoofing hole; limiting falls back to coarse peer-keyed buckets).
+# ---------------------------------------------------------------------------
+GATEWAY=""
+if command -v ip >/dev/null 2>&1; then
+    GATEWAY="$(ip route 2>/dev/null | awk '/default/{print $3; exit}')" || true
+fi
+if [ -z "$GATEWAY" ]; then
+    # python:3.11-slim ships no iproute2; parse /proc/net/route instead.
+    GATEWAY="$(python3 -c '
+import socket, struct
+with open("/proc/net/route") as f:
+    next(f, None)
+    for line in f:
+        p = line.split()
+        if len(p) >= 3 and p[1] == "00000000":
+            print(socket.inet_ntoa(struct.pack("<I", int(p[2], 16))))
+            break
+' 2>/dev/null)" || true
+fi
+if [ -n "$GATEWAY" ]; then
+    export TRUSTED_PROXY_IPS="[\"127.0.0.1\", \"::1\", \"$GATEWAY\"]"
+    echo "TRUSTED_PROXY_IPS=$TRUSTED_PROXY_IPS"
+else
+    export TRUSTED_PROXY_IPS='["127.0.0.1", "::1"]'
+    echo "WARNING: could not resolve bridge gateway; TRUSTED_PROXY_IPS fallback=[\"127.0.0.1\", \"::1\"]"
+fi
+
 # Fix volume permissions and drop privileges
 chown -R appuser:appuser /app/data /app/logs /app/Courses 2>/dev/null || true
 

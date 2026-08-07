@@ -3,7 +3,12 @@ services:
     build: .
     container_name: udemy-enroller
     ports:
-      - "8000:8000"
+      # Loopback bind: only host nginx can reach the app, so the app's TCP peer
+      # is always the Docker bridge gateway. This makes the gateway trustworthy
+      # for TRUSTED_PROXY_IPS (resolved in docker-entrypoint.sh). Do NOT publish
+      # on 0.0.0.0 unless proxy trust is re-evaluated first — an untrusted peer
+      # that can set X-Forwarded-For would spoof per-IP rate-limit buckets.
+      - "127.0.0.1:8000:8000"
     environment:
       - APP_NAME=Udemy Course Enroller
       - DEBUG=false

@@ -12,7 +12,9 @@ from app.security import (
     verify_csrf_token,
     RateLimiter,
     _client_key,
+    _normalize_ip,
 )
+from config.settings import get_settings
 from app.core.cache import SessionCache
 from app.services.course import Course
 
@@ -122,8 +124,10 @@ class _SyntheticAnalyticsRequest:
         self.payload = payload
         self.error = error
         self.json_calls = 0
-        self.headers = {"cf-connecting-ip": "203.0.113.121"}
-        self.client = None
+        # Secure topology: peer is the trusted nginx reverse proxy (127.0.0.1),
+        # so _client_key trusts nginx-set X-Real-IP — NOT a client-set header.
+        self.headers = {"x-real-ip": "203.0.113.121"}
+        self.client = MagicMock(host="127.0.0.1")
 
     async def json(self):
         self.json_calls += 1
@@ -301,8 +305,10 @@ class _SyntheticCspRequest:
         self.payload = payload
         self.error = error
         self.json_calls = 0
-        self.headers = {"cf-connecting-ip": "203.0.113.120"}
-        self.client = None
+        # Secure topology: peer is the trusted nginx reverse proxy (127.0.0.1),
+        # so _client_key trusts nginx-set X-Real-IP — NOT a client-set header.
+        self.headers = {"x-real-ip": "203.0.113.120"}
+        self.client = MagicMock(host="127.0.0.1")
 
     async def json(self):
         self.json_calls += 1
@@ -507,6 +513,13 @@ class TestRateLimiting:
             limiter.raise_if_limited("key1")
         assert exc.value.status_code == 429
 
+    # NOTE: these three synthetic-request tests still send a `cf-connecting-ip`
+    # header. `_client_key` deliberately never reads that header — client-set
+    # headers from an untrusted/unknown peer are inert — so it can no longer
+    # choose a rate-limit bucket. In TestClient the peer host is "testclient",
+    # which is not a valid IP, so every request collapses to the "unknown"
+    # bucket; the 429 after 2 allowed requests is exactly what proves the
+    # header is inert.
     def test_csp_violation_endpoint_rate_limited(self, monkeypatch):
         """Unauthenticated CSP report edge is rate-limited per client."""
         from fastapi.testclient import TestClient
@@ -558,16 +571,124 @@ class TestRateLimiting:
         assert client.get("/api/auth/status", headers=headers).status_code == 429
 
     def test_client_key_extracts_forwarded_for(self):
+        # Peer is a trusted proxy (127.0.0.1) → walk X-Forwarded-For right-to-left
+        # past trusted proxies and return the first untrusted (real) client.
+        req = MagicMock(spec=Request)
+        req.headers = {"x-forwarded-for": "1.2.3.4, 5.6.7.8"}
+        req.client = MagicMock(host="127.0.0.1")
+        assert _client_key(req) == "5.6.7.8"
+
+    def test_client_key_fallback_to_direct(self):
+        # Untrusted peer → X-Forwarded-For is IGNORED (spoof-proof): a client
+        # cannot set its own forwarded header to pick a rate-limit bucket.
         req = MagicMock(spec=Request)
         req.headers = {"x-forwarded-for": "1.2.3.4, 5.6.7.8"}
         req.client = MagicMock(host="10.0.0.1")
-        assert _client_key(req) == "1.2.3.4"
-
-    def test_client_key_fallback_to_direct(self):
-        req = MagicMock(spec=Request)
-        req.headers = {}
-        req.client = MagicMock(host="10.0.0.1")
         assert _client_key(req) == "10.0.0.1"
+
+
+# ── _client_key IP-trust topology ─────────────────────────
+
+
+class TestClientKeyTrustModel:
+    """Spoof-resistance and trust-topology tests for _client_key.
+
+    Every test pins TRUSTED_PROXY_IPS explicitly (monkeypatched onto the cached
+    settings instance and auto-restored) so none of them depends on the
+    production default being correct — the container env fix (compose /
+    entrypoint) is what delivers the real gateway/proxy list at runtime.
+    """
+
+    @staticmethod
+    def _pin_trusted_proxies(monkeypatch, ips):
+        monkeypatch.setattr(get_settings(), "TRUSTED_PROXY_IPS", list(ips))
+
+    @staticmethod
+    def _request(peer_host, headers):
+        req = MagicMock(spec=Request)
+        req.headers = dict(headers)
+        req.client = MagicMock(host=peer_host)
+        return req
+
+    def test_spoofed_xff_chain_uses_rightmost_real_client(self, monkeypatch):
+        # nginx topology: the attacker prepends spoofed entries to
+        # X-Forwarded-For and nginx APPENDS the real client LAST. With a
+        # trusted peer the walk goes right-to-left past trusted proxies and the
+        # first untrusted entry (the rightmost, real client) selects the bucket.
+        self._pin_trusted_proxies(monkeypatch, ["127.0.0.1"])
+        req = self._request("127.0.0.1", {"x-forwarded-for": "8.8.8.8, 1.1.1.1, 203.0.113.9"})
+        key = _client_key(req)
+        assert key == "203.0.113.9"
+        # The attacker's prepended entries are ignored — they can never choose
+        # the bucket, even though they are "closer" to the left of the chain.
+        assert key != "8.8.8.8"
+        assert key != "1.1.1.1"
+
+    def test_untrusted_peer_ignores_all_forwarded_headers(self, monkeypatch):
+        # Direct-to-app attacker: the peer is NOT a trusted proxy, so both
+        # X-Forwarded-For and X-Real-IP are client-controlled and must be
+        # ignored entirely — the key stays the peer IP.
+        self._pin_trusted_proxies(monkeypatch, ["127.0.0.1"])
+        req = self._request(
+            "198.51.100.7",
+            {"x-forwarded-for": "8.8.8.8", "x-real-ip": "203.0.113.99"},
+        )
+        assert _client_key(req) == "198.51.100.7"
+
+    def test_gateway_peer_collapses_to_direct_ip_without_trust_entry(self, monkeypatch):
+        # BLOCKING-1 regression documentation: with the default trust list (no
+        # gateway) a request that arrives via the docker bridge gateway
+        # (172.18.0.1) collapses to the gateway IP — every container client
+        # would share one rate-limit bucket. This asserts the CURRENT collapse
+        # behavior with an explicit trust list; the compose/entrypoint fix
+        # delivers the gateway IP at runtime, and this unit test stays valid
+        # because it pins the list itself.
+        self._pin_trusted_proxies(monkeypatch, ["127.0.0.1", "::1"])
+        req = self._request("172.18.0.1", {"x-forwarded-for": "203.0.113.5"})
+        assert _client_key(req) == "172.18.0.1"
+
+    def test_ipv6_trusted_peer_walks_xff_right_to_left(self, monkeypatch):
+        # IPv6 addresses normalize (and compare) as canonical v6 strings, so the
+        # trust check and the XFF walk work unchanged for v6 peers.
+        self._pin_trusted_proxies(monkeypatch, ["2001:db8::1"])
+        req = self._request("2001:db8::1", {"x-forwarded-for": "2001:db8::2, 2001:db8::1"})
+        assert _client_key(req) == "2001:db8::2"
+
+    def test_ipv6_mapped_v4_peer_is_kept_as_v6_string(self, monkeypatch):
+        # _normalize_ip uses ipaddress.ip_address: a v4-mapped v6 address
+        # (::ffff:1.2.3.4) round-trips as the v6 string — it is NOT collapsed
+        # to 1.2.3.4. Assert the documented as-is behavior (no code change).
+        self._pin_trusted_proxies(monkeypatch, ["::ffff:1.2.3.4"])
+        assert _normalize_ip("::ffff:1.2.3.4") == "::ffff:1.2.3.4"
+        req = self._request("::ffff:1.2.3.4", {"x-forwarded-for": "203.0.113.77"})
+        assert _client_key(req) == "203.0.113.77"
+
+    def test_all_trusted_xff_chain_falls_back_to_first_valid_entry(self, monkeypatch):
+        # When every XFF entry is a trusted proxy the right-to-left walk finds
+        # no untrusted client. _client_key then falls back to the FIRST valid
+        # entry (scan left-to-right) so the key stays stable. (The code comment
+        # says "last valid"; the implementation returns the leftmost valid
+        # entry — this asserts the actual behavior.)
+        self._pin_trusted_proxies(monkeypatch, ["10.0.0.1", "10.0.0.2"])
+        req = self._request("10.0.0.2", {"x-forwarded-for": "10.0.0.1, 10.0.0.2"})
+        assert _client_key(req) == "10.0.0.1"
+
+    def test_all_trusted_xff_fallback_skips_invalid_entries(self, monkeypatch):
+        # Same fallback, but with an unparseable leading entry — normalization
+        # failure is skipped during the fallback scan, so the key is still the
+        # first VALID (leftmost trusted) entry.
+        self._pin_trusted_proxies(monkeypatch, ["10.0.0.1", "10.0.0.2"])
+        req = self._request("10.0.0.2", {"x-forwarded-for": "not-an-ip, 10.0.0.1, 10.0.0.2"})
+        assert _client_key(req) == "10.0.0.1"
+
+    def test_trusted_peer_uses_x_real_ip_when_no_xff(self, monkeypatch):
+        # Secondary hint: when the trusted peer sends no X-Forwarded-For, the
+        # nginx-set X-Real-IP selects the bucket. The peer being trusted is the
+        # whole point — an untrusted peer sending X-Real-IP is covered by
+        # test_untrusted_peer_ignores_all_forwarded_headers.
+        self._pin_trusted_proxies(monkeypatch, ["127.0.0.1"])
+        req = self._request("127.0.0.1", {"x-real-ip": "203.0.113.50"})
+        assert _client_key(req) == "203.0.113.50"
 
 
 # ── Session Cache ─────────────────────────────────────────

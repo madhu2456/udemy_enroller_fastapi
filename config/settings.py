@@ -60,6 +60,19 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
+    # Trusted reverse-proxy / loopback peer IPs. _client_key() (app/security.py)
+    # trusts X-Forwarded-For ONLY when the direct TCP peer is in this list, then
+    # walks the chain right-to-left past these proxies to the real client.
+    # Docker topology: compose publishes "127.0.0.1:8000:8000", so the app's TCP
+    # peer is the bridge gateway (e.g. 172.18.0.1), NOT 127.0.0.1.
+    # docker-entrypoint.sh resolves that gateway at startup and exports
+    # TRUSTED_PROXY_IPS with it included. Never trust a proxy IP without the
+    # loopback bind (an untrusted peer spoofs per-IP rate-limit buckets), and
+    # never widen this list manually unless the deployment truly routes through
+    # that peer. Env var:
+    # TRUSTED_PROXY_IPS='["127.0.0.1","::1"]' (JSON list, pydantic-settings v2).
+    TRUSTED_PROXY_IPS: list[str] = ["127.0.0.1", "::1"]
+
     # Database
     DATABASE_URL: str = "sqlite:///./udemy_enroller.db"
     AUTO_CREATE_TABLES: bool = False  # Use Alembic migrations by default
