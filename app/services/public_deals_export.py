@@ -237,8 +237,14 @@ def list_valid_deals(
     ]
     # Ensure slugs (load_public_deals already assigns)
     deals = [c for c in deals if c.get("slug")]
+    # Stable ordering: discovery time (enrolled_at) is set once and never touched
+    # by the checker, so page boundaries stay stable across refresh cycles.
+    # Fall back to last_checked_at for legacy rows; id breaks ties deterministically.
     deals.sort(
-        key=lambda c: c.get("last_checked_at") or c.get("enrolled_at") or "",
+        key=lambda c: (
+            c.get("enrolled_at") or c.get("last_checked_at") or "",
+            c.get("id", 0),
+        ),
         reverse=True,
     )
     if limit is not None:
