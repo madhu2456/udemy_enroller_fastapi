@@ -12,7 +12,6 @@ from app.services.public_deals_export import (
     get_valid_deal_by_slug,
     list_category_summaries,
     list_valid_deals,
-    load_public_deals,
     public_deals_freshness,
     related_deals,
 )
@@ -25,19 +24,33 @@ PUBLIC_COUPON_PAGE_SIZE = 12
 
 
 @router.get("", response_class=HTMLResponse)
-def public_deals_page(request: Request):
-    """Render the public deals dashboard page."""
+def public_deals_page(request: Request, page: int = Query(1, ge=1)):
+    """Render the public deals dashboard page (crawlable pagination)."""
     initial_courses = []
     initial_total = 0
     initial_pages = 1
+    current_page = 1
+    total_pages = 1
+    canonical_url = "/udemycoupons"
     freshness = {"valid_count": 0, "last_updated": None, "last_checked": None}
     categories = []
     try:
         valid_courses = list_valid_deals()
         initial_total = len(valid_courses)
-        initial_courses = valid_courses[:PUBLIC_COUPON_PAGE_SIZE]
-        initial_pages = max(
+        total_pages = max(
             1, (initial_total + PUBLIC_COUPON_PAGE_SIZE - 1) // PUBLIC_COUPON_PAGE_SIZE
+        )
+        # Clamp instead of 404: coupons expire between crawls, so Googlebot may
+        # request a page number that no longer has enough items — render the
+        # last valid page (or page 1 when the list is empty).
+        current_page = min(page, total_pages)
+        start = (current_page - 1) * PUBLIC_COUPON_PAGE_SIZE
+        initial_courses = valid_courses[start : start + PUBLIC_COUPON_PAGE_SIZE]
+        initial_pages = total_pages
+        canonical_url = (
+            "/udemycoupons"
+            if current_page == 1
+            else f"/udemycoupons?page={current_page}"
         )
         freshness = public_deals_freshness()
         categories = list_category_summaries()
@@ -52,6 +65,9 @@ def public_deals_page(request: Request):
             "initial_total": initial_total,
             "initial_pages": initial_pages,
             "page_size": PUBLIC_COUPON_PAGE_SIZE,
+            "current_page": current_page,
+            "total_pages": total_pages,
+            "canonical_url": canonical_url,
             "freshness": freshness,
             "categories": categories,
         },
@@ -158,7 +174,8 @@ def get_public_coupons(
     # The public endpoint must only serve the explicitly published export. The
     # canonical loader returns an empty list when the export is unavailable or
     # malformed, preventing a fallback across the private database boundary.
-    all_courses = load_public_deals()
+    # Same sorted catalog as the SSR page so API pages match server-rendered pages.
+    all_courses = list_valid_deals()
     categories = sorted(
         {c.get("category") for c in all_courses if c.get("category")}
     )

@@ -3,7 +3,7 @@ meta_description %}Browse free Udemy course coupon links collected by Udemy Enro
 %}article{% endblock %} {% block
 og_title %}Free Udemy Coupons — 100% Off Listings | Udemy Enroller{% endblock %} {% block
 og_description %}Public listing of free Udemy course coupons. Validity can change. Manual claim or start an enrollment run. Not affiliated with Udemy.{% endblock %} {% block twitter_title %}Free Udemy Coupons — 100% Off Listings | Udemy Enroller{% endblock %} {% block twitter_description
-%}Public free Udemy coupon listings. Validity can change. Not affiliated with Udemy. Enrollment not guaranteed.{% endblock %} {% block extra_head %}
+%}Public free Udemy coupon listings. Validity can change. Not affiliated with Udemy. Enrollment not guaranteed.{% endblock %} {% block canonical %}<link rel="canonical" href="https://udemyenroller.madhudadi.in{{ canonical_url | default(request.url.path) }}" />{% endblock %} {% block extra_head %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -63,6 +63,12 @@ og_description %}Public listing of free Udemy course coupons. Validity can chang
         ]
     }
 </script>
+{% if current_page is defined and current_page > 1 %}
+<link rel="prev" href="https://udemyenroller.madhudadi.in/udemycoupons{% if current_page > 2 %}?page={{ current_page - 1 }}{% endif %}" />
+{% endif %}
+{% if current_page is defined and total_pages is defined and current_page < total_pages %}
+<link rel="next" href="https://udemyenroller.madhudadi.in/udemycoupons?page={{ current_page + 1 }}" />
+{% endif %}
 {% endblock %} {% block content %}
 <div class="py-10 text-gray-900">
     <div class="max-w-6xl mx-auto px-6">
@@ -333,6 +339,40 @@ og_description %}Public listing of free Udemy course coupons. Validity can chang
             </button>
         </div>
 
+        <!-- Server-rendered pagination: crawlable no-JS path (JS hides it at
+             startup; the buttons above remain the interactive path). -->
+        {% if total_pages is defined and total_pages > 1 %}
+        <nav
+            id="serverPager"
+            class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-10"
+            aria-label="Pagination"
+        >
+            {% if current_page is defined and current_page > 1 %}
+            <a
+                href="/udemycoupons{% if current_page > 2 %}?page={{ current_page - 1 }}{% endif %}"
+                rel="prev"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+            >
+                <i data-lucide="chevron-left" class="w-4 h-4"></i> Previous
+            </a>
+            {% else %}
+            <span class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-400">Previous</span>
+            {% endif %}
+            <span class="text-sm font-medium text-gray-500">Page {{ current_page | default(1) }} of {{ total_pages }}</span>
+            {% if current_page is defined and current_page < total_pages %}
+            <a
+                href="/udemycoupons?page={{ current_page + 1 }}"
+                rel="next"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+            >
+                Next <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </a>
+            {% else %}
+            <span class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-400">Next</span>
+            {% endif %}
+        </nav>
+        {% endif %}
+
         <!-- SEO / GEO FAQ Section -->
         <div
             class="mt-16 bg-white p-8 rounded-xl border border-gray-200 shadow-sm"
@@ -380,7 +420,7 @@ og_description %}Public listing of free Udemy course coupons. Validity can chang
 
         const PAGE_SIZE = {{ page_size | default(12) }};
         const state = {
-            page: 1,
+            page: {{ current_page | default(1) }},
             search: '',
             category: '',
             status: 'enrolled',
@@ -401,6 +441,12 @@ og_description %}Public listing of free Udemy course coupons. Validity can chang
             pageIndicator: document.getElementById('pageIndicator'),
             clearFiltersBtn: document.getElementById('clearFiltersBtn')
         };
+
+        // The server-rendered anchor pager is the no-JS/crawler path; the JS
+        // buttons take over when scripting is available. Anchors stay in the
+        // DOM (crawlable) but are visually replaced by the buttons.
+        const serverPager = document.getElementById('serverPager');
+        if (serverPager) serverPager.classList.add('hidden');
 
         // Honor SearchAction deep links: /udemycoupons?q={search_term_string}
         const urlSearchQuery = new URLSearchParams(window.location.search).get('q');

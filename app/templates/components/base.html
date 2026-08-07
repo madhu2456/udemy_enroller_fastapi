@@ -45,10 +45,10 @@
         />
         <meta name="theme-color" content="#ffffff" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link
+        {% block canonical %}<link
             rel="canonical"
             href="https://udemyenroller.madhudadi.in{{ request.url.path }}"
-        />
+        />{% endblock %}
         <link rel="author" href="https://madhudadi.in" />
         <link rel="publisher" href="https://madhudadi.in" />
 
