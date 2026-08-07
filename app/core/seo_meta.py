@@ -1,5 +1,11 @@
 """SERP-safe title and meta description helpers."""
 
+import re
+
+# Standalone brand word inside scraped titles/categories: stripped so the final
+# SERP/RSS title carries "Udemy" exactly once (in the "| Udemy Enroller" suffix).
+_UDEMY_WORD_RE = re.compile(r"\bUdemy\b", re.IGNORECASE)
+
 
 def truncate_at_word(text: str, max_len: int) -> str:
     text = (text or "").strip()
@@ -18,11 +24,16 @@ def truncate_at_word(text: str, max_len: int) -> str:
     return f"{cut}…"
 
 
+def _strip_udemy_word(text: str) -> str:
+    """Remove standalone 'Udemy' occurrences and collapse whitespace."""
+    return " ".join(_UDEMY_WORD_RE.sub("", text or "").split())
+
+
 def coupon_serp_title(course_title: str, max_len: int = 60) -> str:
-    """e.g. '{Course} — Free coupon | Udemy Enroller' ≤ max_len."""
+    """e.g. '{Course} — Free coupon | Udemy Enroller' ≤ max_len, 'Udemy' ≤1×."""
     brand = " | Udemy Enroller"
     mid = " — Free coupon"
-    title = (course_title or "Udemy course").strip() or "Udemy course"
+    title = _strip_udemy_word(course_title) or "Free course"
     full = f"{title}{mid}{brand}"
     if len(full) <= max_len:
         return full
@@ -33,6 +44,15 @@ def coupon_serp_title(course_title: str, max_len: int = 60) -> str:
     # Fallback: title | brand only
     budget = max_len - len(brand)
     return f"{truncate_at_word(title, max(budget, 8))}{brand}"
+
+
+def sanitize_category_name(name: str, max_len: int = 40) -> str:
+    """Display-safe category name for category hubs: no standalone 'Udemy'
+    (the title/H1 brand is rendered elsewhere) and ≤ max_len at a word boundary."""
+    clean = _strip_udemy_word(name)
+    if len(clean) <= max_len:
+        return clean
+    return truncate_at_word(clean, max_len)
 
 
 def coupon_serp_description(

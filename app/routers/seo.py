@@ -206,7 +206,7 @@ async def coupons_rss_feed():
     channel = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Free Udemy Coupons — Udemy Enroller</title>
+    <title>Free Udemy Coupons — Enroller</title>
     <link>{SITE_URL}/udemycoupons</link>
     <description>Latest free (100% off) Udemy coupon listings from Udemy Enroller by Madhu Dadi. Validity can change. Not affiliated with Udemy.</description>
     <language>en-in</language>

@@ -1,5 +1,7 @@
 """SERP title/description length caps for coupon detail pages (Fix 16)."""
 
+import re
+
 from app.core.seo_meta import (
     coupon_serp_description,
     coupon_serp_title,
@@ -44,12 +46,14 @@ class TestCouponSerpTitle:
     def test_empty_title_fallback(self):
         title = coupon_serp_title("")
         assert len(title) <= 60
-        assert "Udemy course" in title
+        assert "Free course" in title
+        assert len(re.findall(r"\bUdemy\b", title)) == 1
         assert title.endswith("| Udemy Enroller")
 
     def test_whitespace_title_fallback(self):
         title = coupon_serp_title("   ")
-        assert "Udemy course" in title
+        assert "Free course" in title
+        assert len(re.findall(r"\bUdemy\b", title)) == 1
         assert len(title) <= 60
 
 

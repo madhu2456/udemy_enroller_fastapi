@@ -4,7 +4,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.coupon_content import build_coupon_answer_block
-from app.core.seo_meta import coupon_serp_description, coupon_serp_title
+from app.core.seo_meta import (
+    coupon_serp_description,
+    coupon_serp_title,
+    sanitize_category_name,
+)
 from app.security import _client_key, public_coupons_api_limiter
 from app.services.public_deals_export import (
     category_slug as category_slug_fn,
@@ -80,12 +84,16 @@ def coupon_category_page(request: Request, category_slug: str):
     name, deals = get_deals_for_category_slug(category_slug)
     if not name:
         raise HTTPException(status_code=404, detail="Category not found")
+    # Display-name guard: scraped categories must not reintroduce the brand
+    # word into the title/H1 (the "| Enroller" suffix carries it once) and
+    # long names are truncated so titles stay ≤60 chars.
+    display_name = sanitize_category_name(name)
     freshness = public_deals_freshness()
     return templates.TemplateResponse(
         request,
         "pages/coupon_category.html",
         {
-            "category_name": name,
+            "category_name": display_name,
             "category_slug": category_slug,
             "deals": deals,
             "deal_count": len(deals),
