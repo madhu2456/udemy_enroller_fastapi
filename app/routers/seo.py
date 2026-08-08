@@ -70,6 +70,7 @@ async def robots_txt():
 User-agent: *
 Allow: /
 Disallow: /history
+Disallow: /login
 Disallow: /settings
 Disallow: /api/
 Disallow: /dashboard
@@ -84,6 +85,7 @@ User-agent: Baiduspider
 User-agent: YandexBot
 Allow: /
 Disallow: /history
+Disallow: /login
 Disallow: /settings
 Disallow: /api/
 Disallow: /dashboard
@@ -105,6 +107,7 @@ User-agent: Google-Cloud-Services-Crawler
 User-agent: Google-Cloud-Services-Crawler-Sandbox
 Allow: /
 Disallow: /history
+Disallow: /login
 Disallow: /settings
 Disallow: /api/
 Disallow: /dashboard
