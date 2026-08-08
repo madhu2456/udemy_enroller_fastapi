@@ -6,7 +6,7 @@
     "build:css:app": "tailwindcss -c tailwind.config.js -i ./app/static/css/tailwind.input.css -o ./app/static/css/tailwind.min.css --minify",
     "build:css:home": "tailwindcss -c tailwind.home.config.js -i ./app/static/css/tailwind.input.css -o ./app/templates/components/tailwind-home.min.css --minify",
     "build:css": "npm run build:css:app && npm run build:css:home",
-    "build:vendor": "cp node_modules/lucide/dist/umd/lucide.min.js app/static/js/lucide.min.js",
+    "build:vendor": "node scripts/build-lucide-subset.js",
     "build": "npm run build:vendor && npm run build:css",
     "audit:performance": "node tests/performance-audit.js",
     "audit:performance:baseline": "node tests/performance-audit.js --write-baseline",
@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
-    "lucide": "^0.469.0",
+    "lucide": "0.469.0",
     "playwright": "^1.61.1",
     "tailwindcss": "^3.4.17"
   }

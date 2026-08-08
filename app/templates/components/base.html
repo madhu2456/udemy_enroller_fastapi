@@ -218,8 +218,8 @@
         </script>
         {% endif %}
 
-        <!-- Lucide Icons CDN -->
-        <script defer src="/static/js/lucide.min.js" nonce="{{ request.state.nonce }}"></script>
+        <!-- Lucide Icons (subset bundle, ~9KB vs 358KB full library) -->
+        <script defer src="/static/js/lucide-icons.min.js?v={{ lucide_version }}" nonce="{{ request.state.nonce }}"></script>
         <link rel="stylesheet" href="/static/css/site.css" />
 
         {% block extra_head %}{% endblock %}

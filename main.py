@@ -465,6 +465,14 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Template renderer for error pages
 templates = Jinja2Templates(directory="app/templates")
 
+# Content-hash cache buster for the lucide subset bundle. Every Jinja2Templates
+# instance in the app renders pages extending components/base.html, so the
+# global must be registered on all of them (base.html uses ?v={{ lucide_version }}).
+from app.core.assets import lucide_cache_buster
+
+for _templates in (templates, dashboard.templates, public_deals.templates, seo.templates):
+    _templates.env.globals["lucide_version"] = lucide_cache_buster()
+
 # Include routers
 app.include_router(seo.router)
 app.include_router(dashboard.router)
