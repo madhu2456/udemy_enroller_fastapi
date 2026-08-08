@@ -724,7 +724,7 @@
         </script>
         <!-- Cookie consent banner -->
         {% if request.app.state.gtm_container_id or request.app.state.ga4_measurement_id %}
-        <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 hidden" role="alert" aria-label="Cookie consent">
+        <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 hidden" role="dialog" aria-modal="false" aria-label="Cookie consent">
             <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0 w-full">
                 <p class="text-sm text-gray-600 min-w-0 flex-1">
                     This site uses analytics cookies to improve your experience.
