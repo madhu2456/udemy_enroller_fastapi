@@ -117,11 +117,17 @@ def coupon_detail_page(request: Request, slug: str):
             status_code=404, detail="Coupon listing not found or no longer valid"
         )
 
-    # Permanent redirect numeric /c/123 → /c/readable-name for SEO
+    # Permanent redirect numeric /c/123 → /c/readable-name for SEO; keep query
+    # params so /c/123?page=2&utm_source=x still lands on the same params, and
+    # no-cache so a cached 301 never freezes a stale slug mapping.
     if slug.isdigit() and course.get("slug") and course["slug"] != slug:
+        url = f"/udemycoupons/c/{course['slug']}"
+        if request.query_params:
+            url = f"{url}?{request.query_params}"
         return RedirectResponse(
-            url=f"/udemycoupons/c/{course['slug']}",
+            url=url,
             status_code=301,
+            headers={"Cache-Control": "no-cache"},
         )
 
     # Normalize empty/whitespace coupon codes so templates never render "None"
@@ -164,8 +170,17 @@ def coupon_detail_page(request: Request, slug: str):
 
 
 @router.get("/", include_in_schema=False)
-async def public_deals_page_redirect():
-    return RedirectResponse(url="/udemycoupons", status_code=307)
+async def public_deals_page_redirect(request: Request):
+    # Permanent (SEO) redirect for the trailing-slash URL; keep query params
+    # so /udemycoupons/?page=2 still lands on page 2, not page 1. no-cache:
+    # 301s are heuristically cacheable, and a cached redirect keyed without
+    # the query string would freeze pagination for every /?page=N.
+    url = "/udemycoupons"
+    if request.query_params:
+        url = f"{url}?{request.query_params}"
+    return RedirectResponse(
+        url=url, status_code=301, headers={"Cache-Control": "no-cache"}
+    )
 
 @router.get("/api/coupons")
 def get_public_coupons(
