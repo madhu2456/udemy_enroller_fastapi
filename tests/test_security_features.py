@@ -45,12 +45,12 @@ class TestCookieEncryption:
         assert decrypt_cookies(None) is None
 
     def test_decrypt_legacy_plaintext_dict(self):
-        """Backward compatibility: plaintext dicts should still work."""
+        """Backward compatibility: plaintext dicts should still work in local mode."""
         legacy = {"access_token": "old", "client_id": "legacy"}
         assert decrypt_cookies(legacy) == legacy
 
     def test_decrypt_legacy_json_string(self):
-        """Backward compatibility: JSON string stored in DB."""
+        """Backward compatibility: JSON string stored in DB (local mode)."""
         import json
         legacy = {"access_token": "token"}
         assert decrypt_cookies(json.dumps(legacy)) == legacy
@@ -65,6 +65,88 @@ class TestCookieEncryption:
         # Fernet with same key produces different ciphertexts (random IV)
         assert e1 != e2
         assert decrypt_cookies(e1) == decrypt_cookies(e2)
+
+    def test_server_mode_rejects_plaintext_dict(self, monkeypatch):
+        """F019: DEPLOYMENT_ENV=server must not accept plaintext cookie dicts."""
+        from types import SimpleNamespace
+
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        monkeypatch.delenv("ALLOW_PLAINTEXT_COOKIES", raising=False)
+        monkeypatch.setattr(
+            "config.settings.get_settings",
+            lambda: SimpleNamespace(
+                DEPLOYMENT_ENV="server",
+                COOKIE_ENCRYPTION_KEY=key,
+                SECRET_KEY="a" * 64,
+            ),
+        )
+        security_mod._fernet = None
+        assert decrypt_cookies({"access_token": "x", "client_id": "y"}) is None
+
+    def test_server_mode_rejects_plaintext_json_string(self, monkeypatch):
+        """F019: server mode rejects legacy JSON cookie blobs."""
+        import json
+        from types import SimpleNamespace
+
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        monkeypatch.delenv("ALLOW_PLAINTEXT_COOKIES", raising=False)
+        monkeypatch.setattr(
+            "config.settings.get_settings",
+            lambda: SimpleNamespace(
+                DEPLOYMENT_ENV="server",
+                COOKIE_ENCRYPTION_KEY=key,
+                SECRET_KEY="a" * 64,
+            ),
+        )
+        security_mod._fernet = None
+        assert decrypt_cookies(json.dumps({"access_token": "t"})) is None
+
+    def test_server_mode_accepts_fernet_ciphertext(self, monkeypatch):
+        """F019: Fernet round-trip still works in server mode."""
+        from types import SimpleNamespace
+
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        monkeypatch.delenv("ALLOW_PLAINTEXT_COOKIES", raising=False)
+        monkeypatch.setattr(
+            "config.settings.get_settings",
+            lambda: SimpleNamespace(
+                DEPLOYMENT_ENV="server",
+                COOKIE_ENCRYPTION_KEY=key,
+                SECRET_KEY="a" * 64,
+            ),
+        )
+        security_mod._fernet = None
+        cookies = {"access_token": "abc", "client_id": "def"}
+        encrypted = encrypt_cookies(cookies)
+        assert isinstance(encrypted, str)
+        assert not encrypted.strip().startswith("{")
+        assert decrypt_cookies(encrypted) == cookies
+
+    def test_server_mode_plaintext_override_flag(self, monkeypatch):
+        """Emergency ALLOW_PLAINTEXT_COOKIES=1 re-enables legacy path (not recommended)."""
+        from types import SimpleNamespace
+
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        monkeypatch.setenv("ALLOW_PLAINTEXT_COOKIES", "1")
+        monkeypatch.setattr(
+            "config.settings.get_settings",
+            lambda: SimpleNamespace(
+                DEPLOYMENT_ENV="server",
+                COOKIE_ENCRYPTION_KEY=key,
+                SECRET_KEY="a" * 64,
+            ),
+        )
+        security_mod._fernet = None
+        legacy = {"access_token": "allowed-by-flag"}
+        assert decrypt_cookies(legacy) == legacy
 
 
 # ── CSRF Protection ───────────────────────────────────────

@@ -58,5 +58,13 @@ htmlcov/
 .coverage
 test_err.log
 
-# Ops runbooks (local-only; survive git clean -fd without -x)
-docs/ops/
+# Ops runbooks (local-only; survive git clean -fd without -x).
+# Ignore contents of docs/ops/ but NOT the directory itself so the
+# un-ignore of the shared runbook works (git cannot re-include a file
+# under a fully-ignored parent directory).
+docs/ops/*
+!docs/ops/
+!docs/ops/backup-restore.md
+
+# Local SQLite backup output (F065)
+backups/

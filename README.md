@@ -84,6 +84,8 @@ This application is built on a modern, fully asynchronous Python stack:
 
 The frontend is intentionally lightweight to ensure sub-second load times. Server-Sent Events (SSE) power the live log stream and enrollment progress updates.
 
+**PWA / service worker:** A Web App Manifest is served at `/manifest.webmanifest` (install metadata and icons only). **No service worker is shipped** — offline caching and background sync are intentionally out of scope to keep the surface area small and avoid stale-asset risk on a frequently updated coupon UI.
+
 ---
 
 ## Quick Start
@@ -300,24 +302,36 @@ For a pure validation cycle (skips the ~45-min scrape), set `CHECKER_SCRAPE_ON_C
 
 ## Backup & Recovery
 
-Your enrollment history and settings are stored in a local SQLite database (`udemy_enroller.db` locally, or under the Docker data volume, e.g. `/app/data/udemy_enroller.db`). To back up your data:
+Your enrollment history and settings are stored in a local SQLite database (`data/udemy_enroller.db` or `./udemy_enroller.db` locally; Docker volume path `/app/data/udemy_enroller.db`). Prefer the **automated** script (WAL-safe `sqlite3 .backup`, integrity check, retention) over a raw `cp`.
 
-### Manual Backup
+Full ops runbook: **[docs/ops/backup-restore.md](docs/ops/backup-restore.md)**.
+
+### Automated backup
 ```bash
-# Stop the application first, then copy the database
+# Detects DB path from DB_PATH / DATABASE_URL / .env / common defaults
+./scripts/backup_sqlite.sh              # writes backups/udemy_enroller-<UTC>.db
+./scripts/backup_sqlite.sh drill        # non-destructive backup + restore round-trip
+```
+
+Typical cron (daily):
+```cron
+15 3 * * * cd /path/to/udemy_enroller && ./scripts/backup_sqlite.sh backup
+```
+
+### Restore (scripted)
+```bash
+# Stop writers first (local process or: docker compose stop web coupon-checker)
+CONFIRM=YES ./scripts/backup_sqlite.sh restore backups/udemy_enroller-YYYYMMDDTHHMMSSZ.db
+# Then restart the app / docker compose up -d
+```
+
+### Manual fallback
+```bash
+# Local (stop the app first when possible)
 cp udemy_enroller.db udemy_enroller.db.backup
-```
 
-### Docker Backup
-```bash
-# Copy the database from the running container
+# Docker host snapshot
 docker compose cp web:/app/data/udemy_enroller.db ./udemy_enroller.db.backup
-```
-
-### Restore
-```bash
-# Stop the application, replace the database, restart
-cp udemy_enroller.db.backup udemy_enroller.db
 ```
 
 ---

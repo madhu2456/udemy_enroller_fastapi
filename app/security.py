@@ -76,19 +76,53 @@ def encrypt_cookies(cookie_dict: dict) -> str:
     return f.encrypt(json.dumps(cookie_dict).encode("utf-8")).decode("utf-8")
 
 
+def _allow_plaintext_cookies() -> bool:
+    """Whether legacy plaintext cookie blobs may be accepted on decrypt.
+
+    Server/production deployments reject plaintext by default (F019). Local/dev
+    keeps backward compatibility. Emergency override: ALLOW_PLAINTEXT_COOKIES=1
+    (not recommended on shared hosts).
+    """
+    import os
+
+    flag = (os.environ.get("ALLOW_PLAINTEXT_COOKIES") or "").strip().lower()
+    if flag in ("1", "true", "yes", "on"):
+        return True
+    if flag in ("0", "false", "no", "off"):
+        return False
+
+    from config.settings import get_settings
+
+    env = (get_settings().DEPLOYMENT_ENV or "").strip().lower()
+    return env not in ("server", "production")
+
+
 def decrypt_cookies(encrypted: Any) -> Optional[dict]:
     """Decrypt a cookie string back to a dict. Returns None on failure.
-    Also handles legacy plaintext dicts for backward compatibility.
+
+    Local/dev also accepts legacy plaintext dicts or JSON strings for backward
+    compatibility. In DEPLOYMENT_ENV=server|production, non-Fernet plaintext
+    paths are rejected (return None) unless ALLOW_PLAINTEXT_COOKIES is set.
     """
     if not encrypted:
         return None
     # Backward compatibility: already a dict (legacy plaintext)
     if isinstance(encrypted, dict):
+        if not _allow_plaintext_cookies():
+            logger.warning(
+                "Rejected plaintext cookie dict — server mode requires Fernet ciphertext"
+            )
+            return None
         return encrypted
     if not isinstance(encrypted, str):
         return None
     # If it looks like JSON, it might be a legacy plaintext string stored in JSON col
     if encrypted.strip().startswith(("{", "[")):
+        if not _allow_plaintext_cookies():
+            logger.warning(
+                "Rejected plaintext cookie JSON — server mode requires Fernet ciphertext"
+            )
+            return None
         try:
             return json.loads(encrypted)
         except (json.JSONDecodeError, ValueError):

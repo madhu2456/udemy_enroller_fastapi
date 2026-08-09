@@ -98,24 +98,39 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("AUTO_CREATE_TABLES is disabled; expecting Alembic-managed schema.")
 
-    # Clean up stale runs — gracefully handle fresh database (table may not exist yet)
+    # Reclaim orphaned active enrollment runs (F020): mark DB rows failed and
+    # clear any in-memory task registry left from a previous lifespan cycle.
     try:
         from sqlalchemy import inspect, update
 
         from app.models.database import EnrollmentRun, SessionLocal
+        from app.services.enrollment_manager import EnrollmentManager
+
+        orphaned_tasks = len(EnrollmentManager.active_tasks)
+        if orphaned_tasks:
+            EnrollmentManager.active_tasks.clear()
+            logger.info(
+                f"Cleared {orphaned_tasks} in-memory enrollment task(s) on boot reclaim."
+            )
 
         with SessionLocal() as db:
             inspector = inspect(db.bind)
             if not inspector.has_table(EnrollmentRun.__tablename__):
                 logger.info("No enrollment_runs table found — skipping stale run cleanup (fresh database).")
             else:
-                db.execute(
+                result = db.execute(
                     update(EnrollmentRun)
                     .where(EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]))
                     .values(status="failed", error_message="Server restarted")
                 )
                 db.commit()
-                logger.info("Cleaned up stale enrollment runs.")
+                reclaimed = getattr(result, "rowcount", None)
+                if reclaimed is not None and reclaimed >= 0:
+                    logger.info(
+                        f"Cleaned up stale enrollment runs (reclaimed={reclaimed})."
+                    )
+                else:
+                    logger.info("Cleaned up stale enrollment runs.")
     except Exception as exc:
         logger.warning(f"Skipped stale run cleanup ({type(exc).__name__})")
 
@@ -600,5 +615,13 @@ async def csp_violation(request: Request):
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
-    """Return an HTML 404 page instead of FastAPI's default JSON response."""
-    return templates.TemplateResponse(request, "pages/404.html", status_code=404)
+    """Return an HTML 404 page instead of FastAPI's default JSON response.
+
+    Meta robots noindex is set in pages/404.html; also emit X-Robots-Tag so
+    crawlers that prefer headers still skip soft-404 indexing (F046).
+    """
+    response = templates.TemplateResponse(
+        request, "pages/404.html", status_code=404
+    )
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response

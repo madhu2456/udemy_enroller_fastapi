@@ -239,12 +239,14 @@ def _configure_shutdown_test(monkeypatch, cache_type):
     cache_type.last_instance = None
 
 
-async def _run_lifespan_once():
+async def _run_lifespan_once(*, during_yield=None):
+    """Run one full lifespan cycle. Optional during_yield() runs after startup reclaim."""
     test_app = FastAPI()
     was_set = shutdown_event.is_set()
     try:
         async with app_main.lifespan(test_app):
-            pass
+            if during_yield is not None:
+                during_yield()
     finally:
         if was_set:
             shutdown_event.set()
@@ -270,15 +272,28 @@ async def _cancel_lifespan_during_enrollment_wait(monkeypatch, cache_type):
 
     from app.services.enrollment_manager import EnrollmentManager
 
-    monkeypatch.setattr(EnrollmentManager, "active_tasks", {1: enrollment_task})
-    lifespan_runner = asyncio.create_task(_run_lifespan_once())
+    # F020 clears active_tasks on boot reclaim — register during yield so the
+    # task is present when shutdown cancellation runs (same timing as before).
+    async def _lifespan_register_then_exit():
+        test_app = FastAPI()
+        was_set = shutdown_event.is_set()
+        try:
+            async with app_main.lifespan(test_app):
+                EnrollmentManager.active_tasks[1] = enrollment_task
+        finally:
+            if was_set:
+                shutdown_event.set()
+            else:
+                shutdown_event.clear()
+
+    lifespan_runner = asyncio.create_task(_lifespan_register_then_exit())
 
     try:
-        await asyncio.wait_for(first_cancel_seen.wait(), timeout=1)
+        await asyncio.wait_for(first_cancel_seen.wait(), timeout=2)
         lifespan_runner.cancel()
 
         with pytest.raises(asyncio.CancelledError):
-            await asyncio.wait_for(lifespan_runner, timeout=1)
+            await asyncio.wait_for(lifespan_runner, timeout=2)
     finally:
         if not lifespan_runner.done():
             lifespan_runner.cancel()
@@ -334,6 +349,88 @@ async def test_lifespan_clears_shutdown_event_on_every_startup(monkeypatch):
             shutdown_event.set()
         else:
             shutdown_event.clear()
+
+
+class _ReclaimDatabaseSession:
+    """In-memory stand-in that records the stale-run UPDATE and supports inspect."""
+
+    last_instance = None
+
+    def __init__(self):
+        self.executed = []
+        self.committed = False
+        self.bind = object()
+        type(self).last_instance = self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def execute(self, statement):
+        self.executed.append(statement)
+        return SimpleNamespace(rowcount=2)
+
+    def commit(self):
+        self.committed = True
+
+
+@pytest.mark.asyncio
+async def test_lifespan_reclaims_orphaned_active_tasks_and_stale_runs(monkeypatch):
+    """F020: boot clears in-memory tasks and marks active DB runs failed."""
+    settings = SimpleNamespace(
+        AUTO_CREATE_TABLES=False,
+        LOG_FORMAT="text",
+        GOOGLE_SITE_VERIFICATION="",
+        BING_SITE_VERIFICATION="",
+        GTM_CONTAINER_ID="",
+        GA4_MEASUREMENT_ID="",
+        DEPLOYMENT_ENV="test",
+    )
+    info_messages = []
+
+    monkeypatch.setattr(app_main.os, "makedirs", lambda *args, **kwargs: None)
+    monkeypatch.setattr(app_main, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        "app.models.database.SessionLocal",
+        lambda: _ReclaimDatabaseSession(),
+    )
+    monkeypatch.setattr(
+        "sqlalchemy.inspect",
+        lambda bind: SimpleNamespace(has_table=lambda table_name: True),
+    )
+    monkeypatch.setattr("app.core.cache.SessionCache", _EmptyTrackedSessionCache)
+    monkeypatch.setattr(app_main.logger, "info", info_messages.append)
+
+    from app.services.enrollment_manager import EnrollmentManager
+
+    sentinel_task = object()
+    monkeypatch.setattr(
+        EnrollmentManager, "active_tasks", {42: sentinel_task, 99: object()}
+    )
+    _ReclaimDatabaseSession.last_instance = None
+    _EmptyTrackedSessionCache.last_instance = None
+
+    test_app = FastAPI()
+    was_set = shutdown_event.is_set()
+    try:
+        async with app_main.lifespan(test_app):
+            assert EnrollmentManager.active_tasks == {}
+            session = _ReclaimDatabaseSession.last_instance
+            assert session is not None
+            assert session.committed is True
+            assert len(session.executed) == 1
+    finally:
+        if was_set:
+            shutdown_event.set()
+        else:
+            shutdown_event.clear()
+        EnrollmentManager.active_tasks.clear()
+
+    joined = "\n".join(str(m) for m in info_messages)
+    assert "in-memory enrollment task" in joined
+    assert "reclaimed=2" in joined or "Cleaned up stale enrollment runs" in joined
 
 
 @pytest.mark.asyncio
@@ -534,7 +631,6 @@ async def test_shutdown_task_cancellation_error_excludes_private_details(monkeyp
     from app.services.enrollment_manager import EnrollmentManager
 
     task = _TrackedCancellationTask()
-    monkeypatch.setattr(EnrollmentManager, "active_tasks", {1: task})
 
     def fail_gather(*tasks, **kwargs):
         assert tasks == (task,)
@@ -543,7 +639,10 @@ async def test_shutdown_task_cancellation_error_excludes_private_details(monkeyp
 
     monkeypatch.setattr(app_main.asyncio, "gather", fail_gather)
 
-    await _run_lifespan_once()
+    # Inject after startup reclaim so the task is still present at shutdown.
+    await _run_lifespan_once(
+        during_yield=lambda: EnrollmentManager.active_tasks.__setitem__(1, task)
+    )
 
     cache = _EmptyTrackedSessionCache.last_instance
     assert task.cancel_calls == 1

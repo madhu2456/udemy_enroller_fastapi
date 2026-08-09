@@ -96,6 +96,25 @@ def test_public_guides_missing_is_not_stored():
     assert "no-cache" in cc
 
 
+def test_html_404_is_noindex():
+    """F046: HTML 404 responses carry meta robots + X-Robots-Tag noindex."""
+    client = TestClient(app)
+    try:
+        response = client.get(
+            "/this-path-definitely-does-not-exist-f046",
+            follow_redirects=False,
+        )
+    finally:
+        client.close()
+
+    assert response.status_code == 404
+    robots = response.headers.get("x-robots-tag", "").lower()
+    assert "noindex" in robots
+    body = response.text.lower()
+    assert 'name="robots"' in body or "name='robots'" in body
+    assert "noindex" in body
+
+
 def test_static_missing_is_not_stored():
     client = TestClient(app)
     try:
