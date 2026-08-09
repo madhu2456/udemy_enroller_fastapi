@@ -744,6 +744,8 @@
             (function(){
                 var banner = document.getElementById('cookie-banner');
                 if (!banner) return;
+                var a11yRoot = document.getElementById('a11y-confirm-root');
+                var statsModal = document.getElementById('stats-modal');
                 var consent = localStorage.getItem('cookie_consent');
                 var consentTime = localStorage.getItem('cookie_consent_time');
                 
@@ -758,19 +760,39 @@
                 
                 banner.classList.remove('hidden');
                 
+                function declineCookies() {
+                    localStorage.setItem('cookie_consent', 'declined');
+                    localStorage.setItem('cookie_consent_time', Date.now().toString());
+                    banner.classList.add('hidden');
+                    document.removeEventListener('keydown', onKeydown, true);
+                }
+                
+                function onKeydown(e) {
+                    // Escape dismisses the banner the same way Decline does,
+                    // but only when the keystroke originates within the banner
+                    // and no modal is open above it. This listener runs first
+                    // (capture on document), so it must never record a consent
+                    // decision meant for a modal's own Escape handling.
+                    if (banner.classList.contains('hidden')) return;
+                    if (a11yRoot && !a11yRoot.classList.contains('hidden')) return;
+                    if (statsModal && !statsModal.classList.contains('hidden')) return;
+                    if (e.target !== banner && !banner.contains(e.target)) return;
+                    if (e.key === 'Escape') {
+                        declineCookies();
+                    }
+                }
+                document.addEventListener('keydown', onKeydown, true);
+                
                 document.getElementById('cookie-accept').addEventListener('click', function(){
                     localStorage.setItem('cookie_consent', 'accepted');
                     localStorage.removeItem('cookie_consent_time');
                     banner.classList.add('hidden');
+                    document.removeEventListener('keydown', onKeydown, true);
                     if (window._loadGTM) window._loadGTM();
                     if (window._loadGA4) window._loadGA4();
                 });
                 
-                document.getElementById('cookie-decline').addEventListener('click', function(){
-                    localStorage.setItem('cookie_consent', 'declined');
-                    localStorage.setItem('cookie_consent_time', Date.now().toString());
-                    banner.classList.add('hidden');
-                });
+                document.getElementById('cookie-decline').addEventListener('click', declineCookies);
             })();
         </script>
         {% endif %}
