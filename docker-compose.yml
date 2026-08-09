@@ -23,6 +23,7 @@ services:
       - BING_SITE_VERIFICATION=${BING_SITE_VERIFICATION:-}
       - GTM_CONTAINER_ID=${GTM_CONTAINER_ID:-}
       - GA4_MEASUREMENT_ID=${GA4_MEASUREMENT_ID:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-[]}
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
