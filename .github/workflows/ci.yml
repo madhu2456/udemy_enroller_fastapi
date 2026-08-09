@@ -11,6 +11,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Secret scan
+        run: bash scripts/verify-no-secrets.sh --tree
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
