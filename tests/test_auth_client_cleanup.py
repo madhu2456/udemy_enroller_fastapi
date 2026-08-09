@@ -58,7 +58,9 @@ def _existing_user_db():
 @pytest.fixture(autouse=True)
 def isolate_login_edges(monkeypatch):
     monkeypatch.setattr(auth.settings, "DEPLOYMENT_ENV", "local")
-    monkeypatch.setattr(auth.login_rate_limiter, "raise_if_limited", lambda _key: None)
+    monkeypatch.setattr(
+        auth.login_rate_limiter, "is_allowed_redis", AsyncMock(return_value=True)
+    )
 
 
 @pytest.mark.asyncio

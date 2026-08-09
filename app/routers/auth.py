@@ -3,7 +3,7 @@
 import asyncio
 import secrets
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -143,7 +143,11 @@ async def login_with_credentials(
             ),
         )
 
-    login_rate_limiter.raise_if_limited(_client_key(request))
+    if not await login_rate_limiter.is_allowed_redis(_client_key(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests. Please try again later.",
+        )
     client = UdemyClient()
     client_handed_off = False
     try:
@@ -196,7 +200,11 @@ async def login_with_cookies(
     db: Session = Depends(get_db),
 ):
     """Login using browser cookies (access_token, client_id, csrf_token)."""
-    login_rate_limiter.raise_if_limited(_client_key(request))
+    if not await login_rate_limiter.is_allowed_redis(_client_key(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests. Please try again later.",
+        )
     client = UdemyClient()
     client_handed_off = False
     try:

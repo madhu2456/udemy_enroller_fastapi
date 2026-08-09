@@ -1,10 +1,13 @@
 """Tests for security features: encryption, CSRF, rate limiting, and session cache."""
 
 import asyncio
+import httpx
+import re
 import pytest
 from unittest.mock import MagicMock
 from fastapi import HTTPException, Request
 
+import app.security as security_mod
 from app.security import (
     encrypt_cookies,
     decrypt_cookies,
@@ -585,6 +588,178 @@ class TestRateLimiting:
         req.headers = {"x-forwarded-for": "1.2.3.4, 5.6.7.8"}
         req.client = MagicMock(host="10.0.0.1")
         assert _client_key(req) == "10.0.0.1"
+
+
+class TestRateLimiterRedisAsync:
+    """Upstash Redis-backed async limiter: env gating, fail-open, warn policy.
+
+    Mirrors the Deals resolution (P3-3 / Fix #26): the sync in-memory path
+    (is_allowed/raise_if_limited) stays untouched — all route callers are
+    sync — and the async path is an ADDITIVE shared-bucket option for async
+    callers. It is env-gated (UPSTASH_REDIS_REST_URL + TOKEN both required),
+    fails open to the exact in-memory limiter on any error, warns once for
+    transient failures and on every call for 4xx misconfiguration, and caps
+    the Upstash round-trip at 1.5s.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _reset_redis_warn_flag(self, monkeypatch):
+        monkeypatch.setattr(security_mod, "_REDIS_WARNED_ONCE", False)
+
+    @staticmethod
+    def _pin_upstash(monkeypatch, url="https://upstash.example.test/", token="tok"):
+        monkeypatch.setattr(get_settings(), "UPSTASH_REDIS_REST_URL", url)
+        monkeypatch.setattr(get_settings(), "UPSTASH_REDIS_REST_TOKEN", token)
+
+    @staticmethod
+    def _record_warnings(monkeypatch):
+        warnings = []
+        fake_logger = MagicMock()
+        fake_logger.warning = warnings.append
+        monkeypatch.setattr(security_mod, "logger", fake_logger)
+        return warnings
+
+    @pytest.mark.asyncio
+    async def test_no_env_falls_back_to_memory(self, monkeypatch):
+        """Unset env (both vars empty) → async path uses the exact memory limiter."""
+        self._pin_upstash(monkeypatch, url="", token="")
+        limiter = RateLimiter(max_requests=3, window_seconds=60)
+        assert await limiter.is_allowed_redis("key") is True
+        assert await limiter.is_allowed_redis("key") is True
+        assert await limiter.is_allowed_redis("key") is True
+        assert await limiter.is_allowed_redis("key") is False
+        # The memory store recorded the hits — proves the in-memory path ran.
+        assert limiter._store["key"]
+
+    @pytest.mark.asyncio
+    async def test_401_misconfig_warns_every_call_and_fails_open(self, monkeypatch):
+        """4xx (bad URL/token) → warn on EVERY call; traffic still flows."""
+        self._pin_upstash(monkeypatch)
+        warnings = self._record_warnings(monkeypatch)
+
+        async def misconfigured(base_url, token, redis_key, window_ms):
+            raise security_mod.UpstashHttpError(401)
+
+        monkeypatch.setattr(security_mod, "_upstash_pipeline", misconfigured)
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+        assert await limiter.is_allowed_redis("k") is True
+        assert await limiter.is_allowed_redis("k") is True
+        assert await limiter.is_allowed_redis("k") is False  # memory limit still enforced
+        assert len(warnings) == 3, "4xx must warn on every call"
+        assert "misconfiguration" in warnings[0]
+
+    @pytest.mark.asyncio
+    async def test_network_error_warns_once_and_fails_open(self, monkeypatch):
+        """Transient (network) failure → warn once per process; fail open."""
+        self._pin_upstash(monkeypatch)
+        warnings = self._record_warnings(monkeypatch)
+
+        async def offline(base_url, token, redis_key, window_ms):
+            raise httpx.ConnectError("connection refused")
+
+        monkeypatch.setattr(security_mod, "_upstash_pipeline", offline)
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+        assert await limiter.is_allowed_redis("k") is True
+        assert await limiter.is_allowed_redis("k") is True
+        assert len(warnings) == 1, "transient failure warns once"
+        assert "unreachable" in warnings[0]
+
+    @pytest.mark.asyncio
+    async def test_5xx_fails_open_and_warns_once(self, monkeypatch):
+        """5xx is transient (Upstash-side) — warn once, fail open."""
+        self._pin_upstash(monkeypatch)
+        warnings = self._record_warnings(monkeypatch)
+
+        async def upstream_error(base_url, token, redis_key, window_ms):
+            raise security_mod.UpstashHttpError(503)
+
+        monkeypatch.setattr(security_mod, "_upstash_pipeline", upstream_error)
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+        assert await limiter.is_allowed_redis("k") is True
+        assert await limiter.is_allowed_redis("k") is True
+        assert len(warnings) == 1, "5xx warns once"
+        assert "unreachable" in warnings[0]
+
+    @pytest.mark.asyncio
+    async def test_timeout_fails_open_and_uses_15s_cap(self, monkeypatch):
+        """The pipeline is wrapped in a 1.5s cap; a timeout fails open (warn once)."""
+        self._pin_upstash(monkeypatch)
+        warnings = self._record_warnings(monkeypatch)
+        captured = {}
+
+        class _TimeoutCtx:
+            def __init__(self, seconds):
+                captured["seconds"] = seconds
+
+            async def __aenter__(self):
+                raise asyncio.TimeoutError()
+
+            async def __aexit__(self, *exc_info):
+                return False
+
+        monkeypatch.setattr(asyncio, "timeout", lambda seconds: _TimeoutCtx(seconds))
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+        assert await limiter.is_allowed_redis("k") is True
+        assert captured["seconds"] == 1.5
+        assert len(warnings) == 1, "timeout is transient — warns once"
+
+    @pytest.mark.asyncio
+    async def test_unparseable_response_fails_open(self, monkeypatch):
+        """Malformed pipeline payload (bad JSON / short result list) → fail open."""
+        self._pin_upstash(monkeypatch)
+        warnings = self._record_warnings(monkeypatch)
+
+        async def corrupt(base_url, token, redis_key, window_ms):
+            raise ValueError("Upstash INCR returned invalid count")
+
+        monkeypatch.setattr(security_mod, "_upstash_pipeline", corrupt)
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+        assert await limiter.is_allowed_redis("k") is True
+        assert len(warnings) == 1
+
+    @pytest.mark.asyncio
+    async def test_shared_bucket_semantics_and_key_wiring(self, monkeypatch):
+        """Pipeline drives the decision: count > max_requests blocks; the key is
+        namespaced `udemy:` with the exact window (ms); memory store untouched."""
+        self._pin_upstash(monkeypatch)
+        calls = []
+
+        async def fake_pipeline(base_url, token, redis_key, window_ms):
+            calls.append((base_url, token, redis_key, window_ms))
+            return len(calls), 60  # count = call number
+
+        monkeypatch.setattr(security_mod, "_upstash_pipeline", fake_pipeline)
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+        assert await limiter.is_allowed_redis("203.0.113.7") is True
+        assert await limiter.is_allowed_redis("203.0.113.7") is True
+        assert await limiter.is_allowed_redis("203.0.113.7") is False  # 3rd > 2
+
+        base_url, token, redis_key, window_ms = calls[0]
+        assert base_url == "https://upstash.example.test/"
+        assert token == "tok"
+        assert redis_key == "udemy:203.0.113.7"
+        assert window_ms == 60000
+        # Happy path must not touch the in-memory store.
+        assert not limiter._store
+
+    @pytest.mark.asyncio
+    async def test_key_sanitization(self, monkeypatch):
+        """Redis keys stay well-formed even when the bucket key embeds junk."""
+        self._pin_upstash(monkeypatch)
+        calls = []
+
+        async def fake_pipeline(base_url, token, redis_key, window_ms):
+            calls.append(redis_key)
+            return 1, 60
+
+        monkeypatch.setattr(security_mod, "_upstash_pipeline", fake_pipeline)
+        limiter = RateLimiter(max_requests=2, window_seconds=60)
+        await limiter.is_allowed_redis('192.0.2.1; DROP TABLE "x" --')
+        key = calls[0]
+        assert key.startswith("udemy:")
+        assert "192.0.2.1" in key
+        assert re.fullmatch(r"[a-zA-Z0-9:._@-]+", key), key
+        assert ";" not in key and '"' not in key
 
 
 # ── _client_key IP-trust topology ─────────────────────────

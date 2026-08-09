@@ -1,16 +1,19 @@
 """Security utilities for password hashing, cookie encryption, and validation."""
 
+import asyncio
 import base64
 import hmac
 import hashlib
 import ipaddress
 import json
+import re
 import time
 from collections import defaultdict
 from typing import Any, Optional
 from urllib.parse import urlparse
 
 import bcrypt
+import httpx
 from cryptography.fernet import Fernet
 from fastapi import HTTPException, Request
 from loguru import logger
@@ -126,6 +129,123 @@ class RateLimiter:
                 status_code=429,
                 detail="Too many requests. Please try again later.",
             )
+
+    async def is_allowed_redis(self, key: str) -> bool:
+        """Async, Upstash-Redis-backed variant of is_allowed() for async callers.
+
+        Returns True when the call is ALLOWED (same contract as is_allowed).
+        Env-gated: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN must both
+        be set or the call degrades to the in-memory limiter. On ANY Redis
+        failure it fails OPEN to the same in-memory limiter — a limiter outage
+        can never lock out traffic. Transient failures (network, 5xx, timeout,
+        unparseable response) log one warning; 4xx responses mean a
+        misconfigured URL/token and log a warning on EVERY call. Bucket
+        semantics are identical to is_allowed (max_requests per window_seconds
+        per key, window anchored at the first hit); Redis keys are namespaced
+        `udemy:` so shared Upstash databases never collide.
+        """
+        global _REDIS_WARNED_ONCE
+        from config.settings import get_settings
+
+        settings = get_settings()
+        base_url = (settings.UPSTASH_REDIS_REST_URL or "").strip()
+        token = (settings.UPSTASH_REDIS_REST_TOKEN or "").strip()
+        if not base_url or not token:
+            return self.is_allowed(key)
+
+        redis_key = _sanitize_redis_key(f"udemy:{key}")
+        try:
+            count, _ttl = await _upstash_pipeline(
+                base_url, token, redis_key, int(self.window * 1000)
+            )
+        except UpstashHttpError as exc:
+            if 400 <= exc.status < 500:
+                logger.warning(
+                    f"rate-limit: Upstash misconfiguration (HTTP {exc.status}) — "
+                    "check UPSTASH_REDIS_REST_URL/TOKEN — falling back to in-memory"
+                )
+            elif not _REDIS_WARNED_ONCE:
+                _REDIS_WARNED_ONCE = True
+                logger.warning(
+                    "rate-limit: Upstash Redis unreachable (HTTP "
+                    f"{exc.status}) — failing open to in-memory limiting"
+                )
+            return self.is_allowed(key)
+        except (httpx.HTTPError, asyncio.TimeoutError, ValueError) as exc:
+            if not _REDIS_WARNED_ONCE:
+                _REDIS_WARNED_ONCE = True
+                logger.warning(
+                    "rate-limit: Upstash Redis unreachable — failing open to "
+                    f"in-memory limiting: {exc.__class__.__name__}"
+                )
+            return self.is_allowed(key)
+
+        return count <= self.max_requests
+
+
+# ── Upstash Redis REST rate limiting (optional shared buckets) ──
+
+# Transient-failure warning is emitted once per process; 4xx warnings never
+# use this flag (misconfigurations stay loud on every call).
+_REDIS_WARNED_ONCE = False
+
+
+class UpstashHttpError(Exception):
+    """Non-2xx Upstash REST response — status distinguishes 4xx config errors."""
+
+    def __init__(self, status: int):
+        super().__init__(f"Upstash pipeline HTTP {status}")
+        self.status = status
+
+
+def _sanitize_redis_key(key: str) -> str:
+    """Keys may embed user-derived parts (IPs) — keep Redis keys well-formed."""
+    return re.sub(r"[^a-zA-Z0-9:._@-]", "_", key)[:200]
+
+
+async def _upstash_pipeline(
+    base_url: str, token: str, redis_key: str, window_ms: int
+) -> tuple[int, int]:
+    """Run the atomic Upstash rate-limit pipeline; return (count, ttl_seconds).
+
+    SET ... NX PX seeds the window only when the key is absent (no-op otherwise,
+    so the window stays anchored at the first hit — same semantics as the
+    in-memory limiter); INCR counts; TTL yields the remaining window. SET starts
+    at 0 so the first hit counts as 1 after INCR. Raises UpstashHttpError on
+    non-2xx; network/timeout/parse failures propagate so the caller can fail
+    open. 1.5s hard cap — fail-open means Redis must never add real latency.
+    """
+    body = [
+        ["SET", redis_key, "0", "NX", "PX", str(window_ms)],
+        ["INCR", redis_key],
+        ["TTL", redis_key],
+    ]
+    async with asyncio.timeout(1.5):
+        async with httpx.AsyncClient(timeout=1.5) as client:
+            response = await client.post(
+                f"{base_url.rstrip('/')}/pipeline",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json=body,
+            )
+    if response.status_code < 200 or response.status_code >= 300:
+        raise UpstashHttpError(response.status_code)
+    try:
+        results = response.json()
+        count_raw = results[1]["result"]
+        ttl_raw = results[2]["result"]
+    except (ValueError, KeyError, IndexError, TypeError) as exc:
+        raise ValueError("Upstash pipeline returned an unreadable response") from exc
+    try:
+        count = int(count_raw)
+        ttl = int(ttl_raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Upstash INCR/TTL returned invalid values") from exc
+    if count < 1:
+        raise ValueError("Upstash INCR returned invalid count")
+    return count, ttl
 
 
 def _normalize_ip(value: str | None) -> str | None:

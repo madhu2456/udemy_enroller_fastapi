@@ -109,7 +109,25 @@ ln -sf /etc/nginx/sites-available/udemy-enroller /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 
-echo "9. Setting up SSL with Certbot (optional)..."
+echo "9. Configuring firewall (ufw) — SSH + Nginx Full (80/443) only..."
+# The app publishes loopback-only (127.0.0.1:8000, see docker-compose.yml), so
+# the host firewall needs nothing beyond SSH + HTTP/HTTPS. Idempotent: `ufw
+# allow` is a no-op on existing rules, and `--force enable` runs only when ufw
+# is inactive (mirrors the Deals deploy.sh ufw pattern).
+if command -v ufw &>/dev/null; then
+  ufw allow OpenSSH || ufw allow 22/tcp || true
+  ufw allow 'Nginx Full' || true
+  if ufw status | grep -q "Status: active"; then
+    echo "   ufw already active — rules verified."
+  else
+    ufw --force enable || true
+    echo "   ufw enabled (OpenSSH, Nginx Full)."
+  fi
+else
+  echo "   ufw not installed — skipping firewall setup."
+fi
+
+echo "10. Setting up SSL with Certbot (optional)..."
 echo "   Run: certbot --nginx -d yourdomain.com"
 
 echo ""

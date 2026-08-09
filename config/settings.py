@@ -89,6 +89,13 @@ class Settings(BaseSettings):
     # Redis (optional, for task queue)
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Upstash Redis REST (optional) — shared rate-limit buckets across app
+    # instances. RateLimiter.is_allowed_redis() is active ONLY when BOTH are
+    # set; otherwise it fails open to per-instance in-memory limiting. Never
+    # set one without the other.
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
+
     # Scraper defaults
     MAX_SCRAPER_WORKERS: int = 5
     SCRAPER_SITE_TIMEOUT_SECONDS: int = 1800
