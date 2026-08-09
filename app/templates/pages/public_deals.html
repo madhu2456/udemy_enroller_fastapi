@@ -100,12 +100,12 @@ og_description %}Public listing of free Udemy course coupons. Validity can chang
                     ><strong class="text-gray-900">{{ freshness.valid_count }}</strong>
                     valid listing{% if freshness.valid_count != 1 %}s{% endif %}</span
                 >
-                {% if freshness.last_updated %}
+                {% if freshness.last_checked or freshness.last_updated %}
                 <span class="text-gray-400" aria-hidden="true">·</span>
                 <span
-                    >List last updated
-                    <time datetime="{{ freshness.last_updated }}"
-                        >{{ freshness.last_updated }}</time
+                    >List last checked
+                    <time datetime="{{ freshness.last_checked or freshness.last_updated }}"
+                        >{{ freshness.last_checked or freshness.last_updated }}</time
                     ></span
                 >
                 {% endif %}

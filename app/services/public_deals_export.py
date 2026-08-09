@@ -319,7 +319,12 @@ def list_valid_deals_for_sitemap(
 
 
 def public_deals_freshness(path: Optional[str] = None) -> dict:
-    """Hub freshness stats: valid count + last updated (file mtime / latest check)."""
+    """Hub freshness stats: valid count + last check time.
+
+    ``last_updated`` is the max ``last_checked_at`` across valid deals — the
+    honest signal, since file mtime moves even when nothing changed. Falls
+    back to file mtime only when no deal carries a check timestamp.
+    """
     json_path = path or get_public_deals_path()
     deals = list_valid_deals(path)
     last_file = None
@@ -342,7 +347,7 @@ def public_deals_freshness(path: Optional[str] = None) -> dict:
         last_check_display = last_check[:16].replace("T", " ") + " UTC"
     return {
         "valid_count": len(deals),
-        "last_updated": last_file or last_check_display,
+        "last_updated": last_check_display or last_file,
         "last_checked": last_check_display,
     }
 

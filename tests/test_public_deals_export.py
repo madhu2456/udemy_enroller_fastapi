@@ -29,6 +29,7 @@ from app.services.public_deals_export import (
     get_valid_deal_by_slug,
     is_sitemap_quality_deal,
     list_valid_deals_for_sitemap,
+    public_deals_freshness,
     slugify,
     write_sitemap_files,
 )
@@ -359,3 +360,58 @@ def test_export_refreshes_sitemap_files():
             assert "/udemycoupons/c/" in sm_path.read_text(encoding="utf-8")
     finally:
         db.close()
+
+
+def test_freshness_prefers_max_last_checked_over_mtime(tmp_path):
+    """The page must show the max last_checked_at, not the file mtime."""
+    deals = [
+        {
+            "id": 1,
+            "title": "Course One",
+            "url": "https://www.udemy.com/course/one/?couponCode=A1",
+            "coupon_code": "A1",
+            "is_coupon_valid": True,
+            "last_checked_at": "2026-07-20T09:30:00Z",
+            "enrolled_at": "2026-07-20T09:30:00Z",
+        },
+        {
+            "id": 2,
+            "title": "Course Two",
+            "url": "https://www.udemy.com/course/two/?couponCode=A2",
+            "coupon_code": "A2",
+            "is_coupon_valid": True,
+            "last_checked_at": "2026-08-02T04:05:36Z",
+            "enrolled_at": "2026-08-02T04:05:36Z",
+        },
+    ]
+    out = Path(tmp_path) / "public_deals.json"
+    out.write_text(json.dumps(deals), encoding="utf-8")
+    # File mtime deliberately NEWER than every last_checked_at: the displayed
+    # value must still come from the deal timestamps.
+    recent = os.path.getmtime(out) + 86400 * 10
+    os.utime(out, (recent, recent))
+
+    freshness = public_deals_freshness(str(out))
+    assert freshness["valid_count"] == 2
+    assert freshness["last_checked"] == "2026-08-02 04:05 UTC"
+    assert freshness["last_updated"] == "2026-08-02 04:05 UTC"
+
+
+def test_freshness_falls_back_to_mtime_when_no_check_timestamps(tmp_path):
+    """No last_checked_at anywhere: fall back to file mtime, honest label."""
+    deals = [
+        {
+            "id": 1,
+            "title": "Legacy Course",
+            "url": "https://www.udemy.com/course/legacy/?couponCode=L1",
+            "coupon_code": "L1",
+            "is_coupon_valid": True,
+        }
+    ]
+    out = Path(tmp_path) / "public_deals.json"
+    out.write_text(json.dumps(deals), encoding="utf-8")
+
+    freshness = public_deals_freshness(str(out))
+    assert freshness["last_checked"] is None
+    assert freshness["last_updated"] is not None  # mtime fallback
+    assert freshness["valid_count"] == 1

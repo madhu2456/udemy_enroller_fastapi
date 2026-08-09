@@ -1,9 +1,12 @@
 """Re-validate public coupon catalog (public_deals.json) — no user DB.
 
-Loads deals from PUBLIC_DEALS_PATH (or project-root public_deals.json), checks
-each coupon against Udemy's unauthenticated pricing API, drops confirmed
-expired deals, preserves deals that could not be checked, then rewrites the
-JSON and refreshes sitemap deal URLs.
+Each cycle:
+1. (optional, CHECKER_SCRAPE_ON_CYCLE=true) Scrapes the coupon sources and
+   merges fresh deals into the catalog (failure-tolerant; log + continue).
+2. Loads deals from PUBLIC_DEALS_PATH (or project-root public_deals.json),
+   checks each coupon against Udemy's unauthenticated pricing API, drops
+   confirmed expired deals, preserves deals that could not be checked, then
+   rewrites the JSON and refreshes sitemap deal URLs.
 
 Used by:
   ./scripts/coupon_checker.sh
@@ -37,12 +40,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Course-id extraction. Udemy removed the data-course-id attribute from course
+# HTML; the numeric id now appears only in embedded JSON as
+# "urlMobileNativeDeeplink":"udemy://discover?courseId=7220277" and
+# "courseId":7220277. Current forms come first (priority order); the legacy
+# patterns stay as fallbacks for cached/older HTML.
 _COURSE_ID_PATTERNS = (
+    re.compile(r"udemy://discover\?courseId=(\d+)"),
+    re.compile(r'"courseId"\s*:\s*(\d+)'),
+    re.compile(r"(?<![A-Za-z])courseId[=:]\s*[\"']?(\d+)"),
     re.compile(r'data-course-id="(\d+)"'),
     re.compile(r'"id"\s*:\s*(\d{3,})\s*,\s*"title"'),
     re.compile(r"course_id=(\d+)"),
     re.compile(r"/course/(\d{3,})/"),
 )
+
+# Course-page fetches are intermittently blocked (403 / empty body), so the
+# resolver retries a bounded number of times before giving up. Added latency
+# per deal stays under ~15s worst case (2 retries x 4s sleep).
+_RESOLVE_MAX_ATTEMPTS = 3
+_RESOLVE_RETRY_SLEEP_SECONDS = 4
 
 
 def _utcnow_iso() -> str:
@@ -62,15 +79,29 @@ def _course_id_from_deal(deal: dict) -> Optional[str]:
     return text if text.isdigit() else None
 
 
-async def _resolve_course_id(http: AsyncHTTPClient, url: str) -> Optional[str]:
-    resp = await http.get(url, use_cloudscraper=True, log_failures=False)
-    if not resp or not getattr(resp, "text", None):
-        return None
-    html = resp.text
+def _extract_course_id_from_html(html: str) -> Optional[str]:
+    """Pull the numeric course id from a fetched course page (first match wins)."""
     for pattern in _COURSE_ID_PATTERNS:
         match = pattern.search(html)
         if match:
             return match.group(1)
+    return None
+
+
+async def _resolve_course_id(http: AsyncHTTPClient, url: str) -> Optional[str]:
+    """Fetch the course page and extract its numeric course id.
+
+    Retries on blocked/empty fetches (403 or empty body); a full page that
+    simply contains no matching pattern is treated as deterministic and not
+    retried. Bounded: at most ``_RESOLVE_MAX_ATTEMPTS`` fetches.
+    """
+    for attempt in range(1, _RESOLVE_MAX_ATTEMPTS + 1):
+        resp = await http.get(url, use_cloudscraper=True, log_failures=False)
+        html = resp.text if resp and getattr(resp, "text", None) else ""
+        if html:
+            return _extract_course_id_from_html(html)
+        if attempt < _RESOLVE_MAX_ATTEMPTS:
+            await asyncio.sleep(_RESOLVE_RETRY_SLEEP_SECONDS)
     return None
 
 
@@ -146,6 +177,90 @@ async def check_deal(http: AsyncHTTPClient, deal: dict[str, Any]) -> str:
         return "error"
 
 
+def _scrape_enabled() -> bool:
+    """Env toggle: import latest coupons each cycle (default on)."""
+    return os.getenv("CHECKER_SCRAPE_ON_CYCLE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _scrape_source_limit() -> int:
+    """Env cap on how many sources to scrape per cycle (0 = all)."""
+    raw = os.getenv("CHECKER_SCRAPE_MAX_SOURCES", "0").strip()
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+def _deal_from_course(course) -> dict:
+    """Shape a scraped ``Course`` into a catalog deal dict for the merge.
+
+    ``slug`` is set from the URL path so the merge dedupes against catalog
+    rows by slug. ``enrolled_at`` is set to now so freshly scraped deals sort
+    above the 500-deal cap (the sort falls back to enrolled_at when
+    last_checked_at is absent). ``last_checked_at`` is deliberately NOT set:
+    a merged-but-unvalidated deal must not look "checked"; the validation
+    pass stamps it with the real value moments later.
+    """
+    now = _utcnow_iso()
+    return {
+        "title": course.title,
+        "url": course.url,
+        "slug": course.slug,
+        "course_id": str(course.course_id) if course.course_id else None,
+        "coupon_code": course.coupon_code,
+        "site": course.site,
+        "is_coupon_valid": True,
+        "enrolled_at": now,
+    }
+
+
+async def _import_latest_coupons() -> int:
+    """Scrape the coupon sources and merge fresh deals into the catalog.
+
+    Runs BEFORE validation so the merged deals are re-checked in the same
+    cycle. Failure-tolerant by design: any scrape/merge error is logged and
+    the cycle continues with the existing catalog (a scraper outage must not
+    kill coupon validation). Returns the number of scraped deals merged.
+    """
+    if not _scrape_enabled():
+        logger.info("Coupon import disabled (CHECKER_SCRAPE_ON_CYCLE != true)")
+        return 0
+    try:
+        from app.services.public_deals_export import merge_deals_into_public_catalog
+        from app.services.scraper import SCRAPER_REGISTRY, ScraperService
+
+        sites = list(SCRAPER_REGISTRY.keys())
+        limit = _scrape_source_limit()
+        if limit:
+            sites = sites[:limit]
+        logger.info("Importing latest coupons: scraping %s source(s)...", len(sites))
+        # ScraperService owns pacing: worker semaphore (MAX_SCRAPER_WORKERS),
+        # per-site timeout (SCRAPER_SITE_TIMEOUT_SECONDS) and overall run
+        # timeout (SCRAPER_RUN_TIMEOUT_SECONDS); per-source failures already
+        # yield state "failed" without raising.
+        service = ScraperService(sites_to_scrape=sites)
+        try:
+            courses = await service.scrape_all()
+        finally:
+            await service.close()
+
+        payload = [_deal_from_course(c) for c in courses]
+        if not payload:
+            logger.info("Scrapers found no coupon deals to import")
+            return 0
+        merge_deals_into_public_catalog(payload)
+        logger.info("Merged %s scraped deal(s) into the catalog", len(payload))
+        return len(payload)
+    except Exception as exc:
+        logger.error("Coupon import failed — continuing with validation: %s", exc)
+        return 0
+
+
 async def main() -> None:
     logger.info("Starting Coupon Checker (public_deals.json catalog)...")
     settings = get_settings()
@@ -159,6 +274,21 @@ async def main() -> None:
     if not deals:
         logger.warning("No deals to check — public_deals.json empty or missing.")
         return
+
+    # Auto-import: scrape the coupon sources and merge fresh deals in, then
+    # validate the merged set in this same cycle (new coupons get checked
+    # before the file is rewritten). Failure-tolerant — see _import_latest_coupons.
+    imported = await _import_latest_coupons()
+    if imported:
+        deals = load_public_deals()
+        if not deals:
+            logger.warning("Catalog empty after import — nothing to check.")
+            return
+        logger.info(
+            "Validating %s deals (incl. %s freshly imported)",
+            len(deals),
+            imported,
+        )
 
     proxy_url = None
     if settings.PROXIES:

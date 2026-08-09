@@ -3,8 +3,10 @@
 
 Intended for production (Docker ``coupon-checker`` service). Each cycle:
 1. Loads public_deals.json (catalog file — not the multi-tenant user DB)
-2. Re-validates each coupon via Udemy's unauthenticated pricing API
-3. Drops confirmed expired deals, rewrites JSON + sitemap
+2. Imports latest coupons (scrapes coupon sources, merges fresh deals —
+   toggle with CHECKER_SCRAPE_ON_CYCLE, see .env.example) — before validation
+3. Re-validates each coupon via Udemy's unauthenticated pricing API
+4. Drops confirmed expired deals, rewrites JSON + sitemap
 
 Environment:
   COUPON_CHECKER_INTERVAL_SECONDS  sleep between cycles (default 7200 = 2h)
