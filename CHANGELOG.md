@@ -9,6 +9,24 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### Coupon-checker hardening (resolver tiers + safety valve)
+
+- _resolve_course_id(http, url, slug=None): fields → bare → raw-verbatim-path-slug → HTML tiers;
+  fixed _BROWSER_UA + req_type="api" + log_failures=False on all five JSON call sites.
+- _fetch_pricing_json: plain-httpx-first (status 200 + dict), cloudscraper fallback; discountCode
+  quote()-encoded; _coerce_valid_course_id predicate (rejects 0/junk/unicode digits).
+- Slug tiers: attempts=2 (transport) + single 2s backoff on 429, then fall through.
+- main(): atomic snapshot every 10 deals (refresh_sitemap=False), empty-snapshot guard,
+  safety valve (expired > 75% done AND error < 5% done → skip snapshot AND final save;
+  preserves last known-good file). Residual floor ~1.6% (6 collision-slug deals) accepted.
+- DEPLOY (run before `git checkout .`): backup dirty tree (git diff > /root/predeploy-<ts>.diff;
+  cp -a each dirty path to /root/predeploy-backup/), reconcile each dirty path against this
+  batch's file list, then: git checkout . && git pull origin main && docker compose up -d --build.
+  Post-deploy: git rev-parse HEAD == pushed sha; docker compose ps (new Started time);
+  first "=== Coupon check cycle start ===" after Started; grep -c discountCode == 0.
+  Pass criteria: error <= 10% (<= 38/380); expired within ±5 pts of baseline; zero discountCode
+  in logs; 6 collision slugs + situational_leadership + >55-char slugs resolve via any tier.
+
 ### Added
 
 - **Production coupon checker every 2 hours** — Docker Compose `coupon-checker` service runs `scripts/coupon_checker_loop.py`, shares the data volume with `web`, and rewrites `PUBLIC_DEALS_PATH` (`/app/data/public_deals.json`) so `/udemycoupons` stays fresh without local runs + git push.

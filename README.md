@@ -286,6 +286,16 @@ docker compose exec -T web python -u scripts/coupon_checker.py
 
 You no longer need to run the checker locally and git-push `public_deals.json` for production freshness.
 
+### Coupon checker ops
+
+After deploying the resolver-tier batch (`git pull origin main && docker compose up -d --build`), verify a full cycle against the current `CHANGELOG.md` entry (`[unreleased] coupon-checker hardening`):
+
+- **Post-deploy:** `git rev-parse HEAD` equals the pushed SHA; `docker compose ps` shows a new `Started` time for `coupon-checker`; the first `=== Coupon check cycle start ===` appears after that timestamp; `docker compose logs coupon-checker | grep -c discountCode` is `0` (coupon codes never logged).
+- **Pass criteria:** error share ≤ 10% (≤ 38 of 380 deals); expired share within ±5 points of the pre-deploy baseline; the 6 collision slugs + `situational_leadership` + >55-char slugs all resolve via some tier.
+- **Deploy recipe** (full backup → reconcile → checkout/pull → recreate → verify sequence) is documented in that CHANGELOG entry. Back up the dirty tree before `git checkout .` and reconcile every dirty path against the batch file list.
+
+For a pure validation cycle (skips the ~45-min scrape), set `CHECKER_SCRAPE_ON_CYCLE=false` in the server `.env`, recreate the `coupon-checker` service, and revert to `true` afterwards (see `.env.example`).
+
 ---
 
 ## Backup & Recovery
