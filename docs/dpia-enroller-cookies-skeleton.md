@@ -34,8 +34,8 @@
 |-------|--------|
 | Title | DPIA skeleton — Udemy session cookies (hosted / multi-tenant capable) |
 | Controller / operator | `[TODO: legal name / role]` |
-| Version | 0.2-skeleton |
-| Last updated | 2026-08-09 |
+| Version | 0.3-skeleton |
+| Last updated | 2026-08-10 |
 | Review cadence | `[TODO: e.g. annual or on material change]` |
 | Systems in scope | ☐ Self-hosted · ☐ Hosted demo `udemyenroller.madhudadi.in` · ☐ Other: ________ |
 | Deployment mode in scope | ☐ `DEPLOYMENT_ENV=server` · ☐ local · ☐ both |
@@ -199,11 +199,30 @@ Signatories acknowledge:
 
 ---
 
+## 9a. Residual-risk acceptance checklist (F004 / F001)
+
+**Purpose:** Owner sign-off that residual risk of **hosted multi-tenant Fernet-encrypted Udemy session cookies** is understood and accepted (or redesign chosen). Engineering mitigations (Fernet, TTL, wipe, plaintext reject) reduce exposure; they do **not** eliminate bearer-credential compromise if DB **and** `COOKIE_ENCRYPTION_KEY` (or a live decryption path) are both breached.
+
+| Check | Owner | Date | Notes |
+|-------|-------|------|-------|
+| Read §4 necessity residual + risk R1/R2 in this skeleton | ☐ | | |
+| Confirmed deployment mode in scope (hosted demo vs self-host only) | ☐ | | |
+| Accept residual multi-tenant Fernet risk **or** choose redesign (local-only / no server cookie store) | ☐ Accept · ☐ Redesign | | Decision: ________ |
+| D.3 accepted-risks template filled for F001 | ☐ | | Path: `docs/audits/…/09-D3-accepted-risks-template.md` if present |
+| Counsel path opened for F002 (Terms/automation) if still operating enrollment automation | ☐ N/A · ☐ Opened | | Separate from technical residual |
+
+**Explicit residual (non-legal):** On a multi-tenant hosted instance, ciphertext for many users’ session cookies may coexist in one DB; key material is a single blast-radius control. Prefer self-host when session confidentiality is paramount. Sign-off here is an **ops/product acceptance record**, not a compliance certificate.
+
+Owner sign-off: _________________ Date: ________ Role: ________
+
+---
+
 ## 10. Related audit findings
 
 | ID | Topic | Linkage |
 |----|--------|---------|
 | F001 | Hosted multi-tenant encrypted cookies residual | D.3 accept or redesign |
+| F004 | Residual-risk acceptance stub | **§9a checklist** (this doc) |
 | F002 | Automation / ToS residual | Counsel — not closed by this DPIA |
 | F019 | Plaintext cookie path | Code default rejects in server mode — re-verify deploy |
 | F024 | Formal DPIA missing | **This document** (skeleton only until signed) |
@@ -217,3 +236,4 @@ Signatories acknowledge:
 |---------|------|--------|
 | 0.1 | 2026-08-09 | Initial skeleton draft |
 | 0.2 | 2026-08-09 | Expanded checklist; explicit non-conclusions; SECURITY + privacy links; no fabricated lawful-basis conclusions |
+| 0.3 | 2026-08-10 | F004 residual-risk acceptance checklist (§9a) for Fernet multi-tenant residual |

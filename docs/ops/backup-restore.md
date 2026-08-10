@@ -34,11 +34,50 @@ The script:
 5. Applies **retention**: default delete backups older than **14 days**, keep at
    most **30** newest files (`RETENTION_DAYS`, `RETENTION_COUNT`).
 
-### Cron example (host)
+### Cron example (host) — copy-paste
+
+Install a daily backup plus a freshness check (alerts if backups go stale).
+Adjust paths, user, and log destinations for your host.
 
 ```cron
-# Daily 03:15 UTC; logs to syslog-friendly stdout
-15 3 * * * cd /opt/udemy-enroller && DB_PATH=/opt/udemy-enroller/data/udemy_enroller.db ./scripts/backup_sqlite.sh backup >>/var/log/udemy-enroller-backup.log 2>&1
+# Udemy Enroller — SQLite backup (daily 03:15 UTC)
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# 1) Online-safe backup + integrity check + retention prune
+15 3 * * * cd /opt/udemy-enroller && DB_PATH=/opt/udemy-enroller/data/udemy_enroller.db BACKUP_DIR=/opt/udemy-enroller/backups ./scripts/backup_sqlite.sh backup >>/var/log/udemy-enroller-backup.log 2>&1
+
+# 2) Freshness gate (fail if newest backup older than 26h; max age override via MAX_AGE_HOURS)
+30 3 * * * BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 /opt/udemy-enroller/scripts/verify_backup_freshness.sh >>/var/log/udemy-enroller-backup.log 2>&1
+```
+
+One-shot install helpers (as root or with sudo; edit paths first):
+
+```bash
+# Ensure executable + log file
+chmod +x /opt/udemy-enroller/scripts/backup_sqlite.sh \
+         /opt/udemy-enroller/scripts/verify_backup_freshness.sh
+touch /var/log/udemy-enroller-backup.log
+chown deploy:deploy /var/log/udemy-enroller-backup.log   # or your app user
+
+# Install crontab for the app user (example: deploy)
+sudo -u deploy crontab -e
+# paste the two cron lines above, save
+
+# Or system-wide drop-in:
+# sudo tee /etc/cron.d/udemy-enroller-backup <<'EOF'
+# 15 3 * * * deploy cd /opt/udemy-enroller && DB_PATH=... BACKUP_DIR=... ./scripts/backup_sqlite.sh backup >>/var/log/udemy-enroller-backup.log 2>&1
+# 30 3 * * * deploy BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 /opt/udemy-enroller/scripts/verify_backup_freshness.sh >>/var/log/udemy-enroller-backup.log 2>&1
+# EOF
+```
+
+Manual smoke after install:
+
+```bash
+cd /opt/udemy-enroller
+DB_PATH=/opt/udemy-enroller/data/udemy_enroller.db BACKUP_DIR=/opt/udemy-enroller/backups ./scripts/backup_sqlite.sh backup
+BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 ./scripts/verify_backup_freshness.sh
+# expect exit 0 and a line like: OK: newest backup age …
 ```
 
 ### Docker volume (host-side)
@@ -112,6 +151,17 @@ Run a drill after first deploy and after any change to volume mounts or
 | `RETENTION_COUNT` | `30` | Keep newest N backups (`0` unlimited) |
 | `CONFIRM` | (unset) | Must be `YES` for `restore` |
 | `RESTORE_APP_MARKER` | (unset) | If set and path exists, restore refuses |
+| `MAX_AGE_HOURS` | `26` | Freshness check only (`verify_backup_freshness.sh`) |
+| `BACKUP_GLOB` | `udemy_enroller-*.db` | Freshness check filename glob |
+
+## Freshness verification
+
+```bash
+# Exit 0 if newest backup under BACKUP_DIR is younger than MAX_AGE_HOURS
+BACKUP_DIR=./backups MAX_AGE_HOURS=26 ./scripts/verify_backup_freshness.sh
+```
+
+Wire this into cron after the backup job (see Cron example above) so silent backup failures surface as non-zero exit codes in logs/monitoring.
 
 ## Manual fallback (not preferred)
 

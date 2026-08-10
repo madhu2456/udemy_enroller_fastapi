@@ -34,6 +34,8 @@ async def manifest():
 SITE_URL = "https://udemyenroller.madhudadi.in"
 BLOG_URL = "https://madhudadi.in/blog"
 PORTFOLIO_URL = "https://madhudadi.in"
+# Person.url SSOT — profile path (not apex) aligns with portfolio/Adticks FOUNDER_PERSON.
+PERSON_URL = "https://madhudadi.in/profile/"
 CASE_STUDY_URL = "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
 
 # Fix #8: Person identity anchors only (exact set & order). Sites/products
@@ -239,7 +241,7 @@ Twitter: https://x.com/madhu245
 LinkedIn: https://www.linkedin.com/in/madhu-dadi-54684531
 GitHub: https://github.com/madhu2456
 Location: Visakhapatnam, India
-Role: AI Developer & Marketing Analytics Leader
+Role: AI Engineer, RAG & Analytics Consultant
 
 /* CREDITS */
 SEO / AEO / GEO: Adticks (https://adticks.com)
@@ -391,7 +393,7 @@ Udemy Course Enroller is an open-source FastAPI tool that monitors coupon aggreg
 - **Name:** Udemy Course Enroller
 - **Alternate Name:** Udemy Enroller
 - **Developer:** Madhu Dadi
-- **Developer Job Title:** AI Developer & Marketing Analytics Leader
+- **Developer Job Title:** AI Engineer, RAG & Analytics Consultant
 - **Website:** {SITE_URL}
 - **Parent Portfolio:** {PORTFOLIO_URL}
 - **Blog:** {BLOG_URL}
@@ -535,7 +537,7 @@ The tool uses your Udemy session cookies/tokens to call session-based enrollment
 Automated access may conflict with platform terms; users are responsible for compliance. Course availability and enrollment success are not guaranteed.
 
 ### Who built the Udemy Course Enroller?
-The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Developer & Marketing Analytics Leader from Visakhapatnam, India. Madhu has 10+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, specializing in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems. Learn more at {PORTFOLIO_URL}.
+The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Engineer, RAG & Analytics Consultant from Visakhapatnam, India. Madhu has 10+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, specializing in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems. Learn more at {PORTFOLIO_URL}.
 
 ### What technologies power the Udemy Course Enroller?
 The application is built with Python 3.11+, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper as the primary HTTP client, Playwright as a fallback for some coupon aggregator sites, and Tailwind CSS for the frontend. Deployment uses Docker and docker-compose.
@@ -578,8 +580,8 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 "@type": "Person",
                 "@id": "https://madhudadi.in/#person",
                 "name": "Madhu Dadi",
-                "url": PORTFOLIO_URL,
-                "jobTitle": "AI Developer & Marketing Analytics Leader",
+                "url": PERSON_URL,
+                "jobTitle": "AI Engineer, RAG & Analytics Consultant",
                 "description": "AI consultant and ML engineer with 10+ years of experience in LLM applications, RAG, AI agents, and full-stack AI product development.",
                 "subjectOf": [
                     {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
@@ -592,7 +594,7 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 "@type": "Person",
                 "@id": "https://madhudadi.in/#person",
                 "name": "Madhu Dadi",
-                "url": "https://madhudadi.in",
+                "url": PERSON_URL,
                 "description": "AI & Analytics Engineer. Builder of open-source tools and platforms.",
             },
             "hasPart": [
@@ -670,8 +672,8 @@ async def ai_profile_json(db: Session = Depends(get_db)):
             "name": "Madhu Dadi",
             "givenName": "Madhu",
             "familyName": "Dadi",
-            "url": PORTFOLIO_URL,
-            "jobTitle": "AI Developer & Marketing Analytics Leader",
+            "url": PERSON_URL,
+            "jobTitle": "AI Engineer, RAG & Analytics Consultant",
             "description": "AI consultant and ML engineer with 10+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
             "alumniOf": [
                 {"@type": "CollegeOrUniversity", "name": "Indian Institute of Management (IIM), Amritsar"},
