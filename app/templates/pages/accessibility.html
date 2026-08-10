@@ -1,0 +1,126 @@
+{% extends "components/base.html" %} {% block title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block meta_title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block meta_description %}Udemy Enroller accessibility: WCAG 2.2 Level AA target, known limits, and how to report barriers. Contact and founder hub links.{% endblock %} {% block og_type
+%}article{% endblock %} {% block og_title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block og_description %}Udemy Enroller accessibility commitment: WCAG 2.2 Level AA target, measures we take, known limits, feedback channel.{% endblock %} {% block twitter_title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block twitter_description %}Udemy Enroller accessibility commitment: WCAG 2.2 Level AA target, measures we take, known limits, feedback channel.{%
+endblock %} {% block content %}
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://udemyenroller.madhudadi.in/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Accessibility",
+                        "item": "https://udemyenroller.madhudadi.in/accessibility"
+                    }
+                ]
+            },
+            {
+                "@type": "WebPage",
+                "@id": "https://udemyenroller.madhudadi.in/accessibility",
+                "name": "Accessibility Statement - Udemy Enroller",
+                "description": "Udemy Enroller accessibility statement: WCAG 2.2 Level AA target, known limits, feedback.",
+                "isPartOf": {
+                    "@type": "WebSite",
+                    "@id": "https://udemyenroller.madhudadi.in/#website"
+                },
+                "about": {
+                    "@type": "Thing",
+                    "name": "Web Accessibility"
+                }
+            }
+        ]
+    }
+</script>
+<div class="min-h-screen bg-white text-gray-900">
+    <div>
+        <section
+            class="max-w-3xl mx-auto px-6 pt-14 pb-10"
+            aria-labelledby="a11y-heading"
+        >
+            <div>
+                <span
+                    class="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#2563EB] rounded-full px-3 py-1 text-xs font-medium mb-4"
+                >
+                    Accessibility
+                </span>
+                <h1
+                    id="a11y-heading"
+                    class="text-3xl font-semibold text-gray-900 tracking-tight mb-3"
+                >
+                    Accessibility Statement
+                </h1>
+                <p class="text-sm text-gray-500 mb-8">Last updated: August 10, 2026</p>
+            </div>
+
+            <div class="space-y-8 text-sm leading-7 text-gray-600">
+                <section>
+                    <h2 class="text-lg font-semibold text-gray-900">Commitment</h2>
+                    <p class="mt-2">
+                        Udemy Enroller aims to make public pages usable by as many people as
+                        possible, including people who use assistive technologies. We target
+                        <strong class="text-gray-900">Web Content Accessibility Guidelines (WCAG) 2.2 Level AA</strong>
+                        for public marketing and documentation surfaces. This is a continuous
+                        improvement goal, not a formal third-party certification claim.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-gray-900">Measures we take</h2>
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                        <li>Semantic HTML landmarks, heading hierarchy, and skip-to-content link.</li>
+                        <li>Keyboard-accessible navigation and primary controls on marketing pages.</li>
+                        <li>Text alternatives for primary brand imagery where provided.</li>
+                        <li>Consent and legal pages available without requiring analytics cookies.</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-gray-900">Known limitations</h2>
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                        <li>
+                            <strong class="text-gray-900">Authenticated dashboards:</strong>
+                            enrollment progress tables and dense tooling may not yet meet every AA criterion.
+                        </li>
+                        <li>
+                            <strong class="text-gray-900">Third-party services:</strong>
+                            analytics (after consent) and external links to Udemy or GitHub are outside full first-party control.
+                        </li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-gray-900">Feedback and assistance</h2>
+                    <p class="mt-2">
+                        If you encounter an accessibility barrier—or need content in an alternative
+                        format—please contact us via the
+                        <a href="/contact" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">contact page</a>
+                        or the founder hub at
+                        <a href="https://madhudadi.in/" class="text-blue-700 underline underline-offset-2 hover:text-blue-900" rel="noopener noreferrer">madhudadi.in</a>.
+                        Include the page URL, assistive technology (if any), and a short description.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-gray-900">Related policies</h2>
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                        <li>
+                            <a href="/privacy" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Privacy Policy</a>
+                        </li>
+                        <li>
+                            <a href="/terms" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Terms of Service</a>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -480,6 +480,7 @@ def build_sitemap_xml(
         ("/privacy", None, "0.30", "monthly"),
         ("/contact", None, "0.30", "monthly"),
         ("/terms", None, "0.30", "monthly"),
+        ("/accessibility", None, "0.30", "yearly"),
     ]
 
     # Category hub pages (only categories that currently have valid deals)

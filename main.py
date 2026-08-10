@@ -367,6 +367,7 @@ async def add_cache_headers(request: Request, call_next):
             "/privacy",
             "/contact",
             "/terms",
+            "/accessibility",
             "/udemycoupons",
             "/robots.txt",
             "/humans.txt",

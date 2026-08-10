@@ -366,7 +366,7 @@ These features ensure the project is discoverable by Google, Bing, ChatGPT, Perp
 
 ## About the Developer
 
-**[Madhu Dadi](https://madhudadi.in)** is an AI Developer & Marketing Analytics Leader with 9+ years of experience building production-grade AI systems, full-stack web applications, and marketing analytics platforms.
+**[Madhu Dadi](https://madhudadi.in)** is an AI Developer & Marketing Analytics Leader with 10+ years of experience building production-grade AI systems, full-stack web applications, and marketing analytics platforms.
 
 - **Portfolio:** [https://madhudadi.in](https://madhudadi.in)
 - **Blog:** [https://madhudadi.in/blog](https://madhudadi.in/blog) - Technical articles on FastAPI, RAG, and automation

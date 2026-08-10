@@ -535,7 +535,7 @@ The tool uses your Udemy session cookies/tokens to call session-based enrollment
 Automated access may conflict with platform terms; users are responsible for compliance. Course availability and enrollment success are not guaranteed.
 
 ### Who built the Udemy Course Enroller?
-The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Developer & Marketing Analytics Leader from Visakhapatnam, India. Madhu has 9+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, specializing in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems. Learn more at {PORTFOLIO_URL}.
+The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Developer & Marketing Analytics Leader from Visakhapatnam, India. Madhu has 10+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, specializing in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems. Learn more at {PORTFOLIO_URL}.
 
 ### What technologies power the Udemy Course Enroller?
 The application is built with Python 3.11+, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper as the primary HTTP client, Playwright as a fallback for some coupon aggregator sites, and Tailwind CSS for the frontend. Deployment uses Docker and docker-compose.
@@ -580,7 +580,7 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 "name": "Madhu Dadi",
                 "url": PORTFOLIO_URL,
                 "jobTitle": "AI Developer & Marketing Analytics Leader",
-                "description": "AI consultant and ML engineer with 9+ years of experience in LLM applications, RAG, AI agents, and full-stack AI product development.",
+                "description": "AI consultant and ML engineer with 10+ years of experience in LLM applications, RAG, AI agents, and full-stack AI product development.",
                 "subjectOf": [
                     {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
                     {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL},
@@ -672,7 +672,7 @@ async def ai_profile_json(db: Session = Depends(get_db)):
             "familyName": "Dadi",
             "url": PORTFOLIO_URL,
             "jobTitle": "AI Developer & Marketing Analytics Leader",
-            "description": "AI consultant and ML engineer with 9+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
+            "description": "AI consultant and ML engineer with 10+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
             "alumniOf": [
                 {"@type": "CollegeOrUniversity", "name": "Indian Institute of Management (IIM), Amritsar"},
                 {"@type": "CollegeOrUniversity", "name": "MVGR College of Engineering"}
@@ -788,3 +788,8 @@ async def contact_page(request: Request):
 @router.get("/terms", response_class=HTMLResponse)
 async def terms_page(request: Request):
     return templates.TemplateResponse(request, "pages/terms.html")
+
+
+@router.get("/accessibility", response_class=HTMLResponse)
+async def accessibility_page(request: Request):
+    return templates.TemplateResponse(request, "pages/accessibility.html")
