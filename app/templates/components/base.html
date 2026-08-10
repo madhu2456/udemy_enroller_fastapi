@@ -49,7 +49,7 @@
             rel="canonical"
             href="https://udemyenroller.madhudadi.in{{ request.url.path }}"
         />{% endblock %}
-        <link rel="author" href="https://madhudadi.in" />
+        <link rel="author" href="https://madhudadi.in/profile/" />
         <link rel="publisher" href="https://madhudadi.in" />
 
         <!-- Alternates for LLMs and AI Agents -->
@@ -164,7 +164,7 @@
                         "@type": "Person",
                         "@id": "https://madhudadi.in/#person",
                         "name": "Madhu Dadi",
-                        "url": "https://madhudadi.in",
+                        "url": "https://madhudadi.in/profile/",
                         {# Fix #8: Person identity anchors only — blog/portfolio/deals link via subjectOf/isPartOf, never sameAs #}
                         "sameAs": [
                             "https://www.wikidata.org/wiki/Q139807441",
@@ -191,6 +191,7 @@
                             "priceCurrency": "USD"
                         },
                         "author": { "@id": "https://madhudadi.in/#person" },
+                        "creator": { "@id": "https://madhudadi.in/#person" },
                         "codeRepository": "https://github.com/madhu2456/udemy_enroller_fastapi",
                         "license": "https://opensource.org/licenses/MIT"
                     }
