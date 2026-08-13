@@ -13,6 +13,11 @@ from loguru import logger
 
 from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient
+from app.services.udemy_validation import (
+    is_trk_udemy_url,
+    is_udemy_course_url,
+    is_udemy_url,
+)
 
 
 class Scraper(ABC):
@@ -58,14 +63,14 @@ class Scraper(ABC):
         """Follow a short trk.udemy.com redirect to the real course URL.
         Returns the resolved URL or None if resolution fails.
         """
-        if "trk.udemy.com" not in trk_url:
+        if not is_trk_udemy_url(trk_url):
             normalized = Course.normalize_link(trk_url)
-            return normalized if "udemy.com/course/" in normalized else None
+            return normalized if is_udemy_course_url(normalized) else None
 
         # Course.normalize_link inherently extracts u=, url=, link=, target=, redirect=, go=
         # and preserves any outer couponCode.
         normalized = Course.normalize_link(trk_url)
-        if "udemy.com/course/" in normalized and "trk.udemy.com" not in normalized:
+        if is_udemy_course_url(normalized) and not is_trk_udemy_url(normalized):
             return normalized
 
         import urllib.parse
@@ -86,7 +91,7 @@ class Scraper(ABC):
             )
             if resp:
                 resolved = str(resp.url)
-                if "udemy.com/course/" in resolved:
+                if is_udemy_course_url(resolved):
                     resolved_norm = Course.normalize_link(resolved)
                     if outer_coupon and "couponCode=" not in resolved_norm:
                         separator = "&" if "?" in resolved_norm else "?"
@@ -105,7 +110,7 @@ class Scraper(ABC):
         clean_url = Course.normalize_link(link)
 
         # Ensure it's a valid udemy course link
-        if "udemy.com/course/" in clean_url:
+        if is_udemy_course_url(clean_url):
             return clean_url
 
         return None
@@ -177,14 +182,20 @@ class Scraper(ABC):
 
     def append_to_list(self, title: str, url: str):
         """Add a course to the data list with deduplication logic."""
-        if not title or not url or "udemy.com" not in url:
+        if not title or not url or not is_udemy_url(url):
             return
 
         if self._is_generic_course_title(title) or len(title) < 4:
             # Try to extract from URL slug if possible
-            match = re.search(r"udemy\.com/course/([^/?#]+)", url)
-            if match:
-                title = match.group(1).replace("-", " ").title()
+            slug = None
+            try:
+                path_parts = urllib.parse.urlparse(url).path.split("/")
+                if len(path_parts) > 2 and path_parts[1] == "course":
+                    slug = path_parts[2]
+            except Exception:
+                slug = None
+            if slug:
+                title = slug.replace("-", " ").title()
             else:
                 return  # Skip if we can't get a good title
 
@@ -431,7 +442,7 @@ class ENextScraper(Scraper):
                             normalized_link = Course.normalize_link(link)
                             if (
                                 not normalized_link
-                                or "udemy.com/course/" not in normalized_link
+                                or not is_udemy_course_url(normalized_link)
                             ):
                                 continue
 
@@ -499,11 +510,11 @@ class InterviewGigScraper(Scraper):
                         )
 
                         soup = self.parse_html(content_html)
-                        links = soup.select("a[href*='udemy.com']")
+                        links = soup.select("a[href]")
 
                         for link in links:
                             href = link.get("href", "")
-                            if "udemy.com" not in href:
+                            if not is_udemy_url(href):
                                 continue
 
                             resolved = await self._resolve_trk_redirect(href)
@@ -589,12 +600,14 @@ class UdemyXpertScraper(Scraper):
 
                     # Extract Udemy URL with regex (most reliable)
                     udemy_match = re.search(
-                        r'href="(https?://[^"]*udemy\.com/course/[^"]*)"',
+                        r'href="(https?://[^"]+)"',
                         text,
                     )
                     if not udemy_match:
                         return None, None
                     udemy_url = udemy_match.group(1)
+                    if not is_udemy_course_url(udemy_url):
+                        return None, None
 
                     # Extract title from meta tags
                     title = None
@@ -721,7 +734,7 @@ class CoursesityScraper(Scraper):
 
                     # Extract Udemy course URL from JS strings
                     matches = re.findall(
-                        r'["\'](https?://www\.udemy\.com/course/[^"\']+)["\']',
+                        r'["\'](https?://[^"\']+)["\']',
                         text,
                     )
                     # Filter out image URLs (udemycdn.com is already excluded by regex)
@@ -729,8 +742,9 @@ class CoursesityScraper(Scraper):
                     for m in matches:
                         if ".jpg" in m or ".png" in m or ".jpeg" in m:
                             continue
-                        udemy_url = m
-                        break
+                        if is_udemy_course_url(m):
+                            udemy_url = m
+                            break
 
                     if not udemy_url:
                         return None, None
@@ -866,12 +880,12 @@ class CourseFolderScraper(Scraper):
 
                     # Extract Udemy URL with coupon from anchor tags
                     matches = re.findall(
-                        r'href="(https?://www\.udemy\.com/course/[^"]+)"',
+                        r'href="(https?://[^"]+)"',
                         text,
                     )
                     udemy_url = None
                     for m in matches:
-                        if "couponCode=" in m:
+                        if "couponCode=" in m and is_udemy_course_url(m):
                             udemy_url = m
                             break
 
@@ -1010,15 +1024,16 @@ class CouponamiScraper(Scraper):
 
                     # Extract Udemy URL
                     matches = re.findall(
-                        r'["\'](https?://www\.udemy\.com/course/[^"\']+)["\']',
+                        r'["\'](https?://[^"\']+)["\']',
                         text,
                     )
                     udemy_url = None
                     for m in matches:
                         if ".jpg" in m or ".png" in m:
                             continue
-                        udemy_url = m
-                        break
+                        if is_udemy_course_url(m):
+                            udemy_url = m
+                            break
 
                     if not udemy_url:
                         return None, None
@@ -1149,15 +1164,14 @@ class KorshubScraper(Scraper):
 
                     # Extract Udemy URL with coupon
                     matches = re.findall(
-                        r'href="(https?://www\.udemy\.com/course/[^"]+)"',
+                        r'href="(https?://[^"]+)"',
                         text,
                     )
                     udemy_url = None
                     for m in matches:
-                        if "udemy.com/user/" in m:
-                            continue
-                        udemy_url = m
-                        break
+                        if is_udemy_course_url(m):
+                            udemy_url = m
+                            break
 
                     if not udemy_url:
                         return None, None
@@ -1314,7 +1328,7 @@ class UdemyFreebiesScraper(Scraper):
                         return None, None
 
                     location = resp.headers.get("location", "")
-                    if not location or "udemy.com" not in location:
+                    if not location or not is_udemy_url(location):
                         return None, None
 
                     return title, location
@@ -1454,7 +1468,7 @@ class IDownloadCouponScraper(Scraper):
                         return None, None
 
                     udemy_url = await self._resolve_trk_redirect(location)
-                    if not udemy_url or "udemy.com" not in udemy_url:
+                    if not udemy_url or not is_udemy_url(udemy_url):
                         return None, None
 
                     return title, udemy_url
@@ -1533,17 +1547,17 @@ class CourseJoinerScraper(Scraper):
                     # Use BeautifulSoup anchors first
                     for a in soup.find_all("a", href=True):
                         href = a["href"]
-                        if "udemy.com/course/" in href:
+                        if is_udemy_course_url(href):
                             udemy_url = href
                             break
 
                     # Fall back to regex over full page text
                     if not udemy_url:
                         matches = re.findall(
-                            r'(https?://[^"\'\s<>]*udemy\.com/course/[^"\'\s<>]+)', text
+                            r'(https?://[^"\'\s<>]+)', text
                         )
                         for m in matches:
-                            if ".jpg" not in m and ".png" not in m:
+                            if ".jpg" not in m and ".png" not in m and is_udemy_course_url(m):
                                 udemy_url = m
                                 break
 
@@ -1643,7 +1657,7 @@ class CourseJoinerScraper(Scraper):
                             normalized_link = Course.normalize_link(link)
                             if (
                                 not normalized_link
-                                or "udemy.com/course/" not in normalized_link
+                                or not is_udemy_course_url(normalized_link)
                             ):
                                 continue
 
@@ -1711,9 +1725,7 @@ class FreeCourseSitesScraper(Scraper):
         soup = self.parse_html(html)
 
         candidates = []
-        for anchor in soup.select(
-            "a.mks_button[href*='udemy.com'], a[href*='udemy.com/course/'], a[href*='trk.udemy.com']"
-        ):
+        for anchor in soup.select("a[href]"):
             candidates.append(anchor)
 
         courses = []
@@ -1726,13 +1738,18 @@ class FreeCourseSitesScraper(Scraper):
 
             href = html_lib.unescape(href)
 
-            if "trk.udemy.com" in href:
+            classes = a.get("class") or []
+            is_button = "mks_button" in classes
+            if not (is_button or is_udemy_course_url(href) or is_trk_udemy_url(href)):
+                continue
+
+            if is_trk_udemy_url(href):
                 resolved = await self._resolve_trk_redirect(href)
                 if resolved:
                     href = resolved
 
             normalized = Course.normalize_link(href)
-            if "udemy.com/course/" not in normalized:
+            if not is_udemy_course_url(normalized):
                 continue
 
             if normalized in seen_urls:
@@ -2084,7 +2101,7 @@ class FreeWebCartScraper(Scraper):
                 try:
                     decoded = json.loads(f'"{raw}"')
                     candidate_url = html_lib.unescape(decoded).strip()
-                    if "udemy.com/course/" in candidate_url:
+                    if is_udemy_course_url(candidate_url):
                         udemy_url = candidate_url
                         break
                 except Exception:
@@ -2092,18 +2109,18 @@ class FreeWebCartScraper(Scraper):
 
             if not udemy_url:
                 soup = self.parse_html(html_text)
-                for a in soup.select('a[href*="udemy.com/course/"]'):
+                for a in soup.select("a[href]"):
                     href = a.get("href", "").strip()
-                    if href:
+                    if is_udemy_course_url(href):
                         udemy_url = href
                         break
 
             if not udemy_url:
                 match = re.search(
-                    r'(https://www\.udemy\.com/course/[a-zA-Z0-9_-]+/?(?:[^"\'>\s]+)?)',
+                    r'(https://[a-zA-Z0-9.-]+/course/[a-zA-Z0-9_-]+/?(?:[^"\'>\s]+)?)',
                     html_text,
                 )
-                if match:
+                if match and is_udemy_course_url(match.group(1)):
                     udemy_url = match.group(1)
 
             if not udemy_url:
@@ -2111,7 +2128,7 @@ class FreeWebCartScraper(Scraper):
                 return None
 
             normalized = Course.normalize_link(udemy_url)
-            if "udemy.com/course/" not in normalized:
+            if not is_udemy_course_url(normalized):
                 self.diagnostics["invalid_normalized_urls"] += 1
                 return None
 

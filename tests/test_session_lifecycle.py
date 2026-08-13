@@ -13,7 +13,7 @@ from app.models.database import (
     _utcnow_naive,
     engine,
 )
-from app.security import encrypt_cookies
+from app.security import encrypt_cookies_salted, generate_cookie_salt
 from app.session_lifecycle import cleanup_expired_session, enforce_session_limit
 
 
@@ -21,12 +21,16 @@ def _make_user_with_session(*, expired: bool, cookies: bool = True):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     email = f"life_{secrets.token_hex(4)}@example.com"
+    salt = generate_cookie_salt() if cookies else None
     user = User(
         email=email,
         udemy_display_name="Life",
-        udemy_cookies=encrypt_cookies({"access_token": "t", "client_id": "c"})
-        if cookies
-        else None,
+        udemy_cookies=(
+            encrypt_cookies_salted({"access_token": "t", "client_id": "c"}, salt)
+            if cookies
+            else None
+        ),
+        cookies_salt=salt,
     )
     db.add(user)
     db.commit()

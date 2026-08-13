@@ -63,6 +63,9 @@ class TestGetCourseIDFlow:
         # Mock HTML success
         mock_html = '<body data-course-id="67890"></body>'
         mock_html_resp = MagicMock(status_code=200, text=mock_html)
+        # Redirect target must be an exact Udemy netloc (F-ENRL-C07 gate);
+        # a MagicMock url would be rejected as a non-Udemy host.
+        mock_html_resp.url = "https://www.udemy.com/course/test/"
 
         with patch.object(
             udemy_client.http, "get", side_effect=[mock_api_resp, mock_html_resp]

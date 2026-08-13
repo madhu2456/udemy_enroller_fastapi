@@ -78,6 +78,9 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)  # Bcrypt hashed password
     udemy_display_name = Column(String(255), nullable=True)
     udemy_cookies = Column(Text, nullable=True)
+    # Per-session salt binding the Fernet envelope to the session that wrote it
+    # (F-ENRL-C01). Null for legacy rows until migrated; wiped with cookies.
+    cookies_salt = Column(String(64), nullable=True)
     currency = Column(String(10), default="usd")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utcnow_naive)
@@ -296,6 +299,11 @@ def create_tables():
                 conn.execute(text("SELECT is_coupon_valid FROM enrolled_courses LIMIT 1"))
             except OperationalError:
                 conn.execute(text("ALTER TABLE enrolled_courses ADD COLUMN is_coupon_valid BOOLEAN"))
+
+            try:
+                conn.execute(text("SELECT cookies_salt FROM users LIMIT 1"))
+            except OperationalError:
+                conn.execute(text("ALTER TABLE users ADD COLUMN cookies_salt VARCHAR(64)"))
     except Exception:
         # Just pass if it's Postgres or another DB that handles this via Alembic
         pass

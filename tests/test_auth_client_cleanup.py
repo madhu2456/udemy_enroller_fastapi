@@ -106,7 +106,7 @@ async def test_session_handoff_failure_closes_owned_client(monkeypatch):
     client = _mock_client()
     db, _user = _existing_user_db()
     monkeypatch.setattr(auth, "UdemyClient", lambda: client)
-    monkeypatch.setattr(auth, "encrypt_cookies", lambda _cookies: "encrypted")
+    monkeypatch.setattr(auth, "encrypt_cookies_salted", lambda _cookies, _salt: "encrypted")
     monkeypatch.setattr(
         auth,
         "_create_session",
@@ -136,7 +136,7 @@ async def test_unexpected_credential_login_error_redacts_sensitive_log_details(
     error = MagicMock()
     exception = MagicMock()
     monkeypatch.setattr(auth, "UdemyClient", lambda: client)
-    monkeypatch.setattr(auth, "encrypt_cookies", lambda _cookies: "encrypted")
+    monkeypatch.setattr(auth, "encrypt_cookies_salted", lambda _cookies, _salt: "encrypted")
     monkeypatch.setattr(
         auth,
         "_create_session",
@@ -177,7 +177,7 @@ async def test_unexpected_cookie_login_error_redacts_sensitive_log_details(
     error = MagicMock()
     exception = MagicMock()
     monkeypatch.setattr(auth, "UdemyClient", lambda: client)
-    monkeypatch.setattr(auth, "encrypt_cookies", lambda _cookies: "encrypted")
+    monkeypatch.setattr(auth, "encrypt_cookies_salted", lambda _cookies, _salt: "encrypted")
     monkeypatch.setattr(
         auth,
         "_create_session",
@@ -215,7 +215,7 @@ async def test_successful_session_handoff_keeps_client_open(monkeypatch):
     db, user = _existing_user_db()
     create_session = MagicMock(return_value="synthetic-session-token")
     monkeypatch.setattr(auth, "UdemyClient", lambda: client)
-    monkeypatch.setattr(auth, "encrypt_cookies", lambda _cookies: "encrypted")
+    monkeypatch.setattr(auth, "encrypt_cookies_salted", lambda _cookies, _salt: "encrypted")
     monkeypatch.setattr(auth, "_create_session", create_session)
     request = _request("/api/auth/login")
 
@@ -237,7 +237,7 @@ async def test_successful_cookie_session_handoff_keeps_client_open(monkeypatch):
     db, user = _existing_user_db()
     create_session = MagicMock(return_value="synthetic-session-token")
     monkeypatch.setattr(auth, "UdemyClient", lambda: client)
-    monkeypatch.setattr(auth, "encrypt_cookies", lambda _cookies: "encrypted")
+    monkeypatch.setattr(auth, "encrypt_cookies_salted", lambda _cookies, _salt: "encrypted")
     monkeypatch.setattr(auth, "_create_session", create_session)
     request = _request("/api/auth/login/cookies")
 

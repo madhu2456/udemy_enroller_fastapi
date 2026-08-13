@@ -145,6 +145,51 @@ async def test_resolve_does_not_retry_deterministic_no_match(monkeypatch):
     assert http.get.await_count == 1
 
 
+# --- F-ENRL-C07: pre-fetch + final-URL gates on the raw-URL HTML tier --------
+
+@pytest.mark.asyncio
+async def test_html_tier_rejects_hostile_url_before_fetch():
+    """C1: a hostile URL (www.udemy.com.evil.com) is rejected before any fetch."""
+    http = AsyncMock()
+    result = await checker._resolve_html_tier(
+        http, "https://www.udemy.com.evil.com/course/x/?couponCode=ABC"
+    )
+    assert result is None
+    http.get.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_html_tier_rejects_hostile_redirect_final_url():
+    """C1: a redirect to a non-Udemy final URL is rejected even when the body
+    carries a course id — attacker HTML must never feed extraction, and the
+    deterministic rejection must not retry."""
+    http = AsyncMock()
+    http.get.return_value = SimpleNamespace(
+        text='{"courseId": 7220277}',
+        url="https://evil.com/course/x/?couponCode=ABC",
+    )
+    result = await checker._resolve_html_tier(
+        http, "https://www.udemy.com/course/x/?couponCode=ABC"
+    )
+    assert result is None
+    assert http.get.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_html_tier_accepts_udemy_to_udemy_redirect():
+    """C1: a redirect between exact Udemy netlocs (www.udemy.com -> udemy.com)
+    still resolves the course id from the final page."""
+    http = AsyncMock()
+    http.get.return_value = SimpleNamespace(
+        text='{"courseId": 7220277}',
+        url="https://udemy.com/course/x/?couponCode=ABC",
+    )
+    result = await checker._resolve_html_tier(
+        http, "https://www.udemy.com/course/x/?couponCode=ABC"
+    )
+    assert result == "7220277"
+
+
 # --- resolver tier chain: fields -> bare -> raw-path-slug -> HTML -------------
 
 @pytest.mark.asyncio

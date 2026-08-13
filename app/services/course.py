@@ -4,6 +4,8 @@ from urllib.parse import parse_qs, urlparse, urlsplit, urlunparse, unquote
 import logging
 import html
 
+from app.services.udemy_validation import is_udemy_netloc, is_udemy_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,13 +63,11 @@ class Course:
         original_coupon = original_qs.get("couponCode", [None])[0]
 
         # 2. Extract udemy link from query parameters (common in redirectors like trk.udemy.com)
-        if "udemy.com" in url.lower() and any(
-            k in url for k in ["link=", "url=", "u=", "target=", "redirect=", "go="]
-        ):
+        if any(k in url for k in ["link=", "url=", "u=", "target=", "redirect=", "go="]):
             parsed = urlparse(url)
             qs = parse_qs(parsed.query)
             for key in ["link", "url", "u", "target", "redirect", "go"]:
-                if key in qs and "udemy.com" in qs[key][0]:
+                if key in qs and is_udemy_url(qs[key][0]):
                     url = qs[key][0]
                     break
 
@@ -79,7 +79,7 @@ class Course:
             netloc = "www.udemy.com"
         
         # Ensure it's a udemy link before we start stripping things
-        if "udemy.com" in netloc:
+        if is_udemy_netloc(netloc):
             path = parsed_url.path
             if not path.endswith("/"):
                 path += "/"

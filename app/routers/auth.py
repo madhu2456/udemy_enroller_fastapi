@@ -16,7 +16,8 @@ from app.security import (
     _client_key,
     auth_status_rate_limiter,
     decrypt_cookies,
-    encrypt_cookies,
+    encrypt_cookies_salted,
+    generate_cookie_salt,
     generate_csrf_token,
     login_rate_limiter,
     verify_csrf_token,
@@ -156,10 +157,12 @@ async def login_with_credentials(
 
         user = db.query(User).filter(User.email == login_req.email).first()
         if not user:
+            salt = generate_cookie_salt()
             user = User(
                 email=login_req.email,
                 udemy_display_name=client.display_name,
-                udemy_cookies=encrypt_cookies(client.cookie_dict),
+                udemy_cookies=encrypt_cookies_salted(client.cookie_dict, salt),
+                cookies_salt=salt,
                 currency=client.currency,
             )
             db.add(user)
@@ -169,8 +172,12 @@ async def login_with_credentials(
             db.commit()
             logger.info(f"New user registered (ID: {user.id})")
         else:
+            # Fresh per-session envelope on every login (F-ENRL-C01)
+            user.cookies_salt = generate_cookie_salt()
             user.udemy_display_name = client.display_name
-            user.udemy_cookies = encrypt_cookies(client.cookie_dict)
+            user.udemy_cookies = encrypt_cookies_salted(
+                client.cookie_dict, user.cookies_salt
+            )
             user.currency = client.currency
             db.commit()
             logger.info(f"User updated (ID: {user.id})")
@@ -232,10 +239,12 @@ async def login_with_cookies(
                 db.commit()
 
         if not user:
+            salt = generate_cookie_salt()
             user = User(
                 email=udemy_email,
                 udemy_display_name=client.display_name,
-                udemy_cookies=encrypt_cookies(client.cookie_dict),
+                udemy_cookies=encrypt_cookies_salted(client.cookie_dict, salt),
+                cookies_salt=salt,
                 currency=client.currency,
             )
             db.add(user)
@@ -247,7 +256,11 @@ async def login_with_cookies(
                 f"New user via cookie (ID: {user.id})"
             )
         else:
-            user.udemy_cookies = encrypt_cookies(client.cookie_dict)
+            # Fresh per-session envelope on every login (F-ENRL-C01)
+            user.cookies_salt = generate_cookie_salt()
+            user.udemy_cookies = encrypt_cookies_salted(
+                client.cookie_dict, user.cookies_salt
+            )
             user.currency = client.currency
             user.udemy_display_name = client.display_name  # Keep display name in sync
             db.commit()
@@ -312,7 +325,11 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
     if not client or not client.is_authenticated:
         # Reconstruct client from db cookies
         user = session.user
-        cookies = decrypt_cookies(user.udemy_cookies) if user.udemy_cookies else None
+        cookies = (
+            decrypt_cookies(user.udemy_cookies, user.cookies_salt)
+            if user.udemy_cookies
+            else None
+        )
         if cookies:
             client = UdemyClient(
                 proxy=user.settings.proxy_url if user.settings else None
@@ -390,6 +407,7 @@ async def logout(
                 user = db.query(User).filter(User.id == user_id).first()
                 if user is not None:
                     user.udemy_cookies = None
+                    user.cookies_salt = None
             db.commit()
     except Exception as exc:
         try:

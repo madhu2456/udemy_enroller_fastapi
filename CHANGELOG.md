@@ -108,6 +108,25 @@ Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
 - **Ops**: `scripts/deploy.sh` now generates a Fernet `COOKIE_ENCRYPTION_KEY`; coupon-checker fails fast on invalid settings; see `docs/security-trio-fix.md` for the SECRET_KEY rotation runbook.
 
+### Security — F-ENRL-C01 (per-session cookie envelopes)
+
+- **Security**: hosted cookie blobs now encrypt under a per-session key — HKDF-SHA256 (info `udemy-enroller-session-key-v1`) derived from the master Fernet key plus a per-user `cookies_salt` (16 random bytes), rotated on every write site (login, save, refresh, connect). A blob decrypts only under the salt of the session that wrote it; wrong/missing salt fails closed (None → 401 → re-login).
+- Legacy (unsalted master-key Fernet) blobs and plaintext dicts keep their prior behavior behind two independent flags: `ALLOW_LEGACY_COOKIE_DECRYPT` (default ON for local/dev with a warning, OFF for server/production) and the existing `ALLOW_PLAINTEXT_COOKIES`.
+- Logout, session expiry, and Clear All Data now wipe `cookies_salt` as well, making old blobs undecryptable.
+- Migration `alembic/versions/c01d021a9e01_add_cookies_salt_to_users.py` adds the `cookies_salt` column (write-only ALTER; currently the head of the chain) — **not yet applied to any database**.
+- `scripts/migrate_cookies_per_session.py` re-encrypts existing blobs per session (dry-run by default; `--apply` requires `--backup-verified`; JSON report) — **not yet run**.
+- `.env.example` documents the new flag.
+
+### Security — F-ENRL-C07 (host-validation gate)
+
+- **Security**: all "is this Udemy?" checks in `app/services` now use parse-based allowlist helpers in `app/services/udemy_validation.py` (`is_udemy_netloc`, `is_udemy_url`, `is_udemy_course_url`, `is_trk_udemy_url` — exact netloc match). Substring/regex checks on the literal `udemy.com` (which accept hostile hosts like `udemy.com.evil.com`, `eviludemy.com`, `user@udemy.com`) were removed.
+- `scripts/verify-no-udemy-substring.sh` regression gate runs in CI (`--tree` mode) and can run on the staged diff as a pre-commit check; fails on any new substring check in `app/services` (allowlist file exempt).
+
+### Docs — F-ENRL-J01 (DPIA draft)
+
+- `docs/dpia-enroller-cookies-skeleton.md` — draft DPIA skeleton **v0.4-draft-v1** for hosted encrypted cookie processing: controller, lawful basis (§4a options), retention, cross-border, DPDP Act 2023 pointers; sign-off DATE-PENDING (counsel review required).
+- `docs/legal-counsel-review.md` — added draft IT Act / intermediary N/A rationale (marked draft-for-counsel, not legal advice).
+
 ## [2026-07-06] — baseline `e6bc1c2`
 
 ### Summary

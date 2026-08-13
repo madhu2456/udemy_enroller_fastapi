@@ -299,7 +299,7 @@ class TestCookieLoginIdentityMigration:
         mock_client_inst.get_session_info = AsyncMock()
 
         with patch("app.routers.auth.UdemyClient", return_value=mock_client_inst):
-            with patch("app.routers.auth.encrypt_cookies", return_value=b"encrypted"):
+            with patch("app.routers.auth.encrypt_cookies_salted", return_value=b"encrypted"):
                 with patch("app.routers.auth._create_session", return_value="session123"):
                     with patch("app.routers.auth._login_response"):
                         await login_with_cookies(mock_cookie_req, mock_request, mock_db)

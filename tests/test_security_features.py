@@ -10,7 +10,9 @@ from fastapi import HTTPException, Request
 import app.security as security_mod
 from app.security import (
     encrypt_cookies,
+    encrypt_cookies_salted,
     decrypt_cookies,
+    generate_cookie_salt,
     generate_csrf_token,
     verify_csrf_token,
     RateLimiter,
@@ -26,23 +28,27 @@ from app.services.course import Course
 
 
 class TestCookieEncryption:
-    """Test Fernet-based cookie encryption."""
+    """Test per-session Fernet-based cookie encryption (F-ENRL-C01)."""
 
     def test_roundtrip_encryption(self):
         cookies = {"access_token": "abc123", "client_id": "xyz"}
-        encrypted = encrypt_cookies(cookies)
+        salt = generate_cookie_salt()
+        encrypted = encrypt_cookies_salted(cookies, salt)
         assert isinstance(encrypted, str)
         assert encrypted != str(cookies)
-        decrypted = decrypt_cookies(encrypted)
+        decrypted = decrypt_cookies(encrypted, salt)
         assert decrypted == cookies
 
     def test_empty_dict_returns_empty(self):
         assert encrypt_cookies({}) == ""
         assert encrypt_cookies(None) == ""
+        assert encrypt_cookies_salted({}, generate_cookie_salt()) == ""
+        assert encrypt_cookies_salted(None, generate_cookie_salt()) == ""
 
     def test_decrypt_empty_returns_none(self):
         assert decrypt_cookies("") is None
         assert decrypt_cookies(None) is None
+        assert decrypt_cookies("", generate_cookie_salt()) is None
 
     def test_decrypt_legacy_plaintext_dict(self):
         """Backward compatibility: plaintext dicts should still work in local mode."""
@@ -60,11 +66,20 @@ class TestCookieEncryption:
 
     def test_encryption_is_deterministic_with_same_key(self):
         cookies = {"key": "value"}
-        e1 = encrypt_cookies(cookies)
-        e2 = encrypt_cookies(cookies)
+        salt = generate_cookie_salt()
+        e1 = encrypt_cookies_salted(cookies, salt)
+        e2 = encrypt_cookies_salted(cookies, salt)
         # Fernet with same key produces different ciphertexts (random IV)
         assert e1 != e2
-        assert decrypt_cookies(e1) == decrypt_cookies(e2)
+        assert decrypt_cookies(e1, salt) == decrypt_cookies(e2, salt)
+
+    def test_wrong_salt_fails_closed(self):
+        """A blob encrypted under one session's salt never decrypts under another."""
+        cookies = {"access_token": "abc", "client_id": "def"}
+        salt_a, salt_b = generate_cookie_salt(), generate_cookie_salt()
+        encrypted = encrypt_cookies_salted(cookies, salt_a)
+        assert decrypt_cookies(encrypted, salt_b) is None
+        assert decrypt_cookies(encrypted, salt_a) == cookies
 
     def test_server_mode_rejects_plaintext_dict(self, monkeypatch):
         """F019: DEPLOYMENT_ENV=server must not accept plaintext cookie dicts."""
@@ -105,14 +120,15 @@ class TestCookieEncryption:
         security_mod._fernet = None
         assert decrypt_cookies(json.dumps({"access_token": "t"})) is None
 
-    def test_server_mode_accepts_fernet_ciphertext(self, monkeypatch):
-        """F019: Fernet round-trip still works in server mode."""
+    def test_server_mode_accepts_salted_fernet_ciphertext(self, monkeypatch):
+        """F-ENRL-C01: per-session salted round-trip still works in server mode."""
         from types import SimpleNamespace
 
         from cryptography.fernet import Fernet
 
         key = Fernet.generate_key().decode()
         monkeypatch.delenv("ALLOW_PLAINTEXT_COOKIES", raising=False)
+        monkeypatch.delenv("ALLOW_LEGACY_COOKIE_DECRYPT", raising=False)
         monkeypatch.setattr(
             "config.settings.get_settings",
             lambda: SimpleNamespace(
@@ -122,11 +138,37 @@ class TestCookieEncryption:
             ),
         )
         security_mod._fernet = None
+        security_mod._fernet_key_bytes = None
         cookies = {"access_token": "abc", "client_id": "def"}
-        encrypted = encrypt_cookies(cookies)
+        salt = generate_cookie_salt()
+        encrypted = encrypt_cookies_salted(cookies, salt)
         assert isinstance(encrypted, str)
         assert not encrypted.strip().startswith("{")
-        assert decrypt_cookies(encrypted) == cookies
+        assert decrypt_cookies(encrypted, salt) == cookies
+
+    def test_server_mode_rejects_legacy_unsalted_ciphertext(self, monkeypatch):
+        """Server mode rejects legacy master-key blobs (fail-closed)."""
+        from types import SimpleNamespace
+
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        monkeypatch.delenv("ALLOW_PLAINTEXT_COOKIES", raising=False)
+        monkeypatch.delenv("ALLOW_LEGACY_COOKIE_DECRYPT", raising=False)
+        monkeypatch.setattr(
+            "config.settings.get_settings",
+            lambda: SimpleNamespace(
+                DEPLOYMENT_ENV="server",
+                COOKIE_ENCRYPTION_KEY=key,
+                SECRET_KEY="a" * 64,
+            ),
+        )
+        security_mod._fernet = None
+        security_mod._fernet_key_bytes = None
+        cookies = {"access_token": "abc", "client_id": "def"}
+        legacy = encrypt_cookies(cookies)  # legacy writer: no per-session salt
+        assert decrypt_cookies(legacy) is None
+        assert decrypt_cookies(legacy, generate_cookie_salt()) is None
 
     def test_server_mode_plaintext_override_flag(self, monkeypatch):
         """Emergency ALLOW_PLAINTEXT_COOKIES=1 re-enables legacy path (not recommended)."""

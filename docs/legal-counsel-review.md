@@ -85,6 +85,14 @@ These are **engineering/audit themes** for counsel to analyze against Udemy Term
 6. Any required changes to privacy policy, security contact, or public promotion language?  
 7. Can open-source MIT distribution continue while the hosted demo runs, or should distribution/hosting be separated?
 
+### 4a. Draft rationale: India IT Act / intermediary status — **DRAFT-FOR-COUNSEL, not legal advice**
+
+Working draft for counsel to verify or reject; does **not** change the owner decisions in §1 and does not conclude any legal position:
+
+- The operator of the hosted demo likely does **not** act as an "intermediary" under the Information Technology Act, 2000 §2(1)(w) (as read with the IT (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021) for the cookie-processing feature: the operator does not publish/transmit/host third-party user content to other users and provides no messaging facility. Session cookies are stored solely for each user's own automation runs on their own account.
+- The public coupon-listing page aggregates machine-extracted coupon offers rather than user-generated content; counsel should still assess whether that page could engage intermediary due-diligence expectations (Rules 3–4), and whether the site qualifies for the §79 safe-harbour regime at all if it is not an intermediary.
+- If India's DPDP Act 2023 governs the hosted cookie processing (cookies may be personal data; controller = operator — see `docs/dpia-enroller-cookies-skeleton.md`), the DPDP regime — not the IT Act intermediary regime — is the relevant Indian framework for notice/consent, retention, and cross-border obligations; the Act's implementation status and rules should be confirmed by counsel at review time.
+
 ---
 
 ## 5. Document pack to send counsel

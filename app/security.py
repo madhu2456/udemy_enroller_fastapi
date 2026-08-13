@@ -7,6 +7,7 @@ import hashlib
 import ipaddress
 import json
 import re
+import secrets
 import time
 from collections import defaultdict
 from typing import Any, Optional
@@ -15,6 +16,8 @@ from urllib.parse import urlparse
 import bcrypt
 import httpx
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from fastapi import HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel, field_validator
@@ -23,11 +26,13 @@ _BCRYPT_ROUNDS = 12
 
 # Lazy-loaded Fernet instance — initialized on first use so Settings are ready.
 _fernet: Optional[Fernet] = None
+# Raw 32-byte master key backing the Fernet instance (set together with _fernet).
+_fernet_key_bytes: Optional[bytes] = None
 
 
 def _get_fernet() -> Fernet:
     """Return a Fernet instance, deriving the key from settings if needed."""
-    global _fernet
+    global _fernet, _fernet_key_bytes
     if _fernet is not None:
         return _fernet
 
@@ -49,6 +54,7 @@ def _get_fernet() -> Fernet:
 
     if key and _is_valid_fernet_key(key):
         _fernet = Fernet(key)
+        _fernet_key_bytes = base64.urlsafe_b64decode(key)
         return _fernet
 
     # Fallback: derive from SECRET_KEY
@@ -65,15 +71,100 @@ def _get_fernet() -> Fernet:
             "Set COOKIE_ENCRYPTION_KEY explicitly in production for stronger security."
         )
     _fernet = Fernet(derived)
+    _fernet_key_bytes = base64.urlsafe_b64decode(derived)
     return _fernet
 
 
 def encrypt_cookies(cookie_dict: dict) -> str:
-    """Encrypt a cookie dict to a string for safe DB storage."""
+    """Encrypt a cookie dict to a string for safe DB storage.
+
+    LEGACY writer (F-ENRL-C01 migration path): encrypts under the master key
+    only, with no per-session salt. New writes must use
+    ``encrypt_cookies_salted(data, salt)``; blobs produced here only decrypt
+    while ``ALLOW_LEGACY_COOKIE_DECRYPT`` is enabled.
+    """
     if not cookie_dict:
         return ""
     f = _get_fernet()
     return f.encrypt(json.dumps(cookie_dict).encode("utf-8")).decode("utf-8")
+
+
+# ── Per-session cookie envelope (F-ENRL-C01) ─────────────────
+
+# Stable HKDF info string — changing it would rotate every session key.
+_SESSION_KEY_INFO = b"udemy-enroller-session-key-v1"
+
+
+def generate_cookie_salt() -> str:
+    """Generate a fresh per-session salt (16 random bytes, urlsafe base64).
+
+    Stored on the user row next to the encrypted cookie blob; binds the Fernet
+    envelope to the session that wrote it.
+    """
+    return base64.urlsafe_b64encode(secrets.token_bytes(16)).decode("ascii")
+
+
+def _get_master_key_bytes() -> bytes:
+    """Raw 32-byte master key backing the configured Fernet instance."""
+    _get_fernet()
+    if _fernet_key_bytes is None:
+        raise RuntimeError("Fernet key not initialized")
+    return _fernet_key_bytes
+
+
+def _derive_session_key(salt: str) -> bytes:
+    """Derive a per-session 32-byte key via HKDF-SHA256.
+
+    Master key material (COOKIE_ENCRYPTION_KEY or the SECRET_KEY-derived
+    fallback) + per-session salt + stable info string. A different salt yields
+    a different key, so a ciphertext written under one session's salt can
+    never be decrypted with another session's salt (fail-closed).
+    """
+    if not salt:
+        raise ValueError("cookie salt must be non-empty")
+    try:
+        salt_bytes = base64.urlsafe_b64decode(salt.encode("ascii"))
+    except (ValueError, TypeError) as exc:
+        raise ValueError("cookie salt is not valid urlsafe base64") from exc
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt_bytes,
+        info=_SESSION_KEY_INFO,
+    )
+    return hkdf.derive(_get_master_key_bytes())
+
+
+def encrypt_cookies_salted(data: dict, salt: str) -> str:
+    """Encrypt a cookie dict under a per-session derived key; "" when empty."""
+    if not data:
+        return ""
+    session_key = base64.urlsafe_b64encode(_derive_session_key(salt))
+    f = Fernet(session_key)
+    return f.encrypt(json.dumps(data).encode("utf-8")).decode("utf-8")
+
+
+def _allow_legacy_cookie_decrypt() -> bool:
+    """Whether legacy (unsalted) cookie blobs may be decrypted.
+
+    Server/production deployments reject legacy blobs by default (fail-closed):
+    a blob without a valid per-session salt yields None -> 401 and the user
+    must log in again. Local/dev keeps backward compatibility so existing local
+    databases keep working during the migration window. Emergency override:
+    ALLOW_LEGACY_COOKIE_DECRYPT=1 (not recommended on shared hosts).
+    """
+    import os
+
+    flag = (os.environ.get("ALLOW_LEGACY_COOKIE_DECRYPT") or "").strip().lower()
+    if flag in ("1", "true", "yes", "on"):
+        return True
+    if flag in ("0", "false", "no", "off"):
+        return False
+
+    from config.settings import get_settings
+
+    env = (get_settings().DEPLOYMENT_ENV or "").strip().lower()
+    return env not in ("server", "production")
 
 
 def _allow_plaintext_cookies() -> bool:
@@ -97,36 +188,63 @@ def _allow_plaintext_cookies() -> bool:
     return env not in ("server", "production")
 
 
-def decrypt_cookies(encrypted: Any) -> Optional[dict]:
-    """Decrypt a cookie string back to a dict. Returns None on failure.
+def _legacy_plaintext_decrypt(value: dict) -> Optional[dict]:
+    """Accept a legacy plaintext cookie blob only while plaintext is allowed."""
+    if not _allow_plaintext_cookies():
+        logger.warning(
+            "Rejected plaintext cookie blob — server mode requires Fernet ciphertext"
+        )
+        return None
+    return value
 
-    Local/dev also accepts legacy plaintext dicts or JSON strings for backward
-    compatibility. In DEPLOYMENT_ENV=server|production, non-Fernet plaintext
-    paths are rejected (return None) unless ALLOW_PLAINTEXT_COOKIES is set.
+
+def decrypt_cookies(encrypted: Any, salt: Optional[str] = None) -> Optional[dict]:
+    """Decrypt a cookie blob back to a dict. Returns None on failure.
+
+    Post-F-ENRL-C01 envelopes are Fernet ciphertext under a per-session
+    HKDF-derived key; pass the user's ``cookies_salt`` to decrypt them.
+    Legacy blobs (master-key Fernet ciphertext, plaintext dicts/JSON strings)
+    are accepted only while the legacy path is enabled — ``ALLOW_LEGACY_
+    COOKIE_DECRYPT`` defaults ON for local/dev and OFF for server/production
+    (fail-closed). Any failure returns None so callers take the 401 path;
+    ciphertext is never returned as a usable secret.
     """
     if not encrypted:
         return None
-    # Backward compatibility: already a dict (legacy plaintext)
+    # Legacy plaintext dict (pre-encryption format)
     if isinstance(encrypted, dict):
-        if not _allow_plaintext_cookies():
-            logger.warning(
-                "Rejected plaintext cookie dict — server mode requires Fernet ciphertext"
-            )
-            return None
-        return encrypted
+        return _legacy_plaintext_decrypt(encrypted)
     if not isinstance(encrypted, str):
         return None
-    # If it looks like JSON, it might be a legacy plaintext string stored in JSON col
+    # Legacy plaintext JSON stored in a text column
     if encrypted.strip().startswith(("{", "[")):
-        if not _allow_plaintext_cookies():
-            logger.warning(
-                "Rejected plaintext cookie JSON — server mode requires Fernet ciphertext"
-            )
-            return None
         try:
-            return json.loads(encrypted)
+            return _legacy_plaintext_decrypt(json.loads(encrypted))
         except (json.JSONDecodeError, ValueError):
-            pass
+            return None
+    # Per-session envelope first (salt binds the key to the writing session)
+    if salt:
+        try:
+            session_key = base64.urlsafe_b64encode(_derive_session_key(salt))
+            f = Fernet(session_key)
+            decrypted = f.decrypt(encrypted.encode("utf-8"))
+            return json.loads(decrypted.decode("utf-8"))
+        except Exception:
+            logger.warning(
+                "Failed to decrypt cookies with per-session salt — "
+                "falling back to legacy path"
+            )
+    # Legacy master-key Fernet envelope — gated by the legacy flag
+    if not _allow_legacy_cookie_decrypt():
+        logger.warning(
+            "Rejected legacy (unsalted) cookie ciphertext — "
+            "ALLOW_LEGACY_COOKIE_DECRYPT is off"
+        )
+        return None
+    logger.warning(
+        "Decrypting legacy (unsalted) cookie blob — set "
+        "ALLOW_LEGACY_COOKIE_DECRYPT=0 to fail closed"
+    )
     try:
         f = _get_fernet()
         decrypted = f.decrypt(encrypted.encode("utf-8"))

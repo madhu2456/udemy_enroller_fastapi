@@ -141,6 +141,7 @@ def cleanup_expired_session(
         user = db.query(User).filter(User.id == user_id).first()
         if user is not None and user.udemy_cookies is not None:
             user.udemy_cookies = None
+            user.cookies_salt = None
             logger.info(
                 f"Wiped stored Udemy cookies for user {user_id} after last session expired"
             )

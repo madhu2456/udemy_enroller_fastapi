@@ -206,6 +206,7 @@ async def clear_data(
                 total_excluded=0,
                 total_amount_saved=0.0,
                 udemy_cookies=None,
+                cookies_salt=None,
             )
         )
 

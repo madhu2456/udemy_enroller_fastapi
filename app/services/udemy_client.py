@@ -12,6 +12,7 @@ from loguru import logger
 
 from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient
+from app.services.udemy_validation import is_udemy_url
 from app.core import constants
 from app.logging_config import sanitize_log_message
 
@@ -525,6 +526,18 @@ class UdemyClient:
         if resp and resp.status_code == 200:
             final_url = str(resp.url)
             if final_url != course.url:
+                if not is_udemy_url(final_url):
+                    # Hostile redirect (e.g. trk.udemy.com open redirect to an
+                    # attacker host) must never feed attacker HTML into
+                    # course-id extraction / API calls (F-ENRL-C07).
+                    logger.warning(
+                        f"  Rejected redirect to non-Udemy host for {course.title}: "
+                        f"{course.url} -> {final_url}"
+                    )
+                    course.is_valid = False
+                    course.error = "Redirected to non-Udemy host"
+                    self._course_fetch_report(0)
+                    return
                 course.url = final_url
                 course.extract_coupon_code()
 
@@ -610,6 +623,18 @@ class UdemyClient:
             # Update URL if redirected (important for tracking links like trk.udemy.com)
             final_url = str(resp.url)
             if final_url != course.url:
+                if not is_udemy_url(final_url):
+                    # Hostile redirect (e.g. trk.udemy.com open redirect to an
+                    # attacker host) must never feed attacker HTML into
+                    # course-id extraction / API calls (F-ENRL-C07).
+                    logger.warning(
+                        f"    Rejected redirect to non-Udemy host for {course.title}: "
+                        f"{course.url} -> {final_url}"
+                    )
+                    course.is_valid = False
+                    course.error = "Redirected to non-Udemy host"
+                    self._course_fetch_report(0)
+                    return
                 logger.info(f"    Redirected: {course.url} -> {final_url}")
                 course.url = final_url
                 course.extract_coupon_code()

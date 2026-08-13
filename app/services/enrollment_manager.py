@@ -2,7 +2,6 @@
 
 import asyncio
 import random
-import re
 from typing import Optional, Dict
 
 from sqlalchemy.orm import Session
@@ -261,9 +260,9 @@ class EnrollmentManager:
                     seen_slugs.add(course.url)
 
                     if not course.slug and course.url:
-                        match = re.search(r"udemy\.com/course/([^/?#]+)", course.url)
-                        if match:
-                            course.slug = match.group(1)
+                        # Parse-based slug fallback (no host literal — F-ENRL-C07);
+                        # Course.set_slug extracts /course/{slug} from the path.
+                        course.set_slug()
 
                     if course.slug and course.slug in enrolled_slugs:
                         skipped_already_enrolled += 1

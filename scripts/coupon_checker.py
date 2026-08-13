@@ -37,6 +37,7 @@ from app.services.public_deals_export import (
     load_public_deals,
     save_public_deals,
 )
+from app.services.udemy_validation import is_udemy_url
 from config.settings import get_settings
 
 logging.basicConfig(
@@ -207,10 +208,20 @@ async def _resolve_raw_tier(http, url: str) -> Optional[str]:
 async def _resolve_html_tier(http, url: str) -> Optional[str]:
     """Fetch the course page and extract its numeric course id.
 
+    Defense-in-depth (F-ENRL-C07): the raw catalog URL is only reachable via
+    the scraper-gated pipeline or the repo file, but this tier is the only
+    one that fetches the raw URL, so it mirrors udemy_client's gates: a
+    pre-fetch exact-netloc check and a post-fetch final-URL check (a hostile
+    redirect must never feed attacker HTML into course-id extraction).
     Retries on blocked/empty fetches (403 or empty body); a full page that
     simply contains no matching pattern is treated as deterministic and not
     retried. Bounded: at most ``_RESOLVE_MAX_ATTEMPTS`` fetches.
     """
+    if not is_udemy_url(url):
+        logger.warning(
+            "Rejected non-Udemy URL before fetch (F-ENRL-C07): %s", url
+        )
+        return None
     for attempt in range(1, _RESOLVE_MAX_ATTEMPTS + 1):
         resp = await http.get(
             url,
@@ -219,6 +230,16 @@ async def _resolve_html_tier(http, url: str) -> Optional[str]:
             headers={"User-Agent": _BROWSER_UA},
         )
         html = resp.text if resp and getattr(resp, "text", None) else ""
+        final_url = str(resp.url) if getattr(resp, "url", None) else url
+        if final_url != url and not is_udemy_url(final_url):
+            # Hostile redirect (same gate as udemy_client): never extract
+            # course ids from attacker-controlled HTML.
+            logger.warning(
+                "Rejected redirect to non-Udemy host (F-ENRL-C07): %s -> %s",
+                url,
+                final_url,
+            )
+            return None
         if html:
             return _coerce_valid_course_id(_extract_course_id_from_html(html))
         if attempt < _RESOLVE_MAX_ATTEMPTS:

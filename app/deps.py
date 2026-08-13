@@ -48,7 +48,11 @@ async def get_udemy_client(
         return client
 
     user = session.user
-    cookies = decrypt_cookies(user.udemy_cookies) if user and user.udemy_cookies else None
+    cookies = (
+        decrypt_cookies(user.udemy_cookies, user.cookies_salt)
+        if user and user.udemy_cookies
+        else None
+    )
     if not user or not isinstance(cookies, dict):
         raise HTTPException(
             status_code=401, detail="Udemy session missing. Please log in again."

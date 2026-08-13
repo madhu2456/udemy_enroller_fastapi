@@ -257,6 +257,11 @@ def test_get_valid_deal_by_slug_resolves_name():
 
 
 def test_build_sitemap_includes_deal_slugs_not_udemy():
+    from datetime import date, timedelta
+
+    # Fresh timestamp (relative to today) so the sitemap staleness gate
+    # (SITEMAP_MAX_AGE_DAYS=30) never time-bombs this test.
+    fresh = (date.today() - timedelta(days=1)).isoformat() + "T00:00:00Z"
     deals = assign_unique_slugs(
         [
             {
@@ -265,7 +270,7 @@ def test_build_sitemap_includes_deal_slugs_not_udemy():
                 "url": "https://www.udemy.com/course/python-basics/?couponCode=X",
                 "coupon_code": "X",
                 "is_coupon_valid": True,
-                "last_checked_at": "2026-07-12T00:00:00Z",
+                "last_checked_at": fresh,
             }
         ]
     )
