@@ -48,6 +48,19 @@ def override_get_db():
 client = TestClient(app)
 
 
+def _anonymous_csrf_headers() -> dict:
+    """Browser-like CSRF handshake for the login POSTs (F-ENRL-C03, P2).
+
+    GET / sets the anonymous ``csrf_token`` cookie (only when absent); the
+    login endpoints require it echoed in X-CSRF-Token or they reject with 403.
+    """
+    page = client.get("/")
+    assert page.status_code == 200
+    token = client.cookies.get("csrf_token")
+    assert token, "login page must set the anonymous csrf_token cookie"
+    return {"X-CSRF-Token": token}
+
+
 @pytest.fixture(scope="module", autouse=True)
 def isolate_test_database():
     """Use the temporary database only for this test module."""
@@ -182,8 +195,13 @@ class TestURLValidation:
 class TestAuthEndpoints:
     """Test authentication endpoints."""
 
+    @patch(
+        "app.routers.auth.login_rate_limiter.is_allowed_redis",
+        new_callable=AsyncMock,
+        return_value=True,
+    )
     @patch("app.routers.auth.UdemyClient")
-    def test_login_new_user(self, mock_client_class):
+    def test_login_new_user(self, mock_client_class, mock_rate_limit):
         """Test login with new user credentials."""
         mock_client = MagicMock()
         mock_client.manual_login = AsyncMock(return_value=None)
@@ -196,6 +214,7 @@ class TestAuthEndpoints:
         response = client.post(
             "/api/auth/login",
             json={"email": "test@example.com", "password": "SecurePassword123!"},
+            headers=_anonymous_csrf_headers(),
         )
 
         assert response.status_code == 200
@@ -206,7 +225,9 @@ class TestAuthEndpoints:
     def test_login_weak_password(self, mock_client_class):
         """Test login with weak password."""
         response = client.post(
-            "/api/auth/login", json={"email": "test@example.com", "password": "weak"}
+            "/api/auth/login",
+            json={"email": "test@example.com", "password": "weak"},
+            headers=_anonymous_csrf_headers(),
         )
 
         assert response.status_code == 422
@@ -477,7 +498,9 @@ class TestInputValidation:
     def test_empty_email_rejected(self):
         """Test that empty email is rejected."""
         response = client.post(
-            "/api/auth/login", json={"email": "", "password": "ValidPassword123!"}
+            "/api/auth/login",
+            json={"email": "", "password": "ValidPassword123!"},
+            headers=_anonymous_csrf_headers(),
         )
         assert response.status_code == 422
 
@@ -486,13 +509,16 @@ class TestInputValidation:
         response = client.post(
             "/api/auth/login",
             json={"email": "not-an-email", "password": "ValidPassword123!"},
+            headers=_anonymous_csrf_headers(),
         )
         assert response.status_code == 422
 
     def test_password_minimum_length(self):
         """Test that passwords below minimum length are rejected."""
         response = client.post(
-            "/api/auth/login", json={"email": "test@example.com", "password": "short"}
+            "/api/auth/login",
+            json={"email": "test@example.com", "password": "short"},
+            headers=_anonymous_csrf_headers(),
         )
         assert response.status_code == 422
 

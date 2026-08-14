@@ -9,6 +9,40 @@ echo "=== Udemy Course Enroller - Deployment Script ==="
 APP_DIR="/opt/udemy-enroller"
 REPO_URL="${REPO_URL:-https://github.com/your-username/udemy-enroller.git}"
 
+# ── Backup cron install mode (F-ENRL-K01) ────────────────────────────────
+# `./deploy.sh --install-backup-cron` installs idempotent crontab entries for
+# scripts/backup_sqlite.sh + scripts/verify_backup_freshness.sh and exits.
+# Host paths only; for the Docker named volume (app-data), sync the DB to the
+# host first (docker compose cp web:/app/data/udemy_enroller.db
+# $APP_DIR/data/udemy_enroller.db) or adjust DB_PATH below.
+if [ "${1:-}" = "--install-backup-cron" ]; then
+    echo "=== Installing backup cron entries (F-ENRL-K01) ==="
+    if ! command -v crontab &> /dev/null; then
+        echo "ERROR: crontab not found — install cron first (apt-get install -y cron)." >&2
+        exit 1
+    fi
+    mkdir -p "$APP_DIR/backups" "$APP_DIR/data"
+    BACKUP_LOG="/var/log/udemy-enroller-backup.log"
+    touch "$BACKUP_LOG"
+
+    CRON_MARKER="# udemy-enroller-backup (deploy.sh --install-backup-cron)"
+    CRON_BACKUP="15 3 * * * cd $APP_DIR && DB_PATH=$APP_DIR/data/udemy_enroller.db BACKUP_DIR=$APP_DIR/backups ./scripts/backup_sqlite.sh backup >>$BACKUP_LOG 2>&1"
+    CRON_FRESH="30 3 * * * BACKUP_DIR=$APP_DIR/backups MAX_AGE_HOURS=26 $APP_DIR/scripts/verify_backup_freshness.sh >>$BACKUP_LOG 2>&1"
+
+    EXISTING="$(crontab -l 2>/dev/null || true)"
+    if printf '%s\n' "$EXISTING" | grep -qF "$CRON_MARKER"; then
+        echo "Backup cron already installed — nothing to do (idempotent)."
+    else
+        printf '%s\n' "$EXISTING" "$CRON_MARKER" "$CRON_BACKUP" "$CRON_FRESH" \
+            | crontab -
+        echo "Installed backup + freshness cron entries for crontab of: $(whoami)"
+    fi
+    echo "Log file: $BACKUP_LOG"
+    echo "Manual smoke: $APP_DIR/scripts/backup_sqlite.sh drill"
+    echo "See docs/ops/backup-restore.md for offsite copies and the drill log."
+    exit 0
+fi
+
 echo "1. Updating system..."
 apt-get update && apt-get upgrade -y
 

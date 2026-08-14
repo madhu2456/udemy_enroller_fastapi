@@ -29,10 +29,27 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.lock
           python -m pip install ruff
+          python -m pip install pip-audit
           playwright install chromium
 
       - name: Lint with ruff
         run: ruff check .
+
+      # ── Dependency vulnerability audit (F-ENRL-C06) ────────────────────
+      # Fails on known vulnerabilities in requirements.lock. Exceptions are
+      # documented allowlist flags inside scripts/audit-deps.sh (--ignore-vuln
+      # with a justification) — never add one silently.
+      - name: Audit Python dependencies (pip-audit)
+        run: bash scripts/audit-deps.sh
+
+      # ── Type checking (F-ENRL-P01) — report-only for now ───────────────
+      # Non-blocking baseline job: mypy app/ will fail here once the legacy
+      # findings in security.py / enrollment_manager.py are resolved.
+      - name: Type check with mypy (report-only)
+        run: |
+          python -m pip install mypy
+          python -m mypy app/
+        continue-on-error: true
 
       - name: Prepare clean databases
         run: |
@@ -44,6 +61,12 @@ jobs:
 
       - name: Run unit tests
         run: python -m pytest
+
+      # Per-module coverage annotations (F-ENRL-P01): the documented target is
+      # >=60% for app/security.py and app/services/enrollment_manager.py.
+      - name: Coverage annotations (security.py / enrollment_manager >=60%)
+        run: |
+          python -m coverage report -m app/security.py app/services/enrollment_manager.py
 
       # ── Accessibility and browser tests ──────────────────────────────
       - name: Setup Node.js

@@ -494,6 +494,78 @@ def verify_csrf_token(request: Request) -> None:
         raise HTTPException(status_code=403, detail="CSRF token invalid")
 
 
+def generate_login_csrf_token() -> str:
+    """Generate an anonymous double-submit CSRF token for the login page.
+
+    Set as the ``csrf_token`` cookie (samesite=strict) when the login page is
+    rendered; the login POST must echo it in the X-CSRF-Token header. The
+    post-login session-bound csrf cookie overwrites it (F-ENRL-C03).
+    """
+    return secrets.token_urlsafe(32)
+
+
+def _same_netloc(left: str, right: str) -> bool:
+    """Case-insensitive host[:port] equality; scheme and path are ignored."""
+    left_netloc = urlparse(left).netloc.lower()
+    right_netloc = urlparse(right).netloc.lower()
+    return bool(left_netloc) and left_netloc == right_netloc
+
+
+def _expected_origin(request: Request) -> str:
+    """Origin the server identifies as itself; PUBLIC_BASE_URL overrides it.
+
+    Behind Cloudflare Flexible SSL, nginx forwards X-Forwarded-Proto: http
+    ($scheme) while browsers send https Origins, so request.base_url's scheme
+    must not participate in the comparison.
+    """
+    from config.settings import get_settings
+
+    public_base = get_settings().PUBLIC_BASE_URL
+    if public_base:
+        return public_base.rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
+def _is_same_origin(request: Request) -> bool:
+    """Reject browser requests whose Origin/Referer is not this server's origin.
+
+    Comparison is netloc-only (host[:port], case-insensitive) and scheme-
+    agnostic; the samesite=strict double-submit cookie remains the primary
+    CSRF control. Clients that send neither header (curl, API tests) are not
+    browser-based and cannot be CSRF targets, so they are allowed.
+    """
+    origin = request.headers.get("origin")
+    if origin:
+        return _same_netloc(origin, _expected_origin(request))
+    referer = request.headers.get("referer")
+    if referer:
+        parsed = urlparse(referer)
+        return parsed.hostname is not None and _same_netloc(
+            f"{parsed.scheme}://{parsed.netloc}", _expected_origin(request)
+        )
+    return True
+
+
+def verify_login_csrf(request: Request) -> None:
+    """CSRF guard for unauthenticated login POSTs (double-submit + origin).
+
+    Mirrors ``verify_csrf_token`` for state-changers but works without a
+    session: the browser must send the anonymous ``csrf_token`` cookie AND
+    echo it in the X-CSRF-Token header. ``samesite=strict`` on the cookie
+    means cross-site browsers never attach it, so forged POSTs fail closed.
+    An Origin/Referer same-origin check runs first when either header exists.
+    """
+    if not _is_same_origin(request):
+        raise HTTPException(status_code=403, detail="Cross-origin request rejected")
+
+    cookie_token = request.cookies.get("csrf_token")
+    header_token = request.headers.get("x-csrf-token")
+    if not cookie_token or not header_token:
+        raise HTTPException(status_code=403, detail="CSRF token missing")
+    if not hmac.compare_digest(cookie_token, header_token):
+        raise HTTPException(status_code=403, detail="CSRF token invalid")
+
+
 def hash_password(password: str) -> str:
     """Hash a plaintext password using bcrypt with secure rounds."""
     if not password or not isinstance(password, str):

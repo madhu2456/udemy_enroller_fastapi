@@ -151,10 +151,49 @@ async def lifespan(app: FastAPI):
     app.state.ga4_measurement_id = _settings.GA4_MEASUREMENT_ID
     app.state.deployment_env = _settings.DEPLOYMENT_ENV
 
+    # Stale-run sweeper (F-ENRL-O01): periodically recover runs whose
+    # last_heartbeat stopped (blocking to_thread calls cannot be interrupted
+    # by task.cancel(), so liveness is tracked via the heartbeat column).
+    async def _stale_run_sweeper() -> None:
+        from app.services.enrollment_manager import EnrollmentManager
+
+        sweep_interval = max(
+            1, int(getattr(get_settings(), "STALE_RUN_SWEEP_SECONDS", 60) or 60)
+        )
+        try:
+            while True:
+                await asyncio.sleep(sweep_interval)
+                try:
+                    await EnrollmentManager.sweep_stale_runs()
+                except Exception as exc:
+                    # Transient failures (e.g. SQLite lock contention) must not
+                    # kill the recovery loop; log and retry next interval.
+                    logger.warning(f"Stale-run sweep failed ({type(exc).__name__})")
+        except asyncio.CancelledError:
+            # Normal shutdown path: the sweeper stops before server teardown.
+            pass
+
+    sweeper_task = asyncio.create_task(_stale_run_sweeper())
+    # Give the sweeper its first scheduling slot: a cancel delivered to an
+    # unstarted task raises CancelledError at coroutine entry (outside any
+    # try in the body), which would escape shutdown.
+    await asyncio.sleep(0)
+
     yield
 
     # Shutdown
     shutdown_event.set()
+
+    # Stop the stale-run sweeper first so it cannot race shutdown (F-ENRL-O01)
+    try:
+        sweeper_task.cancel()
+        await asyncio.wait_for(sweeper_task, timeout=2.0)
+    except asyncio.TimeoutError:
+        logger.warning("Timed out waiting for the stale-run sweeper to stop.")
+    except Exception as exc:
+        logger.warning(
+            f"Stale-run sweeper shutdown failed ({type(exc).__name__})"
+        )
 
     logger.info("Server shutting down, cancelling active tasks...")
     try:
@@ -484,7 +523,7 @@ templates = Jinja2Templates(directory="app/templates")
 # Content-hash cache buster for the lucide subset bundle. Every Jinja2Templates
 # instance in the app renders pages extending components/base.html, so the
 # global must be registered on all of them (base.html uses ?v={{ lucide_version }}).
-from app.core.assets import lucide_cache_buster
+from app.core.assets import lucide_cache_buster  # noqa: E402  (deliberate: import kept with template setup block)
 
 for _templates in (templates, dashboard.templates, public_deals.templates, seo.templates):
     _templates.env.globals["lucide_version"] = lucide_cache_buster()

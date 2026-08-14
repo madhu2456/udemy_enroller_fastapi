@@ -51,6 +51,22 @@ PATH=/usr/local/bin:/usr/bin:/bin
 30 3 * * * BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 /opt/udemy-enroller/scripts/verify_backup_freshness.sh >>/var/log/udemy-enroller-backup.log 2>&1
 ```
 
+**One-shot install (F-ENRL-K01):** on a fresh droplet (or any host where the
+repo is at `/opt/udemy-enroller`), `deploy.sh` can install those two entries
+idempotently — re-running never duplicates them:
+
+```bash
+./scripts/deploy.sh --install-backup-cron
+# → "Installed backup + freshness cron entries for crontab of: root"
+# Re-run → "Backup cron already installed — nothing to do (idempotent)."
+crontab -l | grep udemy-enroller-backup
+```
+
+The installed entries use host paths (`/opt/udemy-enroller/data/udemy_enroller.db`).
+If the DB lives inside the Docker named volume (`app-data`), sync it out first
+or point `DB_PATH` at your bind-mounted copy — see "Docker volume" below.
+`deploy.sh --install-backup-cron` exits after installing; it does not deploy.
+
 One-shot install helpers (as root or with sudo; edit paths first):
 
 ```bash
@@ -138,7 +154,60 @@ Proves backup + integrity + restore round-trip without touching the live DB:
 ```
 
 Run a drill after first deploy and after any change to volume mounts or
-`DATABASE_URL`. Record the date in your ops checklist.
+`DATABASE_URL`. Record the date in the drill log below.
+
+### Drill log (owner checklist — F-ENRL-K01)
+
+| Date (UTC) | Environment | Result | Offsite copy verified | Notes |
+|------------|-------------|--------|-----------------------|-------|
+|            | droplet     |        |                       | first drill after deploy |
+|            |             |        |                       | after any volume/DATABASE_URL change |
+
+> A drill that fails (non-`ok` integrity, restore error) is a **P1**: do not
+> rely on backups until the cause is found and the drill passes twice in a row.
+
+## Offsite copies (F-ENRL-K01)
+
+On-site backups protect against file loss, not droplet failure. Maintain at
+least one offsite copy of the backup directory, refreshed at least daily.
+Two supported patterns — pick one (or both):
+
+### Pattern A — rclone (simple, any object store)
+
+```bash
+# One-time setup (on the droplet):
+apt-get install -y rclone
+rclone config   # remote name, e.g. "s3-backups" (S3/B2/Drive/…)
+
+# Sync today's backups (add to the same crontab, after the backup job):
+30 3 * * * rclone sync /opt/udemy-enroller/backups s3-backups:udemy-enroller-backups --include "udemy-enroller-*.db" --include "*.sha256" --transfers 4 >>/var/log/udemy-enroller-backup.log 2>&1
+
+# Restore from offsite:
+rclone copy s3-backups:udemy-enroller-backups/udemy-enroller-<timestamp>.db ./backups/
+# then run the normal restore flow (CONFIRM=YES … restore <file>)
+```
+
+### Pattern B — restic (encrypted, versioned, deduplicated)
+
+```bash
+# One-time setup:
+apt-get install -y restic
+restic init --repo sftp:backup-host:/srv/restic/udemy-enroller   # or s3:…, b2:…
+# RESTIC_PASSWORD must live in root's environment (e.g. /root/.restic-env, mode 600)
+
+# Daily snapshot (after the backup job):
+30 3 * * * . /root/.restic-env && restic backup /opt/udemy-enroller/backups --tag udemy-enroller --quiet >>/var/log/udemy-enroller-backup.log 2>&1
+
+# Restore from offsite:
+restic snapshots --tag udemy-enroller
+restic restore latest --target /opt/udemy-enroller/restore
+# then run the normal restore flow with the restored file
+```
+
+Security: backups contain **encrypted** session cookies and PII-ish account
+metadata — the offsite target must have the same access controls as
+production (private bucket, SSE/encryption at rest, credentials in
+root-only files, never in git).
 
 ## Environment reference
 

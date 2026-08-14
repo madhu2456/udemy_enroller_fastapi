@@ -1,0 +1,14 @@
+# Dependabot (F-ENRL-C06): weekly Python dependency updates.
+#
+# The pip ecosystem tracks requirements.txt; CI installs requirements.lock,
+# so a bump PR must regenerate the lockfile (pip-compile --generate-hashes)
+# before merge, and CI's audit step (scripts/audit-deps.sh) gates it.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"

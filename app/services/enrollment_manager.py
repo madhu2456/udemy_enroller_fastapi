@@ -2,7 +2,7 @@
 
 import asyncio
 import random
-from typing import Optional, Dict
+from typing import Any, Optional, Dict
 
 from sqlalchemy.orm import Session
 from loguru import logger
@@ -72,9 +72,61 @@ class EnrollmentManager:
         )
 
     @classmethod
+    async def sweep_stale_runs(cls) -> int:
+        """Mark runs stalled on a missing/old heartbeat as failed (F-ENRL-O01).
+
+        ``asyncio.to_thread`` calls (cloudscraper/httpx) cannot be interrupted
+        by ``task.cancel()``, so a hung pipeline stops updating
+        ``last_heartbeat``. Run periodically by the lifespan sweeper; also
+        cancels any registered in-memory task so a recovered run cannot keep
+        working against a marked-failed row. Returns the number of runs
+        recovered.
+        """
+        from datetime import timedelta
+
+        from config.settings import get_settings
+
+        settings = get_settings()
+        timeout_minutes = int(getattr(settings, "STALE_RUN_TIMEOUT_MINUTES", 15))
+        cutoff = _utcnow_naive() - timedelta(minutes=timeout_minutes)
+
+        recovered = 0
+        with SessionLocal() as db:
+            stale = (
+                db.query(EnrollmentRun)
+                .filter(
+                    EnrollmentRun.status.in_(["pending", "scraping", "enrolling"])
+                )
+                .filter(
+                    (EnrollmentRun.last_heartbeat.is_(None))
+                    | (EnrollmentRun.last_heartbeat < cutoff)
+                )
+                .all()
+            )
+            for run in stale:
+                run.status = "failed"
+                run.error_message = (
+                    f"Interrupted: no heartbeat for over {timeout_minutes} minutes"
+                )
+                run.completed_at = _utcnow_naive()
+                recovered += 1
+            if stale:
+                db.commit()
+                for run in stale:
+                    task = cls.active_tasks.pop(run.id, None)
+                    if task is not None and not task.done():
+                        task.cancel()
+                    clear_user_caches(run.user_id)
+                    logger.warning(
+                        f"Sweeper marked stale enrollment run {run.id} failed "
+                        f"(no heartbeat for over {timeout_minutes} minutes)"
+                    )
+        return recovered
+
+    @classmethod
     def get_progress_from_run(cls, run: EnrollmentRun) -> dict:
         """Extract progress metrics from a run record."""
-        pd = run.progress_data or {}
+        pd: Any = run.progress_data or {}
 
         scraping_progress = pd.get("scraping_progress", [])
         sources_total = len(scraping_progress)
@@ -82,7 +134,7 @@ class EnrollmentManager:
         sources_failed = sum(1 for s in scraping_progress if s.get("state") in ("failed", "timed_out"))
         courses_discovered = sum(s.get("courses_found", 0) for s in scraping_progress)
         
-        phase = run.status
+        phase: str = str(run.status or "")
         if run.status == "enrolling" and (sources_completed + sources_failed) < sources_total:
             phase = "scraping_and_enrolling"
 
@@ -158,6 +210,7 @@ class EnrollmentManager:
                 return
 
             run.status = "scraping"
+            run.last_heartbeat = _utcnow_naive()
             db.commit()
             self.status = "scraping"
 
@@ -246,6 +299,7 @@ class EnrollmentManager:
                 pd = dict(run.progress_data or {})
                 pd["scraping_progress"] = self.scraper_service.get_progress()
                 run.progress_data = pd
+                run.last_heartbeat = _utcnow_naive()
                 db.commit()
 
                 if state == "completed":
@@ -275,6 +329,7 @@ class EnrollmentManager:
 
                     if self.status == "scraping":
                         run.status = "enrolling"
+                        run.last_heartbeat = _utcnow_naive()
                         db.commit()
                         self.status = "enrolling"
 
@@ -371,6 +426,7 @@ class EnrollmentManager:
                 run.status = "completed"
 
             run.completed_at = _utcnow_naive()
+            run.last_heartbeat = _utcnow_naive()
             db.commit()
             self.status = run.status
 
@@ -399,7 +455,10 @@ class EnrollmentManager:
             cleanup_db = SessionLocal()
             try:
                 run = cleanup_db.get(EnrollmentRun, self.run_id)
-                if run:
+                # Only record a user-initiated cancel when the run is still
+                # active — a sweeper/stop timeout may already have marked it
+                # failed (F-ENRL-O01) and must not be overwritten.
+                if run and run.status in ("pending", "scraping", "enrolling"):
                     run.status = "cancelled"
                     run.completed_at = _utcnow_naive()
                     cleanup_db.commit()
@@ -487,6 +546,7 @@ class EnrollmentManager:
             run.expired = self.udemy.expired_c
             run.excluded = self.udemy.excluded_c
             run.amount_saved = float(self.udemy.amount_saved_c)
+            run.last_heartbeat = _utcnow_naive()
 
             pd = dict(run.progress_data or {})
             pd["current_course_title"] = self.current_course_title
@@ -504,7 +564,7 @@ class EnrollmentManager:
         run: EnrollmentRun,
         course: Course,
         status: str,
-        error_msg: str = None,
+        error_msg: Optional[str] = None,
     ):
         """Save an individual course result to the database."""
         try:

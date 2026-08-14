@@ -93,6 +93,41 @@ Working draft for counsel to verify or reject; does **not** change the owner dec
 - The public coupon-listing page aggregates machine-extracted coupon offers rather than user-generated content; counsel should still assess whether that page could engage intermediary due-diligence expectations (Rules 3–4), and whether the site qualifies for the §79 safe-harbour regime at all if it is not an intermediary.
 - If India's DPDP Act 2023 governs the hosted cookie processing (cookies may be personal data; controller = operator — see `docs/dpia-enroller-cookies-skeleton.md`), the DPDP regime — not the IT Act intermediary regime — is the relevant Indian framework for notice/consent, retention, and cross-border obligations; the Act's implementation status and rules should be confirmed by counsel at review time.
 
+### 4b. Third-party rights & per-aggregator ToS/robots checklist — **DRAFT-FOR-COUNSEL (F-ENRL-J02)**
+
+Working draft for counsel to verify against primary sources; does **not** conclude that scraping, republication, or linking is lawful for any site.
+
+**Third-party rights themes counsel should analyze:**
+
+1. **Scraping authorization** — automated collection from coupon-aggregator sites engages each site's Terms of Service and `robots.txt` (and possibly CFAA-type or tortious-interference analysis outside the EU/India); authorization is per-site, not implied by "publicly accessible."
+2. **Content rights** — extracted data includes course titles, descriptions, thumbnails, prices, coupon codes, and aggregator page text. Republication on `/udemycoupons` + `public_deals.json` may implicate copyright in original expression, EU *sui generis* database rights (if any aggregator's database qualifies and EU users are served), and moral/attribution issues for thumbnails sourced from Udemy or the aggregators.
+3. **Linking / hotlinking** — the public page links out to Udemy coupon pages; deep links are generally low-risk but counsel should confirm no aggregator ToS prohibits hotlinking their images or framing their content.
+4. **Per-aggregator posture** — the checklist below is the engineering record of what needs review; **nothing here is a legal conclusion**. The owner's default stance (keep unless counsel advises otherwise): scrape only publicly visible listing data, honor `robots.txt` disallowances for new sites, never bypass access controls, and attribute thumbnails to their source.
+
+**Per-aggregator review checklist** (sites in `SCRAPER_REGISTRY`, `app/services/scraper.py:2223`). One row per site; counsel or owner fills "reviewed by / date".
+
+| Aggregator | ToS reviewed? | `robots.txt` allows? | Automated access authorized? | Data republished publicly? | Notes / owner action |
+|------------|---------------|----------------------|------------------------------|----------------------------|----------------------|
+| FreeWebCart | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| FreeCourseSites | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| Real Discount | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| E-next | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| Interview Gig | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| UdemyXpert | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| Coursesity | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| Course Folder | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| Couponami | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| Korshub | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| UdemyFreebies | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| iDownloadCoupon | ☐ | ☐ | ☐ | ☐ (deals list) | |
+
+**Engineering guardrails already in place** (verify with counsel whether they are sufficient):
+
+- No CAPTCHA bypass or access-control evasion (explicit product policy, see §1 and `SECURITY.md`).
+- New scraper sites are gated by per-user settings; `robots.txt` is not currently fetched per site — counsel should advise whether to add a robots check before onboarding new aggregators.
+- `public_deals.json` is a machine-generated catalog of links; thumbnails/titles are stored as data, not hotlinked (verify against the current export implementation).
+- Removal: if an aggregator objects, the site can be disabled per-user and scrubbed from the registry; there is no per-site takedown UI yet — owner decision needed if counsel recommends one.
+
 ---
 
 ## 5. Document pack to send counsel
@@ -108,6 +143,7 @@ Working draft for counsel to verify or reject; does **not** change the owner dec
 | Dependency list | `requirements.txt` (note cloudscraper, playwright-stealth) |
 | Hosted posture | Session TTL 24h server / cookie wipe on last expiry; `MAX_SESSIONS_PER_USER` |
 | Live site | https://udemyenroller.madhudadi.in |
+| Per-aggregator ToS/robots checklist (F-ENRL-J02) | §4b above — the engineering record counsel fills in |
 | Optional: audit finding IDs | UE-LEGAL-001, UE-AUTO-*, UE-PRIV-001 from prior Phase 1 audit notes |
 
 **Do not send:** production secrets, real user cookies, production `.env`, personal credentials.

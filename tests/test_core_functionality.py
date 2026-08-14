@@ -36,6 +36,7 @@ def override_get_db():
         db.close()
 
 
+_previous_get_db_override = app.dependency_overrides.get(get_db)
 app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
@@ -285,13 +286,19 @@ class TestAPIIntegration:
 
 @pytest.fixture(scope="module", autouse=True)
 def cleanup_test_db():
-    """Dispose the test engine and remove its temporary database."""
+    """Dispose the test engine, remove its temp DB, and restore any prior
+    get_db override (module installs its override at import — leaking it past
+    this module breaks later modules that rely on the default dependency)."""
     try:
         yield
     finally:
         client.close()
         engine.dispose()
         _test_database_dir.cleanup()
+        if _previous_get_db_override is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = _previous_get_db_override
 
 
 if __name__ == "__main__":

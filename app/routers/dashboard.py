@@ -92,11 +92,30 @@ def login_page(request: Request):
                     return RedirectResponse(url="/dashboard", status_code=303)
 
         platform_stats = get_platform_impact_display(db)
-        return templates.TemplateResponse(
+        response = templates.TemplateResponse(
             request,
             "pages/login.html",
             {"platform_stats": platform_stats},
         )
+        # Anonymous double-submit CSRF cookie for the login POSTs (F-ENRL-C03):
+        # same name as the post-login session-bound cookie, samesite=strict, so
+        # cross-site browsers never attach it and forged logins fail closed.
+        if not request.cookies.get("csrf_token"):
+            from app.security import generate_login_csrf_token
+
+            from config.settings import get_settings
+
+            settings = get_settings()
+            response.set_cookie(
+                "csrf_token",
+                generate_login_csrf_token(),
+                httponly=False,
+                samesite="strict",
+                secure=settings.COOKIE_SECURE,
+                max_age=24 * 60 * 60,
+                path="/",
+            )
+        return response
     finally:
         db.close()
 

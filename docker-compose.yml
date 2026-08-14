@@ -24,6 +24,10 @@ services:
       - GTM_CONTAINER_ID=${GTM_CONTAINER_ID:-}
       - GA4_MEASUREMENT_ID=${GA4_MEASUREMENT_ID:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-[]}
+      # Anchors the login-CSRF origin gate to the public netloc behind the
+      # Cloudflare/nginx proxy (PUBLIC_BASE_URL in the host .env, e.g.
+      # https://udemyenroller.madhudadi.in). Empty = fall back to request.base_url.
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs

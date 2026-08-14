@@ -34,12 +34,20 @@ class TestHostedDemoLoginRestrictions:
         self, mock_client_class, mock_settings
     ):
         mock_settings.DEPLOYMENT_ENV = "server"
+        # Login POSTs are double-submit CSRF protected (F-ENRL-C03): load the
+        # login page first to receive the anonymous csrf_token cookie, then
+        # echo it in the X-CSRF-Token header like the page's own JS does.
+        client.cookies.clear()
+        page = client.get("/")
+        csrf_token = page.cookies.get("csrf_token")
+        assert csrf_token, "login page must set an anonymous csrf_token cookie"
         response = client.post(
             "/api/auth/login",
             json={
                 "email": "test@example.com",
                 "password": "SecurePassword123!",
             },
+            headers={"X-CSRF-Token": csrf_token},
         )
 
         assert response.status_code == 200

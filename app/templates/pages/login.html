@@ -1399,6 +1399,12 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
     const EMAIL_LOGIN_ENABLED =
         {{ 'true' if request.app.state.deployment_env != 'server' else 'false' }};
 
+    function getLoginCsrfToken() {
+        // Anonymous double-submit token set by the login page (F-ENRL-C03).
+        const match = document.cookie.match(/(^| )csrf_token=([^;]+)/);
+        return match ? decodeURIComponent(match[2]) : "";
+    }
+
     function switchTab(tab) {
         if (tab === "email" && !EMAIL_LOGIN_ENABLED) {
             tab = "cookie";
@@ -1532,7 +1538,10 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
         try {
             const resp = await fetch("/api/auth/login", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": getLoginCsrfToken(),
+                },
                 body: JSON.stringify({
                     email: document.getElementById("email").value,
                     password: document.getElementById("password").value,
@@ -1569,7 +1578,10 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
         try {
             const resp = await fetch("/api/auth/login/cookies", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": getLoginCsrfToken(),
+                },
                 body: JSON.stringify({
                     access_token: document.getElementById("access_token").value,
                     client_id: document.getElementById("client_id").value,

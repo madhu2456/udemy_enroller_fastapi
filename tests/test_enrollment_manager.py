@@ -27,8 +27,6 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 Base.metadata.create_all(bind=engine)
 
 # Patch the module's SessionLocal so the pipeline uses our test DB
-_original_session_local = em_module.SessionLocal
-em_module.SessionLocal = TestingSessionLocal
 
 
 def override_get_db():
@@ -59,11 +57,16 @@ def isolate_side_effects_and_cleanup_db(monkeypatch):
 
 @pytest.fixture(scope="module", autouse=True)
 def cleanup_test_database():
-    """Restore the patched session factory and remove the temporary database."""
+    """Re-bind the patched session factory at module start and restore it
+    afterward. Import order cannot be relied on: modules that import later
+    (e.g. test_stale_run_sweeper) swap em_module.SessionLocal at import time,
+    which would silently point pipeline calls at another module's test DB."""
+    original_session_local = em_module.SessionLocal
+    em_module.SessionLocal = TestingSessionLocal
     try:
         yield
     finally:
-        em_module.SessionLocal = _original_session_local
+        em_module.SessionLocal = original_session_local
         engine.dispose()
         _test_database_dir.cleanup()
 

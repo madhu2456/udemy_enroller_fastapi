@@ -1,0 +1,25 @@
+# Project tool configuration (mypy only; package metadata lives in setup.py).
+#
+# F-ENRL-P01 typing baseline: pragmatic strictness subset — no
+# disallow_untyped_defs yet (legacy codebase). CI runs `mypy app/` as a
+# report-only job; the long-term goal is to enable
+# disallow_untyped_defs + strict per module.
+#
+# Known baseline findings (2026-08-13, report-only):
+#   - app/security.py: clean (0 direct errors). One error surfaces from its
+#     import of config/settings.py: the class-scoped `from pydantic import
+#     model_validator` (legacy pydantic pattern) — leave as-is.
+#   - app/services/enrollment_manager.py: 21 errors, ALL one family — classic
+#     declarative models in app/models/database.py type attributes as
+#     Column[...] instead of the runtime type (e.g. run.status: Column[str]).
+#     Re-measured 2026-08-14: 21 errors including the P2-added lines (sweeper
+#     assignments and the heartbeat write) hitting the same family. Real fix =
+#     migrate models to Mapped[...] annotations (runtime-neutral); scheduled,
+#     not cheap, so not done in the P2 wave.
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+ignore_missing_imports = true
+show_error_codes = true

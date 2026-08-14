@@ -244,6 +244,9 @@ class EnrollmentRun(Base):
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime, default=_utcnow_naive)
     completed_at = Column(DateTime, nullable=True)
+    # Periodic pipeline liveness marker (F-ENRL-O01): the stale-run sweeper
+    # marks runs failed when this is older than STALE_RUN_TIMEOUT_MINUTES.
+    last_heartbeat = Column(DateTime, nullable=True)
     progress_data = Column(JSON, default=dict)
 
     # Relationships
@@ -304,6 +307,13 @@ def create_tables():
                 conn.execute(text("SELECT cookies_salt FROM users LIMIT 1"))
             except OperationalError:
                 conn.execute(text("ALTER TABLE users ADD COLUMN cookies_salt VARCHAR(64)"))
+
+            try:
+                conn.execute(text("SELECT last_heartbeat FROM enrollment_runs LIMIT 1"))
+            except OperationalError:
+                conn.execute(
+                    text("ALTER TABLE enrollment_runs ADD COLUMN last_heartbeat DATETIME")
+                )
     except Exception:
         # Just pass if it's Postgres or another DB that handles this via Alembic
         pass

@@ -93,7 +93,18 @@ sqlite3 ./udemy_enroller.db "DELETE FROM user_sessions;"
 docker compose cp ./udemy_enroller.db web:/app/data/udemy_enroller.db
 ```
 
-  Re-login works immediately after the wipe: cookie login (`POST /login/cookies`) is **not CSRF-protected** (rate-limiter only), so the flow only needs a fresh `session_token` + fresh CSRF token from the login response.
+  Re-login works immediately after the wipe: both login POSTs
+  (`POST /api/auth/login` and `POST /api/auth/login/cookies`) are guarded by
+  the **anonymous double-submit CSRF check (F-ENRL-C03)** — the login page
+  sets a random `csrf_token` cookie (samesite=strict, max-age 24h) and the
+  form JS echoes it in the `X-CSRF-Token` header (`verify_login_csrf`,
+  `app/security.py`). After the session wipe the old session-bound CSRF
+  cookie is stale, but loading `/` issues a fresh anonymous one, so the
+  cookie-login flow only needs: load `/` → read `csrf_token` cookie → POST
+  with `X-CSRF-Token` → use the fresh session `csrf_token` from the login
+  response for authenticated POSTs. Non-browser clients (curl, API tests)
+  send neither `Origin` nor `Referer`, so they pass the origin gate and only
+  need the cookie+header pair.
 
 ```bash
 # (c) Expect a short spike of:

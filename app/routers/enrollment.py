@@ -121,7 +121,14 @@ async def stop_enrollment(
     user_id: int = Depends(get_current_user_id),
     _csrf: None = Depends(verify_csrf_token),
 ):
-    """Stop the active enrollment run."""
+    """Stop the active enrollment run.
+
+    Hard timeout (F-ENRL-O01): ``task.cancel()`` cannot interrupt blocking
+    ``asyncio.to_thread`` calls (cloudscraper/httpx), so we await cancellation
+    with a 10s cap and force-mark the run interrupted when the pipeline could
+    not finish. The in-memory client close runs in the pipeline's finally
+    once the blocking call returns.
+    """
     active = EnrollmentManager.get_active_run(db, user_id)
     if not active:
         return {"success": False, "message": "No active enrollment run to stop"}
@@ -129,6 +136,29 @@ async def stop_enrollment(
     task = EnrollmentManager.active_tasks.get(active.id)
     if task:
         task.cancel()
+        try:
+            # gather(return_exceptions=True): never raise on the task's own
+            # CancelledError/exception; wait_for caps the total wait at 10s.
+            await asyncio.wait_for(
+                asyncio.gather(task, return_exceptions=True), timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Stop timed out waiting for run {active.id} to cancel "
+                "(blocking thread); force-marking run interrupted"
+            )
+        db.refresh(active)
+        if active.status in ("pending", "scraping", "enrolling"):
+            active.status = "failed"
+            active.error_message = "Interrupted by user (stop timed out)"
+            active.completed_at = _utcnow_naive()
+            db.commit()
+            logger.warning(
+                f"Force-marked run {active.id} interrupted after stop timeout"
+            )
+
+        # Invalidate cache
+        clear_user_caches(user_id)
         return {"success": True, "message": "Enrollment stopping..."}
     else:
         # Fallback if task is not in memory

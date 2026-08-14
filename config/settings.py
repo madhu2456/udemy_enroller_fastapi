@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
+    # Public base URL (e.g. https://udemyenroller.madhudadi.in). When set, the
+    # login CSRF origin gate compares the browser Origin/Referer netloc against
+    # this value instead of request.base_url — required behind Cloudflare
+    # Flexible SSL, where nginx forwards X-Forwarded-Proto: http ($scheme)
+    # while browsers send https Origins.
+    PUBLIC_BASE_URL: str = ""
+
     # Trusted reverse-proxy / loopback peer IPs. _client_key() (app/security.py)
     # trusts X-Forwarded-For ONLY when the direct TCP peer is in this list, then
     # walks the chain right-to-left past these proxies to the real client.
@@ -110,6 +117,12 @@ class Settings(BaseSettings):
     # Oldest sessions are revoked when the cap is exceeded. Set 0 to disable.
     MAX_SESSIONS_PER_USER: int = 3
 
+    # Stuck-run detection (F-ENRL-O01): the in-process sweeper marks runs whose
+    # last_heartbeat is older than STALE_RUN_TIMEOUT_MINUTES as failed, and
+    # runs every STALE_RUN_SWEEP_SECONDS.
+    STALE_RUN_TIMEOUT_MINUTES: int = 15
+    STALE_RUN_SWEEP_SECONDS: int = 60
+
     # Logging
     LOG_LEVEL: str = "WARNING"
     LOG_FILE: str = "logs/app.log"
@@ -122,7 +135,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    from pydantic import model_validator
+    from pydantic import field_validator, model_validator
+
+    @field_validator("STALE_RUN_SWEEP_SECONDS")
+    @classmethod
+    def _clamp_sweep_interval(cls, v: int) -> int:
+        """Sweeper interval must be >= 1s; a non-positive value would otherwise
+        raise ValueError inside the sweeper task (asyncio.sleep(0)) and kill the
+        recovery loop (F-ENRL-O01)."""
+        return max(1, v)
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":

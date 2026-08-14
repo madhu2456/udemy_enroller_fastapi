@@ -27,6 +27,13 @@ Work in the working tree since `e6bc1c2` (not necessarily committed yet).
   Pass criteria: error <= 10% (<= 38/380); expired within ±5 pts of baseline; zero discountCode
   in logs; 6 collision slugs + situational_leadership + >55-char slugs resolve via any tier.
 
+### P2 wave — review fixes (R1–R6)
+
+- **Fixed**: login CSRF origin gate now compares netloc (`host[:port]`, case-insensitive) only, ignoring scheme — behind Cloudflare Flexible SSL the browser sends an `https` Origin while nginx forwards `X-Forwarded-Proto: http` ($scheme), which previously 403'd every login POST. The `samesite=strict` double-submit cookie remains the primary control; optional `PUBLIC_BASE_URL` overrides the expected origin netloc when set.
+- **Fixed**: stale-run sweeper catches transient exceptions (e.g. SQLite lock contention) inside the loop, logs, and continues instead of killing the recovery sweeper.
+- **Changed**: `.env.example` documents `STALE_RUN_TIMEOUT_MINUTES=15` / `STALE_RUN_SWEEP_SECONDS=60` (F-ENRL-O01).
+- **Docs**: corrected `pyproject.toml` typing-baseline comment (mypy `app/services/enrollment_manager.py` measured 21 errors incl. P2 lines, not 27).
+
 ### Added
 
 - **Production coupon checker every 2 hours** — Docker Compose `coupon-checker` service runs `scripts/coupon_checker_loop.py`, shares the data volume with `web`, and rewrites `PUBLIC_DEALS_PATH` (`/app/data/public_deals.json`) so `/udemycoupons` stays fresh without local runs + git push.

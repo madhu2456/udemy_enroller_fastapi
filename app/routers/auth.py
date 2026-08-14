@@ -21,9 +21,14 @@ from app.security import (
     generate_csrf_token,
     login_rate_limiter,
     verify_csrf_token,
+    verify_login_csrf,
 )
 from app.services.udemy_client import LoginException, UdemyClient
-from app.session_lifecycle import cleanup_expired_session, enforce_session_limit
+from app.session_lifecycle import (
+    _active_sessions_query,
+    cleanup_expired_session,
+    enforce_session_limit,
+)
 from config.settings import get_settings
 
 settings = get_settings()
@@ -132,6 +137,7 @@ async def login_with_credentials(
     login_req: LoginRequest,
     request: Request,
     db: Session = Depends(get_db),
+    _login_csrf: None = Depends(verify_login_csrf),
 ):
     """Login with Udemy email and password."""
     if settings.DEPLOYMENT_ENV == "server":
@@ -205,6 +211,7 @@ async def login_with_cookies(
     cookie_req: CookieLoginRequest,
     request: Request,
     db: Session = Depends(get_db),
+    _login_csrf: None = Depends(verify_login_csrf),
 ):
     """Login using browser cookies (access_token, client_id, csrf_token)."""
     if not await login_rate_limiter.is_allowed_redis(_client_key(request)):
@@ -381,7 +388,8 @@ async def logout(
     db: Session = Depends(get_db),
     _csrf: None = Depends(verify_csrf_token),
 ):
-    """Logout — delete DB session and clear all cookies."""
+    """Logout — revoke this session; wipe stored Udemy cookies only when it is
+    the user's last non-expired session (F-ENRL-C08)."""
     token = request.cookies.get("session_id")
     user_id = None
     task_to_cancel = None
@@ -402,12 +410,19 @@ async def logout(
             # Delete session from DB
             db.query(UserSession).filter(UserSession.token == token).delete()
 
-            # Wipe stored Udemy session cookies on logout (short retention policy)
+            # Wipe stored Udemy session cookies ONLY when no other non-expired
+            # sessions remain, so other devices keep working (F-ENRL-C08).
+            # cookies_salt is per-user: keep it while any session survives.
             if user_id is not None:
-                user = db.query(User).filter(User.id == user_id).first()
-                if user is not None:
-                    user.udemy_cookies = None
-                    user.cookies_salt = None
+                active_count = _active_sessions_query(db, user_id).count()
+                if active_count == 0:
+                    user = db.query(User).filter(User.id == user_id).first()
+                    if user is not None:
+                        user.udemy_cookies = None
+                        user.cookies_salt = None
+                        logger.info(
+                            f"Wiped stored Udemy cookies for user {user_id} after last session logged out"
+                        )
             db.commit()
     except Exception as exc:
         try:
