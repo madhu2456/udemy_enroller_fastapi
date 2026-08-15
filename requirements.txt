@@ -7,7 +7,7 @@ pydantic>=2.10.4
 
 # Database
 sqlalchemy>=2.0.36
-pydantic-settings>=2.7.0
+pydantic-settings>=2.15.0
 alembic>=1.13.1
 
 # HTTP Clients
