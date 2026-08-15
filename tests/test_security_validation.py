@@ -64,15 +64,15 @@ def _anonymous_csrf_headers() -> dict:
 @pytest.fixture(scope="module", autouse=True)
 def isolate_test_database():
     """Use the temporary database only for this test module."""
-    previous_override = app.dependency_overrides.get(get_db)
     app.dependency_overrides[get_db] = override_get_db
 
     yield
 
-    if previous_override is None:
+    # Remove only our own override: restoring an override captured at setup
+    # can resurrect a stale one (installed at import time by an earlier
+    # module, e.g. test_core_functionality) whose database no longer exists.
+    if app.dependency_overrides.get(get_db) is override_get_db:
         app.dependency_overrides.pop(get_db, None)
-    else:
-        app.dependency_overrides[get_db] = previous_override
     client.close()
     engine.dispose()
     _test_db_dir.cleanup()

@@ -1,5 +1,6 @@
 """Application configuration using Pydantic Settings."""
 
+import datetime
 import secrets
 from functools import lru_cache
 
@@ -113,6 +114,16 @@ class Settings(BaseSettings):
     # "server" applies stricter rate limits and adaptive backoff to avoid Udemy blocks
     DEPLOYMENT_ENV: str = "local"
 
+    # User-supplied HTTP proxy for enrollment/scraping (F-ENRL-C05). Enabled by
+    # default for local/dev; the server-mode gate below hard-disables it, so a
+    # hosted deployment never routes outbound traffic through user-chosen
+    # endpoints. Admin-configured PROXIES (coupon checker) are unaffected.
+    ALLOW_USER_PROXY: bool = True
+
+    # Experience claim SSOT (F-XSITE-001): career start month used to derive
+    # the "N+ years of experience" label in SEO copy (app/routers/seo.py).
+    EXPERIENCE_START: str = "2016-05-01"
+
     # Max concurrent non-expired app sessions per user (login creates a new one).
     # Oldest sessions are revoked when the cap is exceeded. Set 0 to disable.
     MAX_SESSIONS_PER_USER: int = 3
@@ -172,6 +183,9 @@ class Settings(BaseSettings):
                     'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
                 )
             self.COOKIE_SECURE = True
+            # Hard gate: user-supplied proxies are ignored in server mode
+            # (F-ENRL-C05).
+            self.ALLOW_USER_PROXY = False
         else:
             # Local development: auto-generate on insecure defaults for convenience
             if self.SECRET_KEY in _INSECURE_LOCAL_AUTOGEN_KEYS:
@@ -182,3 +196,38 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
+
+
+def resolve_user_proxy(settings_proxy) -> str | None:
+    """Return a stored user proxy only when ALLOW_USER_PROXY is enabled.
+
+    Server mode hard-disables user proxies (F-ENRL-C05); all user-proxy entry
+    points (deps, auth login, enrollment start, enrollment manager) must go
+    through this helper so a hosted deployment never honors user-supplied
+    proxies.
+    """
+    if not get_settings().ALLOW_USER_PROXY:
+        return None
+    return settings_proxy
+
+
+def _years_since(start_str: str) -> int:
+    """Whole years elapsed since an ISO date string (best effort)."""
+    try:
+        start_dt = datetime.date.fromisoformat(str(start_str).strip())
+    except (ValueError, TypeError):
+        return 0
+    today = datetime.date.today()
+    return today.year - start_dt.year - (
+        (today.month, today.day) < (start_dt.month, start_dt.day)
+    )
+
+
+def experience_years_label(experience_start: str | None = None) -> str:
+    """'N+ years' label derived from EXPERIENCE_START (F-XSITE-001 SSOT).
+
+    Single source of truth for experience-length copy in SEO/AEO output; no
+    hardcoded '10+ years' literals remain in app code.
+    """
+    years = _years_since(experience_start or get_settings().EXPERIENCE_START)
+    return f"{max(0, years)}+ years"

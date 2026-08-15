@@ -29,7 +29,7 @@ from app.session_lifecycle import (
     cleanup_expired_session,
     enforce_session_limit,
 )
-from config.settings import get_settings
+from config.settings import get_settings, resolve_user_proxy
 
 settings = get_settings()
 router = APIRouter(prefix="/api/auth", tags=["Authentication"], redirect_slashes=False)
@@ -339,7 +339,9 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
         )
         if cookies:
             client = UdemyClient(
-                proxy=user.settings.proxy_url if user.settings else None
+                proxy=resolve_user_proxy(
+                    user.settings.proxy_url if user.settings else None
+                )
             )
             client.cookie_dict = cookies
             client.http.client.cookies.update(cookies)

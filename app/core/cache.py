@@ -29,6 +29,9 @@ class SessionCache:
         entry = self._cache[key]
         if _utcnow_naive() > entry["expires_at"]:
             self.pop(key)
+            # Close the in-memory client owned by the expired entry so its
+            # httpx/cloudscraper connections are released (F-ENRL-C09).
+            self._close_value(entry["value"])
             return None
         self._cache.move_to_end(key)
         return entry["value"]
@@ -41,8 +44,12 @@ class SessionCache:
             "expires_at": _utcnow_naive() + datetime.timedelta(seconds=ttl or self._default_ttl),
         }
         while len(self._cache) > self._max_size:
-            oldest_key, _ = self._cache.popitem(last=False)
+            oldest_key, oldest_entry = self._cache.popitem(last=False)
             logger.info(f"Evicted oldest session from cache (max entries={self._max_size})")
+            # Close the in-memory client owned by the evicted entry so its
+            # httpx/cloudscraper connections are released (F-ENRL-C09). set()
+            # is sync, so async closers are scheduled on the running loop.
+            self._close_value(oldest_entry["value"])
 
     def pop(self, key: str, default: Any = None) -> Optional[Any]:
         entry = self._cache.pop(key, None)
@@ -76,8 +83,33 @@ class SessionCache:
         if self.pop(key) is None:
             raise KeyError(key)
 
+    def _close_value(self, value: Any) -> None:
+        """Best-effort close of a cached value's resources (F-ENRL-C09).
+
+        Sync closers run inline; async closers are scheduled on the running
+        event loop (or discarded when none is running — set() is sync).
+        """
+        close_res = getattr(value, "close", None)
+        if close_res is None:
+            return
+        try:
+            result = close_res()
+            if asyncio.iscoroutine(result):
+                try:
+                    asyncio.get_running_loop().create_task(result)
+                except RuntimeError:
+                    result.close()
+        except Exception as exc:
+            logger.warning(
+                f"Error closing cached session client ({type(exc).__name__})"
+            )
+
     async def cleanup_expired(self, interval: int = 300):
-        """Periodically remove expired entries. Run as background task."""
+        """Periodically remove expired entries. Run as background task.
+
+        In-memory Udemy clients owned by expired entries are closed so their
+        httpx/cloudscraper connections are released (F-ENRL-C09).
+        """
         while True:
             await asyncio.sleep(interval)
             expired = [
@@ -85,7 +117,10 @@ class SessionCache:
                 if _utcnow_naive() > v["expires_at"]
             ]
             for k in expired:
-                self._cache.pop(k, None)
+                entry = self._cache.pop(k, None)
+                if entry is None:
+                    continue
+                self._close_value(entry["value"])
             if expired:
                 logger.info(f"Cleaned up {len(expired)} expired sessions from cache.")
 

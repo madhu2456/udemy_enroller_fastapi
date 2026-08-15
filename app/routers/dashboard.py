@@ -126,8 +126,15 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
     user_id = _session_user_id_for_html(request, db)
     if isinstance(user_id, RedirectResponse):
         return user_id
+    from config.settings import get_settings
+
+    # F-ENRL-C05: server mode hard-disables user proxies; the page warns and
+    # disables the field instead of pretending the setting is honored.
+    allow_user_proxy = get_settings().ALLOW_USER_PROXY
     return templates.TemplateResponse(
-        request, "pages/settings.html", {"user_id": user_id}
+        request,
+        "pages/settings.html",
+        {"user_id": user_id, "allow_user_proxy": allow_user_proxy},
     )
 
 

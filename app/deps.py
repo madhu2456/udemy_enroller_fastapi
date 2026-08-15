@@ -1,5 +1,6 @@
 """Shared FastAPI dependencies."""
 
+import asyncio
 import logging
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -8,11 +9,12 @@ from app.models.database import get_db, UserSession, _utcnow_naive
 from app.security import decrypt_cookies
 from app.services.udemy_client import UdemyClient
 from app.session_lifecycle import cleanup_expired_session
+from config.settings import resolve_user_proxy
 
 logger = logging.getLogger(__name__)
 
 
-def get_session(request: Request, db: Session = Depends(get_db)) -> UserSession:
+async def get_session(request: Request, db: Session = Depends(get_db)) -> UserSession:
     """Resolve the session and check expiration."""
     token = request.cookies.get("session_id")
     if not token:
@@ -23,8 +25,16 @@ def get_session(request: Request, db: Session = Depends(get_db)) -> UserSession:
         raise HTTPException(status_code=401, detail="Invalid session")
 
     if session.expires_at and session.expires_at < _utcnow_naive():
-        # Delete session; wipe Udemy cookies if this was the user's last session
-        cleanup_expired_session(db, session, getattr(request.app, "state", None))
+        # Delete session; wipe Udemy cookies if this was the user's last session;
+        # close the in-memory Udemy client it owned (F-ENRL-C09).
+        client = cleanup_expired_session(db, session, getattr(request.app, "state", None))
+        if client is not None:
+            try:
+                close_res = client.close()
+                if asyncio.iscoroutine(close_res):
+                    await close_res
+            except Exception as e:
+                logger.warning(f"Error closing client after session expiry: {e}")
         raise HTTPException(status_code=401, detail="Session expired")
 
     return session
@@ -72,7 +82,7 @@ async def get_udemy_client(
         )
 
     restored_client = UdemyClient(
-        proxy=user.settings.proxy_url if user.settings else None
+        proxy=resolve_user_proxy(user.settings.proxy_url if user.settings else None)
     )
 
     # Restore ALL cookies found in the database

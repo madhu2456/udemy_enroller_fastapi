@@ -8,19 +8,26 @@ Intended for production (Docker ``coupon-checker`` service). Each cycle:
 3. Re-validates each coupon via Udemy's unauthenticated pricing API
 4. Drops confirmed expired deals, rewrites JSON + sitemap
 
+A tiny HTTP endpoint on 127.0.0.1:<port>/health (F-ENRL-C15) reports liveness
+and catalog freshness for the Docker healthcheck:
+
 Environment:
   COUPON_CHECKER_INTERVAL_SECONDS  sleep between cycles (default 7200 = 2h)
   COUPON_CHECKER_RUN_ON_START      if "1"/"true" (default), run once immediately
   PUBLIC_DEALS_PATH                path for public_deals.json (persistent volume)
+  COUPON_CHECKER_HEALTH_PORT       health endpoint port (default 8001)
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import sys
+import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # Project root on sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -30,6 +37,103 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("coupon_checker_loop")
+
+# Catalog considered stale when no successful cycle finished within 26 hours
+# (F-ENRL-C15): public_deals.json then no longer reflects live coupon status.
+STALE_AFTER_SECONDS = 26 * 3600
+DEFAULT_HEALTH_PORT = 8001
+
+
+class HealthState:
+    """Thread-safe record of cycle timing for the /health endpoint."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._started_at: float | None = None  # epoch seconds, latest cycle start
+        self._finished_at: float | None = None  # epoch seconds, last success
+
+    def mark_started(self) -> None:
+        with self._lock:
+            self._started_at = time.time()
+
+    def mark_finished(self) -> None:
+        with self._lock:
+            self._finished_at = time.time()
+
+    def snapshot(self) -> tuple[float | None, float | None]:
+        with self._lock:
+            return self._started_at, self._finished_at
+
+
+def _health_port() -> int:
+    raw = os.getenv("COUPON_CHECKER_HEALTH_PORT", "").strip()
+    if raw:
+        try:
+            return int(raw)
+        except ValueError:
+            logger.warning(
+                "Invalid COUPON_CHECKER_HEALTH_PORT=%r; using %s",
+                raw,
+                DEFAULT_HEALTH_PORT,
+            )
+    return DEFAULT_HEALTH_PORT
+
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    """GET /health → 200 + last_run_age_seconds, 503 when stale (F-ENRL-C15).
+
+    Age is measured from the last successful cycle finish; before any success
+    it falls back to the latest cycle start. No run ever started → stale.
+    """
+
+    def do_GET(self) -> None:
+        if self.path != "/health":
+            self.send_error(404)
+            return
+        started_at, finished_at = self.server.health_state.snapshot()
+        now = time.time()
+        baseline = finished_at if finished_at is not None else started_at
+        age_seconds = int(now - baseline) if baseline is not None else None
+        stale = age_seconds is None or age_seconds > STALE_AFTER_SECONDS
+        body = json.dumps(
+            {
+                "status": "stale" if stale else "ok",
+                "last_run_age_seconds": age_seconds,
+            }
+        ).encode("utf-8")
+        self.send_response(503 if stale else 200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, fmt: str, *args) -> None:
+        # Access logs are noise in the loop's own stdout; keep them at debug.
+        logger.debug("health: " + fmt % args)
+
+
+def _start_health_server(health_state: HealthState) -> ThreadingHTTPServer:
+    """Bind the health endpoint on loopback and serve it on a daemon thread."""
+    port = _health_port()
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", port), _HealthHandler)
+    except OSError as exc:
+        logger.error(
+            "Cannot bind health endpoint on 127.0.0.1:%s: %s "
+            "(set COUPON_CHECKER_HEALTH_PORT to a free port)",
+            port,
+            exc,
+        )
+        raise
+    server.health_state = health_state
+    thread = threading.Thread(
+        target=server.serve_forever,
+        daemon=True,
+        name="coupon-checker-health",
+    )
+    thread.start()
+    logger.info("Health endpoint: http://127.0.0.1:%d/health", port)
+    return server
 
 
 def _interval_seconds() -> int:
@@ -122,6 +226,9 @@ def main() -> None:
     )
     _seed_public_deals_if_needed()
 
+    health_state = HealthState()
+    _start_health_server(health_state)
+
     first = True
     while True:
         if first and not _run_on_start():
@@ -133,8 +240,10 @@ def main() -> None:
 
         started = time.monotonic()
         logger.info("=== Coupon check cycle start ===")
+        health_state.mark_started()
         try:
             asyncio.run(_run_one_cycle())
+            health_state.mark_finished()
             logger.info(
                 "=== Coupon check cycle finished in %.1fs ===",
                 time.monotonic() - started,

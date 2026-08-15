@@ -45,6 +45,9 @@ class UdemyClient:
         self.already_enrolled_c = 0
         self.expired_c = 0
         self.excluded_c = 0
+        # 504/503 responses never confirm enrollment (F-ENRL-O02) — counted
+        # separately so they do not inflate success or failure stats.
+        self.unknown_c = 0
         self.amount_saved_c = Decimal(0)
 
         self.is_authenticated = False
@@ -972,6 +975,10 @@ class UdemyClient:
             headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
         max_attempts = 5
+        # Rate-limit retries are iterative, never recursive (F-ENRL-C14):
+        # unbounded recursion could re-enter indefinitely under sustained 429s.
+        max_rate_limit_retries = 3
+        rate_limit_retries = 0
         for attempt in range(max_attempts):
             logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
 
@@ -1012,14 +1019,32 @@ class UdemyClient:
             logger.info(f"[DU_CHECKOUT] status={r.status_code} (attempt {attempt + 1}) for {course.title}")
 
             if r.status_code == 429 and "Retry-After" in r.headers:
-                retry_after = int(r.headers["Retry-After"])
+                rate_limit_retries += 1
+                if rate_limit_retries > max_rate_limit_retries:
+                    logger.warning(
+                        f"[DU_CHECKOUT] Giving up on {course.title} after "
+                        f"{rate_limit_retries} rate-limit retries"
+                    )
+                    course.status = False
+                    return
+                try:
+                    retry_after = int(r.headers["Retry-After"])
+                except (ValueError, TypeError):
+                    # Non-numeric Retry-After must not crash the attempt (F-ENRL-C14)
+                    retry_after = 60
                 logger.warning(f"Rate limited. Waiting {retry_after} seconds.")
                 await asyncio.sleep(retry_after)
-                return await self._du_checkout(course)
+                continue
 
             if r.status_code == 504:
-                logger.info(f"[DU_CHECKOUT] 504 treated as success for {course.title}")
-                course.status = True
+                # Gateway timeout: Udemy did not confirm the enrollment (F-ENRL-O02).
+                # Recorded as unknown — NOT enrolled — and counted separately.
+                logger.warning(
+                    f"[DU_CHECKOUT] 504 from Udemy for {course.title} — "
+                    "enrollment unconfirmed (unknown)"
+                )
+                course.status = None
+                course.error = "unknown: 504 gateway timeout"
                 return
 
             try:
@@ -1103,8 +1128,14 @@ class UdemyClient:
             return
 
         if r2.status_code == 503:
-            logger.info(f"[FREE_CHECKOUT] 503 treated as success for {course.title}")
-            course.status = True
+            # Service unavailable: Udemy did not confirm the enrollment (F-ENRL-O02).
+            # Recorded as unknown — NOT enrolled — and counted separately.
+            logger.warning(
+                f"[FREE_CHECKOUT] 503 from Udemy for {course.title} — "
+                "enrollment unconfirmed (unknown)"
+            )
+            course.status = None
+            course.error = "unknown: 503 service unavailable"
             return
 
         data = await self.http.safe_json(r2, context="free_checkout_verify")
@@ -1142,6 +1173,10 @@ class UdemyClient:
 
         if course.status:
             logger.info(f"[CHECKOUT_SINGLE] SUCCESS for {course.title}")
+        elif course.status is None:
+            logger.warning(
+                f"[CHECKOUT_SINGLE] UNKNOWN for {course.title} (unconfirmed response)"
+            )
         else:
             logger.warning(f"[CHECKOUT_SINGLE] FAILED for {course.title}")
         return course.status

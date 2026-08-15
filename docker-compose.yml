@@ -60,15 +60,25 @@ services:
       - CHECKER_SCRAPE_MAX_SOURCES=${CHECKER_SCRAPE_MAX_SOURCES:-0}
       - LOG_LEVEL=${COUPON_CHECKER_LOG_LEVEL:-INFO}
       - PROXIES=${PROXIES:-}
+      - COUPON_CHECKER_HEALTH_PORT=${COUPON_CHECKER_HEALTH_PORT:-8001}
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
     depends_on:
       web:
         condition: service_healthy
-    # Loop process is not an HTTP server — disable image HEALTHCHECK
+    # Loop process is not an HTTP server — the /health endpoint (F-ENRL-C15)
+    # on 127.0.0.1:8001 reports liveness + catalog freshness (503 when no
+    # successful cycle within 26h). Port override: COUPON_CHECKER_HEALTH_PORT
+    # (env var, passthrough above; if changed, update the healthcheck URL).
+    # NOTE: .env.example cannot document this var — repo tool policy blocks
+    # edits to *.env.* files; this compose block is the reference instead.
     healthcheck:
-      disable: true
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
 volumes:

@@ -18,6 +18,7 @@ from app.models.database import (
 from app.services.course import Course
 from app.services.scraper import ScraperService
 from app.services.udemy_client import UdemyClient
+from config.settings import resolve_user_proxy
 
 
 class EnrollmentManager:
@@ -217,7 +218,10 @@ class EnrollmentManager:
             enabled_sites = [k for k, v in self.settings.get("sites", {}).items() if v]
             logger.warning(f"Enabled sites: {enabled_sites}")
             self.scraper_service = ScraperService(
-                enabled_sites, proxy=self.settings.get("proxy_url")
+                enabled_sites,
+                # User proxy honored only when ALLOW_USER_PROXY is enabled
+                # (server mode hard-disables it — F-ENRL-C05)
+                proxy=resolve_user_proxy(self.settings.get("proxy_url")),
             )
 
             enrolled_slugs: set[str] = set()
@@ -260,7 +264,7 @@ class EnrollmentManager:
 
             seen_slugs = set()
             from collections import defaultdict
-            source_stats = defaultdict(lambda: {"enrolled": 0, "already_enrolled": 0, "expired": 0, "failed": 0, "excluded": 0, "invalid": 0})
+            source_stats = defaultdict(lambda: {"enrolled": 0, "already_enrolled": 0, "expired": 0, "failed": 0, "excluded": 0, "invalid": 0, "unknown": 0})
 
             skipped_already_enrolled = 0
             skipped_already_tried = 0
@@ -277,7 +281,15 @@ class EnrollmentManager:
                 success = await self.udemy.checkout_single(course)
                 duration = asyncio.get_event_loop().time() - start_time
 
-                if success:
+                if course.status is None:
+                    # 504/503 responses never confirm enrollment (F-ENRL-O02):
+                    # record as "unknown" so stats stay honest (not enrolled).
+                    status = "unknown"
+                    self.udemy.unknown_c += 1
+                    logger.warning(
+                        f"⏳ Enrollment unknown (unconfirmed response): {course.title} ({duration:.1f}s)"
+                    )
+                elif success:
                     status = "enrolled"
                     self.udemy.successfully_enrolled_c += 1
                     if course.list_price:
@@ -433,7 +445,7 @@ class EnrollmentManager:
             logger.info("--- Source Telemetry Summary ---")
             for site, stats in source_stats.items():
                 total = sum(stats.values())
-                logger.info(f"  {site}: {total} processed | {stats['enrolled']} enrolled | {stats['already_enrolled']} already enrolled | {stats['expired']} expired | {stats['failed']} failed | {stats['excluded']} excluded | {stats['invalid']} invalid")
+                logger.info(f"  {site}: {total} processed | {stats['enrolled']} enrolled | {stats['already_enrolled']} already enrolled | {stats['expired']} expired | {stats['failed']} failed | {stats['excluded']} excluded | {stats['invalid']} invalid | {stats['unknown']} unknown")
             logger.info("--------------------------------")
             _health = self.udemy.get_session_health_report()
             logger.info(f"Enrollment pipeline completed. Enrolled: {self.udemy.successfully_enrolled_c}")

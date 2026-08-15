@@ -14,7 +14,7 @@ from app.deps import get_current_user_id, get_udemy_client
 from app.schemas.schemas import EnrollmentStatus, CourseInfo, RunDetail
 from app.security import RateLimiter, _client_key, verify_csrf_token
 from app.services.enrollment_manager import EnrollmentManager
-from config.settings import get_settings as get_app_settings
+from config.settings import get_settings as get_app_settings, resolve_user_proxy
 from app.core.cache import clear_user_caches, _history_cache, get_cached_or_compute
 
 logger = logging.getLogger(__name__)
@@ -97,8 +97,9 @@ async def start_enrollment(
             detail="You must have at least one valid site, language, and category enabled.",
         )
 
-    # Sync client proxy with current user settings
-    await client.set_proxy(settings_dict["proxy_url"])
+    # Sync client proxy with current user settings (ignored when
+    # ALLOW_USER_PROXY is disabled, e.g. server mode — F-ENRL-C05)
+    await client.set_proxy(resolve_user_proxy(settings_dict["proxy_url"]))
 
     # Update settings_dict with filtered sites for the run
     settings_dict["sites"] = {site: True for site in enabled_sites}
@@ -358,6 +359,20 @@ async def export_run_csv(
         .all()
     )
 
+    def _csv_safe(value):
+        """Neutralize spreadsheet formula injection (F-ENRL-C12).
+
+        Cells beginning with =, +, -, @, tab or CR are interpreted as
+        formulas by spreadsheet apps (e.g. =HYPERLINK(...)); prefixing with
+        a single quote makes them render as literal text.
+        """
+        if value is None:
+            return value
+        text = str(value)
+        if text.startswith(("=", "+", "-", "@", "\t", "\r")):
+            return "'" + text
+        return text
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(
@@ -380,18 +395,18 @@ async def export_run_csv(
     for c in courses:
         writer.writerow(
             [
-                c.title,
-                c.url,
-                c.course_id,
-                c.coupon_code,
-                c.price,
-                c.category,
-                c.language,
-                c.rating,
-                c.site_source,
-                c.status,
-                c.error_message,
-                c.enrolled_at,
+                _csv_safe(c.title),
+                _csv_safe(c.url),
+                _csv_safe(c.course_id),
+                _csv_safe(c.coupon_code),
+                _csv_safe(c.price),
+                _csv_safe(c.category),
+                _csv_safe(c.language),
+                _csv_safe(c.rating),
+                _csv_safe(c.site_source),
+                _csv_safe(c.status),
+                _csv_safe(c.error_message),
+                _csv_safe(c.enrolled_at),
             ]
         )
 

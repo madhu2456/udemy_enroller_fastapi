@@ -1,10 +1,26 @@
 import asyncio
 import random
 from typing import Dict, Optional, Union
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 from loguru import logger
+
+from app.logging_config import sanitize_log_message
+
+
+def _log_safe_url(url: str) -> str:
+    """Redact a URL for logging (F-ENRL-C10).
+
+    Strips the query string (coupon codes / session tokens live in queries),
+    then passes the remainder through the shared sanitizer for defense in depth.
+    """
+    try:
+        parsed = urlparse(url)
+        url = urlunparse(parsed._replace(query="", fragment=""))
+    except (ValueError, TypeError):
+        pass
+    return sanitize_log_message(str(url))
 
 
 class AsyncHTTPClient:
@@ -115,7 +131,15 @@ class AsyncHTTPClient:
             return self._scraper
 
     async def set_proxy(self, proxy: Optional[str]):
-        """Update proxy and re-initialize client, safely closing the old client."""
+        """Update proxy and re-initialize client, safely closing the old client.
+
+        User-supplied proxies are ignored unless ALLOW_USER_PROXY is enabled
+        (F-ENRL-C05). ``__init__`` is deliberately NOT gated so admin-configured
+        PROXIES (coupon checker) still apply on construction.
+        """
+        from config.settings import resolve_user_proxy
+
+        proxy = resolve_user_proxy(proxy)
         if self.proxy == proxy:
             return
         self.proxy = proxy
@@ -465,7 +489,7 @@ class AsyncHTTPClient:
                 if response.status_code == 403 and log_failures:
                     ua_preview = str(headers.get("User-Agent", "unknown"))[:60]
                     logger.warning(
-                        f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {url} | UA: {ua_preview}"
+                        f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {_log_safe_url(url)} | UA: {ua_preview}"
                     )
 
                 if raise_for_status:
@@ -489,12 +513,12 @@ class AsyncHTTPClient:
                     error_name = "DNSResolutionError"
                     if log_failures:
                         logger.warning(
-                            f"  DNS Resolution failed for {url} (Attempt {attempt + 1}/{attempts})"
+                            f"  DNS Resolution failed for {_log_safe_url(url)} (Attempt {attempt + 1}/{attempts})"
                         )
 
                 if log_failures:
                     logger.info(
-                        f"{'CloudScraper' if use_cloudscraper else 'GET'} attempt {attempt + 1}/{attempts} failed for {url}: {error_name}"
+                        f"{'CloudScraper' if use_cloudscraper else 'GET'} attempt {attempt + 1}/{attempts} failed for {_log_safe_url(url)}: {error_name}"
                     )
 
                 should_retry = attempt < attempts - 1
@@ -561,7 +585,7 @@ class AsyncHTTPClient:
                 error_name = type(e).__name__
                 if log_failures:
                     logger.info(
-                        f"HEAD attempt {attempt + 1}/{attempts} failed for {url}: {error_name}"
+                        f"HEAD attempt {attempt + 1}/{attempts} failed for {_log_safe_url(url)}: {error_name}"
                     )
 
                 should_retry = attempt < attempts - 1
@@ -706,7 +730,7 @@ class AsyncHTTPClient:
                 if response.status_code == 403 and log_failures:
                     ua_preview = str(headers.get("User-Agent", "unknown"))[:60]
                     logger.warning(
-                        f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {url} | UA: {ua_preview}"
+                        f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {_log_safe_url(url)} | UA: {ua_preview}"
                     )
 
                 if raise_for_status:
@@ -730,12 +754,12 @@ class AsyncHTTPClient:
                     error_name = "DNSResolutionError"
                     if log_failures:
                         logger.warning(
-                            f"  DNS Resolution failed for {url} (Attempt {attempt + 1}/{attempts})"
+                            f"  DNS Resolution failed for {_log_safe_url(url)} (Attempt {attempt + 1}/{attempts})"
                         )
 
                 if log_failures:
                     logger.info(
-                        f"{'CloudScraper' if use_cloudscraper else 'POST'} attempt {attempt + 1}/{attempts} failed for {url}: {error_name}"
+                        f"{'CloudScraper' if use_cloudscraper else 'POST'} attempt {attempt + 1}/{attempts} failed for {_log_safe_url(url)}: {error_name}"
                     )
 
                 should_retry = attempt < attempts - 1

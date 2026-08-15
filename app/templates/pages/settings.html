@@ -235,6 +235,17 @@ content %}
                 <p class="text-[10px] text-gray-500">
                     Leave blank for direct connection
                 </p>
+                {% if not allow_user_proxy %}
+                <div
+                    id="proxy-disabled-note"
+                    role="status"
+                    class="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 leading-relaxed"
+                >
+                    This hosted deployment ignores user-supplied proxies
+                    (server mode). The value below is stored but never used for
+                    enrollment or scraping traffic.
+                </div>
+                {% endif %}
             </div>
 
             <div class="border-t border-gray-100"></div>
@@ -352,6 +363,8 @@ content %}
 {% endblock %} {% block scripts %}
 <script nonce="{{ request.state.nonce }}">
     let currentSettings = {};
+    // F-ENRL-C05: server mode hard-disables user proxies (rendered flag).
+    const ALLOW_USER_PROXY = {{ "true" if allow_user_proxy else "false" }};
 
     document.addEventListener("DOMContentLoaded", async () => {
         const authed = await checkAuth();
@@ -360,6 +373,17 @@ content %}
         }
         setupTagInput("instructor-input", "instructor-tags");
         setupTagInput("title-input", "title-tags");
+
+        // When user proxies are disabled, the field is informational only:
+        // read-only and excluded from saves so no one is misled into thinking
+        // it takes effect (F-ENRL-C05).
+        if (!ALLOW_USER_PROXY) {
+            const proxyInput = document.getElementById("proxy-url");
+            if (proxyInput) {
+                proxyInput.readOnly = true;
+                proxyInput.classList.add("opacity-60", "cursor-not-allowed");
+            }
+        }
 
         // Event listeners for data-action attributes
         document.querySelectorAll('[data-action="reset-settings"]').forEach(btn => {
@@ -662,8 +686,9 @@ content %}
             title_exclude: getTags("title-tags"),
             save_txt: document.getElementById("save-txt").checked,
             discounted_only: document.getElementById("discounted-only").checked,
-            proxy_url:
-                document.getElementById("proxy-url").value.trim() || null,
+            proxy_url: ALLOW_USER_PROXY
+                ? document.getElementById("proxy-url").value.trim() || null
+                : null,
         };
     }
 

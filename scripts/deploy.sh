@@ -9,6 +9,15 @@ echo "=== Udemy Course Enroller - Deployment Script ==="
 APP_DIR="/opt/udemy-enroller"
 REPO_URL="${REPO_URL:-https://github.com/your-username/udemy-enroller.git}"
 
+# ── Fail fast on the placeholder REPO_URL (F-ENRL-C13) ───────────────────
+# Cloning the example URL would create a broken /opt/udemy-enroller checkout;
+# abort before any system changes so the operator sets REPO_URL properly.
+if [ "$REPO_URL" = "https://github.com/your-username/udemy-enroller.git" ]; then
+    echo "ERROR: REPO_URL is still the placeholder." >&2
+    echo "Set it before running, e.g. REPO_URL=https://github.com/YOUR_ORG/udemy-enroller.git ./deploy.sh" >&2
+    exit 1
+fi
+
 # ── Backup cron install mode (F-ENRL-K01) ────────────────────────────────
 # `./deploy.sh --install-backup-cron` installs idempotent crontab entries for
 # scripts/backup_sqlite.sh + scripts/verify_backup_freshness.sh and exits.
@@ -84,6 +93,8 @@ PORT=8000
 EOF
     echo "   .env file created with random SECRET_KEY and COOKIE_ENCRYPTION_KEY"
 fi
+# Restrict .env to the deploy user after any write (F-ENRL-C13)
+chmod 600 .env
 
 echo "7. Building and starting containers..."
 docker compose up -d --build

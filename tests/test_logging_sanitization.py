@@ -1,6 +1,7 @@
 """Test credential sanitization in logging."""
 
 from app.logging_config import sanitize_log_message
+from app.services.http_client import _log_safe_url
 
 
 def test_sanitize_coupon_code_equals():
@@ -168,3 +169,49 @@ def test_sanitize_dict_str_representation():
     assert "PROMO123" not in sanitized
     assert "***REDACTED***" in sanitized
     assert "price" in sanitized  # Non-sensitive key preserved
+
+
+class TestLogSafeUrl:
+    """F-ENRL-C10: _log_safe_url redacts the query string before logging."""
+
+    def test_strips_coupon_code_query(self):
+        url = "https://www.udemy.com/course/slug/learn/?couponCode=SUPERDISCOUNT50"
+        safe = _log_safe_url(url)
+        assert "SUPERDISCOUNT50" not in safe
+        assert "couponCode" not in safe
+        assert "https://www.udemy.com/course/slug/learn/" in safe
+
+    def test_strips_access_token_query(self):
+        url = "https://www.udemy.com/api-2.0/courses/?access_token=SECRETTOKEN123"
+        safe = _log_safe_url(url)
+        assert "SECRETTOKEN123" not in safe
+        assert "access_token" not in safe
+        assert "https://www.udemy.com/api-2.0/courses/" in safe
+
+    def test_strips_fragment(self):
+        url = "https://www.udemy.com/course/slug/?couponCode=FRAG123#reviews"
+        safe = _log_safe_url(url)
+        assert "FRAG123" not in safe
+        assert "#reviews" not in safe
+
+    def test_preserves_path(self):
+        url = "https://www.udemy.com/course/another-slug/learn/"
+        assert _log_safe_url(url) == url
+
+    def test_preserves_bare_queryless_url(self):
+        url = "https://www.udemy.com"
+        assert _log_safe_url(url) == "https://www.udemy.com"
+
+    def test_handles_non_url_input(self):
+        safe = _log_safe_url("not a url at all")
+        assert "not a url at all" in safe
+
+    def test_empty_string(self):
+        assert _log_safe_url("") == ""
+
+    def test_url_with_userinfo_keeps_path_redacts_other_secrets(self):
+        url = "https://user:pass@proxy.example:8080/api?couponCode=HIDDEN&client_id=abc123"
+        safe = _log_safe_url(url)
+        assert "HIDDEN" not in safe
+        assert "couponCode" not in safe
+        assert "client_id" not in safe

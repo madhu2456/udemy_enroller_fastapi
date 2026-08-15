@@ -524,9 +524,11 @@ templates = Jinja2Templates(directory="app/templates")
 # instance in the app renders pages extending components/base.html, so the
 # global must be registered on all of them (base.html uses ?v={{ lucide_version }}).
 from app.core.assets import lucide_cache_buster  # noqa: E402  (deliberate: import kept with template setup block)
+import datetime  # noqa: E402  (deliberate: import kept with template setup block)
 
 for _templates in (templates, dashboard.templates, public_deals.templates, seo.templates):
     _templates.env.globals["lucide_version"] = lucide_cache_buster()
+    _templates.env.globals["current_year"] = datetime.datetime.now(datetime.UTC).year
 
 # Include routers
 app.include_router(seo.router)

@@ -5,7 +5,7 @@ import html
 import os
 from email.utils import format_datetime
 
-from config.settings import get_settings
+from config.settings import experience_years_label, get_settings
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, FileResponse
@@ -537,7 +537,7 @@ The tool uses your Udemy session cookies/tokens to call session-based enrollment
 Automated access may conflict with platform terms; users are responsible for compliance. Course availability and enrollment success are not guaranteed.
 
 ### Who built the Udemy Course Enroller?
-The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Engineer, RAG & Analytics Consultant from Visakhapatnam, India. Madhu has 10+ years of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, specializing in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems. Learn more at {PORTFOLIO_URL}.
+The Udemy Course Enroller was designed and developed by Madhu Dadi, an AI Engineer, RAG & Analytics Consultant from Visakhapatnam, India. Madhu has {experience_years_label()} of experience across Novartis, redBus, GroupM (WPP), and Absolinsoft, specializing in LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems. Learn more at {PORTFOLIO_URL}.
 
 ### What technologies power the Udemy Course Enroller?
 The application is built with Python 3.11+, FastAPI for the async backend, SQLAlchemy with SQLite for data persistence, CloudScraper as the primary HTTP client, Playwright as a fallback for some coupon aggregator sites, and Tailwind CSS for the frontend. Deployment uses Docker and docker-compose.
@@ -582,7 +582,7 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 "name": "Madhu Dadi",
                 "url": PERSON_URL,
                 "jobTitle": "AI Engineer, RAG & Analytics Consultant",
-                "description": "AI consultant and ML engineer with 10+ years of experience in LLM applications, RAG, AI agents, and full-stack AI product development.",
+                "description": f"AI consultant and ML engineer with {experience_years_label()} of experience in LLM applications, RAG, AI agents, and full-stack AI product development.",
                 "subjectOf": [
                     {"@type": "CreativeWork", "name": "Technical Blog", "url": BLOG_URL},
                     {"@type": "CreativeWork", "name": "Professional Portfolio", "url": PORTFOLIO_URL},
@@ -674,7 +674,7 @@ async def ai_profile_json(db: Session = Depends(get_db)):
             "familyName": "Dadi",
             "url": PERSON_URL,
             "jobTitle": "AI Engineer, RAG & Analytics Consultant",
-            "description": "AI consultant and ML engineer with 10+ years of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
+            "description": f"AI consultant and ML engineer with {experience_years_label()} of experience building production LLM/RAG applications, AI agents, FastAPI/Next.js products, and analytics systems.",
             "alumniOf": [
                 {"@type": "CollegeOrUniversity", "name": "Indian Institute of Management (IIM), Amritsar"},
                 {"@type": "CollegeOrUniversity", "name": "MVGR College of Engineering"}

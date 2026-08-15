@@ -9,6 +9,17 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### P3/P4 wave — last enroller items (F-ENRL-*, F-XSITE-*)
+
+- **C11**: Alembic migration `alembic/versions/c01d021a9e03_drop_firecrawl_and_headless_from_user_settings.py` (head `c01d021a9e03`) drops `firecrawl_api_key` / `use_headless_browser` columns from `user_settings` (write-only; **not yet applied to any database**).
+- **C13**: `scripts/deploy.sh` hardened — `set -euo pipefail` fail-fast, `chmod 600` on the generated `.env`; `bash -n` clean.
+- **C15**: coupon-checker loop now serves a loopback `/health` endpoint (default port 8001, `COUPON_CHECKER_HEALTH_PORT` override) reporting `last_run_age_seconds`; 200 `ok` while a cycle finished within 26h, 503 `stale` otherwise (incl. before the first run). Docker Compose `coupon-checker` healthcheck wired to it. `COUPON_CHECKER_HEALTH_PORT` is also documented in the compose service comment (`.env.example` editing is blocked by the repo's `*.env.*` policy; compose is the reference).
+- **Tests**: `tests/test_coupon_checker_health.py` — /health 200 + age, 503 stale >26h / never-run, 404 unknown path (ephemeral port 0, importlib-by-path).
+- **F-XSITE-001**: seo.py FAQ + ai-profile.json `Person`/`author` descriptions now use `config.settings.experience_years_label()` (SSOT from `EXPERIENCE_START`); zero `10+ years` literals remain in `app/`.
+- **F-XSITE-002**: base.html footer copyright `© {{ current_year }} Enroller by Madhu Dadi`; `current_year` global registered on all four Jinja2Templates instances (main/dashboard/public_deals/seo) in main.py's template-globals loop.
+- **F-XSITE-009**: `twitter:creator` meta added after `twitter:site` in base.html (deviation from plan: base.html is the shared head template, not seo.py).
+- **F-ENRL-J03**: **CLOSED** — `docs/legal-counsel-review.md` §4a (India IT Act / intermediary draft rationale) verified against repo facts: no user-to-user content hosting/transmission, session cookies per-user for own automation runs, DPDP-not-IT-Act identified as the relevant Indian framework for cookie processing; still explicitly draft-for-counsel, not legal advice.
+
 ### Coupon-checker hardening (resolver tiers + safety valve)
 
 - _resolve_course_id(http, url, slug=None): fields → bare → raw-verbatim-path-slug → HTML tiers;

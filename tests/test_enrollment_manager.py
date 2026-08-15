@@ -461,6 +461,72 @@ class TestEnrollmentManagerPipeline:
         if task:
             task.cancel()
 
+    @pytest.mark.asyncio
+    async def test_pipeline_gates_user_proxy_before_scraper_service(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """User proxy must pass through resolve_user_proxy before ScraperService
+        is constructed (F-ENRL-C05): server mode ignores user proxies here too."""
+        user = User(email="proxygate@example.com", udemy_display_name="Proxy")
+        db_session.add(user)
+        db_session.commit()
+
+        run = EnrollmentRun(user_id=user.id, status="pending", currency="USD")
+        db_session.add(run)
+        db_session.commit()
+
+        settings = {
+            **default_settings,
+            "proxy_url": "http://user:pass@proxy.example:8080",
+        }
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, settings
+        )
+
+        resolved_proxy = "http://resolved.example:3128"
+        with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
+            MockScraper.return_value = _make_mock_scraper_service([])
+            with patch(
+                "app.services.enrollment_manager.resolve_user_proxy",
+                return_value=resolved_proxy,
+            ) as mock_resolve:
+                await manager.run_pipeline()
+
+        mock_resolve.assert_called_once_with("http://user:pass@proxy.example:8080")
+        assert MockScraper.call_args.kwargs["proxy"] == resolved_proxy
+
+    @pytest.mark.asyncio
+    async def test_pipeline_user_proxy_ignored_when_gate_disabled(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """With the gate returning None (server mode), ScraperService gets no
+        user proxy (F-ENRL-C05)."""
+        user = User(email="proxygate2@example.com", udemy_display_name="Proxy")
+        db_session.add(user)
+        db_session.commit()
+
+        run = EnrollmentRun(user_id=user.id, status="pending", currency="USD")
+        db_session.add(run)
+        db_session.commit()
+
+        settings = {
+            **default_settings,
+            "proxy_url": "http://user:pass@proxy.example:8080",
+        }
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, settings
+        )
+
+        with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
+            MockScraper.return_value = _make_mock_scraper_service([])
+            with patch(
+                "app.services.enrollment_manager.resolve_user_proxy",
+                return_value=None,
+            ):
+                await manager.run_pipeline()
+
+        assert MockScraper.call_args.kwargs["proxy"] is None
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
