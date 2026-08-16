@@ -254,14 +254,27 @@ def list_valid_deals(
 
 # Sitemap quality: avoid thin/garbage indexable URLs (short titles, missing fields)
 SITEMAP_MIN_TITLE_LEN = 8
+SITEMAP_MIN_TITLE_TOKENS = 3
 # Prefer deals checked within this many days when last_checked_at is present
 SITEMAP_MAX_AGE_DAYS = 30
+
+
+def _title_is_mostly_latin(title: str) -> bool:
+    """True when alphabetic characters are majority ASCII Latin (or none exist)."""
+    letters = [ch for ch in title if ch.isalpha()]
+    if not letters:
+        return True
+    latin = sum(1 for ch in letters if ch.isascii())
+    return (latin / len(letters)) >= 0.5
 
 
 def is_sitemap_quality_deal(course: dict) -> bool:
     """Return True if a deal is worth listing in the sitemap / SEO detail index.
 
     Requires valid flag, coupon code, stable slug, and a non-trivial title.
+    Thin titles are ``len < SITEMAP_MIN_TITLE_LEN`` or (mostly Latin and fewer
+    than ``SITEMAP_MIN_TITLE_TOKENS`` whitespace tokens). CJK titles are not
+    dropped solely for lacking spaces. Trailing ellipsis is always rejected.
     When ``last_checked_at`` is present and parseable, exclude deals older than
     ``SITEMAP_MAX_AGE_DAYS`` so stale inventory does not dominate the index.
     Deals without a check timestamp still pass other quality gates (legacy rows).
@@ -292,6 +305,10 @@ def is_sitemap_quality_deal(course: dict) -> bool:
         return False
     title = (course.get("title") or "").strip()
     if len(title) < SITEMAP_MIN_TITLE_LEN:
+        return False
+    if _title_is_mostly_latin(title) and len(title.split()) < SITEMAP_MIN_TITLE_TOKENS:
+        return False
+    if title.endswith("…") or title.endswith("..."):
         return False
 
     raw = course.get("last_checked_at") or course.get("enrolled_at")

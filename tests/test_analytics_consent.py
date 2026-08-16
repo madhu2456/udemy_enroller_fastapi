@@ -73,6 +73,66 @@ class TestAnalyticsConsent:
         """Loaders stay gated behind localStorage cookie_consent === 'accepted'."""
         html = self._render(gtm_container_id=GTM_ID)
         assert "localStorage.getItem('cookie_consent') === 'accepted'" in html
+        assert "window._loadGTM = gtm" in html
+
+    def test_consent_default_denied_before_gtm_loader(self):
+        """F012/F048: Consent Mode default denied precedes any GTM bootstrap."""
+        html = self._render(gtm_container_id=GTM_ID)
+        default_idx = html.find("gtag('consent','default'")
+        update_idx = html.find("gtag('consent','update'")
+        gtm_idx = html.find("googletagmanager.com/gtm.js")
+        assert default_idx != -1
+        assert update_idx != -1
+        assert gtm_idx != -1
+        assert default_idx < update_idx < gtm_idx
+        assert "analytics_storage:'denied'" in html
+        assert "ad_storage:'denied'" in html
+        assert "ad_user_data:'denied'" in html
+        assert "ad_personalization:'denied'" in html
+        assert "wait_for_update:500" in html
+        assert "window._loadGTM = gtm" in html
+        assert "localStorage.getItem('cookie_consent') === 'accepted'" in html
+        assert "if (window._loadGTM) window._loadGTM();" in html
+
+    def test_accepted_restore_updates_consent_before_gtm(self):
+        """Returning accepted visitors: consent update precedes gtm.js; default first."""
+        html = self._render(gtm_container_id=GTM_ID)
+        default_end = html.find("gtag('consent','default'")
+        assert default_end != -1
+        head_html = html[: html.find("googletagmanager.com/gtm.js")]
+        restore_marker = (
+            "if (localStorage.getItem('cookie_consent') === 'accepted') {\n"
+            "                gtag('consent','update',{"
+        )
+        assert restore_marker in head_html
+        restore_idx = html.find(restore_marker)
+        gtm_idx = html.find("googletagmanager.com/gtm.js")
+        assert default_end < restore_idx < gtm_idx
+        assert "ad_storage:'granted'" not in html
+
+    def test_consent_default_denied_before_ga4_loader(self):
+        """F012/F048: Consent Mode default denied precedes the direct GA4 loader."""
+        html = self._render(ga4_measurement_id=GA4_ID)
+        default_idx = html.find("gtag('consent','default'")
+        ga_idx = html.find("googletagmanager.com/gtag/js")
+        assert default_idx != -1
+        assert ga_idx != -1
+        assert default_idx < ga_idx
+        assert "analytics_storage:'denied'" in html
+        assert "window._loadGA4 = loadGA4" in html
+
+    def test_consent_update_granted_only_on_accept(self):
+        """Accept updates Consent Mode to analytics granted, then loads GTM."""
+        html = self._render(gtm_container_id=GTM_ID)
+        update_idx = html.find("gtag('consent','update'")
+        load_idx = html.find("if (window._loadGTM) window._loadGTM();")
+        assert update_idx != -1
+        assert load_idx != -1
+        assert update_idx < load_idx
+        assert "analytics_storage:'granted'" in html
+        assert "ad_storage:'granted'" not in html
+        assert "ad_user_data:'granted'" not in html
+        assert "ad_personalization:'granted'" not in html
 
     def test_asset_version_bumps_present(self):
         """Self-hosted asset references carry ?v=2 (cache bust), icons fully bumped."""

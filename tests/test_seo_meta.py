@@ -1,5 +1,6 @@
 """SERP title/description length caps for coupon detail pages (Fix 16)."""
 
+from pathlib import Path
 import re
 
 from app.core.seo_meta import (
@@ -96,3 +97,31 @@ class TestCouponSerpDescription:
         assert len(desc) <= 155
         assert "Code " not in desc
         assert "Not affiliated with Udemy" in desc
+
+
+class TestMetaKeywordsEmpty:
+    TEMPLATES = Path(__file__).resolve().parents[1] / "app" / "templates"
+
+    def test_keyword_blocks_are_empty_or_absent(self):
+        stuffed = []
+        empty_block = re.compile(
+            r"\{%\s*block\s+meta_keywords\s*%\}\s*\{%\s*endblock\s*%\}"
+        )
+        for path in self.TEMPLATES.rglob("*.html"):
+            text = path.read_text(encoding="utf-8")
+            for match in re.finditer(
+                r"\{%\s*block\s+meta_keywords\s*%\}(.*?)\{%\s*endblock\s*%\}",
+                text,
+                flags=re.S,
+            ):
+                if match.group(1).strip():
+                    stuffed.append(f"{path}:block={match.group(1).strip()!r}")
+            for match in re.finditer(
+                r'<meta[^>]*name=["\']keywords["\'][^>]*content=["\']([^"\']*)["\']',
+                text,
+                flags=re.I | re.S,
+            ):
+                value = match.group(1).strip()
+                if value and not empty_block.fullmatch(value):
+                    stuffed.append(f"{path}:content={value!r}")
+        assert stuffed == []

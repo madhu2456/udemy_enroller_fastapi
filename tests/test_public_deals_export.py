@@ -55,7 +55,7 @@ def _seed_isolated_db():
 
     valid = EnrolledCourse(
         enrollment_run_id=run.id,
-        title="Python Basics",
+        title="Python Basics Course",
         url="https://www.udemy.com/course/python-basics/?couponCode=FREE",
         coupon_code="FREE",
         price=19.99,
@@ -98,7 +98,7 @@ def test_export_only_valid_with_coupon_code():
             assert n == 1
             data = json.loads(out.read_text(encoding="utf-8"))
             assert len(data) == 1
-            assert data[0]["title"] == "Python Basics"
+            assert data[0]["title"] == "Python Basics Course"
             assert data[0]["coupon_code"] == "FREE"
             assert data[0]["is_coupon_valid"] is True
             assert data[0]["id"] == valid.id
@@ -266,7 +266,7 @@ def test_build_sitemap_includes_deal_slugs_not_udemy():
         [
             {
                 "id": 1,
-                "title": "Python Basics",
+                "title": "Python Basics Course",
                 "url": "https://www.udemy.com/course/python-basics/?couponCode=X",
                 "coupon_code": "X",
                 "is_coupon_valid": True,
@@ -340,6 +340,36 @@ def test_sitemap_quality_filters_thin_and_stale():
         assert "/udemycoupons/c/python-basics" in xml
         assert "/udemycoupons/c/hi" not in xml
         assert "old-course" not in xml
+
+
+def test_sitemap_quality_rejects_short_token_and_ellipsis_titles():
+    """F038: thin = short OR (mostly Latin and <3 tokens); CJK length can pass."""
+    from datetime import date, timedelta
+
+    recent = (date.today() - timedelta(days=2)).isoformat() + "T00:00:00Z"
+    cases = [
+        ("Python Basics Course", "python-basics-course", True),
+        ("Python Basics", "python-basics", False),
+        ("Complete Python Masterclass…", "complete-python-masterclass-ellipsis", False),
+        ("Complete Python Masterclass...", "complete-python-masterclass-dots", False),
+        ("Go", "go-lang-intro-course", False),
+        ("機械学習完全マスター講座", "kikai-gakushu-master-koza", True),
+    ]
+    deals = []
+    for idx, (title, slug, _expected) in enumerate(cases, start=1):
+        deals.append(
+            {
+                "id": idx,
+                "title": title,
+                "url": f"https://www.udemy.com/course/{slug}/",
+                "coupon_code": "FREE",
+                "is_coupon_valid": True,
+                "last_checked_at": recent,
+            }
+        )
+    assign_unique_slugs(deals)
+    for deal, (_title, _slug, expected) in zip(deals, cases, strict=True):
+        assert is_sitemap_quality_deal(deal) is expected, deal["title"]
 
 
 def test_export_refreshes_sitemap_files():

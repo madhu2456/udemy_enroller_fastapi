@@ -9,6 +9,26 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### Docs — F004 residual accepted (2026-08-16)
+
+- F004 residual accepted (ops/product); no key rotate. Not legal advice / not counsel-approved DPIA.
+
+### Docs — F011 last-success proven (2026-08-16)
+
+- Host proof recorded: named volume `app-data`, backups `/var/backups/udemy-enroller`, newest file age 6.16 h, integrity ok, 26 h freshness exit 0, cron present. Restore not run.
+- F004 remains **open / UNSIGNED** (Defer). Owner may now Accept. F011 no longer blocks key rotation; still no rotate/purge unless the owner asks.
+- Documented `--install-backup-cron` does **not** match this host — do not run it blindly.
+
+### Docs — F004 owner decision = Defer until F011 (2026-08-16)
+
+- **Not residual acceptance.** Decision ☑ Defer only (not Accept, not Redesign). Signature n/a — not accepted. F004 remains **open / UNSIGNED**.
+- No key rotation or blob purge until F011 last-success is proven.
+
+### Docs — unsigned F004 DPIA / D.3 wording (C1–C7)
+
+- **Not a close:** F004 remains open. No key rotation or blob purge.
+- `docs/dpia-enroller-cookies-skeleton.md` **0.6-draft-v1**: drop false DPDP SPD/s.7/s.7(c) cites; privacy **template exists** / per-session envelope **not** on `privacy.html` (HTML not edited); `security-trio-fix.md` labeled fail-closed validation; §2.6 Udemy **plus** optional GTM/GA4 after consent; **F019-plaintext** vs fleet F019 humans.txt; wipe is live-DB only vs 14d/30-file unencrypted backups.
+
 ### P3/P4 wave — last enroller items (F-ENRL-*, F-XSITE-*)
 
 - **C11**: Alembic migration `alembic/versions/c01d021a9e03_drop_firecrawl_and_headless_from_user_settings.py` (head `c01d021a9e03`) drops `firecrawl_api_key` / `use_headless_browser` columns from `user_settings` (write-only; **not yet applied to any database**).

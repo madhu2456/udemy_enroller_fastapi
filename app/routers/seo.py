@@ -95,7 +95,7 @@ Disallow: /dashboard
 # AI search, citation, and user-triggered fetchers — ALLOW (AEO/GEO)
 # GPTBot still blocked (training); OAI-SearchBot/ChatGPT-User allowed (search/citation).
 # ClaudeBot blocked (training); Claude-SearchBot/Claude-User/Claude-Web allowed (citation).
-# Google-Extended allowed for Gemini citations (aligned with portfolio 2026-07-27).
+# Google-Extended allowed as Gemini/Vertex training/grounding-token, not Search/AIO citation (aligned with portfolio 2026-07-27).
 User-agent: OAI-SearchBot
 User-agent: ChatGPT-User
 User-agent: PerplexityBot
@@ -115,7 +115,7 @@ Disallow: /api/
 Disallow: /dashboard
 
 # Model-training crawlers — DISALLOW (opt out of training use)
-# Does NOT block Google-Extended (moved to allow for Gemini grounding/citations).
+# Does NOT block Google-Extended (moved to allow as Gemini/Vertex training/grounding-token, not citation).
 User-agent: GPTBot
 User-agent: ClaudeBot
 User-agent: anthropic-ai

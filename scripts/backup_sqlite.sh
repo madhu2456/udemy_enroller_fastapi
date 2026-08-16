@@ -17,6 +17,10 @@
 #   CONFIRM              Must be YES for restore (destructive)
 #   RESTORE_APP_MARKER   If set and path exists, restore refuses (stop app first)
 #
+# After integrity_check=ok and mv of the .tmp to the final *.db, writes
+# LAST_SUCCESS (ISO-8601 UTC + backup path) immediately. sha256 sidecar is
+# best-effort and must not skip the stamp. Not written if the check fails.
+#
 # Exit codes: 0 ok, 1 operational failure, 2 usage/config error.
 #
 set -euo pipefail
@@ -233,9 +237,17 @@ do_backup() {
   fi
 
   mv -f -- "$tmp_path" "$backup_path"
-  # Best-effort sidecar checksum (no secrets).
+
+  # LAST_SUCCESS immediately after the good mv so a later checksum failure
+  # cannot skip the stamp. Same BACKUP_DIR as the backup file.
+  {
+    printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$backup_path"
+  } >"${out_dir}/LAST_SUCCESS.tmp"
+  mv -f -- "${out_dir}/LAST_SUCCESS.tmp" "${out_dir}/LAST_SUCCESS"
+
+  # Best-effort sidecar checksum (no secrets). Failure must not skip LAST_SUCCESS.
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$backup_path" >"${backup_path}.sha256"
+    sha256sum "$backup_path" >"${backup_path}.sha256" || true
   fi
 
   echo "backup written: $backup_path"

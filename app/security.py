@@ -296,7 +296,6 @@ class RateLimiter:
         per key, window anchored at the first hit); Redis keys are namespaced
         `udemy:` so shared Upstash databases never collide.
         """
-        global _REDIS_WARNED_ONCE
         from config.settings import get_settings
 
         settings = get_settings()
@@ -312,24 +311,22 @@ class RateLimiter:
             )
         except UpstashHttpError as exc:
             if 400 <= exc.status < 500:
-                logger.warning(
+                _record_rl_redis_fallback(
                     f"rate-limit: Upstash misconfiguration (HTTP {exc.status}) — "
-                    "check UPSTASH_REDIS_REST_URL/TOKEN — falling back to in-memory"
+                    "check UPSTASH_REDIS_REST_URL/TOKEN — falling back to in-memory",
+                    every_call=True,
                 )
-            elif not _REDIS_WARNED_ONCE:
-                _REDIS_WARNED_ONCE = True
-                logger.warning(
+            else:
+                _record_rl_redis_fallback(
                     "rate-limit: Upstash Redis unreachable (HTTP "
                     f"{exc.status}) — failing open to in-memory limiting"
                 )
             return self.is_allowed(key)
         except (httpx.HTTPError, asyncio.TimeoutError, ValueError) as exc:
-            if not _REDIS_WARNED_ONCE:
-                _REDIS_WARNED_ONCE = True
-                logger.warning(
-                    "rate-limit: Upstash Redis unreachable — failing open to "
-                    f"in-memory limiting: {exc.__class__.__name__}"
-                )
+            _record_rl_redis_fallback(
+                "rate-limit: Upstash Redis unreachable — failing open to "
+                f"in-memory limiting: {exc.__class__.__name__}"
+            )
             return self.is_allowed(key)
 
         return count <= self.max_requests
@@ -340,6 +337,18 @@ class RateLimiter:
 # Transient-failure warning is emitted once per process; 4xx warnings never
 # use this flag (misconfigurations stay loud on every call).
 _REDIS_WARNED_ONCE = False
+# Process-local fail-open counter (F035). Do not fail-closed globally.
+_REDIS_FALLBACK_COUNT = 0
+
+
+def _record_rl_redis_fallback(message: str, *, every_call: bool = False) -> None:
+    """Increment ``rl_redis_fallback`` and log per the warn-once / 4xx policy."""
+    global _REDIS_FALLBACK_COUNT, _REDIS_WARNED_ONCE
+    _REDIS_FALLBACK_COUNT += 1
+    if every_call or not _REDIS_WARNED_ONCE:
+        if not every_call:
+            _REDIS_WARNED_ONCE = True
+        logger.warning(f"rl_redis_fallback count={_REDIS_FALLBACK_COUNT} {message}")
 
 
 class UpstashHttpError(Exception):

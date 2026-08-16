@@ -1,6 +1,15 @@
 /* Custom styles matching premium light mode */
 html {
     overflow-x: clip;
+    scroll-padding-bottom: var(--cookie-banner-height, 0px);
+}
+
+body.cookie-banner-open {
+    padding-bottom: var(--cookie-banner-height, 0px);
+}
+
+body.cookie-banner-open .toast {
+    bottom: calc(1.5rem + var(--cookie-banner-height, 0px));
 }
 
 body {

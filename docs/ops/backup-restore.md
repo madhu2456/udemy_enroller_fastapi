@@ -14,6 +14,16 @@ WAL-safe, integrity-checked, and retention-pruned.
 User sessions, encrypted Udemy cookies, enrollment history, and settings live
 in the SQLite DB. The backup script only copies the DB file.
 
+## Production host layout (as of 2026-08-16)
+
+On the production single host (Netcup/DO box), Enroller and Deals share the box.
+
+- Live DB: Docker **named volume** `app-data` (`udemy-enroller_app-data`). There is **no** `/opt/udemy-enroller/data`.
+- Backups: host `/var/backups/udemy-enroller`. Cron copies from the volume `_data` file (`…/udemy-enroller_app-data/_data/udemy_enroller.db`).
+- F011 last-success **proven** ~2026-08-16T07:39:19Z: newest `/var/backups/udemy-enroller/udemy_enroller-20260816T013001Z.db`, age **6.16 h**, `PRAGMA integrity_check=ok`, `MAX_AGE_HOURS=26` freshness exit 0. Cron present (2026-08-15). Restore **not** run.
+- Host `LAST_SUCCESS` stamp files are **absent** (deployed scripts predate the local stamp patch). Proof is newest-file mtime + integrity + freshness.
+- Documented `deploy.sh --install-backup-cron` installs **host bind paths** (`/opt/udemy-enroller/data` → `/opt/udemy-enroller/backups`) and does **not** match this host. **Do not** run it blindly — leave the working `_data` → `/var/backups/udemy-enroller` cron in place.
+
 ## Automated backup
 
 ```bash
@@ -27,11 +37,15 @@ The script:
 1. **Detects** the DB path from `DB_PATH`, `DATABASE_URL`, `.env`, then common
    candidates (`data/udemy_enroller.db`, `udemy_enroller.db`, Docker
    `/app/data/…` mapped to host `data/…`).
-2. Runs **`sqlite3 .backup`** (online-safe, WAL-aware) into
-   `backups/udemy_enroller-<UTC-timestamp>.db`.
-3. Runs **`PRAGMA integrity_check`** on the copy (fails closed if not `ok`).
-4. Writes an optional **SHA-256** sidecar (`.sha256`).
-5. Applies **retention**: default delete backups older than **14 days**, keep at
+2. Runs **`sqlite3 .backup`** (online-safe, WAL-aware) into a `.tmp` file
+   under `backups/`.
+3. Runs **`PRAGMA integrity_check`** on the tmp copy (fails closed if not `ok`),
+   then `mv` to `backups/udemy_enroller-<UTC-timestamp>.db`.
+4. Writes **`LAST_SUCCESS`** in the same `BACKUP_DIR` (ISO-8601 UTC + backup
+   path) immediately after the good `mv`.
+5. Writes an optional **SHA-256** sidecar (`.sha256`) best-effort; a checksum
+   failure does not skip `LAST_SUCCESS`.
+6. Applies **retention**: default delete backups older than **14 days**, keep at
    most **30** newest files (`RETENTION_DAYS`, `RETENTION_COUNT`).
 
 ### Cron example (host) — copy-paste
@@ -51,9 +65,11 @@ PATH=/usr/local/bin:/usr/bin:/bin
 30 3 * * * BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 /opt/udemy-enroller/scripts/verify_backup_freshness.sh >>/var/log/udemy-enroller-backup.log 2>&1
 ```
 
-**One-shot install (F-ENRL-K01):** on a fresh droplet (or any host where the
-repo is at `/opt/udemy-enroller`), `deploy.sh` can install those two entries
-idempotently — re-running never duplicates them:
+**One-shot install (F-ENRL-K01):** on a **fresh** droplet whose live DB is a
+host file at `/opt/udemy-enroller/data/udemy_enroller.db`, `deploy.sh` can
+install those two entries idempotently — re-running never duplicates them.
+**Do not** run this on the 2026-08-16 production host (named volume `app-data`,
+backups at `/var/backups/udemy-enroller`) — see **Production host layout**.
 
 ```bash
 ./scripts/deploy.sh --install-backup-cron
@@ -215,7 +231,7 @@ root-only files, never in git).
 |----------|---------|---------|
 | `DB_PATH` | auto-detect | Explicit SQLite file path |
 | `DATABASE_URL` | from env/`.env` | `sqlite:///…` used when `DB_PATH` unset |
-| `BACKUP_DIR` | `./backups` | Output directory for `backup` |
+| `BACKUP_DIR` | `./backups` | Output directory for `backup` (`LAST_SUCCESS` is written here after integrity_check=ok) |
 | `RETENTION_DAYS` | `14` | Delete files older than N days (`0` disables) |
 | `RETENTION_COUNT` | `30` | Keep newest N backups (`0` unlimited) |
 | `CONFIRM` | (unset) | Must be `YES` for `restore` |

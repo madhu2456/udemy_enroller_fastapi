@@ -165,3 +165,40 @@ class TestRenderedOutput:
         lists = _collect_same_as(response.json())
         assert len(lists) == 2, f"expected 2 sameAs lists in ai-profile.json, got {len(lists)}"
         self._assert_same_as_lists(lists)
+
+
+HUB_JOB_TITLE = "AI Engineer, RAG & Analytics Consultant"
+
+
+class TestVisibleIdentityCopy:
+    """F015: visible job title matches the hub headline."""
+
+    def test_homepage_visible_title_matches_hub(self):
+        client = TestClient(app)
+        try:
+            response = client.get("/", follow_redirects=False)
+        finally:
+            client.close()
+        assert response.status_code == 200
+        assert HUB_JOB_TITLE in response.text
+        assert "AI Developer" not in response.text
+
+
+class TestFooterSiblingLinks:
+    """F037: footer lists Deals + hub/profile; Adticks stays; products stay out of sameAs."""
+
+    def test_footer_has_deals_hub_profile_and_adticks(self):
+        source = BASE_TEMPLATE_PATH.read_text(encoding="utf-8")
+        footer = source[source.index("<footer") : source.index("</footer>")]
+        assert 'href="https://deals.madhudadi.in"' in footer
+        assert ">Deals<" in footer
+        assert 'href="https://madhudadi.in"' in footer
+        assert 'href="https://madhudadi.in/profile/"' in footer
+        assert ">Profile<" in footer
+        assert 'href="https://adticks.com"' in footer
+
+    def test_footer_products_are_not_in_person_same_as(self):
+        source = BASE_TEMPLATE_PATH.read_text(encoding="utf-8")
+        block = _extract_json_array(source, '"sameAs": [')
+        for forbidden in FORBIDDEN_IN_SAME_AS:
+            assert forbidden not in block

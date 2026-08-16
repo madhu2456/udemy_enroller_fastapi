@@ -17,7 +17,7 @@
         />
         <meta
             name="keywords"
-            content="{% block meta_keywords %}free udemy courses, udemy 100% off coupons, udemy enroller, free udemy coupon, course enrollment helper, open source udemy tool{% endblock %}"
+            content="{% block meta_keywords %}{% endblock %}"
         />
         <meta name="author" content="Madhu Dadi" />
         <meta name="application-name" content="Udemy Enroller" />
@@ -225,8 +225,31 @@
         <link rel="stylesheet" href="/static/css/site.css" />
 
         {% block extra_head %}{% endblock %}
+        {% if request.app.state.gtm_container_id or request.app.state.ga4_measurement_id %}
+        <!-- Consent Mode default MUST precede any GTM/GA loader (F012/F048). -->
+        <script nonce="{{ request.state.nonce }}">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('consent','default',{
+                analytics_storage:'denied',
+                ad_storage:'denied',
+                ad_user_data:'denied',
+                ad_personalization:'denied',
+                wait_for_update:500
+            });
+            // Restore: grant analytics only, then GTM/GA4 may load (ads stay denied).
+            if (localStorage.getItem('cookie_consent') === 'accepted') {
+                gtag('consent','update',{
+                    analytics_storage:'granted',
+                    ad_storage:'denied',
+                    ad_user_data:'denied',
+                    ad_personalization:'denied'
+                });
+            }
+        </script>
+        {% endif %}
         {% if request.app.state.gtm_container_id %}
-        <!-- Google Tag Manager (consent-gated) -->
+        <!-- Google Tag Manager (consent-gated; accepted-only _loadGTM) -->
         <script nonce="{{ request.state.nonce }}">
             (function(w,d,s,l,i){
                 w[l]=w[l]||[];
@@ -245,10 +268,6 @@
                 window._loadGTM = gtm;
             })(window,document,"script","dataLayer","{{ request.app.state.gtm_container_id }}");
         </script>
-        <script nonce="{{ request.state.nonce }}">
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-        </script>
         {% endif %}
         {% if request.app.state.ga4_measurement_id and not request.app.state.gtm_container_id %}
         <!-- Google Analytics 4 (consent-gated) -->
@@ -260,8 +279,6 @@
                 s.src="https://www.googletagmanager.com/gtag/js?id={{ request.app.state.ga4_measurement_id }}";
                 s.nonce="{{ request.state.nonce }}";
                 document.head.appendChild(s);
-                window.dataLayer=window.dataLayer||[];
-                function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
                 gtag('config','{{ request.app.state.ga4_measurement_id }}',{
                     page_path:'{{ request.url.path }}',
@@ -553,11 +570,25 @@
                             >Blog</a
                         >
                         <a
+                            href="https://deals.madhudadi.in"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                            >Deals</a
+                        >
+                        <a
                             href="https://madhudadi.in"
                             target="_blank"
                             rel="noopener noreferrer me"
                             class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
                             >Madhu Dadi</a
+                        >
+                        <a
+                            href="https://madhudadi.in/profile/"
+                            target="_blank"
+                            rel="noopener noreferrer me"
+                            class="inline-flex items-center min-h-[24px] py-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                            >Profile</a
                         >
                         <a
                             href="https://github.com/madhu2456/udemy_enroller_fastapi"
@@ -769,12 +800,37 @@
                 }
                 
                 banner.classList.remove('hidden');
+                applyCookieSpacer();
+                var spacerObserver = null;
+                if (typeof ResizeObserver === 'function') {
+                    spacerObserver = new ResizeObserver(applyCookieSpacer);
+                    spacerObserver.observe(banner);
+                }
+                window.addEventListener('resize', applyCookieSpacer);
+                
+                function applyCookieSpacer() {
+                    if (!banner || banner.classList.contains('hidden')) {
+                        document.documentElement.style.removeProperty('--cookie-banner-height');
+                        document.body.classList.remove('cookie-banner-open');
+                        return;
+                    }
+                    var height = Math.ceil(banner.getBoundingClientRect().height);
+                    document.documentElement.style.setProperty('--cookie-banner-height', height + 'px');
+                    document.body.classList.add('cookie-banner-open');
+                }
+                
+                function hideCookieBanner() {
+                    banner.classList.add('hidden');
+                    applyCookieSpacer();
+                    document.removeEventListener('keydown', onKeydown, true);
+                    window.removeEventListener('resize', applyCookieSpacer);
+                    if (spacerObserver) spacerObserver.disconnect();
+                }
                 
                 function declineCookies() {
                     localStorage.setItem('cookie_consent', 'declined');
                     localStorage.setItem('cookie_consent_time', Date.now().toString());
-                    banner.classList.add('hidden');
-                    document.removeEventListener('keydown', onKeydown, true);
+                    hideCookieBanner();
                 }
                 
                 function onKeydown(e) {
@@ -796,8 +852,13 @@
                 document.getElementById('cookie-accept').addEventListener('click', function(){
                     localStorage.setItem('cookie_consent', 'accepted');
                     localStorage.removeItem('cookie_consent_time');
-                    banner.classList.add('hidden');
-                    document.removeEventListener('keydown', onKeydown, true);
+                    hideCookieBanner();
+                    gtag('consent','update',{
+                        analytics_storage:'granted',
+                        ad_storage:'denied',
+                        ad_user_data:'denied',
+                        ad_personalization:'denied'
+                    });
                     if (window._loadGTM) window._loadGTM();
                     if (window._loadGA4) window._loadGA4();
                 });

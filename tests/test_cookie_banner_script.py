@@ -88,3 +88,31 @@ class TestCookieBannerScript:
         """Keydown handler is registered on document in the capture phase."""
         html = self._render(ga4_measurement_id=GA4_ID)
         assert "document.addEventListener('keydown', onKeydown, true)" in html
+
+    def test_measured_spacer_contract(self):
+        """F043: open banner measures height onto body; hide clears it."""
+        html = self._render(gtm_container_id=GTM_ID)
+        assert "function applyCookieSpacer()" in html
+        assert "getBoundingClientRect().height" in html
+        assert "--cookie-banner-height" in html
+        assert "cookie-banner-open" in html
+        assert "aria-modal=\"false\"" in html
+        assert "spacerObserver.disconnect()" in html
+
+    def test_cookie_spacer_css_on_body_only(self):
+        """R3: spacer padding applies to body, not also #main-content."""
+        from pathlib import Path
+
+        css = Path("app/static/css/site.css").read_text(encoding="utf-8")
+        assert "body.cookie-banner-open" in css
+        assert "body.cookie-banner-open #main-content" not in css
+
+    def test_banner_does_not_trap_focus(self):
+        """F043: cookie chrome is not a modal focus trap (Escape only)."""
+        html = self._render(gtm_container_id=GTM_ID)
+        start = html.index('id="cookie-banner"')
+        end = html.index("<!-- Accessible confirm dialog", start)
+        banner_js = html[start:end]
+        assert "e.key === 'Escape'" in banner_js
+        assert "e.key !== \"Tab\"" not in banner_js
+        assert "e.key !== 'Tab'" not in banner_js

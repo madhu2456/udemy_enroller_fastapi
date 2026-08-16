@@ -729,6 +729,7 @@ class TestRateLimiterRedisAsync:
     @pytest.fixture(autouse=True)
     def _reset_redis_warn_flag(self, monkeypatch):
         monkeypatch.setattr(security_mod, "_REDIS_WARNED_ONCE", False)
+        monkeypatch.setattr(security_mod, "_REDIS_FALLBACK_COUNT", 0)
 
     @staticmethod
     def _pin_upstash(monkeypatch, url="https://upstash.example.test/", token="tok"):
@@ -771,6 +772,8 @@ class TestRateLimiterRedisAsync:
         assert await limiter.is_allowed_redis("k") is False  # memory limit still enforced
         assert len(warnings) == 3, "4xx must warn on every call"
         assert "misconfiguration" in warnings[0]
+        assert "rl_redis_fallback" in warnings[0]
+        assert security_mod._REDIS_FALLBACK_COUNT == 3
 
     @pytest.mark.asyncio
     async def test_network_error_warns_once_and_fails_open(self, monkeypatch):
@@ -787,6 +790,8 @@ class TestRateLimiterRedisAsync:
         assert await limiter.is_allowed_redis("k") is True
         assert len(warnings) == 1, "transient failure warns once"
         assert "unreachable" in warnings[0]
+        assert "rl_redis_fallback" in warnings[0]
+        assert security_mod._REDIS_FALLBACK_COUNT == 2
 
     @pytest.mark.asyncio
     async def test_5xx_fails_open_and_warns_once(self, monkeypatch):
