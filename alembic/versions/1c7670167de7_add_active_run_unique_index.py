@@ -7,7 +7,7 @@ Create Date: 2026-05-31 14:03:46.234443
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -18,6 +18,14 @@ depends_on = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if 'enrollment_runs' not in inspector.get_table_names():
+        return
+    existing = {ix['name'] for ix in inspector.get_indexes('enrollment_runs')}
+    if 'idx_active_run_per_user' in existing:
+        return
+
     # 1. Deterministic cleanup of duplicate active runs per user (keep only the newest one active)
     op.execute(
         """
@@ -47,6 +55,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if 'enrollment_runs' not in inspector.get_table_names():
+        return
+    existing = {ix['name'] for ix in inspector.get_indexes('enrollment_runs')}
+    if 'idx_active_run_per_user' not in existing:
+        return
     op.drop_index(
         'idx_active_run_per_user',
         table_name='enrollment_runs',

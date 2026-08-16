@@ -31,7 +31,6 @@ elif [ -d ".venv" ]; then
 fi
 
 echo "Starting coupon validation..."
-echo "  DATABASE_URL=${DATABASE_URL:-<default from settings>}"
 echo "  PUBLIC_DEALS_PATH=${PUBLIC_DEALS_PATH:-<project root public_deals.json>}"
 python3 -u scripts/coupon_checker.py
 

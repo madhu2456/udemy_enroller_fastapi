@@ -12,6 +12,7 @@ Create Date: 2026-08-12 10:30:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -22,8 +23,20 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("users", sa.Column("cookies_salt", sa.String(64), nullable=True))
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if "users" not in inspector.get_table_names():
+        return
+    columns = [c["name"] for c in inspector.get_columns("users")]
+    if "cookies_salt" not in columns:
+        op.add_column("users", sa.Column("cookies_salt", sa.String(64), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("users", "cookies_salt")
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if "users" not in inspector.get_table_names():
+        return
+    columns = [c["name"] for c in inspector.get_columns("users")]
+    if "cookies_salt" in columns:
+        op.drop_column("users", "cookies_salt")

@@ -51,13 +51,16 @@ jobs:
           python -m mypy app/
         continue-on-error: true
 
-      - name: Prepare clean databases
+      - name: Prepare isolated CI database
         run: |
-          rm -f udemy_enroller.db
           rm -f test_udemy_enroller.db
+          CI_DB="$RUNNER_TEMP/ci_udemy_enroller.db"
+          touch "$CI_DB"
+          echo "CI_DB=$CI_DB" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=sqlite:///${CI_DB}" >> "$GITHUB_ENV"
 
       - name: Run migrations
-        run: alembic upgrade head
+        run: python scripts/alembic_upgrade_pinned.py "$CI_DB" head
 
       - name: Run unit tests
         run: python -m pytest

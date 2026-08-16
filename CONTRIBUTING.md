@@ -34,7 +34,13 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env as needed. For local defaults, DEPLOYMENT_ENV=local is fine.
 
-alembic upgrade head
+# Inspect + backup the live SQLite file, then pin the upgrade (never bare alembic upgrade head).
+# See docs/ops/backup-restore.md
+LIVE_ABS="$PWD/udemy_enroller.db"   # or the inspected live path
+touch "$LIVE_ABS"
+python scripts/inspect_sqlite_schema.py "$LIVE_ABS"
+DB_PATH=$LIVE_ABS ./scripts/backup_sqlite.sh backup
+python scripts/alembic_upgrade_pinned.py "$LIVE_ABS" head
 python run.py
 ```
 

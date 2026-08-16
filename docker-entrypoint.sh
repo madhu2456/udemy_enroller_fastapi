@@ -71,14 +71,34 @@ EOF
     
     if [ $EXIT_CODE -eq 10 ]; then
         echo "Stamping database with initial revision (20260411_0001)..."
-        alembic stamp 20260411_0001
+        python3 -u - "$DB_PATH" <<'PY'
+from pathlib import Path
+import sys
+from alembic.config import Config
+from alembic import command
+
+db_path = Path(sys.argv[1]).expanduser().resolve()
+cfg = Config("alembic.ini")
+cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+command.stamp(cfg, "20260411_0001")
+PY
     fi
 else
     echo "No existing database found. A new one will be created."
 fi
 
-echo "Running migrations (alembic upgrade head)..."
-alembic upgrade head
+echo "Running migrations..."
+python3 -u - "$DB_PATH" <<'PY'
+from pathlib import Path
+import sys
+from alembic.config import Config
+from alembic import command
+
+db_path = Path(sys.argv[1]).expanduser().resolve()
+cfg = Config("alembic.ini")
+cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+command.upgrade(cfg, "head")
+PY
 
 # Seed persistent public_deals.json on the data volume from the image copy
 # (first boot / empty volume). Coupon-checker and enrollment keep it updated.

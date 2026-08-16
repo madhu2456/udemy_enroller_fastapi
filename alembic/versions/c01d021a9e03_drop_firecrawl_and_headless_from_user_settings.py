@@ -13,6 +13,7 @@ Create Date: 2026-08-14 09:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -23,17 +24,32 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Batch mode for SQLite compatibility (drop_column needs table rebuild).
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if "user_settings" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("user_settings")}
+    to_drop = [name for name in ("firecrawl_api_key", "enable_headless") if name in columns]
+    if not to_drop:
+        return
     with op.batch_alter_table("user_settings") as batch_op:
-        batch_op.drop_column("firecrawl_api_key")
-        batch_op.drop_column("enable_headless")
+        for name in to_drop:
+            batch_op.drop_column(name)
 
 
 def downgrade() -> None:
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if "user_settings" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("user_settings")}
+    to_add = []
+    if "firecrawl_api_key" not in columns:
+        to_add.append(sa.Column("firecrawl_api_key", sa.String(length=255), nullable=True))
+    if "enable_headless" not in columns:
+        to_add.append(sa.Column("enable_headless", sa.Boolean(), nullable=True))
+    if not to_add:
+        return
     with op.batch_alter_table("user_settings") as batch_op:
-        batch_op.add_column(
-            sa.Column("firecrawl_api_key", sa.String(length=255), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("enable_headless", sa.Boolean(), nullable=True)
-        )
+        for column in to_add:
+            batch_op.add_column(column)

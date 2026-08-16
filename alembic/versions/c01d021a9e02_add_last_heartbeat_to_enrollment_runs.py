@@ -13,6 +13,7 @@ Create Date: 2026-08-13 08:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -23,10 +24,22 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "enrollment_runs", sa.Column("last_heartbeat", sa.DateTime(), nullable=True)
-    )
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if "enrollment_runs" not in inspector.get_table_names():
+        return
+    columns = [c["name"] for c in inspector.get_columns("enrollment_runs")]
+    if "last_heartbeat" not in columns:
+        op.add_column(
+            "enrollment_runs", sa.Column("last_heartbeat", sa.DateTime(), nullable=True)
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("enrollment_runs", "last_heartbeat")
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    if "enrollment_runs" not in inspector.get_table_names():
+        return
+    columns = [c["name"] for c in inspector.get_columns("enrollment_runs")]
+    if "last_heartbeat" in columns:
+        op.drop_column("enrollment_runs", "last_heartbeat")

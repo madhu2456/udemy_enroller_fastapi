@@ -9,6 +9,13 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### Docs — Alembic head / local apply (2026-08-16)
+
+- Chain head is `c01d021a9e03` (not `c01d021a9e01`). Revisions `c01d021a9e01` (`users.cookies_salt`), `c01d021a9e02` (`enrollment_runs.last_heartbeat`), and `c01d021a9e03` (drop `user_settings.firecrawl_api_key` / `enable_headless`) are inspect-idempotent.
+- `alembic/env.py` fail-closes when both `udemy_enroller.db` and `data/udemy_enroller.db` exist unless `sqlalchemy.url` is an explicit pin (`scripts/alembic_upgrade_pinned.py`).
+- **Local** live DB (`./udemy_enroller.db`) upgraded to `c01d021a9e03` (`cookies_salt` + `last_heartbeat` present). Production named volume **not** upgraded.
+- `scripts/migrate_cookies_per_session.py` **not** run. `AUTO_CREATE_TABLES` remains `False`.
+
 ### Docs — F004 residual accepted (2026-08-16)
 
 - F004 residual accepted (ops/product); no key rotate. Not legal advice / not counsel-approved DPIA.
@@ -31,7 +38,7 @@ Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
 ### P3/P4 wave — last enroller items (F-ENRL-*, F-XSITE-*)
 
-- **C11**: Alembic migration `alembic/versions/c01d021a9e03_drop_firecrawl_and_headless_from_user_settings.py` (head `c01d021a9e03`) drops `firecrawl_api_key` / `use_headless_browser` columns from `user_settings` (write-only; **not yet applied to any database**).
+- **C11**: Alembic migration `alembic/versions/c01d021a9e03_drop_firecrawl_and_headless_from_user_settings.py` (head `c01d021a9e03`) drops `firecrawl_api_key` / `enable_headless` from `user_settings` (inspect-idempotent). Applied on the **local** live DB; production **not** upgraded.
 - **C13**: `scripts/deploy.sh` hardened — `set -euo pipefail` fail-fast, `chmod 600` on the generated `.env`; `bash -n` clean.
 - **C15**: coupon-checker loop now serves a loopback `/health` endpoint (default port 8001, `COUPON_CHECKER_HEALTH_PORT` override) reporting `last_run_age_seconds`; 200 `ok` while a cycle finished within 26h, 503 `stale` otherwise (incl. before the first run). Docker Compose `coupon-checker` healthcheck wired to it. `COUPON_CHECKER_HEALTH_PORT` is also documented in the compose service comment (`.env.example` editing is blocked by the repo's `*.env.*` policy; compose is the reference).
 - **Tests**: `tests/test_coupon_checker_health.py` — /health 200 + age, 503 stale >26h / never-run, 404 unknown path (ephemeral port 0, importlib-by-path).
@@ -151,8 +158,8 @@ Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 - **Security**: hosted cookie blobs now encrypt under a per-session key — HKDF-SHA256 (info `udemy-enroller-session-key-v1`) derived from the master Fernet key plus a per-user `cookies_salt` (16 random bytes), rotated on every write site (login, save, refresh, connect). A blob decrypts only under the salt of the session that wrote it; wrong/missing salt fails closed (None → 401 → re-login).
 - Legacy (unsalted master-key Fernet) blobs and plaintext dicts keep their prior behavior behind two independent flags: `ALLOW_LEGACY_COOKIE_DECRYPT` (default ON for local/dev with a warning, OFF for server/production) and the existing `ALLOW_PLAINTEXT_COOKIES`.
 - Logout, session expiry, and Clear All Data now wipe `cookies_salt` as well, making old blobs undecryptable.
-- Migration `alembic/versions/c01d021a9e01_add_cookies_salt_to_users.py` adds the `cookies_salt` column (write-only ALTER; currently the head of the chain) — **not yet applied to any database**.
-- `scripts/migrate_cookies_per_session.py` re-encrypts existing blobs per session (dry-run by default; `--apply` requires `--backup-verified`; JSON report) — **not yet run**.
+- Migration `alembic/versions/c01d021a9e01_add_cookies_salt_to_users.py` adds the `cookies_salt` column (inspect-idempotent ALTER; down_revision `0bd117e7d36c`). It is **not** the chain head — head is `c01d021a9e03` (via `c01d021a9e02` `last_heartbeat`). Applied on the **local** live DB; production **not** upgraded.
+- `scripts/migrate_cookies_per_session.py` re-encrypts existing blobs per session (dry-run by default; `--apply` requires `--backup-verified`; JSON report) — **not run**.
 - `.env.example` documents the new flag.
 
 ### Security — F-ENRL-C07 (host-validation gate)

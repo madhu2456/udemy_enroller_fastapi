@@ -14,6 +14,19 @@ WAL-safe, integrity-checked, and retention-pruned.
 User sessions, encrypted Udemy cookies, enrollment history, and settings live
 in the SQLite DB. The backup script only copies the DB file.
 
+## Pin Alembic to the inspected live file
+
+If both `udemy_enroller.db` and `data/udemy_enroller.db` exist, do **not** run
+bare `alembic upgrade head`. Inspect first, then set `DB_PATH` to the absolute
+live path (`DB_PATH=$LIVE_ABS`) for backup and the pinned upgrade helper:
+
+```bash
+LIVE_ABS=/absolute/path/to/the/inspected/udemy_enroller.db
+python scripts/inspect_sqlite_schema.py "$LIVE_ABS"
+DB_PATH=$LIVE_ABS ./scripts/backup_sqlite.sh backup
+python scripts/alembic_upgrade_pinned.py "$LIVE_ABS" head
+```
+
 ## Production host layout (as of 2026-08-16)
 
 On the production single host (Netcup/DO box), Enroller and Deals share the box.

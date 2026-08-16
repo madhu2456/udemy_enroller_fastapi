@@ -87,8 +87,9 @@ def main():
   1. Configure your .env file:
      cp .env.example .env
      
-  2. Apply database migrations:
-     alembic upgrade head
+  2. Apply database migrations (pin to the inspected live file; see docs/ops/backup-restore.md):
+     LIVE_ABS="$PWD/udemy_enroller.db"   # or the inspected live path
+     python scripts/alembic_upgrade_pinned.py "$LIVE_ABS" head
      
   3. Run the application:
      python run.py

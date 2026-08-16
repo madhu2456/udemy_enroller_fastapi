@@ -98,6 +98,20 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("AUTO_CREATE_TABLES is disabled; expecting Alembic-managed schema.")
 
+    try:
+        raw_url = getattr(get_settings(), "DATABASE_URL", None)
+        db_file = None
+        if raw_url:
+            from sqlalchemy.engine.url import make_url
+
+            db_file = make_url(raw_url).database
+        if db_file:
+            logger.info(f"SQLite database path: {db_file}")
+        else:
+            logger.info("SQLite database path: (unavailable)")
+    except Exception:
+        logger.info("SQLite database path: (unavailable)")
+
     # Reclaim orphaned active enrollment runs (F020): mark DB rows failed and
     # clear any in-memory task registry left from a previous lifespan cycle.
     try:

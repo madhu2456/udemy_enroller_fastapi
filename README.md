@@ -111,8 +111,13 @@ pip install -r requirements.txt
 # Configure environment (optional)
 cp .env.example .env
 
-# Run migrations
-alembic upgrade head
+# Inspect + backup the live SQLite file, then pin the upgrade (never bare alembic upgrade head).
+# See docs/ops/backup-restore.md
+LIVE_ABS="$PWD/udemy_enroller.db"   # or the inspected live path
+touch "$LIVE_ABS"
+python scripts/inspect_sqlite_schema.py "$LIVE_ABS"
+DB_PATH=$LIVE_ABS ./scripts/backup_sqlite.sh backup
+python scripts/alembic_upgrade_pinned.py "$LIVE_ABS" head
 
 # Start the server
 python run.py
@@ -176,7 +181,9 @@ cd udemy_enroller_fastapi
 git pull origin main
 source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-alembic upgrade head
+# Pin Alembic to the inspected live file after backup (docs/ops/backup-restore.md)
+LIVE_ABS="$PWD/udemy_enroller.db"   # or the inspected live path
+python scripts/alembic_upgrade_pinned.py "$LIVE_ABS" head
 # Restart the app (stop python run.py / uvicorn, then start again)
 python run.py
 ```
