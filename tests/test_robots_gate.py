@@ -12,7 +12,6 @@ import httpx
 import pytest
 
 from app.services.robots_gate import (
-    ROBOTS_CACHE_TTL_SECONDS,
     RobotsGate,
     ROBOTS_MAX_REDIRECTS,
 )

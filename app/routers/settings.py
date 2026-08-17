@@ -418,26 +418,40 @@ async def delete_account(
             detail="confirmation required: confirm must be exactly 'DELETE'",
         )
 
-    active_run = (
-        db.query(EnrollmentRun)
-        .filter(
-            EnrollmentRun.user_id == user_id,
-            EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]),
-        )
-        .first()
-    )
-    if active_run:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete account while an enrollment run is active",
-        )
-
     try:
+        # Wrap user and related rows in transactional row-level locking (D1 DSR)
+        user = db.query(User).filter(User.id == user_id).with_for_update().first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Cancel active in-flight worker tasks before cascading deletion
+        from app.services.enrollment_manager import EnrollmentManager
+
+        user_runs = (
+            db.query(EnrollmentRun)
+            .filter(EnrollmentRun.user_id == user_id)
+            .with_for_update()
+            .all()
+        )
+        for run in user_runs:
+            task = EnrollmentManager.active_tasks.get(run.id)
+            if task:
+                try:
+                    task.cancel()
+                    logger.info(
+                        f"Cancelled active in-flight task {run.id} for user {user_id} during account deletion"
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        f"Failed to cancel task {run.id} during account deletion: {exc}"
+                    )
+
         # Collect session tokens before deleting (for in-memory client cleanup).
         session_tokens = [
             row[0]
             for row in db.query(UserSession.token)
             .filter(UserSession.user_id == user_id)
+            .with_for_update()
             .all()
         ]
 
@@ -521,6 +535,9 @@ async def delete_account(
             )
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
         return response
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to delete account for user {user_id}: {e}")

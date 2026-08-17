@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from loguru import logger
 
 from app.services.course import Course
-from app.services.http_client import AsyncHTTPClient
+from app.services.http_client import AsyncHTTPClient, _log_safe_url
 from app.services.robots_gate import RobotsGate
 from app.services.udemy_validation import (
     is_trk_udemy_url,
@@ -25,6 +25,10 @@ class Scraper(ABC):
     """Base class for all coupon site scrapers."""
 
     def __init__(self, http: AsyncHTTPClient, proxy: Optional[str] = None):
+        from config.settings import get_settings
+
+        app_settings = get_settings()
+
         self.http = http
         self.proxy = proxy
         # F252: per-host robots.txt gate with 24 h cache; fail-open on fetch
@@ -35,6 +39,15 @@ class Scraper(ABC):
         self.length = 0
         self.done = False
         self.error = None
+        # F252: Circuit breaker and timeout configuration
+        self.consecutive_failures = 0
+        self.circuit_open = False
+        self.max_consecutive_failures = getattr(
+            app_settings, "SCRAPER_CIRCUIT_BREAKER_FAILURES", 5
+        )
+        self.request_timeout = getattr(
+            app_settings, "SCRAPER_REQUEST_TIMEOUT_SECONDS", 5.0
+        )
 
     @property
     @abstractmethod
@@ -72,19 +85,104 @@ class Scraper(ABC):
         return await self.robots_gate.is_allowed(url)
 
     async def _http_get(self, url: str, **kwargs) -> Optional[object]:
-        """self.http.get gated by the robots.txt policy (F252).
+        """self.http.get gated by the robots.txt policy, per-request timeout,
+        consecutive-failure circuit breaker, and structured logging (F252).
 
         Each scraper's primary listing fetch goes through this helper: if the
-        host disallows the user-agent/path, the fetch is skipped (None) and no
-        data is collected from that host. Same-host detail fetches run only
-        after a successful listing fetch, so a disallowed host yields nothing.
+        circuit breaker is open, or if the host disallows the user-agent/path,
+        the fetch is skipped (None) and no data is collected from that host.
         """
+        if self.circuit_open:
+            logger.bind(
+                scraper=self.code_name,
+                site=self.site_name,
+                url=_log_safe_url(url),
+                consecutive_failures=self.consecutive_failures,
+            ).warning(
+                f"  [{self.site_name}] Request skipped — circuit breaker is OPEN "
+                f"({self.consecutive_failures} consecutive failures)"
+            )
+            return None
+
         if not await self._robots_allowed(url):
-            logger.info(
+            logger.bind(
+                scraper=self.code_name,
+                site=self.site_name,
+                url=_log_safe_url(url),
+            ).info(
                 f"  {self.site_name}: skipped {url} — robots.txt Disallow (F252)"
             )
             return None
-        return await self.http.get(url, **kwargs)
+
+        if "timeout" not in kwargs:
+            kwargs["timeout"] = self.request_timeout
+
+        try:
+            resp = await self.http.get(url, **kwargs)
+            if resp is not None and getattr(resp, "status_code", None) == 200:
+                self.consecutive_failures = 0
+                logger.bind(
+                    scraper=self.code_name,
+                    site=self.site_name,
+                    url=_log_safe_url(url),
+                    status_code=200,
+                ).debug(f"  [{self.site_name}] Fetch success: 200 OK")
+                return resp
+            else:
+                status = getattr(resp, "status_code", "None")
+                self.consecutive_failures += 1
+                logger.bind(
+                    scraper=self.code_name,
+                    site=self.site_name,
+                    url=_log_safe_url(url),
+                    status_code=status,
+                    consecutive_failures=self.consecutive_failures,
+                    threshold=self.max_consecutive_failures,
+                ).warning(
+                    f"  [{self.site_name}] Fetch failed (status={status}, "
+                    f"failures={self.consecutive_failures}/{self.max_consecutive_failures})"
+                )
+                if self.consecutive_failures >= self.max_consecutive_failures:
+                    self.circuit_open = True
+                    self.error = (
+                        f"Circuit breaker tripped after {self.consecutive_failures} consecutive failures"
+                    )
+                    logger.bind(
+                        scraper=self.code_name,
+                        site=self.site_name,
+                        consecutive_failures=self.consecutive_failures,
+                    ).error(
+                        f"  [{self.site_name}] Circuit breaker TRIPPED after "
+                        f"{self.consecutive_failures} consecutive failures"
+                    )
+                return resp
+        except Exception as exc:
+            self.consecutive_failures += 1
+            logger.bind(
+                scraper=self.code_name,
+                site=self.site_name,
+                url=_log_safe_url(url),
+                error=type(exc).__name__,
+                consecutive_failures=self.consecutive_failures,
+                threshold=self.max_consecutive_failures,
+            ).warning(
+                f"  [{self.site_name}] Fetch exception ({type(exc).__name__}, "
+                f"failures={self.consecutive_failures}/{self.max_consecutive_failures}): {exc}"
+            )
+            if self.consecutive_failures >= self.max_consecutive_failures:
+                self.circuit_open = True
+                self.error = (
+                    f"Circuit breaker tripped after {self.consecutive_failures} consecutive failures"
+                )
+                logger.bind(
+                    scraper=self.code_name,
+                    site=self.site_name,
+                    consecutive_failures=self.consecutive_failures,
+                ).error(
+                    f"  [{self.site_name}] Circuit breaker TRIPPED after "
+                    f"{self.consecutive_failures} consecutive failures"
+                )
+            return None
 
     async def _resolve_trk_redirect(self, trk_url: str) -> str | None:
         """Follow a short trk.udemy.com redirect to the real course URL.
@@ -232,11 +330,19 @@ class Scraper(ABC):
 
     async def _run_detail_task(self, semaphore, func, *args):
         """Helper to run a detail-fetching function with a concurrency semaphore."""
+        if self.circuit_open:
+            return None, None
         async with semaphore:
+            if self.circuit_open:
+                return None, None
             try:
                 return await func(*args)
             except Exception as e:
-                logger.warning(f"Detail task failed in {func.__name__}: {e}")
+                logger.bind(
+                    scraper=self.code_name,
+                    site=self.site_name,
+                    func=func.__name__,
+                ).warning(f"Detail task failed in {func.__name__}: {e}")
                 return None, None
 
     async def playwright_get(self, url: str, wait_selector: str = None) -> str:

@@ -108,6 +108,8 @@ class Settings(BaseSettings):
     MAX_SCRAPER_WORKERS: int = 5
     SCRAPER_SITE_TIMEOUT_SECONDS: int = 1800
     SCRAPER_RUN_TIMEOUT_SECONDS: int = 2700
+    SCRAPER_REQUEST_TIMEOUT_SECONDS: float = 5.0
+    SCRAPER_CIRCUIT_BREAKER_FAILURES: int = 5
     PROXIES: str = ""  # Comma-separated list of proxy URLs
 
     # Deployment environment: "local" or "server"

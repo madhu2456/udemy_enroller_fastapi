@@ -6,7 +6,6 @@ must never appear in the export; delete-account must wipe everything
 including the User row.
 """
 
-import json
 import secrets
 import tempfile
 from pathlib import Path
@@ -225,65 +224,43 @@ class TestDeleteAccount:
         finally:
             db.close()
 
-    def test_delete_account_blocked_during_active_run(self, dsr_client):
-        """Active (pending/enrolling) runs guard against account deletion."""
+    def test_delete_account_cancels_active_runs_and_deletes(self, dsr_client):
+        """Active in-flight runs have their tasks cancelled and deletion cascades (Enroller D1)."""
+        from unittest.mock import MagicMock
+        from app.services.enrollment_manager import EnrollmentManager
+
         client, user_id, token = dsr_client
-        # Give this user an ACTIVE run; the fixture's completed run does not
-        # satisfy the guard (settings.py only blocks pending/scraping/enrolling).
         db = TestingSessionLocal()
         try:
             active = EnrollmentRun(user_id=user_id, status="pending", currency="usd")
             db.add(active)
             db.commit()
+            db.refresh(active)
+            active_run_id = active.id
         finally:
             db.close()
 
-        response = client.post(
-            "/api/settings/delete-account",
-            headers=_csrf_headers(token),
-            json={"confirm": "DELETE"},
-        )
-        assert response.status_code == 400
-        assert "enrollment run is active" in response.json()["detail"]
-        db = TestingSessionLocal()
-        try:
-            assert db.query(User).filter(User.id == user_id).first() is not None
-            assert db.query(EnrollmentRun).filter(
-                EnrollmentRun.user_id == user_id, EnrollmentRun.status == "pending"
-            ).count() == 1
-        finally:
-            db.close()
+        mock_task = MagicMock()
+        EnrollmentManager.active_tasks[active_run_id] = mock_task
 
-        # Abandon the active run (mark completed), then deletion succeeds.
-        db = TestingSessionLocal()
         try:
-            active = (
-                db.query(EnrollmentRun)
-                .filter(
-                    EnrollmentRun.user_id == user_id,
-                    EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]),
-                )
-                .first()
+            response = client.post(
+                "/api/settings/delete-account",
+                headers=_csrf_headers(token),
+                json={"confirm": "DELETE"},
             )
-            assert active is not None
-            db.query(EnrollmentRun).filter(EnrollmentRun.id == active.id).update(
-                {"status": "completed"}
-            )
-            db.commit()
-        finally:
-            db.close()
+            assert response.status_code == 200
+            mock_task.cancel.assert_called_once()
 
-        response = client.post(
-            "/api/settings/delete-account",
-            headers=_csrf_headers(token),
-            json={"confirm": "DELETE"},
-        )
-        assert response.status_code == 200
-        db = TestingSessionLocal()
-        try:
-            assert db.query(User).filter(User.id == user_id).first() is None
+            db = TestingSessionLocal()
+            try:
+                assert db.query(User).filter(User.id == user_id).first() is None
+                assert db.query(EnrollmentRun).filter(EnrollmentRun.user_id == user_id).count() == 0
+                assert db.query(UserSession).filter(UserSession.user_id == user_id).count() == 0
+            finally:
+                db.close()
         finally:
-            db.close()
+            EnrollmentManager.active_tasks.pop(active_run_id, None)
 
     def test_old_session_fails_after_delete(self, dsr_client):
         client, user_id, token = dsr_client

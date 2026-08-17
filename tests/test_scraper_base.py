@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
@@ -132,3 +133,75 @@ async def test_http_client_403_warning_suppression():
             mock_logger.warning.assert_not_called()
     finally:
         await http_client.close()
+
+
+@pytest.mark.asyncio
+async def test_http_get_default_timeout(scraper):
+    """F252: Scraper _http_get applies configured request timeout (5.0s default)."""
+    scraper.robots_gate.is_allowed = AsyncMock(return_value=True)
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    scraper.http.get = AsyncMock(return_value=mock_resp)
+
+    resp = await scraper._http_get("https://example.com/listings")
+    assert resp == mock_resp
+    scraper.http.get.assert_called_once_with("https://example.com/listings", timeout=5.0)
+
+
+@pytest.mark.asyncio
+async def test_http_get_circuit_breaker_trips_and_skips(scraper):
+    """F252: Consecutive failures trip the circuit breaker and subsequent requests are skipped."""
+    scraper.robots_gate.is_allowed = AsyncMock(return_value=True)
+    mock_fail_resp = MagicMock()
+    mock_fail_resp.status_code = 500
+    scraper.http.get = AsyncMock(return_value=mock_fail_resp)
+
+    # 5 consecutive failures
+    for i in range(5):
+        assert scraper.circuit_open is False
+        assert scraper.consecutive_failures == i
+        await scraper._http_get(f"https://example.com/page/{i}")
+
+    assert scraper.circuit_open is True
+    assert scraper.consecutive_failures == 5
+    assert "Circuit breaker tripped" in scraper.error
+
+    # Next request must be skipped immediately without calling http.get
+    scraper.http.get.reset_mock()
+    skipped_resp = await scraper._http_get("https://example.com/page/next")
+    assert skipped_resp is None
+    scraper.http.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_http_get_success_resets_failures(scraper):
+    """F252: 200 OK success resets consecutive failure count to 0."""
+    scraper.robots_gate.is_allowed = AsyncMock(return_value=True)
+    mock_fail = MagicMock()
+    mock_fail.status_code = 500
+    mock_ok = MagicMock()
+    mock_ok.status_code = 200
+
+    scraper.http.get = AsyncMock(side_effect=[mock_fail, mock_fail, mock_ok])
+
+    await scraper._http_get("https://example.com/fail1")
+    assert scraper.consecutive_failures == 1
+    await scraper._http_get("https://example.com/fail2")
+    assert scraper.consecutive_failures == 2
+
+    await scraper._http_get("https://example.com/success")
+    assert scraper.consecutive_failures == 0
+    assert scraper.circuit_open is False
+
+
+@pytest.mark.asyncio
+async def test_run_detail_task_skips_when_circuit_open(scraper):
+    """F252: Detail tasks short-circuit when circuit is open."""
+    scraper.circuit_open = True
+    sem = asyncio.Semaphore(5)
+    mock_func = AsyncMock()
+
+    result = await scraper._run_detail_task(sem, mock_func, "https://example.com")
+    assert result == (None, None)
+    mock_func.assert_not_called()
+

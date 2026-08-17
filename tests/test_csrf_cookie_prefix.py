@@ -8,13 +8,12 @@ must cover both names.
 """
 
 import secrets
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
 
-from app.routers import auth, dashboard
+from app.routers import auth
 from app.security import (
     CSRF_COOKIE_PLAIN,
     CSRF_COOKIE_PREFIXED,
@@ -181,7 +180,7 @@ class TestLogoutDeletesBothNames:
     """Logout must clear the session cookie and BOTH CSRF cookie names."""
 
     def _seed_session(self):
-        from app.models.database import User, UserSession, get_db
+        from app.models.database import User, UserSession
         from app.models.database import SessionLocal
 
         db = SessionLocal()
