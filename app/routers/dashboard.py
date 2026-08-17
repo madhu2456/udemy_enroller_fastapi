@@ -100,14 +100,22 @@ def login_page(request: Request):
         # Anonymous double-submit CSRF cookie for the login POSTs (F-ENRL-C03):
         # same name as the post-login session-bound cookie, samesite=strict, so
         # cross-site browsers never attach it and forged logins fail closed.
-        if not request.cookies.get("csrf_token"):
-            from app.security import generate_login_csrf_token
+        # F228: on secure deployments the cookie is __Host-csrf_token (Secure +
+        # Path=/ required); local dev keeps the plain csrf_token name because
+        # browsers reject __Host- cookies over plain http.
+        from app.security import (
+            csrf_cookie_name,
+            csrf_cookie_names,
+            generate_login_csrf_token,
+        )
 
-            from config.settings import get_settings
+        from config.settings import get_settings
 
-            settings = get_settings()
+        settings = get_settings()
+        active_csrf = csrf_cookie_name(settings.COOKIE_SECURE)
+        if not request.cookies.get(active_csrf):
             response.set_cookie(
-                "csrf_token",
+                active_csrf,
                 generate_login_csrf_token(),
                 httponly=False,
                 samesite="strict",
@@ -115,6 +123,18 @@ def login_page(request: Request):
                 max_age=24 * 60 * 60,
                 path="/",
             )
+            # Best-effort cleanup of a cookie left under the other name (e.g.
+            # set before a COOKIE_SECURE flip).
+            for _stale in csrf_cookie_names():
+                if _stale != active_csrf:
+                    response.delete_cookie(
+                        _stale,
+                        path="/",
+                        domain=None,
+                        httponly=False,
+                        samesite="strict",
+                        secure=settings.COOKIE_SECURE,
+                    )
         return response
     finally:
         db.close()

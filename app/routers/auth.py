@@ -15,6 +15,8 @@ from app.schemas.schemas import CookieLoginRequest, LoginRequest, LoginResponse
 from app.security import (
     _client_key,
     auth_status_rate_limiter,
+    csrf_cookie_name,
+    csrf_cookie_names,
     decrypt_cookies,
     encrypt_cookies_salted,
     generate_cookie_salt,
@@ -108,9 +110,15 @@ def _login_response(client: UdemyClient, token: str) -> JSONResponse:
         max_age=max_age,
         path="/",
     )
-    # CSRF cookie is NOT httponly so frontend JS can read it and send back in header
+    # CSRF cookie is NOT httponly so frontend JS can read it and send back in header.
+    # F228: with COOKIE_SECURE=true the cookie is named __Host-csrf_token
+    # (Secure + Path=/ + no Domain — required by the __Host- prefix), which
+    # blocks injection from sibling subdomains. Tradeoff: browsers reject
+    # __Host- cookies over plain http, so local dev (secure=false) keeps the
+    # plain csrf_token name. Path=/ is required for the prefix to apply.
+    csrf_name = csrf_cookie_name(settings.COOKIE_SECURE)
     response.set_cookie(
-        "csrf_token",
+        csrf_name,
         csrf_token,
         httponly=False,
         samesite="strict",
@@ -498,9 +506,19 @@ async def logout(
         content={"success": True, "message": "Logged out successfully"}
     )
 
-    # Delete session and CSRF cookies with explicit settings
-    response.delete_cookie("session_id", path="/", domain=None)
-    response.delete_cookie("csrf_token", path="/", domain=None)
+    # Delete session and CSRF cookies with explicit settings.
+    # F228: the CSRF cookie may be named __Host-csrf_token (secure) or the
+    # legacy plain csrf_token — delete BOTH, with the same flags they were
+    # set with so browsers accept the deletion cookies.
+    response.delete_cookie(
+        "session_id", path="/", domain=None,
+        httponly=True, samesite="lax", secure=settings.COOKIE_SECURE,
+    )
+    for _csrf_name in csrf_cookie_names():
+        response.delete_cookie(
+            _csrf_name, path="/", domain=None,
+            httponly=False, samesite="strict", secure=settings.COOKIE_SECURE,
+        )
 
     # Prevent browser caching of authenticated pages
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

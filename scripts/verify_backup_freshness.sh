@@ -10,8 +10,9 @@
 # Environment:
 #   BACKUP_DIR      Directory of backup files (default: ./backups)
 #   MAX_AGE_HOURS   Maximum age of newest matching file (default: 26)
-#   BACKUP_GLOB     Filename glob under BACKUP_DIR (default: udemy_enroller-*.db)
-#                   Also matches optional .sha256 sidecars are ignored; only .db.
+#   BACKUP_GLOB     Filename glob under BACKUP_DIR (default: udemy_enroller-*.db*)
+#                   Matches plaintext (*.db), encrypted (*.db.enc) backups and
+#                   their *.sha256 sidecars; the newest artifact wins.
 #
 # Exit codes: 0 fresh, 1 stale/missing/error, 2 usage.
 #
@@ -20,7 +21,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-$ROOT/backups}"
 MAX_AGE_HOURS="${MAX_AGE_HOURS:-26}"
-BACKUP_GLOB="${BACKUP_GLOB:-udemy_enroller-*.db}"
+BACKUP_GLOB="${BACKUP_GLOB:-udemy_enroller-*.db*}"
 
 usage() {
   cat <<'EOF' >&2
@@ -30,7 +31,8 @@ usage:
 Environment:
   BACKUP_DIR      Backup directory (default: <repo>/backups)
   MAX_AGE_HOURS   Fail if newest backup older than this many hours (default: 26)
-  BACKUP_GLOB     Glob for backup files (default: udemy_enroller-*.db)
+  BACKUP_GLOB     Glob for backup files (default: udemy_enroller-*.db* — covers
+                  plaintext .db and encrypted .db.enc backups plus sidecars)
 EOF
   exit 2
 }

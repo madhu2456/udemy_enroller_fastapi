@@ -157,8 +157,12 @@ async def test_success_commits_before_cleanup_and_revokes_all_session_state(logo
     cache.pop.assert_called_once_with(logout_state.token, None)
     cached_client.close.assert_awaited_once_with()
     assert "session_id=" in set_cookie
+    # F228: logout clears the session cookie AND both possible CSRF cookie
+    # names (__Host-csrf_token on secure deployments, legacy plain
+    # csrf_token) — three deletion cookies total.
     assert "csrf_token=" in set_cookie
-    assert set_cookie.count("Max-Age=0") == 2
+    assert "__Host-csrf_token=" in set_cookie
+    assert set_cookie.count("Max-Age=0") == 3
     _assert_session_state(
         logout_state,
         session_exists=False,

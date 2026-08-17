@@ -282,6 +282,10 @@ class RateLimiter:
                 detail="Too many requests. Please try again later.",
             )
 
+    def clear_key(self, key: str):
+        """Drop all recorded hits for a key (used after account deletion, D1)."""
+        self._store.pop(key, None)
+
     async def is_allowed_redis(self, key: str) -> bool:
         """Async, Upstash-Redis-backed variant of is_allowed() for async callers.
 
@@ -478,6 +482,39 @@ auth_status_rate_limiter = RateLimiter(max_requests=90, window_seconds=60)
 
 # ── CSRF Protection ───────────────────────────────────
 
+# CSRF cookie names (F228). Plain double-submit name for local/dev HTTP;
+# __Host- prefixed name when COOKIE_SECURE is true. The __Host- prefix binds
+# the cookie to the exact host (Secure + Path=/ + no Domain), blocking
+# injection from sibling subdomains; its tradeoff is that browsers reject
+# __Host- cookies over plain http, so local dev keeps the plain name.
+CSRF_COOKIE_PLAIN = "csrf_token"
+CSRF_COOKIE_PREFIXED = "__Host-csrf_token"
+
+
+def csrf_cookie_name(secure: Optional[bool] = None) -> str:
+    """Name used to SET the CSRF cookie for the current deployment.
+
+    Pass ``secure`` explicitly to derive the name from the same flag the
+    caller uses for ``secure=`` on set_cookie (avoids two settings reads);
+    otherwise the live settings are consulted.
+    """
+    if secure is None:
+        from config.settings import get_settings
+
+        secure = bool(get_settings().COOKIE_SECURE)
+    return CSRF_COOKIE_PREFIXED if secure else CSRF_COOKIE_PLAIN
+
+
+def csrf_cookie_names() -> tuple[str, str]:
+    """Every CSRF cookie name that may exist (prefixed, plain).
+
+    Read and delete paths must cover both so a browser holding a cookie set
+    under the other name (e.g. before a COOKIE_SECURE flip) cannot keep a
+    stale value working or leftover.
+    """
+    return (CSRF_COOKIE_PREFIXED, CSRF_COOKIE_PLAIN)
+
+
 def generate_csrf_token(session_token: str) -> str:
     """Generate a CSRF token bound to the session token via HMAC."""
     from config.settings import get_settings
@@ -567,7 +604,11 @@ def verify_login_csrf(request: Request) -> None:
     if not _is_same_origin(request):
         raise HTTPException(status_code=403, detail="Cross-origin request rejected")
 
-    cookie_token = request.cookies.get("csrf_token")
+    # F228: accept the __Host- prefixed cookie first (secure deployments),
+    # then the legacy plain name — a browser sends whichever one is set.
+    cookie_token = request.cookies.get(CSRF_COOKIE_PREFIXED) or request.cookies.get(
+        CSRF_COOKIE_PLAIN
+    )
     header_token = request.headers.get("x-csrf-token")
     if not cookie_token or not header_token:
         raise HTTPException(status_code=403, detail="CSRF token missing")

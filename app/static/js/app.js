@@ -5,8 +5,10 @@ window.csrfToken = null;
 function getCsrfToken() {
   if (window.csrfToken) return window.csrfToken;
 
-  // Read CSRF token from cookie
-  const match = document.cookie.match(new RegExp("(^| )csrf_token=([^;]+)"));
+  // Read CSRF token from cookie. F228: secure deployments name the cookie
+  // __Host-csrf_token (prefix blocked over plain http); local dev keeps the
+  // plain csrf_token name — match both.
+  const match = document.cookie.match(new RegExp("(^| )(?:__Host-)?csrf_token=([^;]+)"));
   if (match) {
     window.csrfToken = decodeURIComponent(match[2]);
     return window.csrfToken;

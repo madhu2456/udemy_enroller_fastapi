@@ -15,6 +15,7 @@ from app.models.database import (
     _utcnow_naive,
     User,
 )
+from app.services.alerts import send_alert
 from app.services.course import Course
 from app.services.scraper import ScraperService
 from app.services.udemy_client import UdemyClient
@@ -121,6 +122,16 @@ class EnrollmentManager:
                     logger.warning(
                         f"Sweeper marked stale enrollment run {run.id} failed "
                         f"(no heartbeat for over {timeout_minutes} minutes)"
+                    )
+                    # F230: alert on stuck-task recovery (webhook OFF unless
+                    # ALERT_WEBHOOK_URL is set; never raises).
+                    await send_alert(
+                        "enrollment_stuck",
+                        f"Enrollment run {run.id} (user {run.user_id}) marked "
+                        f"failed after no heartbeat for over {timeout_minutes} "
+                        "minutes",
+                        run_id=run.id,
+                        user_id=run.user_id,
                     )
         return recovered
 
@@ -483,6 +494,14 @@ class EnrollmentManager:
             raise
         except Exception as e:
             logger.exception("Enrollment pipeline failed")
+            # F230: alert on enrollment task failure (webhook OFF unless
+            # ALERT_WEBHOOK_URL is set; never raises).
+            await send_alert(
+                "enrollment_failed",
+                f"Enrollment run {self.run_id} (user {self.user_id}) failed: {e}",
+                run_id=self.run_id,
+                user_id=self.user_id,
+            )
             try:
                 run = db.get(EnrollmentRun, self.run_id)
                 if run:

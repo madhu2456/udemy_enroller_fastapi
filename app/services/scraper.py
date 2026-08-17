@@ -13,6 +13,7 @@ from loguru import logger
 
 from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient
+from app.services.robots_gate import RobotsGate
 from app.services.udemy_validation import (
     is_trk_udemy_url,
     is_udemy_course_url,
@@ -26,6 +27,9 @@ class Scraper(ABC):
     def __init__(self, http: AsyncHTTPClient, proxy: Optional[str] = None):
         self.http = http
         self.proxy = proxy
+        # F252: per-host robots.txt gate with 24 h cache; fail-open on fetch
+        # errors (policy in app/services/robots_gate.py + docs/ops).
+        self.robots_gate = RobotsGate(http)
         self.data: List[Course] = []
         self.progress = 0
         self.length = 0
@@ -58,6 +62,29 @@ class Scraper(ABC):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", MarkupResemblesLocatorWarning)
             return BeautifulSoup(content, "lxml")
+
+    async def _robots_allowed(self, url: str) -> bool:
+        """Honor the target host's robots.txt (F252).
+
+        Fail-open by design: robots.txt fetch errors/5xx allow the fetch so a
+        robots outage never takes coupon sources offline (documented policy).
+        """
+        return await self.robots_gate.is_allowed(url)
+
+    async def _http_get(self, url: str, **kwargs) -> Optional[object]:
+        """self.http.get gated by the robots.txt policy (F252).
+
+        Each scraper's primary listing fetch goes through this helper: if the
+        host disallows the user-agent/path, the fetch is skipped (None) and no
+        data is collected from that host. Same-host detail fetches run only
+        after a successful listing fetch, so a disallowed host yields nothing.
+        """
+        if not await self._robots_allowed(url):
+            logger.info(
+                f"  {self.site_name}: skipped {url} — robots.txt Disallow (F252)"
+            )
+            return None
+        return await self.http.get(url, **kwargs)
 
     async def _resolve_trk_redirect(self, trk_url: str) -> str | None:
         """Follow a short trk.udemy.com redirect to the real course URL.
@@ -315,7 +342,7 @@ class RealDiscountScraper(Scraper):
                 "referer": "https://www.real.discount/",
                 "Host": "cdn.real.discount",
             }
-            resp = await self.http.get(url, headers=headers)
+            resp = await self._http_get(url, headers=headers)
             data = await self.http.safe_json(resp)
 
             if not data or "items" not in data:
@@ -396,7 +423,7 @@ class ENextScraper(Scraper):
                     break
                 self.progress = page
 
-                resp = await self.http.get(
+                resp = await self._http_get(
                     f"https://jobs.e-next.in/course/udemy/{page}"
                 )
                 if not resp or resp.status_code != 200:
@@ -488,7 +515,7 @@ class InterviewGigScraper(Scraper):
             page_tasks = []
             for page in range(1, max_api_pages + 1):
                 url = f"{base_api}?per_page=100&page={page}"
-                page_tasks.append(self.http.get(url, use_cloudscraper=True, timeout=20))
+                page_tasks.append(self._http_get(url, use_cloudscraper=True, timeout=20))
 
             results = await asyncio.gather(*page_tasks, return_exceptions=True)
             for i, resp in enumerate(results):
@@ -568,7 +595,7 @@ class UdemyXpertScraper(Scraper):
         try:
             logger.info("  UdemyXpert: Fetching sitemap...")
             self.length = 1  # Sitemap fetch
-            resp = await self.http.get(
+            resp = await self._http_get(
                 "https://udemyxpert.com/sitemap.xml", use_cloudscraper=True, timeout=20
             )
             self.progress = 1
@@ -696,7 +723,7 @@ class CoursesityScraper(Scraper):
                     f"?page={page_num}"
                 )
                 try:
-                    resp = await self.http.get(url, use_cloudscraper=True, timeout=15)
+                    resp = await self._http_get(url, use_cloudscraper=True, timeout=15)
                     if not resp or resp.status_code != 200:
                         break
 
@@ -829,7 +856,7 @@ class CourseFolderScraper(Scraper):
                 self.progress = page_num + 1
                 url = f"https://coursefolder.net/free-udemy-coupon.php?page={page_num}"
                 try:
-                    resp = await self.http.get(url, use_cloudscraper=True, timeout=15)
+                    resp = await self._http_get(url, use_cloudscraper=True, timeout=15)
                     if not resp or resp.status_code != 200:
                         break
 
@@ -969,7 +996,7 @@ class CouponamiScraper(Scraper):
             for i, sitemap_url in enumerate(sitemap_urls):
                 self.progress = i + 1
                 try:
-                    resp = await self.http.get(
+                    resp = await self._http_get(
                         sitemap_url, use_cloudscraper=True, timeout=20
                     )
                     if not resp or resp.status_code != 200:
@@ -1120,7 +1147,7 @@ class KorshubScraper(Scraper):
                 self.progress = page_num + 1
                 url = f"https://www.korshub.com/courses?page={page_num}"
                 try:
-                    resp = await self.http.get(
+                    resp = await self._http_get(
                         url, use_cloudscraper=True, timeout=15, retry_403=True
                     )
                     if not resp or resp.status_code != 200:
@@ -1258,7 +1285,7 @@ class UdemyFreebiesScraper(Scraper):
             page_tasks = []
             for page_num in range(1, max_pages + 1):
                 url = f"https://www.udemyfreebies.com/free-udemy-courses/{page_num}"
-                page_tasks.append(self.http.get(url, use_cloudscraper=True, timeout=15))
+                page_tasks.append(self._http_get(url, use_cloudscraper=True, timeout=15))
 
             for i, task in enumerate(asyncio.as_completed(page_tasks)):
                 self.progress = i + 1
@@ -1389,7 +1416,7 @@ class IDownloadCouponScraper(Scraper):
 
             async def fetch_page(url):
                 async with local_listing_semaphore:
-                    return await self.http.get(url, use_cloudscraper=True, timeout=15)
+                    return await self._http_get(url, use_cloudscraper=True, timeout=15)
 
             page_tasks = []
             for page_num in range(1, max_pages + 1):
@@ -1580,7 +1607,7 @@ class CourseJoinerScraper(Scraper):
                         f"https://coursejoiner.com/category/free-udemy/page/{page_num}/"
                     )
 
-                resp = await self.http.get(url, use_cloudscraper=True, timeout=15)
+                resp = await self._http_get(url, use_cloudscraper=True, timeout=15)
                 if not resp or resp.status_code != 200:
                     break
 
@@ -1699,7 +1726,7 @@ class FreeCourseSitesScraper(Scraper):
     async def _get_category_id(self, slug: str, fallback_id: int) -> int:
         try:
             url = f"{self.BASE_URL}/wp-json/wp/v2/categories?slug={slug}"
-            resp = await self.http.get(
+            resp = await self._http_get(
                 url, use_cloudscraper=True, timeout=15, raise_for_status=False
             )
             data = await self.http.safe_json(resp, "freecoursesites_category")
@@ -1810,7 +1837,7 @@ class FreeCourseSitesScraper(Scraper):
                 else:
                     url = f"{self.BASE_URL}/category/{slug}/page/{page}/"
 
-                resp = await self.http.get(
+                resp = await self._http_get(
                     url, use_cloudscraper=True, timeout=20, raise_for_status=False
                 )
                 if not resp or resp.status_code != 200:
@@ -1898,7 +1925,7 @@ class FreeCourseSitesScraper(Scraper):
 
                 self.progress = page
                 url = f"{self.BASE_URL}/wp-json/wp/v2/posts?categories={cat_id}&per_page={self.PER_PAGE}&page={page}&orderby=date&order=desc&_fields=id,link,title,content,date"
-                resp = await self.http.get(
+                resp = await self._http_get(
                     url, use_cloudscraper=True, timeout=20, raise_for_status=False
                 )
                 if not resp or resp.status_code != 200:
@@ -2024,7 +2051,7 @@ class FreeWebCartScraper(Scraper):
                 else f"{self.BASE_URL}/courses?page={page}"
             )
 
-            resp = await self.http.get(
+            resp = await self._http_get(
                 url, use_cloudscraper=True, timeout=20, raise_for_status=False
             )
 
@@ -2040,7 +2067,7 @@ class FreeWebCartScraper(Scraper):
                         "Accept-Encoding": "identity",
                         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                     }
-                    resp = await self.http.get(
+                    resp = await self._http_get(
                         url,
                         use_cloudscraper=False,
                         timeout=20,

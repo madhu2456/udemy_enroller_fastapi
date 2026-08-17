@@ -298,6 +298,10 @@ async def test_page_2_empty_ends_pagination_without_fallback(scraper):
     assert len(candidates) == 1
     assert scraper.progress == 2
     for call in scraper.http.get.call_args_list:
+        # F252: the robots.txt fetch uses plain httpx (use_cloudscraper=False)
+        # and is not the fallback path under test — skip it.
+        if "robots.txt" in call[0][0]:
+            continue
         kwargs = call[1]
         assert kwargs.get("use_cloudscraper") is True
 

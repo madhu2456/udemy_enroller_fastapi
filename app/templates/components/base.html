@@ -147,6 +147,27 @@
                 "@context": "https://schema.org",
                 "@graph": [
                     {
+                        "@type": "Organization",
+                        "@id": "https://udemyenroller.madhudadi.in/#organization",
+                        "name": "Udemy Enroller",
+                        "url": "https://udemyenroller.madhudadi.in/",
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": "https://udemyenroller.madhudadi.in/static/images/icon-512.png",
+                            "width": 512,
+                            "height": 512
+                        },
+                        "founder": {
+                            "@type": "Person",
+                            "@id": "https://madhudadi.in/#person",
+                            "name": "Madhu Dadi",
+                            "url": "https://madhudadi.in/profile/"
+                        },
+                        "parentOrganization": {
+                            "@id": "https://madhudadi.in/#organization"
+                        }
+                    },
+                    {
                         "@type": "WebSite",
                         "@id": "https://udemyenroller.madhudadi.in/#website",
                         "url": "https://udemyenroller.madhudadi.in",

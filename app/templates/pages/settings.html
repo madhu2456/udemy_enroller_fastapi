@@ -318,6 +318,47 @@ content %}
         </div>
     </div>
 
+    <!-- Data export section (D1 DSR) -->
+    <div
+        class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm"
+    >
+        <div
+            class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2.5"
+        >
+            <i data-lucide="download" class="text-blue-600 w-4 h-4"></i>
+            <h2 class="text-sm font-semibold text-gray-900">
+                Export Your Data
+            </h2>
+        </div>
+        <div class="p-6">
+            <div
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+                <div>
+                    <p class="text-sm font-medium text-gray-800">
+                        Download a copy of your data
+                    </p>
+                    <p
+                        class="text-xs text-gray-600 mt-0.5 max-w-lg leading-relaxed font-light"
+                    >
+                        Exports your enrollment history, run metadata, session
+                        metadata, statistics, and settings as a JSON file.
+                        Stored Udemy cookies are never included — only a flag
+                        showing whether they exist.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    data-action="export-data"
+                    class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                >
+                    <i data-lucide="download" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    Export Data
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Danger Zone section -->
     <div
         class="bg-white rounded-xl border border-red-200 overflow-hidden shadow-sm"
@@ -328,7 +369,7 @@ content %}
             <i data-lucide="alert-triangle" class="text-red-500 w-4 h-4"></i>
             <h2 class="text-sm font-semibold text-red-700">Danger Zone</h2>
         </div>
-        <div class="p-6">
+        <div class="p-6 space-y-5">
             <div
                 class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-xl p-5"
             >
@@ -354,6 +395,48 @@ content %}
                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5" aria-hidden="true"></i>
                     Clear All Data
                 </button>
+            </div>
+
+            <!-- Delete account (D1 DSR) — distinct from clear-all-data -->
+            <div
+                class="flex flex-col gap-4 bg-red-50 border border-red-200 rounded-xl p-5"
+            >
+                <div>
+                    <p class="text-sm font-semibold text-red-800">
+                        Delete Account
+                    </p>
+                    <p
+                        class="text-xs text-red-800 mt-0.5 max-w-lg leading-relaxed font-light"
+                    >
+                        Permanently deletes the account and ALL associated
+                        data: enrollment history, run logs, statistics,
+                        sessions, settings, and stored Udemy cookies —
+                        including the account row itself. Type
+                        <strong>DELETE</strong> in the box below to confirm.
+                        This cannot be undone. Note: database backups
+                        (retention up to 14 days / 30 files) may still contain
+                        this data until they age out.
+                    </p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 items-stretch">
+                    <input
+                        type="text"
+                        id="delete-account-confirm"
+                        name="delete-account-confirm"
+                        autocomplete="off"
+                        placeholder="Type DELETE to confirm"
+                        aria-label="Type DELETE to confirm account deletion"
+                        class="flex-1 min-w-0 bg-white border border-red-300 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                    />
+                    <button
+                        type="button"
+                        data-action="delete-account"
+                        class="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2"
+                    >
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                        Delete Account
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -397,6 +480,12 @@ content %}
         });
         document.querySelectorAll('[data-action="clear-all-data"]').forEach(btn => {
             btn.addEventListener('click', () => clearAllData());
+        });
+        document.querySelectorAll('[data-action="export-data"]').forEach(btn => {
+            btn.addEventListener('click', () => exportData());
+        });
+        document.querySelectorAll('[data-action="delete-account"]').forEach(btn => {
+            btn.addEventListener('click', () => deleteAccount());
         });
         document.querySelectorAll('[data-action="remove-parent"]').forEach(btn => {
             btn.addEventListener('click', () => btn.parentElement.remove());
@@ -803,6 +892,91 @@ content %}
         el.textContent = msg;
         el.classList.remove("hidden");
         setTimeout(() => el.classList.add("hidden"), 4000);
+    }
+
+    // D1 DSR: download the data-subject export as a JSON file.
+    async function exportData() {
+        const btn = document.querySelector('button[data-action="export-data"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML =
+            '<span class="flex items-center gap-1.5"><span class="spinner" aria-hidden="true"></span> Exporting...</span>';
+        try {
+            const r = await apiFetch("/api/settings/export", { method: "POST" });
+            if (!r.ok) {
+                const data = await r.json().catch(() => ({}));
+                showMsg(data.detail || "Export failed", "red");
+                return;
+            }
+            const payload = await r.json();
+            const blob = new Blob([JSON.stringify(payload, null, 2)], {
+                type: "application/json",
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "udemy-enroller-data-export.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showMsg("Data export downloaded", "green");
+        } catch (e) {
+            showMsg("Network error while exporting data", "red");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    // D1 DSR: permanent account deletion — requires typing DELETE.
+    async function deleteAccount() {
+        const field = document.getElementById("delete-account-confirm");
+        if (!field) return;
+        const typed = field.value.trim();
+        if (typed !== "DELETE") {
+            showMsg("Type DELETE in the box to confirm deletion", "red");
+            field.focus();
+            return;
+        }
+        const ok1 = await window.accessibleConfirm({
+            title: "Delete account permanently?",
+            message:
+                "This deletes the account and ALL associated data: history, " +
+                "statistics, sessions, settings, and stored Udemy cookies. " +
+                "It cannot be undone.",
+            confirmLabel: "Continue",
+            cancelLabel: "Cancel",
+            danger: true,
+        });
+        if (!ok1) return;
+        const ok2 = await window.accessibleConfirm({
+            title: "Final confirmation",
+            message:
+                "Really delete this account and all its data? Note: database " +
+                "backups (retention up to 14 days / 30 files) may still contain " +
+                "this data until they age out.",
+            confirmLabel: "Delete account",
+            cancelLabel: "Cancel",
+            danger: true,
+        });
+        if (!ok2) return;
+
+        try {
+            const r = await apiFetch("/api/settings/delete-account", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ confirm: typed }),
+            });
+            const data = await r.json().catch(() => ({}));
+            if (r.ok) {
+                window.location.href = "/";
+            } else {
+                showMsg(data.detail || "Failed to delete account", "red");
+            }
+        } catch (e) {
+            showMsg("Network error while deleting account", "red");
+        }
     }
 </script>
 {% endblock %}

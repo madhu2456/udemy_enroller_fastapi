@@ -134,6 +134,11 @@ class Settings(BaseSettings):
     STALE_RUN_TIMEOUT_MINUTES: int = 15
     STALE_RUN_SWEEP_SECONDS: int = 60
 
+    # Minimal operational alerting (F230): when set, enrollment task failures
+    # and stuck-run sweeper recoveries POST a JSON alert to this webhook URL.
+    # Default OFF (empty) — no behavior change. The URL is never logged.
+    ALERT_WEBHOOK_URL: str = ""
+
     # Logging
     LOG_LEVEL: str = "WARNING"
     LOG_FILE: str = "logs/app.log"

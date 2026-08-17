@@ -16,7 +16,11 @@ from app.models.database import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False (standard Alembic template guidance):
+    # with the default True, running alembic in-process (e.g. the pinned
+    # upgrade helper used by tests/CI) disables every logger that already
+    # exists, silently silencing later application logging in the process.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

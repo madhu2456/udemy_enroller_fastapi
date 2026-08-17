@@ -97,7 +97,35 @@ Public copy and [`SECURITY.md`](../SECURITY.md) state the tool is **not affiliat
 
 ### 2.6 Cross-border transfers
 
-**DRAFT v1 fill (for counsel):** External flows are **not** Udemy-only. They include (1) the **user's own Udemy session cookie material sent to Udemy Inc.** (US) during enrollment HTTP flows — under the **user's own Udemy account**, at the user's direction — **and** (2) optional **GTM/GA4** page/event analytics after consent (privacy template). Host/analytics **regions, SCC, and adequacy** are **counsel questions** — do not invent findings here. **Cookie blobs / Udemy session material must not go to analytics.** The hosted demo is operated by the controller (India). Whether any of these is a "transfer" for GDPR Art. 44+ purposes is a **counsel question**. Do not invent SCCs or adequacy findings in this document.  
+**F226 fill (2026-08-16, code-verified):** Topology: the hosted demo runs on an
+owner-controlled **hosted server** (region `[TODO with counsel]`) fronted by
+**Cloudflare** edge/CDN (anycast; caching + TLS edge). Data subjects include
+users in **India** (controller located in Visakhapatnam, India). Processing
+locations therefore span the hosting provider's region and Cloudflare's edge
+network — exact regions are `[TODO with counsel]`; do not invent findings.
+
+Code facts (re-verified 2026-08-16):
+1. **Cookies encrypted server-side:** stored Udemy session cookie material is
+   a per-session Fernet envelope (HKDF-SHA256 master key + `users.cookies_salt`),
+   `app/security.py:94-144`; server mode requires a valid Fernet
+   `COOKIE_ENCRYPTION_KEY` (`config/settings.py:177-184`).
+2. **24 h TTL:** server deployments cap app sessions at 24 h
+   (`app/routers/auth.py:39-46`); **salt wipe** happens together with cookie
+   wipe on logout / last-session expiry / clear-data (`app/routers/auth.py:415-427`,
+   `app/session_lifecycle.py:140-147`, `app/routers/settings.py:198-211`).
+3. **Backups are unencrypted copies** (`scripts/backup_sqlite.sh`, default
+   retention **14 days / 30 newest files**) — an **acknowledged window** where
+   the encryption-at-rest control does not apply. F235 (backup encryption +
+   plaintext fail-closed) is tracked separately and **still unproven on the
+   production host** (2026-08-16).
+
+External flows: the user's **own Udemy session cookie material is sent to
+Udemy Inc. (US)** during enrollment HTTP flows — under the user's own Udemy
+account, at the user's direction. Optional **GTM/GA4** page/event analytics
+(after consent) flow to Google; **cookie blobs / Udemy session material must
+never go to analytics**. Whether any of these constitutes a "transfer" for
+GDPR Art. 44+ or DPDP cross-border purposes is a **counsel question** — do
+not invent SCCs or adequacy findings in this document.
 - `[TODO with counsel: host region, backup region, analytics regions]`
 
 ### 2.7 Retention (DRAFT v1 — owner confirms)
@@ -181,7 +209,14 @@ The privacy **template exists** (`app/templates/pages/privacy.html`; live `/priv
 | Data fiduciary identity + contact | "India DPDP Act — Data Fiduciary" (operator contact) |
 | Non-affiliation / third-party flow to Udemy | "Affiliation" |
 
-Gap (open): the page's contact channel and the DPIA controller contact (https://madhudadi.in/profile/) must be cross-checked to the same mailbox; grievance channel wording to be confirmed with counsel.
+Gap (resolved 2026-08-16 — F226): the privacy page's contact channel and the
+DPIA controller contact were cross-checked. `app/templates/pages/contact.html`
+(mailto at `:84`, GitHub issues links at `:108`/`:175`) exposes the operator's
+grievance channels: **GitHub issue tracker**
+(`https://github.com/madhu2456/udemy_enroller_fastapi/issues`) and
+**hello@madhudadi.in**. The DPIA §6 public channels below are aligned to
+those two; the privacy template itself is **not** edited in this pass, and
+grievance-channel wording remains to be confirmed with counsel.
 
 ---
 
@@ -204,9 +239,9 @@ Gap (open): the page's contact channel and the DPIA controller contact (https://
 
 | Request type | Public channel | Owner SLA | Technical steps | Tested? |
 |--------------|----------------|-----------|-----------------|---------|
-| Access | `[TODO]` | `[TODO]` | Describe stored fields; no raw cookie export to email without care | ☐ |
+| Access | GitHub issue (https://github.com/madhu2456/udemy_enroller_fastapi/issues) **or** hello@madhudadi.in (contact.html:84) | `[TODO]` | **POST /api/settings/export** (D1 DSR, m3): JSON of runs/courses/sessions metadata + cookie-presence flag — **never raw cookie values**; auth + CSRF + rate-limited | ☐ |
 | Delete / wipe cookies | Privacy UX + logout / clear-data | `[TODO]` | Wipe path + session revoke | ☐ |
-| Account deletion | `[TODO]` | `[TODO]` | Cascade sessions, cookies, history | ☐ |
+| Account deletion | Same grievance channels; `POST /api/settings/delete-account` requires typing `DELETE` | `[TODO]` | D1 DSR: wipes EnrolledCourse, EnrollmentRun, UserSession, UserSettings, encrypted cookies + salt, stats, **User row**; clears session + rate-limit state; response notes backups may retain PII ≤14d/30 files | ☐ |
 | Object / stop hosted processing | `[TODO]` | `[TODO]` | Disable connect / leave hosted demo | ☐ |
 
 Align wording with the live privacy page before publication.
@@ -251,9 +286,10 @@ Signatories acknowledge:
 
 - [ ] Confirm controller/processor roles for hosted demo  
 - [ ] Align privacy page with actual retention / wipe behavior  
-- [ ] Confirm backup encryption and access control on production host  
-- [ ] Schedule restore drill (see `docs/ops/backup-restore.md`)  
+- [ ] Confirm backup encryption and access control on production host (F235 — script-level encryption/plaintext fail-closed landed 2026-08-16; host enablement + key duplication still owner)  
+- [x] Schedule restore drill (see `docs/ops/backup-restore.md`) — **F210 drill executed 2026-08-16T17:38:29Z** on a scratch copy of `udemy_enroller-20260816T141357Z.db` (restore-on-copy, RTO 0.39 s, repo backup sha256 unchanged)  
 - [x] **F011** last-success **proven** 2026-08-16. Owner **Accept residual** for **F004** on 2026-08-16 (`docs/audits/D3-F004-enroller-fernet-2026-08-16.md`); review **2026-10-16**. **Not** a crypto change. Still **do not** rotate `COOKIE_ENCRYPTION_KEY` or purge blobs. F002 remains counsel.  
+- [ ] **Counsel sign-off remains owner-ops:** DPIA stays DRAFT until counsel review (§8) — open item, not a legal sign-off  
 - [ ] Counsel review of automation / Terms residual (see [`legal-counsel-review.md`](legal-counsel-review.md)) — separate from technical DPIA  
 - [ ] Re-verify **F019-plaintext** (Enroller-local; **not** fleet v7.15 F019) reject on the running server image  
 
@@ -309,3 +345,4 @@ Owner sign-off: Madhu Dadi (owner) — verbal Accept via orchestration (**not** 
 | 0.7-draft-v1 | 2026-08-16 | Owner decision log: §9a **Defer until F011** (not Accept, not Redesign). DATE 2026-08-16. Sign-off line **n/a — not accepted**. D.3 still UNSIGNED. **F004 not closed.** No key rotate. |
 | 0.8-draft-v1 | 2026-08-16 | **F011 proven** (single host, deals + enroller). §9a still **Defer** / **not** Accept. Owner may now sign Accept or pick Redesign. F011 no longer blocks rotation; still no rotate/purge unless the owner asks. **F004 not closed.** |
 | 0.9-draft-v1 | 2026-08-16 | Owner **Accept residual** DATE 2026-08-16. §8 product owner **Proceed (residual accepted)**; counsel still **PENDING**. Review 2026-10-16. DPIA still draft / not legal advice / not counsel-approved. **Not** a crypto change. No key rotate. |
+| 0.10-draft-v1 | 2026-08-16 | **F226**: §2.6 cross-border fill (hosted server + Cloudflare edge vs India users; cookies encrypted server-side per-session, 24 h TTL, salt wipe; unencrypted 14d/30-file backups = acknowledged window; Udemy (US) + optional GTM/GA4 flows; counsel TODO regions). Privacy-contact cross-check resolved: §4b gap + §6 channels aligned to contact.html:84 GitHub issues + hello@madhudadi.in. Counsel sign-off recorded as open owner-ops item (§9). **F004 not closed**; still not legal advice. |

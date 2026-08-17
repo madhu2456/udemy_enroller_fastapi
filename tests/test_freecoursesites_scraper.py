@@ -113,7 +113,7 @@ async def test_rest_pagination_and_deduplication(scraper):
     assert scraper.data[1].url == "https://www.udemy.com/course/course2/"
     assert scraper.data[2].url == "https://www.udemy.com/course/c3/"
 
-    calls = scraper.http.get.call_args_list
+    calls = [c for c in scraper.http.get.call_args_list if "robots.txt" not in c[0][0]]
     assert len(calls) == 2
     assert "orderby=date&order=desc" in calls[0][0][0]
 

@@ -1401,7 +1401,9 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
 
     function getLoginCsrfToken() {
         // Anonymous double-submit token set by the login page (F-ENRL-C03).
-        const match = document.cookie.match(/(^| )csrf_token=([^;]+)/);
+        // F228: secure deployments name the cookie __Host-csrf_token; local
+        // dev keeps the plain csrf_token name — match both.
+        const match = document.cookie.match(/(^| )(?:__Host-)?csrf_token=([^;]+)/);
         return match ? decodeURIComponent(match[2]) : "";
     }
 

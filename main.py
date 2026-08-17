@@ -425,6 +425,7 @@ async def add_cache_headers(request: Request, call_next):
             "/robots.txt",
             "/humans.txt",
             "/llms.txt",
+            "/llms-full.txt",
             "/ai-profile.json",
             "/.well-known/security.txt",
             "/security.txt",

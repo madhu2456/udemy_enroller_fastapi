@@ -42,7 +42,9 @@ On the production single host (Netcup/DO box), Enroller and Deals share the box.
 ```bash
 # From the repo root (or app host with the project tree)
 chmod +x scripts/backup_sqlite.sh   # once
-./scripts/backup_sqlite.sh          # or: backup
+./scripts/backup_sqlite.sh backup --allow-plaintext   # plaintext (explicit flag, F235)
+# …or with encryption:
+# BACKUP_ENCRYPTION_KEY=<key> ./scripts/backup_sqlite.sh backup
 ```
 
 The script:
@@ -52,14 +54,34 @@ The script:
    `/app/data/…` mapped to host `data/…`).
 2. Runs **`sqlite3 .backup`** (online-safe, WAL-aware) into a `.tmp` file
    under `backups/`.
-3. Runs **`PRAGMA integrity_check`** on the tmp copy (fails closed if not `ok`),
-   then `mv` to `backups/udemy_enroller-<UTC-timestamp>.db`.
-4. Writes **`LAST_SUCCESS`** in the same `BACKUP_DIR` (ISO-8601 UTC + backup
+3. Runs **`PRAGMA integrity_check`** on the tmp copy (fails closed if not `ok`).
+4. **Encrypts when `BACKUP_ENCRYPTION_KEY` is set** (F235): `openssl enc
+   -aes-256-cbc -pbkdf2 -salt`, key read via `-pass env:` (never logged,
+   never in argv), output `backups/udemy_enroller-<UTC-timestamp>.db.enc`.
+   **Without a key, plaintext writes are REFUSED unless `--allow-plaintext`
+   is passed** (fail-closed). Then `mv` to the final artifact.
+5. Writes **`LAST_SUCCESS`** in the same `BACKUP_DIR` (ISO-8601 UTC + backup
    path) immediately after the good `mv`.
-5. Writes an optional **SHA-256** sidecar (`.sha256`) best-effort; a checksum
-   failure does not skip `LAST_SUCCESS`.
-6. Applies **retention**: default delete backups older than **14 days**, keep at
-   most **30** newest files (`RETENTION_DAYS`, `RETENTION_COUNT`).
+6. Writes an optional **SHA-256** sidecar (`.sha256`, checksums the final
+   artifact — plaintext or encrypted) best-effort; a checksum failure does not
+   skip `LAST_SUCCESS`.
+7. Applies **retention**: default delete backups older than **14 days**, keep at
+   most **30** newest files (`RETENTION_DAYS`, `RETENTION_COUNT`). Retention
+   counts **plain and encrypted** backups and removes their `.sha256`
+   sidecars together with the backup (F235).
+
+### Encryption key handling (F235 — read before enabling)
+
+- Set `BACKUP_ENCRYPTION_KEY` **on the host only** (never in git, never in a
+  committed `.env.example` value). The script never logs or echoes the key.
+- **Duplicate the key** in your password manager (or equivalent offline
+  vault) BEFORE enabling encryption. **Key loss = backup loss** — an
+  encrypted backup cannot be restored without the exact key.
+- Restore auto-detects encrypted backups (`.db.enc` suffix or the OpenSSL
+  `Salted__` magic header) and decrypts them with the same environment
+  variable. Legacy plaintext backups restore unchanged (backward compat).
+- If you rotate the key, old `.db.enc` files remain restorable only with the
+  old key — keep both during the transition, then re-encrypt or prune.
 
 ### Cron example (host) — copy-paste
 
@@ -72,11 +94,20 @@ SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
 # 1) Online-safe backup + integrity check + retention prune
-15 3 * * * cd /opt/udemy-enroller && DB_PATH=/opt/udemy-enroller/data/udemy_enroller.db BACKUP_DIR=/opt/udemy-enroller/backups ./scripts/backup_sqlite.sh backup >>/var/log/udemy-enroller-backup.log 2>&1
+#    F235: BACKUP_ENCRYPTION_KEY unset on this host → pass --allow-plaintext
+#    explicitly (fail-closed). Once the owner sets BACKUP_ENCRYPTION_KEY
+#    (and duplicates it in the password manager), drop --allow-plaintext.
+15 3 * * * cd /opt/udemy-enroller && DB_PATH=/opt/udemy-enroller/data/udemy_enroller.db BACKUP_DIR=/opt/udemy-enroller/backups ./scripts/backup_sqlite.sh backup --allow-plaintext >>/var/log/udemy-enroller-backup.log 2>&1
 
 # 2) Freshness gate (fail if newest backup older than 26h; max age override via MAX_AGE_HOURS)
 30 3 * * * BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 /opt/udemy-enroller/scripts/verify_backup_freshness.sh >>/var/log/udemy-enroller-backup.log 2>&1
 ```
+
+> **F235 note:** the example above keeps `--allow-plaintext` until the owner
+> sets `BACKUP_ENCRYPTION_KEY` on the host. Without the flag (and without a
+> key) the backup command now **refuses to run** — that is intentional
+> fail-closed behavior. See **Encryption key handling** above. The freshness
+> glob covers both `*.db` and `*.db.enc`.
 
 **One-shot install (F-ENRL-K01):** on a **fresh** droplet whose live DB is a
 host file at `/opt/udemy-enroller/data/udemy_enroller.db`, `deploy.sh` can
@@ -111,7 +142,7 @@ sudo -u deploy crontab -e
 
 # Or system-wide drop-in:
 # sudo tee /etc/cron.d/udemy-enroller-backup <<'EOF'
-# 15 3 * * * deploy cd /opt/udemy-enroller && DB_PATH=... BACKUP_DIR=... ./scripts/backup_sqlite.sh backup >>/var/log/udemy-enroller-backup.log 2>&1
+# 15 3 * * * deploy cd /opt/udemy-enroller && DB_PATH=... BACKUP_DIR=... ./scripts/backup_sqlite.sh backup --allow-plaintext >>/var/log/udemy-enroller-backup.log 2>&1
 # 30 3 * * * deploy BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 /opt/udemy-enroller/scripts/verify_backup_freshness.sh >>/var/log/udemy-enroller-backup.log 2>&1
 # EOF
 ```
@@ -120,7 +151,7 @@ Manual smoke after install:
 
 ```bash
 cd /opt/udemy-enroller
-DB_PATH=/opt/udemy-enroller/data/udemy_enroller.db BACKUP_DIR=/opt/udemy-enroller/backups ./scripts/backup_sqlite.sh backup
+DB_PATH=/opt/udemy-enroller/data/udemy_enroller.db BACKUP_DIR=/opt/udemy-enroller/backups ./scripts/backup_sqlite.sh backup --allow-plaintext
 BACKUP_DIR=/opt/udemy-enroller/backups MAX_AGE_HOURS=26 ./scripts/verify_backup_freshness.sh
 # expect exit 0 and a line like: OK: newest backup age …
 ```
@@ -158,7 +189,10 @@ marker exists.
 ```bash
 # Integrity-check the chosen backup, write a pre-restore copy of the live DB,
 # then replace the DB and drop stale -wal/-shm sidecars (WAL only after replace).
+# Encrypted backups (*.db.enc) are auto-detected and decrypted with
+# BACKUP_ENCRYPTION_KEY (F235); legacy plaintext backups restore unchanged.
 CONFIRM=YES ./scripts/backup_sqlite.sh restore backups/udemy_enroller-YYYYMMDDTHHMMSSZ.db
+# encrypted: CONFIRM=YES BACKUP_ENCRYPTION_KEY=<key> ./scripts/backup_sqlite.sh restore backups/udemy_enroller-YYYYMMDDTHHMMSSZ.db.enc
 
 # Restart
 # local:  python run.py
@@ -179,16 +213,19 @@ curl -sf http://127.0.0.1:8000/api/health
 Proves backup + integrity + restore round-trip without touching the live DB:
 
 ```bash
-./scripts/backup_sqlite.sh drill
+# F235: pass --allow-plaintext when BACKUP_ENCRYPTION_KEY is unset
+./scripts/backup_sqlite.sh drill --allow-plaintext
+# encrypted drill: BACKUP_ENCRYPTION_KEY=<key> ./scripts/backup_sqlite.sh drill
 ```
 
 Run a drill after first deploy and after any change to volume mounts or
 `DATABASE_URL`. Record the date in the drill log below.
 
-### Drill log (owner checklist — F-ENRL-K01)
+### Drill log (owner checklist — F-ENRL-K01 / F210)
 
 | Date (UTC) | Environment | Result | Offsite copy verified | Notes |
 |------------|-------------|--------|-----------------------|-------|
+| 2026-08-16T17:38:29Z | local scratch copy of host backup `udemy_enroller-20260816T141357Z.db` | **passed** — `CONFIRM=YES BACKUP_DIR=/tmp/ue-drill-20260816T173829Z/ DB_PATH=/tmp/ue-drill-20260816T173829Z/restored.db restore <scratch>`; integrity ok; restored DB sane (19 users / 229 runs / 17704 courses); repo backup sha256 `7f9f6f07…0812b` unchanged before/after | ☐ | F210 restore-on-copy drill; measured RTO **0.39 s** |
 |            | droplet     |        |                       | first drill after deploy |
 |            |             |        |                       | after any volume/DATABASE_URL change |
 
@@ -249,8 +286,10 @@ root-only files, never in git).
 | `RETENTION_COUNT` | `30` | Keep newest N backups (`0` unlimited) |
 | `CONFIRM` | (unset) | Must be `YES` for `restore` |
 | `RESTORE_APP_MARKER` | (unset) | If set and path exists, restore refuses |
+| `BACKUP_ENCRYPTION_KEY` | (unset) | F235: when set, backups are encrypted `*.db.enc` (openssl AES-256-CBC pbkdf2; key via `-pass env:`, never logged). When unset, plaintext writes require `--allow-plaintext` (fail-closed). Encrypted restores auto-decrypt with this key; legacy plaintext restores always work |
+| `--allow-plaintext` | — | Explicit flag to write an unencrypted backup when `BACKUP_ENCRYPTION_KEY` is unset |
 | `MAX_AGE_HOURS` | `26` | Freshness check only (`verify_backup_freshness.sh`) |
-| `BACKUP_GLOB` | `udemy_enroller-*.db` | Freshness check filename glob |
+| `BACKUP_GLOB` | `udemy_enroller-*.db*` | Freshness check filename glob — covers plaintext `*.db` and encrypted `*.db.enc` backups (plus sidecars) |
 
 ## Freshness verification
 
@@ -277,6 +316,9 @@ Manual copies can race with WAL writers. Prefer `scripts/backup_sqlite.sh`.
 
 - Backup files contain **encrypted** session cookies and PII-ish account
   metadata — store them with the same access controls as production data.
+- F235: set `BACKUP_ENCRYPTION_KEY` and **duplicate it in the password
+  manager before enabling encryption** — key loss = backup loss. Plaintext
+  copies require the explicit `--allow-plaintext` flag.
 - Do **not** commit backups to git; keep `backups/` out of the deploy rsync
   payload if it sits under the app tree (add to excludes if needed).
 - Never log or paste DB contents into tickets.

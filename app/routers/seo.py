@@ -296,8 +296,8 @@ async def security_txt_root():
     return Response(content=_security_txt_body(), media_type="text/plain; charset=utf-8")
 
 
-@router.get("/llms.txt", response_class=Response)
-async def llms_txt(db: Session = Depends(get_db)):
+async def _llms_txt_body(db: Session) -> str:
+    """Build the llms.txt profile body (shared by /llms.txt and /llms-full.txt)."""
     now = datetime.datetime.now(datetime.UTC)
 
     impact = get_platform_impact_display(db)
@@ -554,7 +554,20 @@ Yes. The application includes a docker-compose.yml for containerized deployment.
 ### Can I self-host the Udemy Enroller?
 Yes. The tool is designed for self-hosting. You can run it locally with Python 3.11+ and pip, or deploy it on any server using Docker. The source code and setup scripts are available at https://github.com/madhu2456/udemy_enroller_fastapi.
 """
-    return Response(content=content, media_type="text/plain")
+    return content
+
+
+@router.get("/llms.txt", response_class=Response)
+async def llms_txt(db: Session = Depends(get_db)):
+    """LLMs profile feed (canonical path)."""
+    return Response(content=await _llms_txt_body(db), media_type="text/plain")
+
+
+@router.get("/llms-full.txt", response_class=Response)
+async def llms_full_txt(db: Session = Depends(get_db)):
+    """Full-length mirror of /llms.txt (F250) — byte-identical content for
+    LLM tooling that expects the ``llms-full`` convention."""
+    return Response(content=await _llms_txt_body(db), media_type="text/plain")
 
 
 @router.get("/ai-profile.json")
