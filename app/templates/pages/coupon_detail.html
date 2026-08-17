@@ -31,6 +31,7 @@
   "about": {
     "@type": "Course",
     "name": {{ course.title | tojson }},
+    "description": {{ (course.description or course.title or "Free Udemy course coupon listing") | tojson }},
     "provider": {
       "@type": "Organization",
       "name": "Udemy",
@@ -41,7 +42,7 @@
   "mainEntity": {
     "@type": "Offer",
     "name": {{ course.title | tojson }},
-    "price": 0,
+    "price": "0",
     "priceCurrency": "USD",
     "availability": "https://schema.org/LimitedAvailability",
     "url": "https://udemyenroller.madhudadi.in/udemycoupons/c/{{ course.slug }}",
@@ -50,6 +51,7 @@
   }
 }
 </script>
+{% if coupon_content.faqs and coupon_content.faqs | length > 0 %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -68,6 +70,7 @@
   ]
 }
 </script>
+{% endif %}
 {% endblock %}
 {% block content %}
 <div class="py-10 text-gray-900">
@@ -190,6 +193,7 @@
       </div>
     </article>
 
+    {% if coupon_content.faqs and coupon_content.faqs | length > 0 %}
     <section class="mt-10" aria-labelledby="coupon-faq-heading">
       <h2 id="coupon-faq-heading" class="text-lg font-semibold text-gray-900 mb-4">FAQ</h2>
       {% for faq in coupon_content.faqs %}
@@ -199,6 +203,7 @@
       </div>
       {% endfor %}
     </section>
+    {% endif %}
 
     {% if related %}
     <section class="mt-10" aria-labelledby="related-heading">

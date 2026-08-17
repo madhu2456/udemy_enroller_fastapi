@@ -113,3 +113,55 @@ def test_coupon_detail_empty_coupon_code_hides_code_ui():
     assert "Code ." not in desc
     assert "Free Udemy coupon listing for Link Only Course" in desc
     assert "Validity can change" in desc
+
+
+def test_coupon_detail_course_schema_and_offer_parity():
+    course = {
+        "id": 3,
+        "title": "Schema Test Course",
+        "slug": "schema-test-course",
+        "description": "A comprehensive course on python testing.",
+        "category": "Development",
+        "language": "English",
+        "coupon_code": "SCHEMAPASS",
+        "is_coupon_valid": True,
+        "url": "https://www.udemy.com/course/schema-test/",
+        "rating": 4.8,
+        "price": 1200,
+        "last_checked_at": "2026-07-30T00:00:00",
+    }
+    with patch(
+        "app.routers.public_deals.get_valid_deal_by_slug", return_value=course
+    ), patch("app.routers.public_deals.related_deals", return_value=[]):
+        client = TestClient(app)
+        try:
+            r = client.get("/udemycoupons/c/schema-test-course")
+        finally:
+            client.close()
+
+    assert r.status_code == 200
+    blocks = re.findall(
+        r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>',
+        r.text,
+        flags=re.DOTALL,
+    )
+    webpage = None
+    for b in blocks:
+        data = json.loads(b)
+        if data.get("@type") == "WebPage":
+            webpage = data
+            break
+    assert webpage is not None
+    assert "about" in webpage
+    course_node = webpage["about"]
+    assert course_node["@type"] == "Course"
+    assert course_node["name"] == "Schema Test Course"
+    assert course_node["description"] == "A comprehensive course on python testing."
+    assert course_node["provider"]["name"] == "Udemy"
+
+    assert "mainEntity" in webpage
+    offer_node = webpage["mainEntity"]
+    assert offer_node["@type"] == "Offer"
+    assert offer_node["price"] == "0"
+    assert offer_node["priceCurrency"] == "USD"
+

@@ -9,6 +9,25 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### SEO, Schema & Conversion Enhancements (2026-08-17)
+
+- **High-CTR Title & Meta Description Optimization (`/udemycoupons`)**:
+  - Optimized title tag to `"100% Free Udemy Coupons & Promo Codes (Updated Hourly)"` targeting high-intent organic search keywords.
+  - Aligned high-converting meta description across `description`, `og:description`, and `twitter:description`: `"Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design."`
+  - Explicitly set Open Graph `og:type` to `"website"`.
+- **ItemList Schema Integration (`Course` + `Offer`)**:
+  - Integrated Schema.org `ItemList` with embedded `Course` nodes on `/udemycoupons` (`app/templates/pages/public_deals.html`) and category pages (`app/templates/pages/coupon_category.html`).
+  - Embedded nested `Offer` with `price: "0"`, `priceCurrency: "USD"`, and `availability: "https://schema.org/InStock"`.
+- **4-Question FAQPage Schema with 100% DOM Parity**:
+  - Expanded and synchronized structured data (`FAQPage`) and visible FAQ accordion DOM on `/udemycoupons` across 4 core user intent questions (free verification, update frequency, redemption instructions, automated enrollment tooling).
+- **Auto-Enroller Conversion Callout Banner**:
+  - Added native callout banner linking to the automated enrollment tool (`/`) with zero-CLS reserved container height (`min-h-[130px] sm:min-h-[100px]`), gradient styling, and high-CTR CTA (`Start Auto-Enroller`).
+- **Empty FAQ Guard & Detail Schema Hardening (`coupon_detail.html`)**:
+  - Wrapped FAQ JSON-LD and HTML rendering in `{% if coupon_content.faqs and coupon_content.faqs | length > 0 %}` to prevent invalid empty FAQ schema generation.
+  - Hardened Course schema with fallback description and normalized Offer `price: "0"` string.
+- **Regression Tests**:
+  - Added test coverage in `tests/test_public_deals_pagination.py` and `tests/test_coupon_detail_page.py`.
+
 ### Docs — Alembic head / local apply (2026-08-16)
 
 - Chain head is `c01d021a9e03` (not `c01d021a9e01`). Revisions `c01d021a9e01` (`users.cookies_salt`), `c01d021a9e02` (`enrollment_runs.last_heartbeat`), and `c01d021a9e03` (drop `user_settings.firecrawl_api_key` / `enable_headless`) are inspect-idempotent.

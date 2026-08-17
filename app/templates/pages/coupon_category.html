@@ -31,6 +31,41 @@
   "numberOfItems": {{ deal_count }}
 }
 </script>
+{% if deals and deals | length > 0 %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": {{ ("Free " ~ category_name ~ " Udemy Coupons") | tojson }},
+  "itemListElement": [
+    {% for course in deals %}
+    {
+      "@type": "ListItem",
+      "position": {{ loop.index }},
+      "item": {
+        "@type": "Course",
+        "name": {{ (course.title or "Untitled Course") | tojson }},
+        "description": {{ (course.description or course.title or ("Free Udemy course coupon listing in " ~ category_name)) | tojson }},
+        "url": "https://udemyenroller.madhudadi.in/udemycoupons/c/{{ course.slug }}",
+        "provider": {
+          "@type": "Organization",
+          "name": "Udemy",
+          "sameAs": "https://www.udemy.com"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "url": "https://udemyenroller.madhudadi.in/udemycoupons/c/{{ course.slug }}"
+        }
+      }
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
 {% endblock %}
 {% block content %}
 <div class="py-10 text-gray-900">

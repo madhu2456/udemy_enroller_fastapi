@@ -1,9 +1,9 @@
-{% extends "components/base.html" %} {% block title %}Free Udemy Coupons — 100% Off Listings | Enroller{% endblock %} {% block meta_title %}Free Udemy Coupons — 100% Off Listings | Enroller{% endblock %} {% block
-meta_description %}Public list of 100% off Udemy coupon links collected by Enroller. Codes expire. Confirm the price on Udemy. Not affiliated with Udemy.{% endblock %} {% block og_type
-%}article{% endblock %} {% block
-og_title %}Free Udemy Coupons — 100% Off Listings | Enroller{% endblock %} {% block
-og_description %}Last-known public list of 100% off Udemy coupon links. Codes expire. Checkout on Udemy decides the price. Not affiliated with Udemy.{% endblock %} {% block twitter_title %}Free Udemy Coupons — 100% Off Listings | Enroller{% endblock %} {% block twitter_description
-%}Last-known public list of 100% off coupon links. Codes expire. Confirm the price on Udemy. Not affiliated with Udemy.{% endblock %} {% block canonical %}<link rel="canonical" href="https://udemyenroller.madhudadi.in{{ canonical_url | default(request.url.path) }}" />{% endblock %} {% block extra_head %}
+{% extends "components/base.html" %} {% block title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block meta_title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block
+meta_description %}Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design.{% endblock %} {% block og_type
+%}website{% endblock %} {% block
+og_title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block
+og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design.{% endblock %} {% block twitter_title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block twitter_description
+%}Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design.{% endblock %} {% block canonical %}<link rel="canonical" href="https://udemyenroller.madhudadi.in{{ canonical_url | default(request.url.path) }}" />{% endblock %} {% block extra_head %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -39,6 +39,41 @@ og_description %}Last-known public list of 100% off Udemy coupon links. Codes ex
         }
     }
 </script>
+{% if initial_courses and initial_courses | length > 0 %}
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "100% Free Udemy Coupons & Promo Codes",
+        "itemListElement": [
+            {% for course in initial_courses %}
+            {
+                "@type": "ListItem",
+                "position": {{ loop.index }},
+                "item": {
+                    "@type": "Course",
+                    "name": {{ (course.title or "Untitled Course") | tojson }},
+                    "description": {{ (course.description or course.title or "Free Udemy course coupon listing") | tojson }},
+                    "url": "https://udemyenroller.madhudadi.in/udemycoupons/c/{{ course.slug }}",
+                    "provider": {
+                        "@type": "Organization",
+                        "name": "Udemy",
+                        "sameAs": "https://www.udemy.com"
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "price": "0",
+                        "priceCurrency": "USD",
+                        "availability": "https://schema.org/InStock",
+                        "url": "https://udemyenroller.madhudadi.in/udemycoupons/c/{{ course.slug }}"
+                    }
+                }
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }
+</script>
+{% endif %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -46,18 +81,34 @@ og_description %}Last-known public list of 100% off Udemy coupon links. Codes ex
         "mainEntity": [
             {
                 "@type": "Question",
-                "name": "Are these Udemy coupons free?",
+                "name": "Are these Udemy coupons really 100% free?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Listings aim to show 100% off coupons, but validity can change. Always confirm pricing on Udemy before enrolling."
+                    "text": "Yes, all coupons listed here are curated for 100% off discounts. However, instructor coupons have limited redemption caps and expiration windows. Always verify the price shows $0 or free at Udemy checkout before enrolling."
                 }
             },
             {
                 "@type": "Question",
-                "name": "How often are coupons updated?",
+                "name": "How often are the coupon codes updated?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "The list is refreshed when enrollment runs or the coupon checker finish. Frequency varies; expired codes may still appear briefly."
+                    "text": "Our automated crawlers scan verified sources in real-time, refreshing listings multiple times daily to remove expired promo codes and add fresh deals."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How do I redeem a Udemy coupon code?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Click the 'Enroll on Udemy' button or copy the coupon code and apply it during Udemy checkout. Ensure you are signed in to your Udemy account to apply the discount."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Can I automate enrollment into these free courses?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes! Udemy Enroller is an open-source automation tool designed to automatically claim and enroll into verified free courses matching your category and language preferences."
                 }
             }
         ]
@@ -129,6 +180,30 @@ og_description %}Last-known public list of 100% off Udemy coupon links. Codes ex
                 {% endfor %}
             </div>
             {% endif %}
+        </div>
+
+        <!-- Auto-Enroller Feature Callout Banner -->
+        <div class="mb-8 p-5 sm:p-6 bg-gradient-to-r from-blue-900 to-indigo-800 text-white rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 min-h-[130px] sm:min-h-[100px]">
+            <div class="space-y-1">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-200 text-xs font-semibold uppercase tracking-wider">
+                    <i data-lucide="zap" class="w-3.5 h-3.5 text-yellow-400"></i> Automated Learning
+                </div>
+                <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
+                    Never Miss a 100% Free Course
+                </h2>
+                <p class="text-xs sm:text-sm text-blue-100 max-w-xl leading-relaxed">
+                    Automate your course enrollments. Connect your session to claim free verified courses in coding, AI, and business in real time.
+                </p>
+            </div>
+            <div class="flex-shrink-0 flex items-center gap-3 w-full sm:w-auto">
+                <a
+                    href="/"
+                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                    <i data-lucide="play" class="w-4 h-4"></i>
+                    Start Auto-Enroller
+                </a>
+            </div>
         </div>
 
         <!-- Search & Filter Controls -->
@@ -386,9 +461,7 @@ og_description %}Last-known public list of 100% off Udemy coupon links. Codes ex
                         Are these Udemy coupons really 100% free?
                     </h3>
                     <p class="text-sm text-gray-600 mt-2">
-                        Listings aim to show 100% off coupons, but validity can
-                        change. Always confirm the price on Udemy before you
-                        enroll. Not affiliated with Udemy.
+                        Yes, all coupons listed here are curated for 100% off discounts. However, instructor coupons have limited redemption caps and expiration windows. Always verify the price shows $0 or free at Udemy checkout before enrolling.
                     </p>
                 </div>
                 <div>
@@ -396,8 +469,23 @@ og_description %}Last-known public list of 100% off Udemy coupon links. Codes ex
                         How often are the coupon codes updated?
                     </h3>
                     <p class="text-sm text-gray-600 mt-2">
-                        The list is refreshed by automated checks. Frequency
-                        varies; expired codes may still appear briefly.
+                        Our automated crawlers scan verified sources in real-time, refreshing listings multiple times daily to remove expired promo codes and add fresh deals.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">
+                        How do I redeem a Udemy coupon code?
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-2">
+                        Click the 'Enroll on Udemy' button or copy the coupon code and apply it during Udemy checkout. Ensure you are signed in to your Udemy account to apply the discount.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">
+                        Can I automate enrollment into these free courses?
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-2">
+                        Yes! Udemy Enroller is an open-source automation tool designed to automatically claim and enroll into verified free courses matching your category and language preferences.
                     </p>
                 </div>
             </div>

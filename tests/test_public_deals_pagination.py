@@ -308,3 +308,122 @@ def test_list_valid_deals_order_stable_across_checker_cycles(tmp_path):
     # newest last_checked_at still sorts by enrolled_at, not by last_checked_at.
     assert after[0] == 6
     assert after[-1] == 1
+
+
+def test_public_deals_meta_and_og_type(monkeypatch):
+    """Guards meta description, og:type, and twitter tags on /udemycoupons."""
+    _use_real_fixture(monkeypatch)
+    client = TestClient(app)
+    try:
+        response = _get(client, "/udemycoupons")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    html = response.text
+    og_type_match = re.search(r'property="og:type"\s+content="([^"]+)"', html)
+    assert og_type_match is not None and og_type_match.group(1) == "website"
+
+    expected_desc = (
+        "Browse 100% free Udemy coupons, promo codes, and verified deals. "
+        "Automate enrollment and claim free courses in coding, AI, business, and design."
+    )
+    desc_match = re.search(r'name="description"\s+content="([^"]+)"', html)
+    assert desc_match is not None and desc_match.group(1) == expected_desc
+
+    og_desc_match = re.search(r'property="og:description"\s+content="([^"]+)"', html)
+    assert og_desc_match is not None and og_desc_match.group(1) == expected_desc
+
+    tw_desc_match = re.search(r'name="twitter:description"\s+content="([^"]+)"', html)
+    assert tw_desc_match is not None and tw_desc_match.group(1) == expected_desc
+
+
+def test_public_deals_callout_banner(monkeypatch):
+    """Guards the Auto-Enroller callout banner container on /udemycoupons."""
+    _use_real_fixture(monkeypatch)
+    client = TestClient(app)
+    try:
+        response = _get(client, "/udemycoupons")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    html = response.text
+    assert "min-h-[130px] sm:min-h-[100px]" in html
+    assert "Start Auto-Enroller" in html
+    assert "Never Miss a 100% Free Course" in html
+
+
+def test_public_deals_itemlist_and_faq_schema(monkeypatch):
+    """Guards ItemList schema and 4-question FAQPage schema with DOM parity."""
+    _use_real_fixture(monkeypatch)
+    client = TestClient(app)
+    try:
+        response = _get(client, "/udemycoupons")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    html = response.text
+
+    blocks = re.findall(
+        r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>',
+        html,
+        flags=re.DOTALL,
+    )
+    docs = [json.loads(b) for b in blocks]
+
+    item_list = next((d for d in docs if d.get("@type") == "ItemList"), None)
+    assert item_list is not None, "ItemList schema missing on /udemycoupons"
+    assert item_list["name"] == "100% Free Udemy Coupons & Promo Codes"
+    items = item_list["itemListElement"]
+    assert len(items) > 0
+    first_item = items[0]["item"]
+    assert first_item["@type"] == "Course"
+    assert "name" in first_item
+    assert "description" in first_item
+    assert first_item["provider"]["name"] == "Udemy"
+    assert first_item["offers"]["@type"] == "Offer"
+    assert first_item["offers"]["price"] == "0"
+    assert first_item["offers"]["priceCurrency"] == "USD"
+    assert first_item["offers"]["availability"] == "https://schema.org/InStock"
+
+    faq = next((d for d in docs if d.get("@type") == "FAQPage"), None)
+    assert faq is not None, "FAQPage schema missing on /udemycoupons"
+    faqs = faq["mainEntity"]
+    assert len(faqs) == 4
+    for q_entry in faqs:
+        question = q_entry["name"]
+        answer = q_entry["acceptedAnswer"]["text"]
+        assert question in html, f"FAQ question not in DOM: {question}"
+        assert answer in html, f"FAQ answer not in DOM: {answer}"
+
+
+def test_category_itemlist_schema():
+    """Guards ItemList schema with Course and Offer on category page."""
+    client = TestClient(app)
+    try:
+        response = client.get("/udemycoupons/category/development")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    html = response.text
+
+    blocks = re.findall(
+        r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>',
+        html,
+        flags=re.DOTALL,
+    )
+    docs = [json.loads(b) for b in blocks]
+    item_list = next((d for d in docs if d.get("@type") == "ItemList"), None)
+    if item_list:
+        items = item_list["itemListElement"]
+        assert len(items) > 0
+        first_item = items[0]["item"]
+        assert first_item["@type"] == "Course"
+        assert "name" in first_item
+        assert "description" in first_item
+        assert first_item["offers"]["price"] == "0"
+        assert first_item["offers"]["priceCurrency"] == "USD"
+
