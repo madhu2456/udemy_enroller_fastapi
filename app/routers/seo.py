@@ -296,6 +296,67 @@ async def security_txt_root():
     return Response(content=_security_txt_body(), media_type="text/plain; charset=utf-8")
 
 
+def _pricing_md_body() -> str:
+    """Markdown document explaining the 100% free open-source model under MIT license."""
+    return f"""# Pricing — Udemy Course Enroller
+
+> Free, self-hosted, open-source automated Udemy course enrollment tool.
+> Canonical: {SITE_URL}
+> Author: Madhu Dadi ({PORTFOLIO_URL})
+> License: MIT License (100% Free & Open Source)
+
+## Free & Open-Source Model
+
+Udemy Course Enroller is **100% free and open-source software** licensed under the [MIT License](https://github.com/madhu2456/udemy_enroller_fastapi/blob/main/LICENSE).
+
+- **Cost:** $0 / Free forever (no subscriptions, no paywalls, no hidden fees)
+- **License:** MIT License
+- **Source Code:** https://github.com/madhu2456/udemy_enroller_fastapi
+- **Hosted Demo:** {SITE_URL}
+- **Self-Hosting:** Full support for local Python 3.11+ and Docker / Docker Compose environments
+
+## What Is Included (100% Free)
+
+- **Automated Coupon Monitoring:** Query configured coupon aggregator sources on demand.
+- **Smart Course Filtering:** Filter deals by category, language, minimum rating, and instructor exclusions.
+- **Rate-Limited Enrollment Attempts:** Batch enrollment automation with safe request pacing.
+- **Real-Time Analytics Dashboard:** Track active sessions, total enrolled courses, and aggregate cost savings.
+- **Encrypted Session Security:** Cookie-based session authentication with Fernet symmetric encryption at rest.
+- **Public Coupon Directory:** Browse live 100% off coupon listings directly at {SITE_URL}/udemycoupons.
+
+## Deployment Options
+
+1. **Self-Hosted (Recommended):** Deploy on your own server or local machine using Docker (`docker compose up -d`) or Python virtualenv. Keeps session tokens strictly on your infrastructure.
+2. **Hosted Demo:** Public evaluation instance available at {SITE_URL} for quick testing.
+
+## Disclaimers & Compliance
+
+- **Not Affiliated with Udemy:** Udemy Enroller is an independent open-source educational project and is not affiliated with, endorsed by, or sponsored by Udemy, Inc.
+- **Best-Effort Operations:** Coupon availability and enrollment success depend strictly on third-party instructor coupon limits, expiration windows, and platform rate constraints.
+- **Terms of Use:** Users are solely responsible for ensuring their usage complies with [Udemy's Terms of Use](https://www.udemy.com/terms/).
+
+## Author & Contact
+
+- **Developer:** Madhu Dadi ({PORTFOLIO_URL}/profile/)
+- **Repository:** https://github.com/madhu2456/udemy_enroller_fastapi
+- **Bug Reports & Security:** https://github.com/madhu2456/udemy_enroller_fastapi/issues
+- **Contact:** {PORTFOLIO_URL}/contact/
+"""
+
+
+@router.get("/pricing.md", response_class=Response)
+async def pricing_md():
+    """100% free open-source model under MIT license (machine-readable markdown)."""
+    return Response(
+        content=_pricing_md_body(),
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Cache-Control": "public, max-age=120, s-maxage=300, stale-while-revalidate=600",
+        },
+    )
+
+
+
 async def _llms_txt_body(db: Session) -> str:
     """Build the llms.txt profile body (shared by /llms.txt and /llms-full.txt)."""
     now = datetime.datetime.now(datetime.UTC)

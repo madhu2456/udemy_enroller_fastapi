@@ -433,6 +433,7 @@ async def add_cache_headers(request: Request, call_next):
             "/ai-profile.json",
             "/.well-known/security.txt",
             "/security.txt",
+            "/pricing.md",
         }
         or path.startswith("/guides/")
         or path.startswith("/udemycoupons/c/")

@@ -1,4 +1,4 @@
-# Dependabot (F-ENRL-C06): weekly Python dependency updates.
+# Dependabot (F-ENRL-C06): weekly Python, npm, and GitHub Actions dependency updates.
 #
 # The pip ecosystem tracks requirements.txt; CI installs requirements.lock,
 # so a bump PR must regenerate the lockfile (pip-compile --generate-hashes)
@@ -12,3 +12,20 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
