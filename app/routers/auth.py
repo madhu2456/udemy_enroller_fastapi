@@ -13,6 +13,8 @@ from datetime import timedelta
 from app.models.database import User, UserSession, UserSettings, _utcnow_naive, get_db
 from app.schemas.schemas import CookieLoginRequest, LoginRequest, LoginResponse
 from app.security import (
+    SESSION_COOKIE_PLAIN,
+    SESSION_COOKIE_PREFIXED,
     _client_key,
     auth_status_rate_limiter,
     csrf_cookie_name,
@@ -22,6 +24,8 @@ from app.security import (
     generate_cookie_salt,
     generate_csrf_token,
     login_rate_limiter,
+    session_cookie_name,
+    session_cookie_names,
     verify_csrf_token,
     verify_login_csrf,
 )
@@ -101,11 +105,13 @@ def _login_response(client: UdemyClient, token: str) -> JSONResponse:
             "csrf_token": csrf_token,
         }
     )
+    # Session cookie: with COOKIE_SECURE=true named __Host-session_id (CRITIC-ENROLLER-01)
+    session_name = session_cookie_name(settings.COOKIE_SECURE)
     response.set_cookie(
-        "session_id",
+        session_name,
         token,
         httponly=True,
-        samesite="lax",
+        samesite="strict",
         secure=settings.COOKIE_SECURE,
         max_age=max_age,
         path="/",
@@ -305,7 +311,9 @@ async def login_with_cookies(
 async def auth_status(request: Request, db: Session = Depends(get_db)):
     """Check if user is authenticated."""
     auth_status_rate_limiter.raise_if_limited(_client_key(request))
-    token = request.cookies.get("session_id")
+    token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
+        SESSION_COOKIE_PLAIN
+    )
     if not token:
         return {"authenticated": False}
 
@@ -400,7 +408,9 @@ async def logout(
 ):
     """Logout — revoke this session; wipe stored Udemy cookies only when it is
     the user's last non-expired session (F-ENRL-C08)."""
-    token = request.cookies.get("session_id")
+    token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
+        SESSION_COOKIE_PLAIN
+    )
     user_id = None
     task_to_cancel = None
 
@@ -507,17 +517,25 @@ async def logout(
     )
 
     # Delete session and CSRF cookies with explicit settings.
-    # F228: the CSRF cookie may be named __Host-csrf_token (secure) or the
-    # legacy plain csrf_token — delete BOTH, with the same flags they were
-    # set with so browsers accept the deletion cookies.
-    response.delete_cookie(
-        "session_id", path="/", domain=None,
-        httponly=True, samesite="lax", secure=settings.COOKIE_SECURE,
-    )
+    # F228 / CRITIC-ENROLLER-01: delete BOTH possible session and CSRF cookie names
+    # (__Host- prefixed on secure deployments, legacy plain name) so browsers accept deletion.
+    for _session_name in session_cookie_names():
+        response.delete_cookie(
+            _session_name,
+            path="/",
+            domain=None,
+            httponly=True,
+            samesite="strict",
+            secure=settings.COOKIE_SECURE,
+        )
     for _csrf_name in csrf_cookie_names():
         response.delete_cookie(
-            _csrf_name, path="/", domain=None,
-            httponly=False, samesite="strict", secure=settings.COOKIE_SECURE,
+            _csrf_name,
+            path="/",
+            domain=None,
+            httponly=False,
+            samesite="strict",
+            secure=settings.COOKIE_SECURE,
         )
 
     # Prevent browser caching of authenticated pages

@@ -602,6 +602,18 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 ],
                 "sameAs": PERSON_SAME_AS,
             },
+            "creator": {
+                "@type": "Person",
+                "@id": "https://madhudadi.in/#person",
+                "name": "Madhu Dadi",
+                "url": PERSON_URL,
+            },
+            "publisher": {
+                "@type": "Person",
+                "@id": "https://madhudadi.in/#person",
+                "name": "Madhu Dadi",
+                "url": PERSON_URL,
+            },
             "offers": {"@type": "Offer", "price": 0, "priceCurrency": "USD", "availability": "https://schema.org/InStock"},
             "provider": {
                 "@type": "Person",

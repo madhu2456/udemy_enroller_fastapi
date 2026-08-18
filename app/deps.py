@@ -6,7 +6,11 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db, UserSession, _utcnow_naive
-from app.security import decrypt_cookies
+from app.security import (
+    SESSION_COOKIE_PLAIN,
+    SESSION_COOKIE_PREFIXED,
+    decrypt_cookies,
+)
 from app.services.udemy_client import UdemyClient
 from app.session_lifecycle import cleanup_expired_session
 from config.settings import resolve_user_proxy
@@ -16,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 async def get_session(request: Request, db: Session = Depends(get_db)) -> UserSession:
     """Resolve the session and check expiration."""
-    token = request.cookies.get("session_id")
+    token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
+        SESSION_COOKIE_PLAIN
+    )
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 

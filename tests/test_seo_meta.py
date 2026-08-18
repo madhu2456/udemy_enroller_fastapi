@@ -125,3 +125,30 @@ class TestMetaKeywordsEmpty:
                 if value and not empty_block.fullmatch(value):
                     stuffed.append(f"{path}:content={value!r}")
         assert stuffed == []
+
+
+class TestSoftwareApplicationJsonLd:
+    """D6: SoftwareApplication JSON-LD references Person Madhu Dadi as author/creator."""
+
+    def test_ai_profile_software_application_author_creator(self):
+        from fastapi.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        try:
+            res = client.get("/ai-profile.json")
+            assert res.status_code == 200
+            data = res.json()
+            assert "@graph" in data
+            app_node = next(
+                (node for node in data["@graph"] if node.get("@type") == "SoftwareApplication"),
+                None,
+            )
+            assert app_node is not None
+            assert app_node["author"]["@id"] == "https://madhudadi.in/#person"
+            assert app_node["author"]["name"] == "Madhu Dadi"
+            assert app_node["creator"]["@id"] == "https://madhudadi.in/#person"
+            assert app_node["creator"]["name"] == "Madhu Dadi"
+            assert app_node["publisher"]["@id"] == "https://madhudadi.in/#person"
+        finally:
+            client.close()

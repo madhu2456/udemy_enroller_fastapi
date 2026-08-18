@@ -480,7 +480,33 @@ public_coupons_api_limiter = RateLimiter(max_requests=60, window_seconds=60)
 auth_status_rate_limiter = RateLimiter(max_requests=90, window_seconds=60)
 
 
-# ── CSRF Protection ───────────────────────────────────
+# Session cookie names (F228 / CRITIC-ENROLLER-01). Plain name for local/dev HTTP;
+# __Host- prefixed name when COOKIE_SECURE is true.
+SESSION_COOKIE_PLAIN = "session_id"
+SESSION_COOKIE_PREFIXED = "__Host-session_id"
+
+
+def session_cookie_name(secure: Optional[bool] = None) -> str:
+    """Name used to SET the session cookie for the current deployment.
+
+    Pass ``secure`` explicitly to derive the name from the same flag the
+    caller uses for ``secure=`` on set_cookie; otherwise live settings are consulted.
+    """
+    if secure is None:
+        from config.settings import get_settings
+
+        secure = bool(get_settings().COOKIE_SECURE)
+    return SESSION_COOKIE_PREFIXED if secure else SESSION_COOKIE_PLAIN
+
+
+def session_cookie_names() -> tuple[str, str]:
+    """Every session cookie name that may exist (prefixed, plain).
+
+    Read and delete paths must cover both so a browser holding a cookie set
+    under the other name cannot keep a stale value working or leftover.
+    """
+    return (SESSION_COOKIE_PREFIXED, SESSION_COOKIE_PLAIN)
+
 
 # CSRF cookie names (F228). Plain double-submit name for local/dev HTTP;
 # __Host- prefixed name when COOKIE_SECURE is true. The __Host- prefix binds
@@ -527,7 +553,9 @@ def generate_csrf_token(session_token: str) -> str:
 
 def verify_csrf_token(request: Request) -> None:
     """Validate the X-CSRF-Token header against the session cookie."""
-    session_token = request.cookies.get("session_id")
+    session_token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
+        SESSION_COOKIE_PLAIN
+    )
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 

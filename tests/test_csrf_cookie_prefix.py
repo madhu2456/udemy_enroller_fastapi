@@ -1,8 +1,8 @@
-"""F228: __Host-csrf_token cookie prefix when COOKIE_SECURE is true.
+"""F228 & CRITIC-ENROLLER-01: __Host- cookie prefixes when COOKIE_SECURE is true.
 
-Secure deployments must set the double-submit CSRF cookie as
-__Host-csrf_token (Secure + Path=/ + no Domain) so sibling subdomains cannot
-inject it; local dev over plain http keeps the legacy csrf_token name because
+Secure deployments must set double-submit CSRF and session cookies as
+__Host-csrf_token and __Host-session_id (Secure + Path=/ + no Domain) so sibling subdomains
+cannot inject them; local dev over plain http keeps legacy names because
 browsers reject __Host- cookies without Secure. All set/delete/read sites
 must cover both names.
 """
@@ -17,9 +17,13 @@ from app.routers import auth
 from app.security import (
     CSRF_COOKIE_PLAIN,
     CSRF_COOKIE_PREFIXED,
+    SESSION_COOKIE_PLAIN,
+    SESSION_COOKIE_PREFIXED,
     csrf_cookie_name,
     csrf_cookie_names,
     generate_csrf_token,
+    session_cookie_name,
+    session_cookie_names,
     verify_csrf_token,
     verify_login_csrf,
 )
@@ -57,6 +61,32 @@ def _active_set_cookie_names(response) -> list[str]:
     ]
 
 
+class TestSessionCookieName:
+    def test_prefixed_when_secure(self):
+        assert session_cookie_name(True) == SESSION_COOKIE_PREFIXED
+        assert session_cookie_name(True) == "__Host-session_id"
+
+    def test_plain_when_not_secure(self):
+        assert session_cookie_name(False) == SESSION_COOKIE_PLAIN
+        assert session_cookie_name(False) == "session_id"
+
+    def test_defaults_to_live_settings(self, monkeypatch):
+        monkeypatch.setattr(
+            "config.settings.get_settings",
+            lambda: MagicMock(COOKIE_SECURE=True),
+        )
+        assert session_cookie_name() == SESSION_COOKIE_PREFIXED
+        monkeypatch.setattr(
+            "config.settings.get_settings",
+            lambda: MagicMock(COOKIE_SECURE=False),
+        )
+        assert session_cookie_name() == SESSION_COOKIE_PLAIN
+
+    def test_names_tuple_contains_both(self):
+        names = session_cookie_names()
+        assert names == (SESSION_COOKIE_PREFIXED, SESSION_COOKIE_PLAIN)
+
+
 class TestCsrfCookieName:
     def test_prefixed_when_secure(self):
         assert csrf_cookie_name(True) == CSRF_COOKIE_PREFIXED
@@ -84,7 +114,7 @@ class TestCsrfCookieName:
 
 
 class TestLoginResponseCookieName:
-    """_login_response must set the prefixed name only when secure."""
+    """_login_response must set prefixed session & CSRF cookies only when secure."""
 
     def _login_response(self, monkeypatch, secure):
         monkeypatch.setattr(auth.settings, "COOKIE_SECURE", secure)
@@ -96,13 +126,15 @@ class TestLoginResponseCookieName:
         token = secrets.token_hex(32)
         return auth._login_response(client, token)
 
-    def test_secure_sets_host_prefixed_cookie(self, monkeypatch):
+    def test_secure_sets_host_prefixed_cookies(self, monkeypatch):
         response = self._login_response(monkeypatch, secure=True)
         names = _set_cookie_names(response)
         assert CSRF_COOKIE_PREFIXED in names
         assert CSRF_COOKIE_PLAIN not in names
+        assert SESSION_COOKIE_PREFIXED in names
+        assert SESSION_COOKIE_PLAIN not in names
 
-    def test_secure_prefixed_cookie_has_secure_and_path(self, monkeypatch):
+    def test_secure_prefixed_cookies_have_secure_and_path(self, monkeypatch):
         response = self._login_response(monkeypatch, secure=True)
         set_cookies = " ".join(
             v.decode("ascii")
@@ -110,8 +142,11 @@ class TestLoginResponseCookieName:
             if k.decode("ascii").lower() == "set-cookie"
         )
         assert "__Host-csrf_token=" in set_cookies
+        assert "__Host-session_id=" in set_cookies
         assert "; Secure" in set_cookies
         assert "Path=/" in set_cookies
+        assert "SameSite=strict" in set_cookies
+        assert "HttpOnly" in set_cookies
         # __Host- prefix forbids a Domain attribute (browser requirement).
         assert "; Domain" not in set_cookies
 
@@ -120,6 +155,8 @@ class TestLoginResponseCookieName:
         names = _set_cookie_names(response)
         assert CSRF_COOKIE_PLAIN in names
         assert CSRF_COOKIE_PREFIXED not in names
+        assert SESSION_COOKIE_PLAIN in names
+        assert SESSION_COOKIE_PREFIXED not in names
 
 
 class TestLoginPageAnonymousCookie:
@@ -167,17 +204,22 @@ class TestVerifyLoginCsrfReadsBothNames:
         verify_login_csrf(req)  # must not raise
 
     def test_prefixed_cookie_works_for_session_csrf(self):
-        # verify_csrf_token binds to the session cookie + header; the CSRF
-        # cookie name is irrelevant there, but the token must still round-trip.
         token = "session-abc"
         req = MagicMock(spec=Request)
         req.cookies = {"session_id": token}
         req.headers = {"x-csrf-token": generate_csrf_token(token)}
         verify_csrf_token(req)  # must not raise
 
+    def test_prefixed_session_cookie_works_for_session_csrf(self):
+        token = "session-abc"
+        req = MagicMock(spec=Request)
+        req.cookies = {SESSION_COOKIE_PREFIXED: token}
+        req.headers = {"x-csrf-token": generate_csrf_token(token)}
+        verify_csrf_token(req)  # must not raise
+
 
 class TestLogoutDeletesBothNames:
-    """Logout must clear the session cookie and BOTH CSRF cookie names."""
+    """Logout must clear both session cookie names and BOTH CSRF cookie names."""
 
     def _seed_session(self):
         from app.models.database import User, UserSession
@@ -206,8 +248,9 @@ class TestLogoutDeletesBothNames:
             )
             assert response.status_code == 200
             names = _set_cookie_names(response)
-            # Deletion cookies for the session + both CSRF names.
-            assert "session_id" in names
+            # Deletion cookies for both session names + both CSRF names.
+            assert SESSION_COOKIE_PREFIXED in names
+            assert SESSION_COOKIE_PLAIN in names
             assert CSRF_COOKIE_PREFIXED in names
             assert CSRF_COOKIE_PLAIN in names
         finally:
@@ -224,6 +267,8 @@ class TestLogoutDeletesBothNames:
             )
             assert response.status_code == 200
             names = _set_cookie_names(response)
+            assert SESSION_COOKIE_PREFIXED in names
+            assert SESSION_COOKIE_PLAIN in names
             assert CSRF_COOKIE_PREFIXED in names
             assert CSRF_COOKIE_PLAIN in names
         finally:

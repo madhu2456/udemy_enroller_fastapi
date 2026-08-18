@@ -26,6 +26,7 @@ from app.security import (
     csrf_cookie_names,
     login_rate_limiter,
     public_coupons_api_limiter,
+    session_cookie_names,
     verify_csrf_token,
 )
 from app.security import validate_proxy_url
@@ -259,17 +260,26 @@ async def clear_data(
                 ),
             }
         )
-        # Force re-auth in the browser. F228: delete the session cookie and
-        # BOTH possible CSRF cookie names (__Host-csrf_token on secure
-        # deployments, legacy plain csrf_token) with matching flags.
-        response.delete_cookie(
-            "session_id", path="/", domain=None,
-            httponly=True, samesite="lax", secure=app_settings.COOKIE_SECURE,
-        )
+        # Force re-auth in the browser. F228 / CRITIC-ENROLLER-01: delete
+        # BOTH possible session and CSRF cookie names (__Host- prefixed on
+        # secure deployments, legacy plain name) with matching flags.
+        for _session_name in session_cookie_names():
+            response.delete_cookie(
+                _session_name,
+                path="/",
+                domain=None,
+                httponly=True,
+                samesite="strict",
+                secure=app_settings.COOKIE_SECURE,
+            )
         for _csrf_name in csrf_cookie_names():
             response.delete_cookie(
-                _csrf_name, path="/", domain=None,
-                httponly=False, samesite="strict", secure=app_settings.COOKIE_SECURE,
+                _csrf_name,
+                path="/",
+                domain=None,
+                httponly=False,
+                samesite="strict",
+                secure=app_settings.COOKIE_SECURE,
             )
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
         return response
@@ -524,14 +534,24 @@ async def delete_account(
         )
         # Force re-auth in the browser (session row is already gone; clear
         # cookies so the client cannot keep sending a dead token).
-        response.delete_cookie(
-            "session_id", path="/", domain=None,
-            httponly=True, samesite="lax", secure=app_settings.COOKIE_SECURE,
-        )
+        # F228 / CRITIC-ENROLLER-01: delete both possible session and CSRF cookie names.
+        for _session_name in session_cookie_names():
+            response.delete_cookie(
+                _session_name,
+                path="/",
+                domain=None,
+                httponly=True,
+                samesite="strict",
+                secure=app_settings.COOKIE_SECURE,
+            )
         for _csrf_name in csrf_cookie_names():
             response.delete_cookie(
-                _csrf_name, path="/", domain=None,
-                httponly=False, samesite="strict", secure=app_settings.COOKIE_SECURE,
+                _csrf_name,
+                path="/",
+                domain=None,
+                httponly=False,
+                samesite="strict",
+                secure=app_settings.COOKIE_SECURE,
             )
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
         return response

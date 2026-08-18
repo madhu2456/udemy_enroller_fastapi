@@ -22,6 +22,7 @@ from app.models.database import (
     _utcnow_naive,
     get_db,
 )
+from app.security import SESSION_COOKIE_PLAIN, SESSION_COOKIE_PREFIXED
 from app.session_lifecycle import cleanup_expired_session
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,9 @@ def _session_user_id_for_html(request: Request, db: Session) -> int | RedirectRe
 
     HTML routes should not return raw JSON 401; API routes keep Depends(get_current_user_id).
     """
-    token = request.cookies.get("session_id")
+    token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
+        SESSION_COOKIE_PLAIN
+    )
     if not token:
         return _redirect_to_connect()
 
@@ -80,7 +83,9 @@ def login_page(request: Request):
 
     db = SessionLocal()
     try:
-        token = request.cookies.get("session_id")
+        token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
+            SESSION_COOKIE_PLAIN
+        )
         if token:
             session = db.query(UserSession).filter(UserSession.token == token).first()
             if session:

@@ -54,6 +54,8 @@ from app.models.database import (
 )
 from app.routers import auth, dashboard, enrollment, public_deals, seo, settings
 from app.security import (
+    SESSION_COOKIE_PLAIN,
+    SESSION_COOKIE_PREFIXED,
     _client_key,
     analytics_rate_limiter,
     csp_report_rate_limiter,
@@ -331,7 +333,9 @@ async def attach_nav_auth(request: Request, call_next):
             not path.startswith("/static/")
             and not path.startswith("/api/")
         ):
-            token = request.cookies.get("session_id")
+            token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
+                SESSION_COOKIE_PLAIN
+            )
             if token:
                 db = SessionLocal()
                 try:
