@@ -151,7 +151,7 @@ CI runs on pull requests: ruff, migrations, pytest (with Playwright Chromium for
 
 ## Deploy note
 
-Production deploy is primarily via **GitHub Actions** (see `.github/workflows/deploy.yaml`) or **Docker Compose**. Treat `scripts/deploy.sh` as an older droplet bootstrap; review carefully before any use on a real server.
+Production deploy is primarily via **GitHub Actions** (see `.github/workflows/ci.yml`) or **Docker Compose**. Treat `scripts/deploy.sh` as an older droplet bootstrap; review carefully before any use on a real server.
 
 See README sections **Updating** and **Uninstall / remove** for end-user upgrade and teardown steps.
 

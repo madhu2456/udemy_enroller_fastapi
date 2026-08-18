@@ -1,11 +1,23 @@
-name: CI
+name: CI/CD
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   test:
+    name: Backend & E2E Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -95,3 +107,56 @@ jobs:
       - name: Run browser smoke tests
         run: BASE_URL=http://127.0.0.1:8000 BROWSERS=chromium npm run smoke:browsers
         continue-on-error: true
+
+  deploy:
+    name: Deploy to Server
+    needs: test
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: udemy-enroller-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Get latest code
+        # Pin full commit SHA (tag v4.2.2) for supply-chain integrity
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # The rsync action copies your project files to the remote server.
+      # Excludes are used so we don't overwrite virtual environments or local DBs.
+      - name: Sync files to remote server
+        # Pin full commit SHA (tag 7.0.1)
+        uses: burnett01/rsync-deployments@796cf0d5e4b535745ce49d7429f77cf39e25ef39 # 7.0.1
+        with:
+          switches: -avzr --delete --exclude=.git/ --exclude=venv/ --exclude=__pycache__/ --exclude=*.db --exclude=.env
+          rsh: -4 -o BatchMode=yes -o ConnectTimeout=30
+          path: ./
+          remote_path: /opt/udemy-enroller
+          remote_host: ${{ secrets.SERVER_HOST }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_KEY_DEPLOY }}
+
+      # Restart Docker on the remote host after sync.
+      - name: Restart Docker Container
+        # Pin full commit SHA (release tag v1.2.5); never use @master
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          protocol: tcp4
+          key: ${{ secrets.SSH_KEY_DEPLOY }}
+          script: |
+            cd /opt/udemy-enroller
+            docker compose up -d --build
+            echo "Waiting for Udemy Enroller health on :8000..."
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+                echo "✅ Udemy Enroller healthy."
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "❌ Health check timed out:"
+            docker compose logs --tail=100 || true
+            exit 1

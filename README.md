@@ -203,7 +203,7 @@ git pull origin main
 docker compose up -d --build
 ```
 
-Production pushes to `main` can also deploy via **GitHub Actions** (`.github/workflows/deploy.yaml`), if that workflow is configured for your server.
+Production pushes to `main` can also deploy via **GitHub Actions** (`.github/workflows/ci.yml`), if that workflow is configured for your server.
 
 After updates, re-check `.env.example` for any new variables (for example `COOKIE_ENCRYPTION_KEY` and analytics IDs in server mode).
 
