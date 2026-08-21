@@ -53,6 +53,52 @@ def test_robots_txt_status_and_content():
     assert "User-agent:" in response.text
 
 
+def test_f319_robots_comments_search_visibility_not_citation_labels():
+    """F319: crawler-purpose comments say search-visibility; Allow/Deny unchanged.
+
+    Tight pattern: only robots_txt comment lines. Google-Extended lines may
+    still say the bot is *not* Search/AIO citation. Do not use ``citation = 0``.
+    """
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[1] / "app/routers/seo.py"
+    text = src.read_text(encoding="utf-8")
+    start = text.index("async def robots_txt")
+    end = text.index("return Response", start)
+    block = text[start:end]
+    comment_lines = [
+        line.strip() for line in block.splitlines() if line.strip().startswith("#")
+    ]
+    for line in comment_lines:
+        if "citation" not in line.lower():
+            continue
+        assert "google-extended" in line.lower(), line
+        assert "not" in line.lower(), line
+        assert "search/citation" not in line.lower(), line
+
+    client = TestClient(app)
+    try:
+        response = client.get("/robots.txt")
+    finally:
+        client.close()
+
+    body = response.text
+    assert "search/citation" not in body
+    assert "search-visibility" in body
+    assert "not Search/AIO citation" in body
+    assert "User-agent: OAI-SearchBot" in body
+    assert "User-agent: ChatGPT-User" in body
+    assert "User-agent: Google-Extended" in body
+    assert "User-agent: GPTBot" in body
+    assert "Disallow: /history" in body
+    assert "Disallow: /login" in body
+    assert "Disallow: /settings" in body
+    assert "Disallow: /api/" in body
+    assert "Disallow: /dashboard" in body
+    assert "Disallow: /" in body
+    assert "Allow: /" in body
+
+
 def test_humans_txt_status_and_content():
     """Verify GET /humans.txt returns text/plain."""
     client = TestClient(app)

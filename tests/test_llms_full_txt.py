@@ -23,6 +23,9 @@ def _fetch(path: str) -> str:
 
 
 def _normalize_timestamp(text: str) -> str:
+    # Two sequential TestClient GETs each stamp "Last generated" independently,
+    # so raw bodies are never byte-identical even when both routes share the
+    # same builder. Strip that one line so the rest of the document can match.
     return re.sub(r"Last generated: .*", "Last generated: <TS>", text)
 
 

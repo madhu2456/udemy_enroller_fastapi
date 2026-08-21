@@ -54,3 +54,57 @@ def test_guides_page_cookie_first():
     assert "Email Login is available only when you self-host" in response.text
     assert "For the quickest setup, enter your Udemy" not in response.text
     assert "Cookie Login is the only login option on the hosted demo" in response.text
+
+
+def test_f320_guides_index_lead_is_definition():
+    """UI-ENR-02 / F320: /guides first prose p after H1 is a 40–60 word definition."""
+    import re
+
+    from bs4 import BeautifulSoup
+
+    client = TestClient(app)
+    try:
+        response = client.get("/guides")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.text, "html.parser")
+    h1 = soup.select_one("#guides-hero-heading")
+    assert h1 is not None
+    lead = h1.find_next_sibling("p")
+    assert lead is not None
+    text = re.sub(r"\s+", " ", lead.get_text()).strip()
+    words = text.split()
+    assert 40 <= len(words) <= 60, f"lead word count {len(words)}: {text}"
+    assert "session cookies" in text.lower()
+    assert "5 minutes" in text
+    assert lead.find("a") is None
+    assert "best" not in text.lower()
+
+
+def test_f320_guide_lead_promotes_existing_definition():
+    """F320: first paragraph after H1 is the existing ~49w coupon definition."""
+    import re
+
+    from bs4 import BeautifulSoup
+
+    client = TestClient(app)
+    try:
+        response = client.get("/guides/free-udemy-coupons")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.text, "html.parser")
+    h1 = soup.select_one("article header h1")
+    assert h1 is not None
+    lead = h1.find_next_sibling("p")
+    assert lead is not None
+    text = re.sub(r"\s+", " ", lead.get_text()).strip()
+    words = text.split()
+    assert 40 <= len(words) <= 60, f"lead word count {len(words)}: {text}"
+    assert "promotional discount codes" in text
+    assert "100% off" in text
+    assert "Madhu Dadi" in response.text
+    assert "not affiliated with udemy" in response.text.lower()

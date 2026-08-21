@@ -9,6 +9,60 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### Scrapers — live fleet 13→12 (complete delete Course Joiner)
+
+- `SCRAPER_REGISTRY` complete-deletes Course Joiner from the live fleet (12 keys). Scraper class, unit tests, and live tests are deleted (unlike Real Discount and Discudemy, whose classes and unit tests were kept). Leftover stored JSON keys for that name are dropped via GET/PUT/reset merge (stale names not in `default_sites()`).
+- Coupon checker: frozen 10, appended 2 (Courson, CouponScorpion). `N=2` is appended-only. `N=3` is appended + Couponami. Leftover `N=11` omits iDownloadCoupon. Compose default `CHECKER_SCRAPE_MAX_SOURCES=0` (all keys) is unchanged.
+- Public FAQ and README list the 12 live aggregators (FAQ display order, not registry order). Tutorialbar is not a current source.
+
+### Scrapers — live fleet 14→13 (complete delete FreeWebCart)
+
+- `SCRAPER_REGISTRY` complete-deletes FreeWebCart from the live fleet (13 keys). Scraper class, unit tests, and live tests are deleted (unlike Real Discount and Discudemy, whose classes and unit tests were kept). Leftover stored JSON keys for that name are dropped via GET/PUT/reset merge (stale names not in `default_sites()`).
+- Coupon checker: frozen 11, appended 2 (Courson, CouponScorpion). `N=2` is appended-only. `N=3` is appended + Couponami. Leftover `N=12` omits Course Joiner. Compose default `CHECKER_SCRAPE_MAX_SOURCES=0` (all keys) is unchanged.
+- Public FAQ and README list the 13 live aggregators (FAQ display order, not registry order). Tutorialbar is not a current source.
+
+### Scrapers — live fleet 16→14 (unregister Real Discount, Discudemy)
+
+- `SCRAPER_REGISTRY` unregisters Real Discount and Discudemy from the live fleet (14 keys). Scraper classes and unit tests are kept. Leftover stored JSON keys for those names are dropped via GET/PUT/reset merge (stale names not in `default_sites()`).
+- Coupon checker: frozen 12, appended 2 (Courson, CouponScorpion). `N=2` is appended-only. `N=3` is appended + Couponami. Leftover `N=13` omits Course Joiner. Compose default `CHECKER_SCRAPE_MAX_SOURCES=0` (all keys) is unchanged.
+- Public FAQ and README list the 14 live aggregators (FAQ display order, not registry order). Tutorialbar is not a current source.
+
+### Scrapers — FWC hop-200, Korshub `/go/` query, UF `/out/` rewrite
+
+- FreeWebCart parses hop-200 interstitial HTML on the same C11 GET (Couponami quoted-URL loop, cap 1) and logs after each detail chunk; Korshub allows `/go/{uuid}` hrefs that have a query (hop URL stays path-only); UdemyFreebies `_resolve_out` rewrites single-segment `udemy.com/{slug}?couponCode=` to `/course/{slug}/` then existing course/trk gates, with local Semaphore(8). Real Discount and Discudemy parser classes were unchanged in that hop wave (C15, C1/C6); they are not live-registry keys after the 16→14 unregister.
+
+### Scrapers — FreeCourseSites categories
+
+- FreeCourseSites scrapes coupon-first `100-off-udemy-coupon` (137426), then archive `free-udemy-courses` (67983); `udemy-free-courses` (78256) is removed. REST first, HTML fallback when under 500; `MAX_COURSES` unchanged.
+
+### Scrapers — hop/parser fixes (C11–C21, C1/C6)
+
+- Aggregator hops (CouponScorpion `out.php`, UdemyFreebies `/out/`, iDownloadCoupon redeem, FreeWebCart same-origin `/redirect/`, Korshub same-origin `/go/`) use C11 `self.http.get` kwargs plus `attempts=1` (C20). Location is not followed; only `is_udemy_course_url` or `is_trk_udemy_url` is accepted. No Playwright on hops (C14).
+- Coursesity: comment-only; no extra site-redirect GET; URL yield without `couponCode=` is expected (C12).
+- Interview Gig: `_resolve_one` wrapper, local Semaphore(8), E-next-style chunks, 80 trk-HTTP cap; frozen helper is never `_run_detail_task` func (C13).
+- Korshub: listing `/courses/{one-segment}` without `-udemy`; no `udemy.com/course/{korshub-slug}` construction; hop only same-origin `/go/{uuid}` (C17).
+- FreeWebCart: `sourceUrl`/direct href/regex first; hop only `freewebcart.com|www.freewebcart.com` + `^/redirect/[A-Za-z0-9_-]+$` (C19).
+- Course Joiner: short-trk resolved inside `_fetch_detail` via frozen helper; no nested `_run_detail_task` (C21).
+- Real Discount: API miss sets `self.error` to `API unreachable; Playwright skipped`; no Playwright fallback (C15).
+- Discudemy: log candidate and found counts; never GET couponami.com/go/ (C1/C6).
+- Live tests: UF/IDC/CJ added; 0-ok for RD/DU/CSC/UF/IDC/FWC/UX/KH/IG/CJ; Coursesity keeps `>0` URLs with no coupon claim (C16/C18).
+
+### Scrapers — Discudemy, Courson, CouponScorpion (registry 13→16)
+
+- `SCRAPER_REGISTRY` expands from 13 to 16 sources: Discudemy, Courson, and CouponScorpion join the existing 13 (including Course Joiner).
+- Public FAQ and README list the 16 aggregator scrapers. Tutorialbar is not a current source.
+- `CHECKER_SCRAPE_MAX_SOURCES=0` or a cap ≥ registry size scrapes all keys. Execution order: appended sources (Discudemy, Courson, CouponScorpion) first, then Couponami, then the rest of the frozen 13.
+- `0 < N < size` scrapes at most N sources. Cap slots go to appended keys first, then Couponami, then the frozen prefix from the front. **N<4 omits Couponami.** N=3 is only the three new sources. N=13 is the three new sources + Couponami + 9 other frozen names.
+- Omitted source names are logged. A stale `N=13` no longer drops Discudemy, Courson, or CouponScorpion; it can still omit the last frozen names.
+- Discudemy leftover native pages may be empty because `/all` cards are collected by Couponami. Discudemy does not fetch couponami.com or `/go/`.
+- C11 residual: checker list order prefers the new sources plus Couponami; with 5 workers and a 2700s run timeout, later frozen sites can still time out. `ScraperService` already logs timed-out names.
+- C7: settings PUT upgrade-merges sites (`defaults ← stored ← PUT`) so new scraper keys persist on save. GET still does not write. Unchecked boxes still save `False`.
+- F252: listing `_http_get` honors `robots.txt` (fail-open). Courson `/claim/` is Disallow and is never requested.
+
+### Residual wave (2026-08-19)
+
+- No residual-wave product code change. `tests/test_llms_full_txt.py` now comments why `/llms-full.txt` vs `/llms.txt` comparison normalizes the per-request `Last generated` line (bodies are not byte-identical).
+
 ### SEO, Schema & Conversion Enhancements (2026-08-17)
 
 - **High-CTR Title & Meta Description Optimization (`/udemycoupons`)**:

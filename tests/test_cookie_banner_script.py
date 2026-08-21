@@ -96,8 +96,24 @@ class TestCookieBannerScript:
         assert "getBoundingClientRect().height" in html
         assert "--cookie-banner-height" in html
         assert "cookie-banner-open" in html
-        assert "aria-modal=\"false\"" in html
         assert "spacerObserver.disconnect()" in html
+
+    def test_banner_is_region_strip(self):
+        """UI-ENR-01: cookie chrome is a 56–72px region strip, not a dialog."""
+        html = self._render(gtm_container_id=GTM_ID)
+        start = html.index('id="cookie-banner"')
+        end = html.index("<!-- Accessible confirm dialog", start)
+        banner_html = html[start:end]
+        assert 'role="region"' in banner_html
+        assert 'aria-live="polite"' in banner_html
+        assert 'role="dialog"' not in banner_html
+        assert "aria-modal" not in banner_html
+        assert "max-h-[72px]" in banner_html
+        assert "min-h-14" in banner_html
+        assert 'href="/privacy"' in banner_html
+        assert "flex-col" not in banner_html
+        assert "p-4" not in banner_html
+        assert "autofocus" not in banner_html.lower()
 
     def test_cookie_spacer_css_on_body_only(self):
         """R3: spacer padding applies to body, not also #main-content."""

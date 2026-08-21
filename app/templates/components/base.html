@@ -368,15 +368,15 @@
         {% set nav_name = request.state.nav_display_name | default('') %}
          <header
             role="banner"
-            class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm overflow-hidden"
+            class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm"
         >
             <!-- Main nav row -->
             <nav
                 role="navigation"
-                class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 min-w-0 overflow-hidden"
+                class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 min-w-0"
                 aria-label="Main navigation"
             >
-                <!-- Logo -->
+                <!-- Logo: short wordmark below sm so 375px shows "Enroller" -->
                 <a
                     href="/"
                     class="flex-shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-sm"
@@ -388,15 +388,18 @@
                         width="24"
                         height="24"
                     />
+                    <span class="text-sm font-semibold text-gray-900 sm:hidden"
+                        >Enroller</span
+                    >
                     <span
                         class="text-sm font-semibold text-gray-900 hidden sm:block"
                         >Udemy Enroller</span
                     >
                 </a>
 
-                <!-- Centre nav links - always visible -->
+                <!-- Centre nav links — sm+ only; no edge-mask fade (mid-label clip) -->
                 <div
-                    class="flex-1 min-w-0 flex items-center gap-0.5 overflow-x-auto no-scrollbar px-2 mask-edges"
+                    class="hidden sm:flex flex-1 min-w-0 items-center gap-0.5 overflow-x-auto no-scrollbar px-2"
                     id="nav-links"
                 >
                     <a
@@ -503,8 +506,95 @@
                         <i data-lucide="log-out" class="w-3.5 h-3.5" aria-hidden="true"></i>
                         <span class="hidden sm:inline">Logout</span>
                     </button>
+
+                    <button
+                        type="button"
+                        id="nav-toggle"
+                        class="sm:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md text-gray-700 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                        aria-label="Open menu"
+                        aria-expanded="false"
+                        aria-controls="mobile-nav"
+                    >
+                        <svg
+                            id="nav-toggle-open"
+                            aria-hidden="true"
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16"
+                            />
+                        </svg>
+                        <svg
+                            id="nav-toggle-close"
+                            aria-hidden="true"
+                            class="hidden w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </button>
                 </div>
             </nav>
+            <div id="mobile-nav" class="hidden">
+                <nav
+                    aria-label="Mobile"
+                    class="sm:hidden border-t border-gray-200 bg-white px-4 py-3 flex flex-col gap-1"
+                >
+                    <a
+                        href="/guides"
+                        class="min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/guides' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >Guides</a
+                    >
+                    <a
+                        href="/faq"
+                        class="min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/faq' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >FAQ</a
+                    >
+                    <a
+                        href="/about"
+                        class="min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/about' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >About</a
+                    >
+                    <a
+                        href="/udemycoupons"
+                        class="min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/udemycoupons' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >Free Coupons</a
+                    >
+                    <a
+                        href="/dashboard"
+                        class="auth-only {% if not nav_auth %}hidden{% endif %} min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/dashboard' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >Dashboard</a
+                    >
+                    <a
+                        href="/settings"
+                        class="auth-only {% if not nav_auth %}hidden{% endif %} min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/settings' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >Settings</a
+                    >
+                    <a
+                        href="/history"
+                        class="auth-only {% if not nav_auth %}hidden{% endif %} min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/history' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >History</a
+                    >
+                    <a
+                        href="/privacy"
+                        class="min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/privacy' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
+                        >Privacy</a
+                    >
+                </nav>
+            </div>
         </header>
 
         <!-- Main Content -->
@@ -782,21 +872,66 @@
                 document.querySelectorAll('[data-action="logout"]').forEach(btn => {
                     btn.addEventListener('click', () => logout());
                 });
+
+                // F316: hamburger below sm — full labels, no mid-glyph mask
+                (function initMobileNav() {
+                    var toggle = document.getElementById("nav-toggle");
+                    var panel = document.getElementById("mobile-nav");
+                    var iconOpen = document.getElementById("nav-toggle-open");
+                    var iconClose = document.getElementById("nav-toggle-close");
+                    if (!toggle || !panel) return;
+
+                    function setOpen(open) {
+                        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+                        toggle.setAttribute(
+                            "aria-label",
+                            open ? "Close menu" : "Open menu"
+                        );
+                        if (open) {
+                            panel.classList.remove("hidden");
+                        } else {
+                            panel.classList.add("hidden");
+                        }
+                        if (iconOpen) {
+                            if (open) iconOpen.classList.add("hidden");
+                            else iconOpen.classList.remove("hidden");
+                        }
+                        if (iconClose) {
+                            if (open) iconClose.classList.remove("hidden");
+                            else iconClose.classList.add("hidden");
+                        }
+                    }
+
+                    toggle.addEventListener("click", function () {
+                        setOpen(toggle.getAttribute("aria-expanded") !== "true");
+                    });
+                    document.addEventListener("keydown", function (e) {
+                        if (e.key !== "Escape") return;
+                        if (toggle.getAttribute("aria-expanded") !== "true") return;
+                        setOpen(false);
+                        toggle.focus();
+                    });
+                    window.addEventListener("resize", function () {
+                        if (window.matchMedia("(min-width: 640px)").matches) {
+                            setOpen(false);
+                        }
+                    });
+                })();
             });
         </script>
         <!-- Cookie consent banner -->
         {% if request.app.state.gtm_container_id or request.app.state.ga4_measurement_id %}
-        <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 hidden" role="dialog" aria-modal="false" aria-label="Cookie consent">
-            <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0 w-full">
-                <p class="text-sm text-gray-600 min-w-0 flex-1">
+        <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg hidden" role="region" aria-live="polite" aria-label="Cookie consent">
+            <div class="mx-auto flex h-14 min-h-14 max-h-[72px] w-full max-w-6xl flex-row items-center gap-2 px-3 sm:px-6">
+                <p class="min-w-0 flex-1 truncate text-sm text-gray-600">
                     This site uses analytics cookies to improve your experience.
-                    <a href="/privacy" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Read our privacy policy</a>.
                 </p>
-                <div class="flex gap-2 flex-shrink-0">
-                    <button id="cookie-decline" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors min-h-[44px]">
+                <a href="/privacy" class="shrink-0 whitespace-nowrap text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900">Privacy</a>
+                <div class="flex shrink-0 items-center gap-2">
+                    <button id="cookie-decline" class="px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors min-h-[44px]">
                         Decline
                     </button>
-                    <button id="cookie-accept" class="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors min-h-[44px]">
+                    <button id="cookie-accept" class="px-4 py-1.5 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors min-h-[44px]">
                         Accept
                     </button>
                 </div>

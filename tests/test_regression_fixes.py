@@ -11,7 +11,7 @@ from app.services.enrollment_manager import EnrollmentManager
 async def test_udemy_client_locale_fallback():
     """Test that simple_english_title is properly extracted from locale objects."""
     client = UdemyClient()
-    course = Course(title="Test Course", url="https://udemy.com/course/test", site="FreeWebCart")
+    course = Course(title="Test Course", url="https://udemy.com/course/test", site="FreeCourseSites")
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -80,15 +80,15 @@ async def test_telemetry_status_assignment(monkeypatch):
     udemy_mock.check_course = AsyncMock()
     udemy_mock.is_course_excluded = MagicMock()
 
-    manager = EnrollmentManager(user_id=1, run_id=1, udemy_client=udemy_mock, settings={"sites": {"FreeWebCart": True}})
+    manager = EnrollmentManager(user_id=1, run_id=1, udemy_client=udemy_mock, settings={"sites": {"FreeCourseSites": True}})
 
-    course1 = Course("Title 1", "https://udemy.com/course/1/", "FreeWebCart")
+    course1 = Course("Title 1", "https://udemy.com/course/1/", "FreeCourseSites")
     course1.course_id = "1"
     course1.is_valid = True
     course1.is_coupon_valid = True
     course1.is_free = False
 
-    course2 = Course("Title 2", "https://udemy.com/course/2/", "FreeWebCart")
+    course2 = Course("Title 2", "https://udemy.com/course/2/", "FreeCourseSites")
     course2.course_id = "2"
     course2.is_valid = True
     course2.is_coupon_valid = True

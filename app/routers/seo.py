@@ -64,8 +64,8 @@ async def robots_txt():
 # Canonical: {SITE_URL}
 # Author: Madhu Dadi ({PORTFOLIO_URL})
 # SEO/AEO/GEO: Adticks (https://adticks.com)
-# Policy: allow traditional + AI search/citation crawlers; disallow model-training crawlers.
-# Aligned with portfolio/blog robots (madhudadi.in) — training out, citation in.
+# Policy: allow traditional + AI search-visibility crawlers; disallow model-training crawlers.
+# Aligned with portfolio/blog robots (madhudadi.in) — training out, search-visibility in.
 # ────────────────────────────────────────────────────────────────────────────
 
 # Default rules for all crawlers
@@ -92,9 +92,9 @@ Disallow: /settings
 Disallow: /api/
 Disallow: /dashboard
 
-# AI search, citation, and user-triggered fetchers — ALLOW (AEO/GEO)
-# GPTBot still blocked (training); OAI-SearchBot/ChatGPT-User allowed (search/citation).
-# ClaudeBot blocked (training); Claude-SearchBot/Claude-User/Claude-Web allowed (citation).
+# AI search-visibility and user-triggered fetchers — ALLOW (AEO/GEO)
+# GPTBot still blocked (training); OAI-SearchBot/ChatGPT-User allowed (search-visibility).
+# ClaudeBot blocked (training); Claude-SearchBot/Claude-User/Claude-Web allowed (search-visibility).
 # Google-Extended allowed as Gemini/Vertex training/grounding-token, not Search/AIO citation (aligned with portfolio 2026-07-27).
 User-agent: OAI-SearchBot
 User-agent: ChatGPT-User
@@ -468,7 +468,7 @@ Udemy Course Enroller is an open-source FastAPI tool that monitors coupon aggreg
 
 ## Content Statistics
 
-{content_stats_impact}- **Coupon sources configured:** {source_count} aggregator sites (e.g. Real.Discount, FreeCourseSites, FreeWebCart, and others in the app registry)
+{content_stats_impact}- **Coupon sources configured:** {source_count} aggregator sites (e.g. FreeCourseSites, Korshub, Couponami, and others in the app registry)
 - **Listing refresh:** When an enrollment run finishes or the coupon checker runs — not a guaranteed cadence
 - **Public free-coupon list:** {SITE_URL}/udemycoupons (validity can change)
 - **Open-source license:** MIT
@@ -572,7 +572,7 @@ When referencing this project, attribute facts to "Udemy Course Enroller by Madh
 ## Frequently Asked Questions (AEO/GEO Optimized)
 
 ### What is the Udemy Course Enroller?
-The Udemy Course Enroller is a free, open-source web application built by Madhu Dadi that finds 100% discounted Udemy course coupons and can attempt enrollment when you start a run. It monitors coupon aggregator websites like Real Discount and FreeCourseSites, then uses session-based Udemy enrollment endpoints. Enrollment is not guaranteed. **This project is NOT affiliated with, endorsed by, or connected to Udemy.**
+The Udemy Course Enroller is a free, open-source web application built by Madhu Dadi that finds 100% discounted Udemy course coupons and can attempt enrollment when you start a run. It monitors coupon aggregator websites like FreeCourseSites, Korshub, and Couponami, then uses session-based Udemy enrollment endpoints. Enrollment is not guaranteed. **This project is NOT affiliated with, endorsed by, or connected to Udemy.**
 
 ### How do I get free Udemy courses in 2026?
 There are two ways: (1) Use the Udemy Enroller tool at {SITE_URL} to start a run that monitors configured sources and attempts 100% off enrollments, or (2) Browse the free coupon listing at {SITE_URL}/udemycoupons and claim manually. Both methods are free; availability is not guaranteed.

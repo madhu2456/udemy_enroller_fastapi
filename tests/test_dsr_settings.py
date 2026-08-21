@@ -285,3 +285,21 @@ class TestDeleteAccount:
         )
         assert response.status_code == 200
         assert "backups" in response.json()["message"].lower()
+
+
+def test_privacy_page_documents_export_and_delete_account():
+    """J.9: /privacy must describe Settings export and delete-account."""
+    client = TestClient(app)
+    try:
+        response = client.get("/privacy")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    body = response.text
+    assert "POST /api/settings/export" in body
+    assert "POST /api/settings/delete-account" in body
+    assert "Export Your Data" in body
+    assert "Delete Account" in body
+    assert "2026-08-19" in body
+    assert "Stored Udemy cookies are never included" in body

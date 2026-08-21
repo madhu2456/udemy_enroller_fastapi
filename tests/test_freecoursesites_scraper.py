@@ -20,6 +20,15 @@ def http_client():
 def scraper(http_client):
     return FreeCourseSitesScraper(http_client)
 
+
+def test_category_sources_coupon_then_archive():
+    assert len(FreeCourseSitesScraper.CATEGORY_SOURCES) == 2
+    assert FreeCourseSitesScraper.CATEGORY_SOURCES == [
+        {"slug": "100-off-udemy-coupon", "fallback_id": 137426},
+        {"slug": "free-udemy-courses", "fallback_id": 67983},
+    ]
+
+
 @pytest.mark.asyncio
 async def test_category_id_resolution(scraper):
     # Success case
@@ -152,7 +161,7 @@ async def test_scraper_cap(scraper):
     detail1_resp.text = '<a href="https://www.udemy.com/course/new1/">L</a><a href="https://www.udemy.com/course/new2/">L</a>'
 
     async def mock_get(url, *args, **kwargs):
-        if url == "https://freecoursesites.com/category/udemy-free-courses/":
+        if url == "https://freecoursesites.com/category/100-off-udemy-coupon/":
             return archive_resp
         elif url == "https://freecoursesites.com/c1/":
             return detail1_resp
@@ -188,7 +197,7 @@ async def test_html_fallback_ordering(scraper):
     detail2_resp.text = '<a href="https://www.udemy.com/course/course2/">Link</a>'
 
     async def mock_get(url, *args, **kwargs):
-        if url == "https://freecoursesites.com/category/udemy-free-courses/":
+        if url == "https://freecoursesites.com/category/100-off-udemy-coupon/":
             return archive_resp
         elif url == "https://freecoursesites.com/c1/":
             await asyncio.sleep(0.1) # slow, but should be processed first
@@ -206,7 +215,7 @@ async def test_html_fallback_ordering(scraper):
 
 @pytest.mark.asyncio
 async def test_multiple_categories_exhaustion(scraper):
-    scraper._get_category_id = AsyncMock(side_effect=[78256, 137426])
+    scraper._get_category_id = AsyncMock(side_effect=[137426, 67983])
 
     async def mock_get(url, *args, **kwargs):
         mock_resp = MagicMock()
@@ -218,10 +227,10 @@ async def test_multiple_categories_exhaustion(scraper):
     scraper.http.get.side_effect = mock_get
 
     async def side_effect_json(resp, *args, **kwargs):
-        if "categories=78256" in resp.url:
-            # 31 items from primary category
+        if "categories=137426" in resp.url:
+            # 31 items from coupon category
             return [{"title": {"rendered": f"Post A{i}"}, "content": {"rendered": f'<a href="https://www.udemy.com/course/a{i}/">Link</a>'}} for i in range(31)]
-        elif "categories=137426" in resp.url:
+        elif "categories=67983" in resp.url:
             # 9 unique items, plus 1 cross-category duplicate
             return [{"title": {"rendered": f"Post B{i}"}, "content": {"rendered": f'<a href="https://www.udemy.com/course/b{i}/">Link</a>'}} for i in range(9)] + \
                    [{"title": {"rendered": "Post A0 Duplicate"}, "content": {"rendered": '<a href="https://www.udemy.com/course/a0/">Link</a>'}}]
@@ -237,7 +246,11 @@ async def test_multiple_categories_exhaustion(scraper):
     assert scraper.data[0].url == "https://www.udemy.com/course/a0/"
     assert scraper.data[-1].url == "https://www.udemy.com/course/b8/"
 
-    # Verify both categories were fetched
+    # Verify coupon category then archive category were fetched
     calls = scraper.http.get.call_args_list
-    assert any("categories=78256" in c[0][0] for c in calls)
-    assert any("categories=137426" in c[0][0] for c in calls)
+    rest_urls = [c[0][0] for c in calls if "categories=" in c[0][0]]
+    assert any("categories=137426" in url for url in rest_urls)
+    assert any("categories=67983" in url for url in rest_urls)
+    coupon_idx = next(i for i, url in enumerate(rest_urls) if "categories=137426" in url)
+    archive_idx = next(i for i, url in enumerate(rest_urls) if "categories=67983" in url)
+    assert coupon_idx < archive_idx

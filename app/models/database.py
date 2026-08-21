@@ -125,9 +125,7 @@ class UserSettings(Base):
     @staticmethod
     def default_sites():
         return {
-            "FreeWebCart": True,
             "FreeCourseSites": True,
-            "Real Discount": True,
             "E-next": True,
             "Interview Gig": True,
             "UdemyXpert": True,
@@ -137,7 +135,8 @@ class UserSettings(Base):
             "Korshub": True,
             "UdemyFreebies": True,
             "iDownloadCoupon": True,
-            "Course Joiner": True,
+            "Courson": True,
+            "CouponScorpion": True,
         }
 
     @staticmethod

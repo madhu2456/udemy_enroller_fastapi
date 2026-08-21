@@ -71,6 +71,9 @@ _RESOLVE_RETRY_SLEEP_SECONDS = 4
 # against the slug/pricing endpoints; a stable Chrome UA works).
 _BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
+# Frozen-10 SCRAPER_REGISTRY prefix; tests lock this to FROZEN_10 (never keys[:10]).
+# BAN 9. Appended-2: Courson, CouponScorpion.
+_FROZEN_REGISTRY_PREFIX_LEN = 10
 # Mid-run atomic snapshot cadence (deals processed) so a crash still leaves a
 # recent file; refresh_sitemap=False keeps snapshot writes cheap.
 _SAVE_EVERY_N_DEALS = 10
@@ -385,6 +388,45 @@ def _scrape_source_limit() -> int:
         return 0
 
 
+def _prefer_couponami(frozen: list[str]) -> list[str]:
+    """Frozen-fill order only: Couponami first, then the rest in original order."""
+    if "Couponami" not in frozen:
+        return list(frozen)
+    return ["Couponami"] + [k for k in frozen if k != "Couponami"]
+
+
+def _select_checker_scrape_sites(
+    keys: list[str], limit: int
+) -> tuple[list[str], list[str]]:
+    """Pick checker scrape sites: appended sources first, then Couponami-preferred frozen fill.
+
+    ``limit <= 0`` or ``limit >= len(keys)`` selects every key (reordered). A
+    positive cap smaller than the registry fills appended names first, then
+    frozen names in Couponami-preferred order. Does not mutate ``keys`` or
+    ``SCRAPER_REGISTRY``.
+    """
+    seq = list(keys)
+    n = _FROZEN_REGISTRY_PREFIX_LEN
+    frozen, appended = seq[:n], seq[n:]
+    if limit <= 0 or limit >= len(seq):
+        selected = appended + _prefer_couponami(frozen)
+        omitted: list[str] = []
+    else:
+        take_appended = appended[:limit]
+        remain = limit - len(take_appended)
+        take_frozen = _prefer_couponami(frozen)[:remain]
+        selected = take_appended + take_frozen
+        selected_set = set(selected)
+        omitted = [k for k in seq if k not in selected_set]
+    if omitted:
+        logger.warning(
+            "Omitting scrape sources (CHECKER_SCRAPE_MAX_SOURCES=%s): %s",
+            limit,
+            ", ".join(omitted),
+        )
+    return selected, omitted
+
+
 def _deal_from_course(course) -> dict:
     """Shape a scraped ``Course`` into a catalog deal dict for the merge.
 
@@ -425,8 +467,7 @@ async def _import_latest_coupons() -> int:
 
         sites = list(SCRAPER_REGISTRY.keys())
         limit = _scrape_source_limit()
-        if limit:
-            sites = sites[:limit]
+        sites, _ = _select_checker_scrape_sites(sites, limit)
         logger.info("Importing latest coupons: scraping %s source(s)...", len(sites))
         # ScraperService owns pacing: worker semaphore (MAX_SCRAPER_WORKERS),
         # per-site timeout (SCRAPER_SITE_TIMEOUT_SECONDS) and overall run

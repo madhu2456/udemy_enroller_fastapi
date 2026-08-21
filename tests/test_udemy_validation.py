@@ -233,6 +233,15 @@ async def test_udemyfreebies_rejects_hostile_location(freebies_scraper, hostile_
         f"hostile Location accepted by UdemyFreebies: {hostile_location}"
     )
 
+    out_calls = [c for c in http.get.call_args_list if c.args and "/out/" in c.args[0]]
+    assert out_calls
+    for call in out_calls:
+        assert call.kwargs.get("use_cloudscraper") is True
+        assert call.kwargs.get("allow_redirects") is False
+        assert call.kwargs.get("follow_redirects") is False
+        assert call.kwargs.get("raise_for_status") is False
+        assert call.kwargs.get("attempts") == 1
+
 
 @pytest.mark.asyncio
 async def test_udemyfreebies_accepts_legit_location(freebies_scraper):
@@ -255,6 +264,108 @@ async def test_udemyfreebies_accepts_legit_location(freebies_scraper):
     await scraper.scrape(asyncio.Semaphore(1))
     assert len(scraper.data) == 1
     assert scraper.data[0].url == legit
+
+    out_calls = [c for c in http.get.call_args_list if c.args and "/out/" in c.args[0]]
+    assert out_calls
+    for call in out_calls:
+        assert call.kwargs.get("use_cloudscraper") is True
+        assert call.kwargs.get("allow_redirects") is False
+        assert call.kwargs.get("follow_redirects") is False
+        assert call.kwargs.get("raise_for_status") is False
+        assert call.kwargs.get("attempts") == 1
+
+
+UF_SLUG = "ace-every-job-interview-master-blueprint-and-get-your-dream-job"
+UF_COUPON = "AUG2026FREE01"
+UF_SINGLE_SEGMENT = f"https://www.udemy.com/{UF_SLUG}/?couponCode={UF_COUPON}"
+UF_REWRITTEN = f"https://www.udemy.com/course/{UF_SLUG}/?couponCode={UF_COUPON}"
+
+
+@pytest.mark.asyncio
+async def test_udemyfreebies_rewrites_single_segment_location(freebies_scraper):
+    http, scraper = freebies_scraper
+
+    def mock_get(url, *args, **kwargs):
+        if "/out/" in url:
+            return _redirect_response(UF_SINGLE_SEGMENT)
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.content = (
+            '<div class="coupon-name"><a href="/free-udemy-course/slug-1">'
+            "Ace Every Job Interview</a></div>"
+        ).encode()
+        resp.url = url
+        return resp
+
+    http.get.side_effect = mock_get
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert len(scraper.data) == 1
+    assert scraper.data[0].url == UF_REWRITTEN
+
+    out_calls = [c for c in http.get.call_args_list if c.args and "/out/" in c.args[0]]
+    assert out_calls
+    for call in out_calls:
+        assert call.kwargs.get("use_cloudscraper") is True
+        assert call.kwargs.get("allow_redirects") is False
+        assert call.kwargs.get("follow_redirects") is False
+        assert call.kwargs.get("raise_for_status") is False
+        assert call.kwargs.get("attempts") == 1
+        assert call.kwargs.get("timeout") == 15
+
+
+@pytest.mark.asyncio
+async def test_udemyfreebies_trk_location_uses_resolve_trk_not_course_rewrite(
+    freebies_scraper,
+):
+    http, scraper = freebies_scraper
+    trk_id = "trk-id-123"
+    trk_location = f"https://trk.udemy.com/{trk_id}?couponCode={UF_COUPON}"
+    resolved = "https://www.udemy.com/course/real-trk-course/?couponCode=FREE"
+    scraper._resolve_trk_redirect = AsyncMock(return_value=resolved)
+
+    def mock_get(url, *args, **kwargs):
+        if "/out/" in url:
+            return _redirect_response(trk_location)
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.content = (
+            '<div class="coupon-name"><a href="/free-udemy-course/slug-1">'
+            "Trk Course</a></div>"
+        ).encode()
+        resp.url = url
+        return resp
+
+    http.get.side_effect = mock_get
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert len(scraper.data) == 1
+    assert scraper.data[0].url == resolved
+    assert f"/course/{trk_id}" not in scraper.data[0].url
+    scraper._resolve_trk_redirect.assert_awaited()
+    assert scraper._resolve_trk_redirect.await_args.args[0] == trk_location
+
+
+@pytest.mark.asyncio
+async def test_udemyfreebies_single_segment_without_coupon_yields_empty(
+    freebies_scraper,
+):
+    http, scraper = freebies_scraper
+    location = f"https://www.udemy.com/{UF_SLUG}/"
+
+    def mock_get(url, *args, **kwargs):
+        if "/out/" in url:
+            return _redirect_response(location)
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.content = (
+            '<div class="coupon-name"><a href="/free-udemy-course/slug-1">'
+            "No Coupon Course</a></div>"
+        ).encode()
+        resp.url = url
+        return resp
+
+    http.get.side_effect = mock_get
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert scraper.data == []
 
 
 @pytest.mark.asyncio
@@ -324,3 +435,79 @@ async def test_idownloadcoupon_accepts_legit_trk_location():
         scraper.data[0].url
         == "https://www.udemy.com/course/real-course/?couponCode=FREE"
     )
+
+    redeem_calls = [
+        c
+        for c in http.get.call_args_list
+        if c.args
+        and "/udemy/" in c.args[0]
+        and "page/" not in c.args[0]
+        and c.args[0].rstrip("/").split("/")[-1].isdigit()
+    ]
+    assert redeem_calls
+    for call in redeem_calls:
+        assert call.kwargs.get("use_cloudscraper") is True
+        assert call.kwargs.get("allow_redirects") is False
+        assert call.kwargs.get("follow_redirects") is False
+        assert call.kwargs.get("raise_for_status") is False
+        assert call.kwargs.get("attempts") == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "hostile_location",
+    [
+        "/course/stolen/?couponCode=FREE",
+        "../course/stolen/?couponCode=FREE",
+        "//evil.example/course/x/?couponCode=FREE",
+        "https://evil.example/?u=https://www.udemy.com/course/stolen/?couponCode=FREE",
+        "https://eviludemy.com/course/x/?couponCode=FREE",
+    ],
+)
+async def test_idownloadcoupon_relative_hostile_location_does_not_append(
+    hostile_location,
+):
+    """Relative or hostile Location must not be unwrapped into a course URL."""
+    from app.services.scraper import IDownloadCouponScraper
+
+    http = MagicMock()
+    http.get = AsyncMock()
+    scraper = IDownloadCouponScraper(http)
+
+    def mock_get(url, *args, **kwargs):
+        if "/udemy/" in url and "page/" not in url:
+            resp = MagicMock()
+            resp.status_code = 302
+            resp.headers = {"location": hostile_location}
+            resp.content = b""
+            return resp
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.content = (
+            '<a href="/udemy/12345/stolen-course/">Stolen Course</a>'
+        ).encode()
+        resp.url = url
+        return resp
+
+    http.get.side_effect = mock_get
+    await scraper.scrape(asyncio.Semaphore(1))
+    assert scraper.data == [], (
+        f"relative/hostile Location appended by iDownloadCoupon: {hostile_location}"
+    )
+
+    requested = [c.args[0] for c in http.get.call_args_list if c.args]
+    assert all("evil.example" not in u for u in requested)
+    assert all("eviludemy.com" not in u for u in requested)
+    redeem_calls = [
+        c
+        for c in http.get.call_args_list
+        if c.args
+        and "/udemy/" in c.args[0]
+        and "page/" not in c.args[0]
+        and c.args[0].rstrip("/").split("/")[-1].isdigit()
+    ]
+    assert redeem_calls
+    for call in redeem_calls:
+        assert call.kwargs.get("allow_redirects") is False
+        assert call.kwargs.get("follow_redirects") is False
+        assert call.kwargs.get("attempts") == 1

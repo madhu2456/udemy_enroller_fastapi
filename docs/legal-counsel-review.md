@@ -104,13 +104,11 @@ Working draft for counsel to verify against primary sources; does **not** conclu
 3. **Linking / hotlinking** — the public page links out to Udemy coupon pages; deep links are generally low-risk but counsel should confirm no aggregator ToS prohibits hotlinking their images or framing their content.
 4. **Per-aggregator posture** — the checklist below is the engineering record of what needs review; **nothing here is a legal conclusion**. The owner's default stance (keep unless counsel advises otherwise): scrape only publicly visible listing data, honor `robots.txt` disallowances for new sites, never bypass access controls, and attribute thumbnails to their source.
 
-**Per-aggregator review checklist** (sites in `SCRAPER_REGISTRY`, `app/services/scraper.py:2223`). One row per site; counsel or owner fills "reviewed by / date".
+**Per-aggregator review checklist** (sites in `SCRAPER_REGISTRY` in `app/services/scraper.py`). One row per site; counsel or owner fills "reviewed by / date". Live-fleet registry keys (12, registry order): FreeCourseSites, E-next, Interview Gig, UdemyXpert, Coursesity, Course Folder, Couponami, Korshub, UdemyFreebies, iDownloadCoupon, Courson, CouponScorpion.
 
 | Aggregator | ToS reviewed? | `robots.txt` allows? | Automated access authorized? | Data republished publicly? | Notes / owner action |
 |------------|---------------|----------------------|------------------------------|----------------------------|----------------------|
-| FreeWebCart | ☐ | ☐ | ☐ | ☐ (deals list) | |
 | FreeCourseSites | ☐ | ☐ | ☐ | ☐ (deals list) | |
-| Real Discount | ☐ | ☐ | ☐ | ☐ (deals list) | |
 | E-next | ☐ | ☐ | ☐ | ☐ (deals list) | |
 | Interview Gig | ☐ | ☐ | ☐ | ☐ (deals list) | |
 | UdemyXpert | ☐ | ☐ | ☐ | ☐ (deals list) | |
@@ -120,11 +118,13 @@ Working draft for counsel to verify against primary sources; does **not** conclu
 | Korshub | ☐ | ☐ | ☐ | ☐ (deals list) | |
 | UdemyFreebies | ☐ | ☐ | ☐ | ☐ (deals list) | |
 | iDownloadCoupon | ☐ | ☐ | ☐ | ☐ (deals list) | |
+| Courson | ☐ | ☐ | ☐ | ☐ (deals list) | `robots.txt` `Disallow: /claim/`; the scraper never requests `/claim/`. Listing `_http_get` honors robots (F252, fail-open). |
+| CouponScorpion | ☐ | ☐ | ☐ | ☐ (deals list) | Added with the 13→16 registry expansion. |
 
 **Engineering guardrails already in place** (verify with counsel whether they are sufficient):
 
 - No CAPTCHA bypass or access-control evasion (explicit product policy, see §1 and `SECURITY.md`).
-- New scraper sites are gated by per-user settings; `robots.txt` is not currently fetched per site — counsel should advise whether to add a robots check before onboarding new aggregators.
+- New scraper sites are gated by per-user settings. F252: each scraper's primary listing fetch goes through `Scraper._http_get` (`app/services/scraper.py`), which fetches and honors the target host's `robots.txt` (per-host cache, 24 h TTL in `app/services/robots_gate.py`). The gate is **fail-open**: if the robots fetch fails, times out, returns non-200, or loops redirects, the listing fetch is allowed so a robots outage cannot take every coupon source offline. Courson `robots.txt` disallows `/claim/`; the Courson scraper never requests `/claim/` paths. See `docs/ops/scraping-robots.md`.
 - `public_deals.json` is a machine-generated catalog of links; thumbnails/titles are stored as data, not hotlinked (verify against the current export implementation).
 - Removal: if an aggregator objects, the site can be disabled per-user and scrubbed from the registry; there is no per-site takedown UI yet — owner decision needed if counsel recommends one.
 

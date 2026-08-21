@@ -54,6 +54,20 @@ def get_or_create_settings(db: Session, user_id: int) -> UserSettings:
     return settings
 
 
+def _merge_sites_for_put(stored, put) -> dict:
+    """Upgrade-merge sites on PUT: defaults ← stored ← put; drop unknown keys."""
+    merged = UserSettings.default_sites().copy()
+    stored = stored if isinstance(stored, dict) else {}
+    put = put if isinstance(put, dict) else {}
+    for k, v in stored.items():
+        if k in merged:
+            merged[k] = bool(v)
+    for k, v in put.items():
+        if k in merged:
+            merged[k] = bool(v)
+    return merged
+
+
 @router.get("/", response_model=SettingsResponse)
 @router.get("", response_model=SettingsResponse, include_in_schema=False)
 async def get_settings(
@@ -77,8 +91,9 @@ async def get_settings(
             if k in merged:
                 merged[k] = bool(v)
 
-        # If the user has stale keys that are NO LONGER in defaults (like Discudemy),
-        # they will be naturally excluded because we started with a copy of defaults.
+        # Stale-key exclusion is names not in default_sites(). Discudemy and
+        # Real Discount leftover keys are stale after unregistration; leftover
+        # FreeWebCart and Course Joiner keys are stale too.
         return merged
 
     return SettingsResponse(
@@ -117,7 +132,12 @@ async def update_settings(
             )
             raise HTTPException(status_code=400, detail="Invalid proxy URL format")
 
+    if "sites" in update_data and update_data["sites"] is not None:
+        settings.sites = _merge_sites_for_put(settings.sites, update_data["sites"])
+
     for field, value in update_data.items():
+        if field == "sites":
+            continue
         if value is not None:
             setattr(settings, field, value)
 

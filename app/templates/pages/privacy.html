@@ -60,8 +60,8 @@ endblock %} {% block content %}
                 </h1>
                 <p class="text-sm text-gray-500 leading-relaxed">
                     This page explains what data Udemy Enroller collects, how it
-                     is stored, and how you can delete it. Last updated: July
-                     2026.
+                     is stored, and how you can delete it. Last updated:
+                     2026-08-19.
                 </p>
             </div>
         </section>
@@ -340,6 +340,77 @@ endblock %} {% block content %}
                                 >
                             </li>
                         </ol>
+                    </div>
+                </div>
+
+                <!-- Export and account deletion (Settings DSR) -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                        Export Your Data or Delete Your Account
+                    </h2>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
+                    >
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            Signed-in Settings also provides a data export and a
+                            full account deletion. These are separate from
+                            Clear All Data above.
+                        </p>
+                        <ul
+                            class="space-y-3 text-sm text-gray-500 leading-relaxed"
+                        >
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    ><strong class="text-gray-700"
+                                        >Export Your Data</strong
+                                    >
+                                    &mdash; Settings
+                                    <strong class="text-gray-700"
+                                        >Export Data</strong
+                                    >
+                                    downloads your enrollment history, run
+                                    metadata, session metadata, statistics, and
+                                    settings as a JSON file
+                                    (<code
+                                        class="text-xs text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded font-mono"
+                                        >POST /api/settings/export</code
+                                    >). Stored Udemy cookies are never included
+                                    &mdash; only a flag showing whether they
+                                    exist.</span
+                                >
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0"
+                                ></span>
+                                <span
+                                    ><strong class="text-gray-700"
+                                        >Delete Account</strong
+                                    >
+                                    &mdash; Settings
+                                    <strong class="text-gray-700"
+                                        >Delete Account</strong
+                                    >
+                                    permanently deletes the account and all
+                                    associated data: enrollment history, run
+                                    logs, statistics, sessions, settings, and
+                                    stored Udemy cookies, including the account
+                                    row itself
+                                    (<code
+                                        class="text-xs text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded font-mono"
+                                        >POST /api/settings/delete-account</code
+                                    >). Type
+                                    <strong class="text-gray-700">DELETE</strong>
+                                    in Settings to confirm. This cannot be
+                                    undone. Database backups (retention up to 14
+                                    days / 30 files) may still contain this data
+                                    until they age out.</span
+                                >
+                            </li>
+                        </ul>
                     </div>
                 </div>
 

@@ -39,7 +39,7 @@ responsible for ensuring their use complies with applicable terms and laws.
 
 ## What is Udemy Course Enroller?
 
-**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that helps you discover free (often 100% off) Udemy course coupons and **attempt** enrollment when you start a run. While a run is active, it monitors configured coupon aggregator sites — such as Real Discount, Discudemy, and Courson — applies your filters, and uses session-based Udemy enrollment endpoints. Enrollment success and coupon validity are **not guaranteed**.
+**Udemy Course Enroller** is an asynchronous web application built with **Python** and **FastAPI** that helps you discover free (often 100% off) Udemy course coupons and **attempt** enrollment when you start a run. While a run is active, it monitors **12 aggregator scrapers** — Courson, CouponScorpion, FreeCourseSites, E-next, Interview Gig, UdemyXpert, Coursesity, Course Folder, Couponami, Korshub, UdemyFreebies, and iDownloadCoupon — applies your filters, and uses session-based Udemy enrollment endpoints. Enrollment success and coupon validity are **not guaranteed**.
 
 You can also browse public free-coupon listings without automation. Prefer self-hosting if you want full control over where session cookies are stored.
 

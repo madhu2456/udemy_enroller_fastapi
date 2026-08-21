@@ -146,3 +146,47 @@ def test_base_template_has_no_hidden_flex_conflict():
         assert not (has_hidden and has_flex), (
             f"Conflicting hidden+flex tokens in class={match.group(1)!r}"
         )
+
+
+def test_f316_mobile_nav_unmasks_about_and_shows_enroller_wordmark():
+    """F316: hamburger below sm; About is a full word; short wordmark present."""
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "app/templates/components/base.html"
+    ).read_text(encoding="utf-8")
+    assert re.search(r'class="[^"]*mask-edges', source) is None
+
+    client = TestClient(app)
+    try:
+        response = client.get("/faq")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    toggle = soup.find(id="nav-toggle")
+    assert toggle is not None
+    assert toggle.get("aria-controls") == "mobile-nav"
+    assert toggle.get("aria-expanded") == "false"
+
+    panel = soup.find(id="mobile-nav")
+    assert panel is not None
+    labels = [
+        a.get_text(strip=True)
+        for a in panel.find_all("a")
+        if a.get_text(strip=True)
+    ]
+    for expected in ("Guides", "FAQ", "About", "Free Coupons"):
+        assert expected in labels
+    about = next(a for a in panel.find_all("a") if a.get_text(strip=True) == "About")
+    assert about.get_text(strip=True) == "About"
+
+    wordmarks = [
+        span.get_text(strip=True)
+        for span in soup.select("header a[href='/'] span")
+    ]
+    assert "Enroller" in wordmarks
+    assert "Udemy Enroller" in wordmarks
