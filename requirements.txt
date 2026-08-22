@@ -1,43 +1,43 @@
 # FastAPI Framework
-fastapi>=0.115.6
-uvicorn[standard]>=0.34.0
-python-multipart>=0.0.31
+fastapi>=0.141.1
+uvicorn[standard]>=0.52.4
+python-multipart>=0.0.32
 jinja2>=3.1.6
-pydantic>=2.10.4
+pydantic>=2.13.4
 
 # Database
-sqlalchemy>=2.0.36
-pydantic-settings>=2.7.0
-alembic>=1.13.1
+sqlalchemy>=2.0.52
+pydantic-settings>=2.15.0
+alembic>=1.19.1
 
 # HTTP Clients
-requests>=2.33.0
+requests>=2.34.2
 cloudscraper>=1.2.71
 httpx[brotli]>=0.28.1
 brotli>=1.2.0
 
 # HTML Parsing
-beautifulsoup4>=4.12.3
-lxml>=6.1.0
+beautifulsoup4>=4.15.0
+lxml>=6.1.2
 
 # Automation
-playwright>=1.49.1
-playwright-stealth>=1.0.6
-setuptools>=78.1.1
+playwright>=1.62.0
+playwright-stealth>=2.0.3
+setuptools>=84.0.0
 
 # Security
-bcrypt>=4.1.2
+bcrypt>=5.0.0
 cryptography>=50.0.0
 
 # Logging
 loguru>=0.7.3
-python-json-logger>=2.0.7
+python-json-logger>=4.2.0
 
 # Testing
-pytest>=9.0.3
-pytest-asyncio>=0.25.3
-pytest-cov>=4.1.0
-ruff>=0.9.0
+pytest>=9.1.1
+pytest-asyncio>=1.4.0
+pytest-cov>=7.1.0
+ruff>=0.16.3
 
 # Utilities
-python-dotenv>=1.2.2
+python-dotenv>=1.2.3
