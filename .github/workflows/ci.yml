@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Checkout
         # Pin full commit SHA (tag v4.2.2) for supply-chain integrity
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Secret scan
         run: bash scripts/verify-no-secrets.sh --tree
@@ -32,7 +32,7 @@ jobs:
 
       - name: Setup Python
         # Pin full commit SHA (tag v5.6.0)
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
 
@@ -86,7 +86,7 @@ jobs:
       # ── Accessibility and browser tests ──────────────────────────────
       - name: Setup Node.js
         # Pin full commit SHA (tag v4.4.0)
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: "npm"
@@ -121,13 +121,13 @@ jobs:
     steps:
       - name: Get latest code
         # Pin full commit SHA (tag v4.2.2) for supply-chain integrity
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The rsync action copies your project files to the remote server.
       # Excludes are used so we don't overwrite virtual environments or local DBs.
       - name: Sync files to remote server
         # Pin full commit SHA (tag 7.0.1)
-        uses: burnett01/rsync-deployments@796cf0d5e4b535745ce49d7429f77cf39e25ef39 # 7.0.1
+        uses: burnett01/rsync-deployments@4d419d1dc46d4a8a2b6ceab2f951f0f93b2da8f5 # 9
         with:
           switches: -avzr --delete --exclude=.git/ --exclude=venv/ --exclude=__pycache__/ --exclude=*.db --exclude=.env
           rsh: -4 -o BatchMode=yes -o ConnectTimeout=30
