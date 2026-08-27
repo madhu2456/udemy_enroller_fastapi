@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_REST_TOKEN: str = ""
 
     # Scraper defaults
-    MAX_SCRAPER_WORKERS: int = 5
+    MAX_SCRAPER_WORKERS: int = 12
     SCRAPER_SITE_TIMEOUT_SECONDS: int = 1800
     SCRAPER_RUN_TIMEOUT_SECONDS: int = 2700
     SCRAPER_REQUEST_TIMEOUT_SECONDS: float = 5.0

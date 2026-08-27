@@ -26,8 +26,12 @@ async def test_scraper_service_initialization():
     """Test that ScraperService initializes correctly with default sites."""
     scraper = ScraperService()
     assert len(scraper.sites) > 0
-    assert "Real Discount" not in scraper.sites
+    assert "Real Discount" in scraper.sites
     assert "FreeCourseSites" in scraper.sites
+    assert "OnlineCourses.ooo" in scraper.sites
+    assert "FreebiesGlobal" in scraper.sites
+    assert "GeeksGod" in scraper.sites
+    assert "TutorialBar" in scraper.sites
     assert "FreeWebCart" not in scraper.sites
     assert "Course Joiner" not in scraper.sites
     await scraper.http.close()
@@ -67,18 +71,25 @@ def test_generic_course_title_rejection():
     assert scraper._is_generic_course_title("Kursu İncele") is True
 
 
-def test_registry_keeps_frozen_ten_and_appends_two():
+def test_registry_keeps_frozen_ten_and_appends_seven():
     keys = list(SCRAPER_REGISTRY)
     defaults = list(UserSettings.default_sites())
     assert keys == defaults
     assert keys[:10] == FROZEN_10
-    assert keys[-2:] == ["Courson", "CouponScorpion"]
-    assert len(keys) == 12
-    assert len(SCRAPER_REGISTRY) == 12
+    assert keys[10:] == [
+        "Courson",
+        "CouponScorpion",
+        "Real Discount",
+        "OnlineCourses.ooo",
+        "FreebiesGlobal",
+        "GeeksGod",
+        "TutorialBar",
+    ]
+    assert len(keys) == 17
+    assert len(SCRAPER_REGISTRY) == 17
     codes = [cls(MagicMock()).code_name for cls in SCRAPER_REGISTRY.values()]
     assert len(codes) == len(set(codes))
-    assert set(codes) >= {"cr", "csc"}
-    assert "Real Discount" not in keys
+    assert set(codes) >= {"cr", "csc", "rd", "oc", "fg", "gg", "tb"}
     assert "Discudemy" not in keys
     assert "FreeWebCart" not in keys
     assert "Course Joiner" not in keys

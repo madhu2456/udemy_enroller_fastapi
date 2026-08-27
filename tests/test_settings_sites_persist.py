@@ -17,8 +17,16 @@ from app.models.database import Base, User, UserSession, UserSettings, get_db
 from app.routers.settings import _merge_sites_for_put
 from app.security import generate_csrf_token
 
-_NEW_TWO = ("Courson", "CouponScorpion")
-_DROPPED_TWO = ("Real Discount", "Discudemy")
+_NEW_SEVEN = (
+    "Courson",
+    "CouponScorpion",
+    "Real Discount",
+    "OnlineCourses.ooo",
+    "FreebiesGlobal",
+    "GeeksGod",
+    "TutorialBar",
+)
+_DROPPED_DECOMMISSIONED = ("Discudemy", "FreeWebCart", "Course Joiner")
 _REPO = Path(__file__).resolve().parents[1]
 _SETTINGS_HTML = _REPO / "app" / "templates" / "pages" / "settings.html"
 
@@ -42,7 +50,7 @@ def _override_get_db():
 
 def _ten_sites() -> dict:
     return {
-        k: True for k in UserSettings.default_sites() if k not in _NEW_TWO
+        k: True for k in UserSettings.default_sites() if k not in _NEW_SEVEN
     }
 
 
@@ -137,19 +145,20 @@ def _set_stored_sites(user_id: int, sites):
 
 
 class TestMergeSitesForPutHelper:
-    def test_ten_stored_and_put_upgrades_new_two_keeps_put_false(self):
+    def test_ten_stored_and_put_upgrades_new_seven_keeps_put_false(self):
         stored = _ten_sites()
         put = dict(stored)
         put["FreeCourseSites"] = False
         merged = _merge_sites_for_put(stored, put)
         defaults = UserSettings.default_sites()
         assert set(merged) == set(defaults)
-        assert len(merged) == 12
-        for name in _NEW_TWO:
+        assert len(merged) == 17
+        for name in _NEW_SEVEN:
             assert merged[name] is True
         assert merged["FreeCourseSites"] is False
         assert "FreeWebCart" not in merged
         assert "Course Joiner" not in merged
+        assert "Discudemy" not in merged
 
     def test_stored_false_survives_put_that_omits_key(self):
         stored = UserSettings.default_sites()
@@ -175,15 +184,14 @@ class TestMergeSitesForPutHelper:
         merged = _merge_sites_for_put(stored, put)
         defaults = UserSettings.default_sites()
         assert set(merged) == set(defaults)
-        assert len(merged) == 12
-        assert "Real Discount" not in merged
+        assert len(merged) == 17
         assert "Discudemy" not in merged
         assert "FreeWebCart" not in merged
         assert "Course Joiner" not in merged
 
 
 class TestSettingsSitesPersistHttp:
-    def test_put_ten_upgrades_db_to_twelve_and_keeps_put_false(
+    def test_put_ten_upgrades_db_to_seventeen_and_keeps_put_false(
         self, sites_client
     ):
         client, user_id, token = sites_client
@@ -197,12 +205,13 @@ class TestSettingsSitesPersistHttp:
         assert response.status_code == 200
         stored = _db_sites(user_id)
         assert set(stored) == set(UserSettings.default_sites())
-        assert len(stored) == 12
-        for name in _NEW_TWO:
+        assert len(stored) == 17
+        for name in _NEW_SEVEN:
             assert stored[name] is True
         assert stored["FreeCourseSites"] is False
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
+        assert "Discudemy" not in stored
 
     def test_put_omitting_courson_keeps_stored_false(self, sites_client):
         client, user_id, token = sites_client
@@ -245,26 +254,25 @@ class TestSettingsSitesPersistHttp:
         assert all(body[k] is True for k in defaults)
         assert "FreeWebCart" not in body
         assert "Course Joiner" not in body
+        assert "Discudemy" not in body
         after = _db_sites(user_id)
         assert set(after) == set(_ten_sites())
-        for name in _NEW_TWO:
+        for name in _NEW_SEVEN:
             assert name not in after
 
-    def test_get_legacy_sixteen_drops_rd_du_without_writing_db(self, sites_client):
+    def test_get_legacy_sixteen_drops_decommissioned_without_writing_db(self, sites_client):
         client, user_id, _token = sites_client
         legacy = _legacy_sixteen_sites()
         _set_stored_sites(user_id, legacy)
         before = _db_sites(user_id)
         assert len(before) == 16
-        assert "Real Discount" in before and "Discudemy" in before
-        assert "Course Joiner" in before
+        assert "Discudemy" in before and "Course Joiner" in before
         response = client.get("/api/settings/")
         assert response.status_code == 200
         body = response.json()["sites"]
         defaults = UserSettings.default_sites()
         assert set(body) == set(defaults)
-        assert len(body) == 12
-        assert "Real Discount" not in body
+        assert len(body) == 17
         assert "Discudemy" not in body
         assert "FreeWebCart" not in body
         assert "Course Joiner" not in body
@@ -272,11 +280,11 @@ class TestSettingsSitesPersistHttp:
         after = _db_sites(user_id)
         assert after == before
         assert len(after) == 16
-        assert "Real Discount" in after and "Discudemy" in after
+        assert "Discudemy" in after
         assert after["FreeWebCart"] is True
         assert after["Course Joiner"] is True
 
-    def test_put_legacy_sixteen_extras_ignored_writes_twelve(self, sites_client):
+    def test_put_legacy_sixteen_extras_ignored_writes_seventeen(self, sites_client):
         client, user_id, token = sites_client
         _set_stored_sites(user_id, _legacy_sixteen_sites())
         put = _legacy_sixteen_sites()
@@ -290,16 +298,15 @@ class TestSettingsSitesPersistHttp:
         stored = _db_sites(user_id)
         defaults = UserSettings.default_sites()
         assert set(stored) == set(defaults)
-        assert len(stored) == 12
-        assert "Real Discount" not in stored
+        assert len(stored) == 17
         assert "Discudemy" not in stored
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
         assert stored["FreeCourseSites"] is False
-        for name in _DROPPED_TWO:
+        for name in _DROPPED_DECOMMISSIONED:
             assert name not in stored
 
-    def test_post_reset_writes_twelve_key_defaults(self, sites_client):
+    def test_post_reset_writes_seventeen_key_defaults(self, sites_client):
         client, user_id, token = sites_client
         _set_stored_sites(user_id, _legacy_sixteen_sites())
         response = client.post(
@@ -309,8 +316,7 @@ class TestSettingsSitesPersistHttp:
         assert response.status_code == 200
         stored = _db_sites(user_id)
         assert stored == UserSettings.default_sites()
-        assert len(stored) == 12
-        assert "Real Discount" not in stored
+        assert len(stored) == 17
         assert "Discudemy" not in stored
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
@@ -332,7 +338,9 @@ class TestSettingsSitesPersistHttp:
         assert set(stored) == set(UserSettings.default_sites())
         assert stored["FreeCourseSites"] is False
         assert "FreeWebCart" not in stored
-        for name in _NEW_TWO:
+        assert "Discudemy" not in stored
+        assert "Course Joiner" not in stored
+        for name in _NEW_SEVEN:
             assert stored[name] is True
 
     def test_non_dict_put_sites_does_not_500(self, sites_client):

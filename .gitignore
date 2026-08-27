@@ -68,3 +68,5 @@ docs/ops/*
 
 # Local SQLite backup output (F065)
 backups/
+data/*.enc
+*.enc

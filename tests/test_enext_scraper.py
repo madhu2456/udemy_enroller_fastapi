@@ -59,8 +59,8 @@ async def test_pagination_continues_on_duplicates_and_failures_to_hit_cap(scrape
     assert len(scraper.data) == 500
     listing_calls = [c for c in scraper.http.get.call_args_list if "jobs.e-next.in" in c[0][0] and "robots.txt" not in c[0][0]]
     # Page 1 gives 1 unique course. We need 499 more.
-    # 499 / 60 = 8.3 => 9 more pages. Total 1 + 9 = 10 pages.
-    assert len(listing_calls) == 10
+    # Fetched in batches of 6 pages: 2 batches (pages 1-6 and 7-12) = 12 pages.
+    assert len(listing_calls) == 12
 
 @pytest.mark.asyncio
 async def test_empty_listing_stops_gracefully(scraper):
@@ -75,9 +75,9 @@ async def test_empty_listing_stops_gracefully(scraper):
     await scraper.scrape(asyncio.Semaphore(1))
     
     assert len(scraper.data) == 0
-    # Should only try the first page and then stop
+    # Should try the first batch of 6 pages and then stop
     listing_calls = [c for c in scraper.http.get.call_args_list if "jobs.e-next.in" in c[0][0] and "robots.txt" not in c[0][0]]
-    assert len(listing_calls) == 1
+    assert len(listing_calls) == 6
 
 @pytest.mark.asyncio
 async def test_duplicate_listing_urls_and_duplicate_udemy_urls(scraper):

@@ -22,10 +22,13 @@ def scraper(http_client):
 
 
 def test_category_sources_coupon_then_archive():
-    assert len(FreeCourseSitesScraper.CATEGORY_SOURCES) == 2
+    assert len(FreeCourseSitesScraper.CATEGORY_SOURCES) == 5
     assert FreeCourseSitesScraper.CATEGORY_SOURCES == [
         {"slug": "100-off-udemy-coupon", "fallback_id": 137426},
         {"slug": "free-udemy-courses", "fallback_id": 67983},
+        {"slug": "udemy-coupon-giveaways", "fallback_id": 0},
+        {"slug": "it-software", "fallback_id": 0},
+        {"slug": "development", "fallback_id": 0},
     ]
 
 
@@ -215,7 +218,7 @@ async def test_html_fallback_ordering(scraper):
 
 @pytest.mark.asyncio
 async def test_multiple_categories_exhaustion(scraper):
-    scraper._get_category_id = AsyncMock(side_effect=[137426, 67983])
+    scraper._get_category_id = AsyncMock(side_effect=[137426, 67983, 0, 0, 0])
 
     async def mock_get(url, *args, **kwargs):
         mock_resp = MagicMock()

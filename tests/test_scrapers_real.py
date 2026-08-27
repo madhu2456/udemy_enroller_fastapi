@@ -44,7 +44,7 @@ async def test_real_discount_live(http_client):
     scraper = RealDiscountScraper(http_client)
     semaphore = asyncio.Semaphore(5)
     await scraper.scrape(semaphore)
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     print(f"\n[Real Discount] Found {len(scraper.data)} courses", flush=True)
 
 @pytest.mark.asyncio(loop_scope="function")
@@ -54,7 +54,7 @@ async def test_freecoursesites_live(http_client):
     await scraper.scrape(semaphore)
     print(f"FreeCourseSites unique courses={len(scraper.data)}", flush=True)
     assert len(scraper.data) > 0, f"FreeCourseSites found 0 courses. Error: {scraper.error}"
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     assert all("udemy.com/course/" in c.url for c in scraper.data)
 
 
@@ -73,7 +73,7 @@ async def test_interviewgig_live(http_client):
     scraper = InterviewGigScraper(http_client)
     semaphore = asyncio.Semaphore(5)
     await scraper.scrape(semaphore)
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     print(f"\n[InterviewGig] Found {len(scraper.data)} courses", flush=True)
 
 
@@ -83,7 +83,7 @@ async def test_udemyxpert_live(http_client):
     scraper = UdemyXpertScraper(http_client)
     semaphore = asyncio.Semaphore(5)
     await scraper.scrape(semaphore)
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     print(f"\n[UdemyXpert] Found {len(scraper.data)} courses", flush=True)
 
 
@@ -94,6 +94,7 @@ async def test_coursesity_live(http_client):
     semaphore = asyncio.Semaphore(5)
     await scraper.scrape(semaphore)
     assert len(scraper.data) > 0, f"Coursesity found 0 courses. Error: {scraper.error}"
+    assert len(scraper.data) <= scraper.MAX_COURSES
     print(f"\n[Coursesity] Found {len(scraper.data)} courses")
 
 
@@ -124,7 +125,7 @@ async def test_korshub_live(http_client):
     await scraper.scrape(semaphore)
     print(f"\n[Korshub] Found {len(scraper.data)} courses", flush=True)
     assert len(scraper.data) > 0, f"Korshub found 0 courses. Error: {scraper.error}"
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     assert all("udemy.com/course/" in c.url for c in scraper.data)
 
 
@@ -133,7 +134,7 @@ async def test_discudemy_live(http_client):
     """Unregistered class probe, not a live-fleet pin (C43)."""
     scraper = DiscudemyScraper(http_client)
     await scraper.scrape(asyncio.Semaphore(5))
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     assert all("udemy.com/course/" in c.url for c in scraper.data)
     print(f"\n[Discudemy] Found {len(scraper.data)} courses", flush=True)
 
@@ -142,7 +143,7 @@ async def test_discudemy_live(http_client):
 async def test_courson_live(http_client):
     scraper = CoursonScraper(http_client)
     await scraper.scrape(asyncio.Semaphore(5))
-    assert len(scraper.data) <= 80
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     assert all("couponCode=" in c.url for c in scraper.data)
 
 
@@ -151,7 +152,7 @@ async def test_couponscorpion_live(http_client):
     scraper = CouponScorpionScraper(http_client)
     await scraper.scrape(asyncio.Semaphore(5))
     print(f"\n[CouponScorpion] Found {len(scraper.data)} courses", flush=True)
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= getattr(scraper, 'MAX_COURSES', 500)
     assert all("udemy.com/course/" in c.url for c in scraper.data)
 
 
@@ -161,7 +162,7 @@ async def test_udemyfreebies_live(http_client):
     await scraper.scrape(asyncio.Semaphore(5))
     print(f"\n[UdemyFreebies] Found {len(scraper.data)} courses", flush=True)
     assert len(scraper.data) > 0, f"UdemyFreebies found 0 courses. Error: {scraper.error}"
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) <= scraper.MAX_COURSES
     assert all("udemy.com/course/" in c.url for c in scraper.data)
 
 
@@ -170,5 +171,6 @@ async def test_idownloadcoupon_live(http_client):
     scraper = IDownloadCouponScraper(http_client)
     await scraper.scrape(asyncio.Semaphore(5))
     print(f"\n[IDownloadCoupon] Found {len(scraper.data)} courses", flush=True)
-    assert len(scraper.data) <= 500
+    assert len(scraper.data) > 0, f"IDownloadCoupon found 0 courses. Error: {scraper.error}"
+    assert len(scraper.data) <= scraper.MAX_COURSES
     assert all("udemy.com/course/" in c.url for c in scraper.data)

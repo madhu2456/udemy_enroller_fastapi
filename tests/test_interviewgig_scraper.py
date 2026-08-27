@@ -142,9 +142,9 @@ async def test_exception_in_resolve_one_does_not_append(scraper):
 
 
 @pytest.mark.asyncio
-async def test_trk_http_cap_is_80(scraper):
-    hrefs = [(f"https://trk.udemy.com/{i:08d}", f"Tracked Course Number {i}") for i in range(100)]
+async def test_trk_http_cap(scraper):
+    hrefs = [(f"https://trk.udemy.com/{i:08d}", f"Tracked Course Number {i}") for i in range(200)]
     scraper._resolve_trk_redirect = AsyncMock(return_value=COURSE_URL)
     scraper.http.get = AsyncMock(side_effect=_api_mock(_posts(*hrefs)))
     await scraper.scrape(asyncio.Semaphore(1))
-    assert scraper._resolve_trk_redirect.await_count == 80
+    assert scraper._resolve_trk_redirect.await_count == scraper.MAX_TRK_HTTP

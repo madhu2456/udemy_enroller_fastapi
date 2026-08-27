@@ -59,8 +59,8 @@ async def test_idownloadcoupon_semaphore_enforcement():
                 global_sem = asyncio.Semaphore(50)
                 await scraper.scrape(global_sem)
 
-                # Should have instantiated Semaphore(8) locally inside scrape()
-                mock_sem.assert_any_call(8)
+                # Should have instantiated Semaphore(scraper.LISTING_CONCURRENCY) locally inside scrape()
+                mock_sem.assert_any_call(scraper.LISTING_CONCURRENCY)
 
 @pytest.mark.asyncio
 async def test_telemetry_status_assignment(monkeypatch):

@@ -161,6 +161,38 @@
                     "@type": "Answer",
                     "text": "Only if you allow it. By setting a language filter, the engine will skip any course whose listed language does not match your preference."
                 }
+            },
+            {
+                "@type": "Question",
+                "name": "How do I run the CustomTkinter Desktop GUI?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Run 'python gui.py' from the project directory. The native CustomTkinter desktop interface provides Dark/Light theme switching, 1-click browser cookie auto-import across Chrome, Edge, Firefox, Brave, Opera, and Chromium, an interactive 17-scraper checklist, dual progress bars for scraping and enrollment, and a 1000-line ring-buffer execution log box."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How do I use the Unified Rich Terminal CLI?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Run 'python cli.py --help' to access the unified Typer and Rich CLI suite. Available commands include 'enroll' (with --dry-run, --categories, --languages, --min-rating, --limit, --discounted-only), 'scrape' (with --sites, --limit, --format table/json/csv), 'check' (session health and single-coupon validation), 'stats' (lifetime statistics and historical runs), and 'server' (launch FastAPI web UI)."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Which browsers support 1-click automatic cookie extraction?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "The built-in browser cookie extractor supports Chrome, Microsoft Edge, Mozilla Firefox, Brave, Opera, and Chromium across Linux, Windows, and macOS. It reads pre-authenticated session tokens (access_token, client_id, csrftoken) directly from your browser's local cookie database without needing to manually copy values from Developer Tools."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "What are the benefits of using the Desktop GUI or CLI instead of the web interface?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "The Desktop GUI and CLI run 100% locally on your computer with zero web server dependencies. They feature instant 1-click browser cookie auto-import (avoiding manual copy-paste), granular CLI arguments for headless automation and cron jobs, dry-run simulation mode, direct JSON/CSV export, and real-time dual progress bars."
+                }
             }
         ]
     }
@@ -761,6 +793,93 @@
                                     filter, the engine will skip any course
                                     whose listed language does not match your
                                     preference.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop GUI & Terminal CLI -->
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <div
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#EFF6FF] border border-blue-100"
+                        >
+                            <svg
+                                aria-hidden="true"
+                                class="w-4 h-4 text-[#2563EB]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                />
+                            </svg>
+                        </div>
+                        <h2 class="text-base font-semibold text-gray-900">
+                            Desktop GUI &amp; Terminal CLI
+                        </h2>
+                    </div>
+                    <div
+                        class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200"
+                    >
+                        <div class="px-6 py-5">
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                            >
+                                How do I run the CustomTkinter Desktop GUI?
+                            </h3>
+                            <div>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                >
+                                    Run <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">python gui.py</code> from your project root. The native desktop application provides Dark/Light theme switching, 1-click browser cookie auto-import across Chrome, Edge, Firefox, Brave, Opera, and Chromium, an interactive 17-scraper checklist, dual progress bars for scraping and enrollment, and a 1000-line ring-buffer log box.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="px-6 py-5">
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                            >
+                                How do I use the Unified Rich Terminal CLI?
+                            </h3>
+                            <div>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                >
+                                    Run <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">python cli.py --help</code> to view the full command suite. Subcommands include <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">enroll</code> (with <code class="text-xs">--dry-run</code>, <code class="text-xs">--categories</code>, <code class="text-xs">--languages</code>, <code class="text-xs">--min-rating</code>, <code class="text-xs">--limit</code>, <code class="text-xs">--discounted-only</code>), <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">scrape</code> (with <code class="text-xs">--sites</code>, <code class="text-xs">--limit</code>, <code class="text-xs">--format</code>), <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">check</code> (session health / coupon validation), <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">stats</code> (lifetime statistics), and <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">server</code> (launch FastAPI web UI).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="px-6 py-5">
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                            >
+                                Which browsers support 1-click automatic cookie extraction?
+                            </h3>
+                            <div>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                >
+                                    The built-in cookie extraction service supports <strong>Chrome, Microsoft Edge, Mozilla Firefox, Brave, Opera, and Chromium</strong> on Linux, Windows, and macOS. It reads active session cookies directly from your browser's local profile store so you don't need to manually inspect DevTools.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="px-6 py-5">
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                            >
+                                What are the benefits of using the Desktop GUI or CLI instead of the web interface?
+                            </h3>
+                            <div>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                >
+                                    The native apps run 100% locally with zero server setup required. Benefits include 1-click browser cookie auto-import, dry-run simulation mode, granular terminal flags for automated scripts and cron jobs, direct JSON/CSV export, and real-time dual progress bars.
                                 </p>
                             </div>
                         </div>

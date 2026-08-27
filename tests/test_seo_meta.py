@@ -152,3 +152,34 @@ class TestSoftwareApplicationJsonLd:
             assert app_node["publisher"]["@id"] == "https://madhudadi.in/#person"
         finally:
             client.close()
+
+    def test_ai_profile_related_profiles(self):
+        from fastapi.testclient import TestClient
+        from main import app
+        from app.routers.seo import PORTFOLIO_URL, BLOG_URL, DEALS_URL, ADTICKS_URL
+
+        client = TestClient(app)
+        try:
+            res = client.get("/ai-profile.json")
+            assert res.status_code == 200
+            data = res.json()
+            assert "@graph" in data
+            app_node = next(
+                (node for node in data["@graph"] if node.get("@type") == "SoftwareApplication"),
+                None,
+            )
+            assert app_node is not None
+            expected_profiles = [
+                f"{PORTFOLIO_URL}/ai-profile.json",
+                f"{BLOG_URL}/ai-profile.json",
+                f"{DEALS_URL}/ai-profile.json",
+                f"{ADTICKS_URL}/ai-profile.json",
+            ]
+            assert app_node.get("relatedProfiles") == expected_profiles
+            assert "https://madhudadi.in/ai-profile.json" in app_node["relatedProfiles"]
+            assert "https://madhudadi.in/blog/ai-profile.json" in app_node["relatedProfiles"]
+            assert "https://deals.madhudadi.in/ai-profile.json" in app_node["relatedProfiles"]
+            assert "https://adticks.com/ai-profile.json" in app_node["relatedProfiles"]
+        finally:
+            client.close()
+

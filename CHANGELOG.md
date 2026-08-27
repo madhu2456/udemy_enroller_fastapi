@@ -9,6 +9,192 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### Standalone Executables (`Gui.exe` & `cli.exe`) & Cross-Platform Packaging
+
+- **Standalone Cross-Platform Compiler (`build_exe.py`, `gui.spec`, `cli.spec`)**:
+  - **Single-File Desktop Packaging**: Implemented PyInstaller specifications for building standalone single-file executables (`Gui.exe` in windowed mode without terminal popups, and `cli.exe` in console mode for Rich terminal UI).
+  - **Asset & Theme Bundling**: Properly packages all CustomTkinter theme assets, templates, and static resources into single-file runtime extraction (`sys._MEIPASS`).
+  - **Unified Build Runner**: Added `python build_exe.py --all`, `python build_exe.py --gui`, `python build_exe.py --cli`, and `python build_exe.py --clean`.
+- **GitHub Actions Multi-OS Automated Release Pipeline (`.github/workflows/build-executables.yml`)**:
+  - Automatically compiles standalone release binaries across Windows (`Gui.exe`, `cli.exe`), Linux (`Gui`, `cli`), and macOS (`Gui`, `cli`) on every tag/release or manual workflow dispatch.
+- **Unit Test Suite (`tests/test_build_exe.py`)**:
+  - Added test coverage for build artifact cleaning, spec file validation, and PyInstaller execution handling.
+
+
+### Persistent Encrypted Session Storage & Automatic Long-Term Session Restoration
+
+- **Persistent Encrypted Session Store (`app/services/session_store.py`)**:
+  - **Salted HKDF-SHA256 Encryption**: Implemented `save_persistent_session`, `load_persistent_session`, `clear_persistent_session`, and `verify_and_restore_session` utilizing per-session random salts and Fernet symmetric encryption.
+  - **Dual-Layer Persistence**: Securely stores encrypted credentials in the local SQLite database (`users` table) with an encrypted backup file (`data/.session.enc` with strict 0600 file permissions) to survive database recreations.
+  - **Automatic Session Restoration on Startup**: On Desktop GUI and Unified CLI launch, the application automatically loads and tests saved session credentials in the background against the Udemy API (`get_session_info()`).
+  - **Fail-Closed & Zero-Interruption Experience**: If the saved session is valid, the app authenticates seamlessly with 0 manual token re-entry prompts. If the session has expired (typically after 30–90 days on Udemy), the user is gracefully alerted to enter fresh tokens.
+- **Desktop GUI Integration (`app/gui/app.py`, `app/gui/bridge.py`, `app/gui/views/login_view.py`)**:
+  - Automatically restores saved sessions upon application startup and displays `✓ Connected as <User> (Session Saved)`.
+  - Added "✓ Test & Save Session" and "Clear Saved Session" controls to the Login View.
+- **Unified Rich CLI Integration (`app/cli/commands/login.py`, `app/cli/commands/logout.py`, `app/cli/commands/enroll.py`, `app/cli/commands/check.py`, `app/cli/commands/stats.py`)**:
+  - **Dedicated `login` and `logout` Subcommands**: Added `python cli.py login` (with 1-click browser auto-detection or manual token options to authenticate, inspect account details, and persist session) and `python cli.py logout` (to securely wipe persistent credentials from DB and local storage).
+  - **Automatic Session Fallback**: `python cli.py enroll` and `python cli.py check` now automatically use saved persistent credentials when `--token` is omitted, eliminating repetitive credential entry.
+  - **Account Status in `stats`**: `python cli.py stats` displays connected account and saved session status.
+  - **Per-Course Error Isolation**: Hardened the CLI enrollment loop with item-level `try...except` isolation so individual course anomalies never abort the batch process.
+- **Automated Test Suite (`tests/test_session_store.py`, `tests/test_cli.py`)**:
+  - Added unit tests verifying encryption/decryption roundtrips, invalid payload rejections, expired session detection, AsyncioBridge IPC events, CLI login/logout commands, and CLI automatic session fallback.
+
+### Website & Documentation — Desktop GUI & Rich CLI Promotions, Guides, FAQ & Schema.org Integration
+
+- **Dashboard Hero Promotion Banner (`app/templates/pages/dashboard.html`)**:
+  - **Responsive Promotion Banner (`#desktop-cli-banner`)**: Added an interactive gradient hero promotion banner on the dashboard showcasing the native CustomTkinter GUI and Rich CLI alternatives.
+  - **Feature Badges & Command Snippets**: Integrated visual badges ("Native Apps", "CustomTkinter GUI & Rich CLI", "1-Click Cookie Extraction"), terminal command snippets (`python gui.py`, `python cli.py enroll`), feature summaries (17 scrapers, dual progress bars, 100% offline execution), and direct CTA links to `/guides#desktop-gui-cli` and GitHub.
+- **Dedicated Guide Section 06 & Schema.org Structured Data (`app/templates/pages/guides.html`)**:
+  - **Guide Section 06 (`#desktop-gui-cli`)**: Added comprehensive step-by-step documentation ("Using the Desktop GUI & Unified Terminal CLI") with a 6-minute read estimate covering GUI launch, theme customization, 17-scraper checklist controls, dual progress bars, 1,000-line circular log box, 1-click cookie auto-extraction across 6 supported browsers, and all CLI subcommands (`enroll`, `scrape`, `check`, `stats`, `server`) and filter flags (`--dry-run`, `--categories`, `--languages`, `--min-rating`, `--limit`, `--discounted-only`, `--sites`, `--format`).
+  - **Schema.org `ItemList` Position 6**: Extended the JSON-LD `ItemList` schema with position 6 pointing to `https://udemyenroller.madhudadi.in/guides#desktop-gui-cli` ("Desktop GUI & Terminal CLI Guide") while strictly preserving F320 lead paragraph constraints (40–60 words, no anchor links, zero superlatives).
+- **Global Footer Navigation Link (`app/templates/components/base.html`)**:
+  - Added direct `Desktop & CLI Guide` navigation link targeting `/guides#desktop-gui-cli` in the footer `<nav aria-label="Footer navigation">` across all site pages.
+- **FAQ Section & JSON-LD `FAQPage` Rich Snippets (`app/templates/pages/faq.html`)**:
+  - **"Desktop GUI & Terminal CLI" FAQ Category**: Added 4 detailed FAQ entries covering CustomTkinter Desktop GUI execution, Unified Rich CLI commands and subcommands, the 6 supported browsers for 1-click cookie auto-extraction (Chrome, Edge, Firefox, Brave, Opera, Chromium), and advantages of 100% local offline execution vs. web server hosting.
+  - **Schema.org `FAQPage` JSON-LD Synchronization**: Added matching structured question and answer entries to the `@type: FAQPage` JSON-LD graph for enhanced search engine indexing and rich snippets.
+- **Documentation & Integration Test Suite (`tests/test_desktop_cli_docs.py`)**:
+  - Added 13 automated test cases verifying dashboard hero banner markup and snippets (`test_dashboard_desktop_cli_hero_banner`), `/guides` section 06 content and flags (`test_guides_page_desktop_cli_section`), `ItemList` position 6 JSON-LD schema (`test_guides_itemlist_schema_includes_desktop_cli`), F320 lead paragraph constraints (`test_f320_guides_lead_preserved`), `base.html` footer link (`test_base_footer_desktop_cli_link`), FAQ HTML and `FAQPage` JSON-LD coverage (`test_faq_jsonld_and_html_desktop_cli_coverage`), and unbroken single `<main id="main-content" role="main">` landmark structure across all 7 public routes (`test_main_landmark_structure_unbroken`).
+
+### Modern Desktop GUI — CustomTkinter Application & Thread-Safe AsyncioBridge
+
+- **Modern Desktop GUI (`gui.py`, `app/gui/`)**:
+  - **CustomTkinter Engine & Native Themes**: Implemented a responsive desktop interface powered by CustomTkinter supporting Dark and Light native themes with persistent preferences.
+  - **Dual Progress Bars**: Added visual dual progress bars providing concurrent real-time tracking for batch-level scraping across the scraper fleet and item-level enrollment processing in the checkout loop.
+  - **17-Scraper Checklist Grid**: Interactive multi-select grid enabling granular scraper fleet control with 1-click batch toggles ("Select All", "Deselect All", "Reset Defaults").
+  - **1,000-Line Circular FIFO Log Box**: Embedded terminal log viewer backed by a 1,000-line `collections.deque` buffer with auto-scroll locking, colorized log level tags, and dynamic Pause / Resume controls.
+  - **Thread-Safe `AsyncioBridge`**: Implemented a decoupled worker thread bridge managing bidirectional queue communication (`command_queue` and `event_queue`) between the CustomTkinter UI event loop and asyncio background operations (`UdemyClient`, `ScraperService`, `browser_cookies`).
+  - **Display Environment Detection**: Hardened `gui.py` with lazy imports and display checks (`DISPLAY`, `WAYLAND_DISPLAY`), outputting clear diagnostic errors and redirecting headless/SSH environments to `python cli.py`.
+
+### Unified Rich CLI — Typer & Rich Terminal Ecosystem
+
+- **Unified Rich CLI (`cli.py`, `app/cli/`)**:
+  - **5 Specialized Subcommands**:
+    - `enroll`: Automated scraping and bulk enrollment with granular filters (`--categories`, `--languages`, `--min-rating`, `--min-reviews`, `--instructors`, `--limit`, `--browser`, `--token`, `--dry-run`, `--output`).
+    - `scrape`: Standalone coupon harvester exporting discovered courses to formatted Rich terminal tables, JSON, or CSV (`--format table|json|csv`, `--output`, `--sites`, `--limit`).
+    - `check`: Fast diagnostic utility verifying Udemy authentication status, account profile data, and single coupon URL availability (`--token`, `--url`).
+    - `stats`: Displays lifetime enrollment metrics, total savings, currency breakdown, and historical run records with JSON export support (`--output`, `--limit`).
+    - `server`: Production Uvicorn web server launcher running the FastAPI interface (`--host`, `--port`, `--reload`).
+  - **`--dry-run` Simulation Mode**: Full course discovery and filter evaluation simulation without modifying the user's live Udemy account or submitting checkout requests.
+  - **Interactive Terminal Wizard**: Guided prompts automatically engaging when subcommands are invoked interactively without arguments or credentials.
+  - **CI & Non-TTY Detection**: Built-in pipe detection (`is_tty()`) automatically disabling animations, progress bars, and spinners when output is redirected to files, pipes, or CI/CD automated runners.
+
+### Universal Browser Cookie Extractor — Safe Zero-Lock Extraction & Decryption
+
+- **Universal Browser Cookie Extractor (`app/services/browser_cookies.py`)**:
+  - **Multi-Browser Support**: Automated discovery and credential harvesting across Google Chrome, Microsoft Edge, Mozilla Firefox, Brave, Opera, and Chromium.
+  - **Immutable Tempdir SQLite Extraction**: Copies browser cookie databases to isolated temporary directories and queries using SQLite `mode=ro&immutable=1` URI flags, completely preventing database lock contention on active browser sessions.
+  - **Cross-Platform Decryption Engines**:
+    - **Linux**: Chromium `v10` AES-128-CBC unmasking via PBKDF2 HMAC SHA-1 (`saltysalt`, 24 iterations) with SecretService / GNOME Keyring / `peanuts` master key retrieval.
+    - **Windows**: DPAPI `CryptUnprotectData` master key unwrap from `Local State` JSON combined with AES-256-GCM cookie payload decryption.
+    - **macOS**: Keychain master password retrieval with PBKDF2 derivation and AES-128-CBC cookie unmasking.
+    - **Firefox**: Plain-text SQLite extraction directly querying `moz_cookies` for `access_token`, `client_id`, and `csrftoken`.
+  - **Windows Chrome 127+ App-Bound `v20` Detection**: Detects DPAPI App-Bound encryption barriers and surfaces user-friendly troubleshooting guidance recommending Firefox/Edge or manual token input.
+
+### Test Suites — 25 New Unit Tests Across GUI, CLI, and Cookie Extractor
+
+- **Dedicated Unit Test Suites (25 Tests)**:
+  - **`tests/test_browser_cookies.py` (8 tests)**: Validates `UdemyBrowserCookies` dataclass conversions, Firefox plain cookie extraction, Linux PBKDF2 decryption, Windows DPAPI mock decryption, macOS Keychain mock decryption, browser candidate path discovery, missing database handling, and fallback note validation.
+  - **`tests/test_cli.py` (10 tests)**: Validates `--version`, top-level `--help`, missing cookie handling, `--dry-run` enrollment simulation with JSON output, `scrape` command with JSON and CSV exports, `check` command session validation and single URL verification, `stats` lifetime metrics export, and `server` Uvicorn launcher invocation.
+  - **`tests/test_gui_bridge.py` (7 tests)**: Validates AsyncioBridge lifecycle management (start/stop), PAUSE and RESUME command handling, mock TEST_LOGIN authentication flow, AUTO_EXTRACT_COOKIES integration, filter synchronization, SCRAPE_COURSES dispatching, and Loguru log forwarding handler.
+
+### Scrapers — Fleet Capacity Scaling to 500 Courses & Concurrency Optimizations
+
+- **FreebiesGlobal Scraper Scaling (`FreebiesGlobalScraper` / `fg`)**:
+  - Pointed `LISTING_ENDPOINT` to `https://freebiesglobal.com/tag/udemy-100-off/page/{p}/`, unlocking access to FreebiesGlobal's full 8,024-course tag archive (535 pages) rather than the 2-page `/dealstore/udemy` landing showcase.
+  - Implemented 0-hop offer card direct link parsing (`a.re_track_btn`) + 1-hop detail post fallback (`article.post a.btn_offer_block`) with fast regex and `courses_added_this_page == 0` early termination, scaling yield from 53 to **500 valid Udemy coupons**.
+- **Korshub Scraper High-Speed JSON-LD & Flight Extraction (`KorshubScraper` / `kh`)**:
+  - Implemented fast JSON-LD regex matching (`"url":\s*"(https://www.udemy.com/course/[^"]+)"`) and enhanced Next.js Flight SSR unicode unescaping (`\u0026`, `\u002f`, `\u003d`, `\u003f`, `\"`, `\/`), resolving 500 courses from the 3,138-course catalog in <20s.
+- **CouponScorpion Fast Single-Attempt Hop Resolution (`CouponScorpionScraper` / `csc`)**:
+  - Optimized `out.php` hop resolution to single attempt (`attempts=1`), `timeout=8s`, and added relative redirect handling, resolving 500 courses from the 1,786 Category 21032 catalog in <30s.
+- **OnlineCourses.ooo Isolated Detail Ingestion (`OnlineCoursesScraper` / `oc`)**:
+  - Switched detail page requests to isolated `self.http.get` calls, preventing transient detail 404s/timeouts from tripping the listing circuit breaker and paginating up to 500 courses.
+- **Live Inventory Verification for GeeksGod (`gg`) & TutorialBar (`tb`)**:
+  - Verified that GeeksGod's 35 courses and TutorialBar's 140 courses represent 100% of their active live databases, with dynamic discovery enabled up to 500 items.
+
+### Scrapers — TutorialBar Scraper Engine Integration (17 Scrapers Fleet)
+
+- **TutorialBar Scraper Engine Integration (17 Scrapers Fleet)**:
+  - **`TutorialBarScraper` (`tb` / "TutorialBar")**: Integrated `https://www.tutorialbar.com/live-coupons` as the 17th active scraper.
+  - **Next.js React Server Component (RSC) Flight Stream Extraction**: Extracts embedded `couponUrl` and `couponCode` strings directly from `self.__next_f` flight chunks with Unicode entity unescaping (`\u0026` -> `&`, `\"` -> `"`, `\u002F` -> `/`), enabling 0-hop direct coupon resolution.
+  - **Multi-Tiered Fallback Architecture**: Includes secondary 0-hop DOM card extraction (`.coupon-card a[href*='udemy.com']`) and 1-hop detail resolution (`/course/{slug}` -> `a.btn-primary`).
+  - **Robots.txt & Circuit Safety**: Bypasses disallowed `/go/` endpoints via listing page flight data parsing; implements early break on zero-yield pages and 500-course caps.
+  - **`SCRAPER_REGISTRY` & `UserSettings.default_sites()`**: Expanded to 17 scrapers while preserving `_FROZEN_REGISTRY_PREFIX_LEN = 10` for `coupon_checker.py`.
+  - **Test Suite**: Created `tests/test_tutorialbar_scraper.py` and synchronized `tests/test_scraper.py`, `tests/test_settings_sites_persist.py`, `tests/test_coupon_checker.py`, and `tests/test_scrapers_url_smoke.py`.
+
+### Scrapers — Tier-1 Scraper Fleet Expansion (16 Scrapers)
+
+- **Tier-1 Scraper Fleet Expansion (16 Scrapers)**:
+  - **`RealDiscountScraper` (`rd` / "Real Discount")**: Replaced legacy HTML scraping with direct CDN JSON REST API (`https://cdn.real.discount/api/courses?page={p}&limit=100&sortBy=sale_start&store=Udemy&freeOnly=true`), supporting 0-hop direct coupon link extraction, ad/sponsored filtering, and non-zero price rejection.
+  - **`OnlineCoursesScraper` (`oc` / "OnlineCourses.ooo")**: Added RSS `/feed/` XML ingestion + paginated `/page/{p}/` crawling, resolving detail buttons via ReHub CSS selector fallbacks (`a.btn_offer_block`, `a.re_track_btn`, `a[href*="udemy.com"]`).
+  - **`FreebiesGlobalScraper` (`fg` / "FreebiesGlobal")**: Added deal category harvesting (`https://freebiesglobal.com/dealstore/udemy/page/{p}/`) with direct offer card extraction and 1-hop detail fallback.
+  - **`GeeksGodScraper` (`gg` / "GeeksGod")**: Added `/courses?page={p}` catalog crawling with detail CTA resolution, tracking parameter sanitization (`rand=4`, `ref` stripped via `Course.normalize_link`), and WordPress pagination loop break detection.
+  - **`SCRAPER_REGISTRY` & Invariant Preservation**: Expanded registry to 16 scrapers while strictly preserving the `FROZEN_10` prefix at index positions 0..9 and `_FROZEN_REGISTRY_PREFIX_LEN = 10` for `coupon_checker.py`.
+  - **`UserSettings.default_sites()`**: Expanded to 16 keys defaulting to `True`.
+  - **Dedicated Unit Test Suites**: Created `tests/test_onlinecourses_scraper.py`, `tests/test_freebiesglobal_scraper.py`, `tests/test_geeksgod_scraper.py`, and updated `tests/test_realdiscount_scraper.py`, `tests/test_scraper.py`, `tests/test_settings_sites_persist.py`, `tests/test_coupon_checker.py`, and `tests/test_scrapers_url_smoke.py`.
+
+### Scrapers — Fleet-Wide 500 Latest Coupons Standardization & Anti-Zombie Chunked Detail Batching
+
+- **Standardized `MAX_COURSES = 500` Across All 12 Scrapers in `SCRAPER_REGISTRY`**:
+  - Enforced a uniform maximum cap of 500 latest coupons across the entire fleet (`ENextScraper`, `InterviewGigScraper`, `UdemyXpertScraper`, `CoursesityScraper`, `CourseFolderScraper`, `CouponamiScraper`, `KorshubScraper`, `UdemyFreebiesScraper`, `IDownloadCouponScraper`, `FreeCourseSitesScraper`, `CoursonScraper`, `CouponScorpionScraper`).
+  - Expanded listing candidate buffers to 750–800 raw candidates (`MAX_LISTING_PAGES`, `MAX_API_PAGES`, `CANDIDATE_BUFFER`, `MAX_COUPON_PAGES`) to guarantee discovering 500 valid coupons when available on source platforms.
+- **Anti-Zombie Chunked Detail Batching (`DETAIL_BATCH_SIZE = 10`)**:
+  - Refactored detail iteration loops across all scrapers to execute in discrete chunks (`asyncio.gather(*chunk, return_exceptions=True)` in batches of 10) with immediate early loop break when `len(self.data) >= self.MAX_COURSES`.
+  - Completely eliminated uncancelled background task leaks and socket descriptor exhaustion on early loop termination.
+- **Korshub 3,767-Course `/free-courses?platform=UDEMY` Scale & Next.js Flight SSR Extraction**:
+  - Upgraded `KorshubScraper` to target the dedicated 100% free courses platform endpoint (`https://www.korshub.com/free-courses?page={p}&platform=UDEMY`), tapping into Korshub's full 261-page (~3,132 Udemy courses) catalog instead of mixed multi-platform pages.
+  - Implemented Next.js Server Components Flight payload extraction (`_extract_udemy_url_from_text`) with Unicode and entity unescaping (`\u0026` -> `&`, `\/` -> `/`), directly resolving full Udemy coupon URLs without intermediary redirect overhead.
+  - Verified live performance: extracted 500 out of 500 valid Udemy coupons in 266s.
+  - Added unit test `test_korshub_nextjs_flight_unicode_unescape` in `tests/test_korshub_scraper.py`.
+
+- **Courson `/load-more-coupons` Live Pagination Scale**:
+  - Upgraded `CoursonScraper` to target `POST https://courson.xyz/load-more-coupons` with `{"filters": {}, "offset": offset}`, successfully extracting 100% of all live courses (277 out of 279 active courses harvested, up from 151).
+  - Maintained safe window.courseData extraction and discrete chunked batching.
+
+- **Test Suite & CI Parity Synchronization**:
+  - Updated all unit, smoke, and regression test suites (`tests/test_scrapers_url_smoke.py`, `tests/test_scrapers_real.py`, `tests/test_interviewgig_scraper.py`, `tests/test_coursesity_scraper.py`, `tests/test_udemyfreebies_scraper.py`, `tests/test_idownloadcoupon_scraper.py`, `tests/test_couponscorpion_scraper.py`, `tests/test_courson_scraper.py`, `tests/test_enext_scraper.py`, `tests/test_freecoursesites_scraper.py`, `tests/test_korshub_scraper.py`).
+  - Verified 100% test pass (912 passed) and clean linter checks (`ruff check .`).
+
+- **iDownloadCoupon WooCommerce Store REST API & Safe Probing**:
+  - Upgraded `IDownloadCouponScraper` to WooCommerce Store REST API (`STORE_API_ENDPOINT = "https://idownloadcoupon.com/wp-json/wc/store/v1/products"`), fetching 100 items per request (`PER_PAGE = 100`, `MAX_PAGES = 15`, `MAX_COURSES = 1000`).
+  - Added safe capability probing with dynamic `X-WP-TotalPages` header pagination, clean 400 (`rest_post_invalid_page_number`) and empty-list EOF handling, and concurrent listing page fetches (`LISTING_CONCURRENCY = 5`).
+  - Implemented resilient fallback to paginated HTML crawling (`/page/{n}/`) when Store API probing is unavailable or returns an error.
+  - Hardened `/udemy/{id}/` 302 redirect resolution with `attempts=1`, `local_detail_semaphore = 10`, HTML entity unescaping, and strict `is_udemy_course_url`/`is_trk_udemy_url` host gating.
+
+- **UdemyFreebies 1,000-Course Scale & Connection Pool Sizing**:
+  - Scaled `UdemyFreebiesScraper` capacity from 500 to 1,000 courses (`MAX_COURSES = 1000`, `COURSES_PER_PAGE = 12`, `MAX_LISTING_PAGES = 85`, `LISTING_CONCURRENCY = 6`).
+  - Configured `HTTPAdapter(pool_connections=50, pool_maxsize=50)` on CloudScraper sessions in `AsyncHTTPClient` to eliminate connection pool starvation under high detail concurrency.
+  - Implemented `UDEMY_RESERVED_SLUGS` filtering rejecting non-course redirect destinations (`/cart`, `/terms`, `/support`, `/privacy`, `/join`, etc.).
+  - Hardened single-hop `/out/{slug}` redirect resolution with `attempts=2`, single-segment course path rewriting (`/course/{slug}/?couponCode=...`), and `local_detail_semaphore = 10`.
+
+- **Unit Test Suites**:
+  - Added dedicated unit test suites `tests/test_idownloadcoupon_scraper.py` (9 tests covering Store API extraction, EOF handling, 400 errors, HTML fallback, trk redirect unwrap, hostile host rejection, and deduplication caps) and `tests/test_udemyfreebies_scraper.py` (8 tests covering class attributes, HTML listing extraction, single-hop redirects, reserved slug rejection, trk unwrap, hostile redirect drops, and max course caps).
+
+### Scrapers — Coursesity 3,000+ Course Scale & Angular 18 SSR TransferState Extraction
+
+- **Coursesity Scale & Angular SSR TransferState Extraction**:
+  - Scaled scraper capacity from ~140 to 3,051 courses (`MAX_COURSES = 3500`, `COURSES_PER_PAGE = 15`, `MAX_LISTING_PAGES = 205`) via single-phase Angular 18 SSR TransferState extraction targeting `<script id="app-root-state">` (with fallback support for `serverApp-state` and `coursesity-state`).
+  - Added specialized Angular entity unescaping (`_sanitize_angular_entities`) decoding custom Angular entities (`&q;`, `&a;`, `&s;`, `&l;`, `&g;`, `&b;`) alongside standard HTML entities.
+  - Implemented recursive JSON state key discovery (`_find_courses_and_count_in_state`) dynamically discovering course lists (`courseData`, `courses`, `COURSE_LIST`, `items`, `data`, `results`) and total count metadata (`totalCount`, `totalCourses`, `total_count`, `count`).
+  - Added 2-tier URL resolution (`_unwrap_udemy_url`): Tier 1 static regex/query parameter unwrapping without network overhead (handling `u=`, `murl=`, `dest=`, and double-encoded URLs), with Tier 2 cooperative fallback (`_resolve_trk_redirect`) for opaque `trk.udemy.com` redirect tokens.
+  - Hardened pagination with `LISTING_CONCURRENCY = 5` semaphore control, circuit-breaker safety, and comprehensive fallback to DOM-based `/course-detail/` crawl when SSR TransferState is absent or malformed.
+  - Added 10 comprehensive unit tests in `tests/test_coursesity_scraper.py` covering entity unescaping, malformed JSON fallback, recursive key variations, pagination bounding, URL unwrap tiers, concurrency limits, DOM fallback, title cleaning/deduplication, and scraper contracts.
+
+### Scrapers — CouponScorpion 500-Course Scale & HTTP Client Thread-Safe Concurrency
+
+- **CouponScorpion 500-Course Scale**:
+  - Upgraded `CouponScorpionScraper` capacity to 500 courses (`MAX_COURSES = 500`).
+  - Added WP REST listing pagination (`REST_URL` with `per_page=100`, page 1..7) and paginated HTML fallback (`HTML_LISTING` category listing).
+  - Implemented fast regex scanning (`_OUT_PHP_RE`) for `/scripts/udemy/out.php` links before falling back to DOM parsing.
+  - Added HTML entity unescaping for redirect parameters in `_out_url_from_href`.
+  - Hardened hop resolution with `attempts=2`, strict no-follow gates, and 20ms cooperative async sleep.
+  - Converted detail fetching to concurrent task dispatch via `asyncio.as_completed` bounded by `detail_semaphore`.
+
+- **HTTP Client Thread-Safe CloudScraper Sessions & Keyword Normalization (`app/services/http_client.py`)**:
+  - Replaced shared `_scraper` / `_mobile_scraper` attributes with `threading.local()` storage, guaranteeing thread isolation and preventing session state corruption across concurrent threads.
+  - Implemented thread-safe scraper registry (`_scrapers_lock`, `_all_scrapers`) with atomic cleanup in `_close_all_scrapers()` upon client teardown and re-initialization.
+  - Normalized redirect keyword arguments across `get()`, `post()`, and `head()` methods to support both `allow_redirects` (requests/cloudscraper) and `follow_redirects` (httpx) without parameter collision errors.
+  - Scaled default scraper concurrency: `MAX_SCRAPER_WORKERS` raised from 5 to 12 in `config/settings.py` (and `ScraperService` worker semaphore fallback), with detail concurrency semaphore raised from 10 to 20.
+
 ### Scrapers — live fleet 13→12 (complete delete Course Joiner)
 
 - `SCRAPER_REGISTRY` complete-deletes Course Joiner from the live fleet (12 keys). Scraper class, unit tests, and live tests are deleted (unlike Real Discount and Discudemy, whose classes and unit tests were kept). Leftover stored JSON keys for that name are dropped via GET/PUT/reset merge (stale names not in `default_sites()`).

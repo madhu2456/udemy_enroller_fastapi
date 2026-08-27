@@ -1,5 +1,6 @@
 import asyncio
 import random
+import threading
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -69,16 +70,29 @@ class AsyncHTTPClient:
         self.proxy = proxy
         self._request_semaphore = asyncio.Semaphore(max(1, max_concurrency))
         self._last_request_time = 0.0
-        self._scraper = None
-        self._mobile_scraper = None
+        self._thread_local = threading.local()
+        self._scrapers_lock = threading.Lock()
+        self._all_scrapers: set = set()
         self._init_client()
 
         from config.settings import get_settings
 
         self._is_server = get_settings().DEPLOYMENT_ENV == "server"
 
+    def _close_all_scrapers(self):
+        with self._scrapers_lock:
+            scrapers = list(self._all_scrapers)
+            self._all_scrapers.clear()
+        for s in scrapers:
+            try:
+                s.close()
+            except Exception:
+                pass
+
     def _init_client(self):
         """Initialize or re-initialize the internal httpx client and cloudscraper."""
+        self._close_all_scrapers()
+        self._thread_local = threading.local()
         self.client = httpx.AsyncClient(
             proxy=self.proxy,
             timeout=httpx.Timeout(15.0, connect=30.0),
@@ -87,48 +101,48 @@ class AsyncHTTPClient:
                 max_connections=40, max_keepalive_connections=20, keepalive_expiry=20.0
             ),
         )
-        self._scraper = None
-        self._mobile_scraper = None
 
     def _get_scraper(self, is_mobile: bool = False):
         """Get or create a persistent CloudScraper instance.
-        
+
         CloudScraper is used to access coupon aggregator sites that may use
         Cloudflare protection. This is necessary because these sites are the
         primary source of course coupon data.
-        
+
         Note: Users are responsible for ensuring their use complies with
         the terms of service of coupon aggregator sites.
         """
-        import cloudscraper
+        attr_name = "mobile_scraper" if is_mobile else "desktop_scraper"
+        scraper = getattr(self._thread_local, attr_name, None)
+        if scraper is None:
+            import cloudscraper
+            from requests.adapters import HTTPAdapter
 
-        if is_mobile:
-            if not self._mobile_scraper:
-                self._mobile_scraper = cloudscraper.create_scraper(
+            if is_mobile:
+                scraper = cloudscraper.create_scraper(
                     browser={
                         "browser": "chrome",
                         "platform": "android",
                         "mobile": True,
                     }
                 )
-                if self.proxy:
-                    self._mobile_scraper.proxies = {
-                        "http": self.proxy,
-                        "https": self.proxy,
-                    }
-            return self._mobile_scraper
-        else:
-            if not self._scraper:
-                self._scraper = cloudscraper.create_scraper(
+            else:
+                scraper = cloudscraper.create_scraper(
                     browser={
                         "browser": "chrome",
                         "platform": "windows",
                         "desktop": True,
                     }
                 )
-                if self.proxy:
-                    self._scraper.proxies = {"http": self.proxy, "https": self.proxy}
-            return self._scraper
+            adapter = HTTPAdapter(pool_connections=50, pool_maxsize=50)
+            scraper.mount("https://", adapter)
+            scraper.mount("http://", adapter)
+            if self.proxy:
+                scraper.proxies = {"http": self.proxy, "https": self.proxy}
+            setattr(self._thread_local, attr_name, scraper)
+            with self._scrapers_lock:
+                self._all_scrapers.add(scraper)
+        return scraper
 
     async def set_proxy(self, proxy: Optional[str]):
         """Update proxy and re-initialize client, safely closing the old client.
@@ -409,6 +423,7 @@ class AsyncHTTPClient:
 
     async def close(self):
         await self.client.aclose()
+        self._close_all_scrapers()
 
     async def get(self, url: str, **kwargs) -> Optional[httpx.Response]:
         """Perform an async GET request with retries and anti-ban delays."""
@@ -419,6 +434,15 @@ class AsyncHTTPClient:
         req_type = kwargs.pop("req_type", "document")
         retry_403 = kwargs.pop("retry_403", False)
         use_cloudscraper = kwargs.pop("use_cloudscraper", False)
+
+        follow_kw = kwargs.pop("follow_redirects", None)
+        allow_kw = kwargs.pop("allow_redirects", None)
+        if follow_kw is not None:
+            redirect_policy = bool(follow_kw)
+        elif allow_kw is not None:
+            redirect_policy = bool(allow_kw)
+        else:
+            redirect_policy = True
 
         custom_cookies = kwargs.pop("cookies", {})
 
@@ -457,7 +481,7 @@ class AsyncHTTPClient:
                             url,
                             headers=scraper_headers,
                             timeout=25,
-                            allow_redirects=kwargs.get("allow_redirects", True),
+                            allow_redirects=redirect_policy,
                         )
                         if custom_cookies is not None:
                             custom_cookies.update(resp.cookies.get_dict())
@@ -477,6 +501,7 @@ class AsyncHTTPClient:
 
                     call_kwargs = kwargs.copy()
                     call_kwargs.pop("headers", None)
+                    call_kwargs["follow_redirects"] = redirect_policy
 
                     async with self._request_semaphore:
                         response = await self.client.get(
@@ -563,6 +588,15 @@ class AsyncHTTPClient:
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
 
+        follow_kw = kwargs.pop("follow_redirects", None)
+        allow_kw = kwargs.pop("allow_redirects", None)
+        if follow_kw is not None:
+            redirect_policy = bool(follow_kw)
+        elif allow_kw is not None:
+            redirect_policy = bool(allow_kw)
+        else:
+            redirect_policy = True
+
         await self._apply_human_like_delay()
 
         headers = self._get_headers(url, kwargs.get("headers"), req_type="document")
@@ -571,6 +605,7 @@ class AsyncHTTPClient:
             try:
                 call_kwargs = kwargs.copy()
                 call_kwargs.pop("headers", None)
+                call_kwargs["follow_redirects"] = redirect_policy
 
                 async with self._request_semaphore:
                     response = await self.client.head(
@@ -648,6 +683,15 @@ class AsyncHTTPClient:
         retry_403 = kwargs.pop("retry_403", False)
         use_cloudscraper = kwargs.pop("use_cloudscraper", False)
 
+        follow_kw = kwargs.pop("follow_redirects", None)
+        allow_kw = kwargs.pop("allow_redirects", None)
+        if follow_kw is not None:
+            redirect_policy = bool(follow_kw)
+        elif allow_kw is not None:
+            redirect_policy = bool(allow_kw)
+        else:
+            redirect_policy = True
+
         custom_cookies = kwargs.pop("cookies", {})
         custom_headers = kwargs.pop("headers", None)
         json_payload = kwargs.pop("json", None)
@@ -687,7 +731,7 @@ class AsyncHTTPClient:
                                 json=json_payload,
                                 headers=scraper_headers,
                                 timeout=25,
-                                allow_redirects=kwargs.get("allow_redirects", True),
+                                allow_redirects=redirect_policy,
                             )
                         else:
                             resp = scraper.post(
@@ -695,7 +739,7 @@ class AsyncHTTPClient:
                                 data=kwargs.get("data"),
                                 headers=scraper_headers,
                                 timeout=25,
-                                allow_redirects=kwargs.get("allow_redirects", True),
+                                allow_redirects=redirect_policy,
                             )
 
                         if custom_cookies is not None:
@@ -714,14 +758,18 @@ class AsyncHTTPClient:
                         for k, v in custom_cookies.items():
                             self.client.cookies.set(k, v)
 
+                    call_kwargs = kwargs.copy()
+                    call_kwargs.pop("headers", None)
+                    call_kwargs["follow_redirects"] = redirect_policy
+
                     async with self._request_semaphore:
                         if json_payload is not None:
                             response = await self.client.post(
-                                url, headers=headers, json=json_payload, **kwargs
+                                url, headers=headers, json=json_payload, **call_kwargs
                             )
                         else:
                             response = await self.client.post(
-                                url, headers=headers, **kwargs
+                                url, headers=headers, **call_kwargs
                             )
 
                     if custom_cookies is not None:

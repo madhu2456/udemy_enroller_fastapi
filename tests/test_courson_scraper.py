@@ -107,7 +107,7 @@ async def test_missing_coupon_code_skips_without_error(scraper):
 
 
 @pytest.mark.asyncio
-async def test_sitemap_cap_at_most_80_coupon_page_gets(scraper):
+async def test_sitemap_cap_at_most_500_coupon_page_gets(scraper):
     locs = "".join(
         f"<loc>https://courson.xyz/coupon/course-{i}</loc>" for i in range(100)
     )
@@ -130,6 +130,7 @@ async def test_sitemap_cap_at_most_80_coupon_page_gets(scraper):
         return _resp("")
 
     scraper.http.get = AsyncMock(side_effect=mock_get)
+    scraper.http.post = AsyncMock(return_value=_resp("{}", status=500))
     scraper.playwright_get = AsyncMock(return_value="")
 
     await scraper.scrape(asyncio.Semaphore(5))
@@ -139,6 +140,84 @@ async def test_sitemap_cap_at_most_80_coupon_page_gets(scraper):
         for u in _get_urls(scraper)
         if urlparse(u).path.startswith("/coupon/")
     ]
-    assert len(coupon_gets) <= 80
-    assert len(scraper.data) <= 80
+    assert len(coupon_gets) <= 500
+    assert len(scraper.data) <= 500
     scraper.playwright_get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_collect_api_posts_pagination_and_deduplication(scraper):
+    import json
+
+    batch_1 = {
+        "coupons": [
+            {"id_name": "course-1", "title": "Course 1"},
+            {"id_name": "course-2", "title": "Course 2"},
+            {"id_name": "course-1", "title": "Course 1 Duplicate"},
+        ],
+        "total_count": 5,
+    }
+    batch_2 = {
+        "coupons": [
+            {"id_name": "course-3", "title": "Course 3"},
+            {"id_name": "course-4", "title": "Course 4"},
+        ],
+        "total_count": 5,
+    }
+    batch_3 = {
+        "coupons": [],
+        "total_count": 5,
+    }
+
+    async def mock_post(url, *args, **kwargs):
+        if "robots.txt" in url:
+            return _resp("", status=404)
+        json_body = kwargs.get("json") or {}
+        offset = json_body.get("offset", 0)
+        if offset == 0:
+            return _resp(json.dumps(batch_1), status=200)
+        elif offset == 3:
+            return _resp(json.dumps(batch_2), status=200)
+        return _resp(json.dumps(batch_3), status=200)
+
+    scraper.http.post = AsyncMock(side_effect=mock_post)
+    scraper.http.get = AsyncMock(return_value=_resp("", status=404))
+
+    urls = await scraper._collect_api_posts()
+
+    assert len(urls) == 4
+    assert "https://courson.xyz/coupon/course-1" in urls
+    assert "https://courson.xyz/coupon/course-2" in urls
+    assert "https://courson.xyz/coupon/course-3" in urls
+    assert "https://courson.xyz/coupon/course-4" in urls
+
+
+@pytest.mark.asyncio
+async def test_collect_api_posts_fallback_on_error(scraper):
+    homepage = '<a href="/coupon/fallback-course">Fallback Course</a>'
+    coupon_html = (
+        '<script>window.courseData={course_id:"fallback-course",'
+        'course_title:"Fallback Course",coupon_code:"FALLBACK100"}</script>'
+    )
+
+    async def mock_get(url, *args, **kwargs):
+        if "robots.txt" in url:
+            return _resp("", status=404)
+        parsed = urlparse(url)
+        if parsed.path in ("", "/") and "sitemap" not in url:
+            return _resp(homepage)
+        if url.endswith("sitemap.xml"):
+            return _resp("<urlset></urlset>")
+        if parsed.path.startswith("/coupon/"):
+            return _resp(coupon_html)
+        return _resp("")
+
+    scraper.http.post = AsyncMock(return_value=_resp("Server Error", status=500))
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+
+    await scraper.scrape(asyncio.Semaphore(1))
+
+    assert len(scraper.data) == 1
+    assert scraper.data[0].title == "Fallback Course"
+    assert "couponCode=FALLBACK100" in scraper.data[0].url
+

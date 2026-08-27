@@ -402,6 +402,7 @@ class UdemyClient:
 
             self.is_authenticated = True
             logger.info(f"Authenticated as {self.display_name} (ID: {self.udemy_user_id})")
+            return True
 
         except Exception as e:
             if not isinstance(e, LoginException):
@@ -667,6 +668,13 @@ class UdemyClient:
 
     async def check_course(self, course: Course):
         """Fetch price/coupon info via Mobile API."""
+        if not course.course_id:
+            await self.get_course_id(course)
+        if not course.course_id:
+            course.is_coupon_valid = False
+            course.error = "Course ID extraction failed"
+            return
+
         url = f"{constants.UDEMY_COURSE_LANDING_COMPONENTS_URL}{course.course_id}/me/?components=purchase,redeem_coupon,cacheable_purchase,cacheable_redeem_coupon&couponCode={course.coupon_code or ''}"
         headers = {
             "Referer": course.url or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/"
@@ -822,74 +830,94 @@ class UdemyClient:
             )
             return False
 
-    def is_course_excluded(self, course: Course, settings: dict):
-        min_rating = settings.get("min_rating", 0)
+    def is_course_excluded(self, course: Course, settings: dict) -> bool:
+        """Check whether course is excluded based on filters (supports dict or list format)."""
+        course.is_excluded = False
+        min_rating = settings.get("min_rating", 0) or 0
         if course.rating is not None and min_rating > 0 and course.rating < min_rating:
             course.is_excluded = True
             course.error = f"Rating {course.rating} below minimum {min_rating}"
-            return
+            return True
 
-        # Languages filter (narrowed/active if at least one option is False)
-        langs_dict = settings.get("languages", {})
-        allowed_langs = {k.lower(): v for k, v in langs_dict.items() if v}
-        languages_filter_active = any(not v for v in langs_dict.values())
+        # Languages filter (handles dict e.g. {"english": True} or list e.g. ["English"])
+        raw_langs = settings.get("languages", {})
+        if isinstance(raw_langs, (list, tuple, set)):
+            allowed_langs = {str(k).lower().strip(): True for k in raw_langs if str(k).strip()}
+            languages_filter_active = bool(allowed_langs)
+        elif isinstance(raw_langs, dict):
+            allowed_langs = {str(k).lower().strip(): v for k, v in raw_langs.items() if v}
+            languages_filter_active = any(not v for v in raw_langs.values())
+        else:
+            allowed_langs = {}
+            languages_filter_active = False
 
-        if languages_filter_active:
+        if languages_filter_active and allowed_langs:
             if not course.language:
                 course.is_excluded = True
                 course.error = "Language filter enabled but course language is missing"
-                return
-            elif course.language.lower() not in allowed_langs:
+                return True
+            elif course.language.lower().strip() not in allowed_langs:
                 course.is_excluded = True
                 course.error = f"Language '{course.language}' not allowed"
-                return
-        elif course.language and allowed_langs:
-            if course.language.lower() not in allowed_langs:
-                course.is_excluded = True
-                course.error = f"Language '{course.language}' not allowed"
-                return
+                return True
 
-        # Categories filter (narrowed/active if at least one option is False)
-        cats_dict = settings.get("categories", {})
-        allowed_cats = {k.lower(): v for k, v in cats_dict.items() if v}
-        categories_filter_active = any(not v for v in cats_dict.values())
+        # Categories filter (handles dict e.g. {"development": True} or list e.g. ["Development"])
+        raw_cats = settings.get("categories", {})
+        if isinstance(raw_cats, (list, tuple, set)):
+            allowed_cats = {str(k).lower().strip(): True for k in raw_cats if str(k).strip()}
+            categories_filter_active = bool(allowed_cats)
+        elif isinstance(raw_cats, dict):
+            allowed_cats = {str(k).lower().strip(): v for k, v in raw_cats.items() if v}
+            categories_filter_active = any(not v for v in raw_cats.values())
+        else:
+            allowed_cats = {}
+            categories_filter_active = False
 
-        if categories_filter_active:
+        if categories_filter_active and allowed_cats:
             if not course.category:
                 course.is_excluded = True
                 course.error = "Category filter enabled but course category is missing"
-                return
-            elif course.category.lower() not in allowed_cats:
+                return True
+            elif course.category.lower().strip() not in allowed_cats:
                 course.is_excluded = True
                 course.error = f"Category '{course.category}' not allowed"
-                return
-        elif course.category and allowed_cats:
-            if course.category.lower() not in allowed_cats:
-                course.is_excluded = True
-                course.error = f"Category '{course.category}' not allowed"
-                return
+                return True
 
-        # Instructor exclusions
-        instructor_exclude = [inst.lower().strip() for inst in settings.get("instructor_exclude", []) if inst]
+        # Instructor exclusions (handles list or comma/newline string)
+        raw_inst = settings.get("instructor_exclude", [])
+        if isinstance(raw_inst, str):
+            instructor_exclude = [inst.lower().strip() for inst in re.split(r"[,\n]", raw_inst) if inst.strip()]
+        elif isinstance(raw_inst, (list, tuple, set)):
+            instructor_exclude = [str(inst).lower().strip() for inst in raw_inst if str(inst).strip()]
+        else:
+            instructor_exclude = []
+
         if instructor_exclude and course.instructors:
             for inst in course.instructors:
-                if inst.lower() in instructor_exclude:
+                if inst.lower().strip() in instructor_exclude:
                     course.is_excluded = True
                     course.error = f"Instructor '{inst}' is excluded"
-                    return
+                    return True
 
-        # Title exclusions
-        title_exclude = [kw.lower().strip() for kw in settings.get("title_exclude", []) if kw]
+        # Title exclusions (handles list or comma/newline string)
+        raw_titles = settings.get("title_exclude", [])
+        if isinstance(raw_titles, str):
+            title_exclude = [kw.lower().strip() for kw in re.split(r"[,\n]", raw_titles) if kw.strip()]
+        elif isinstance(raw_titles, (list, tuple, set)):
+            title_exclude = [str(kw).lower().strip() for kw in raw_titles if str(kw).strip()]
+        else:
+            title_exclude = []
+
         if title_exclude and course.title:
             title_lower = course.title.lower()
             for kw in title_exclude:
                 if kw in title_lower:
                     course.is_excluded = True
                     course.error = f"Title contains excluded keyword '{kw}'"
-                    return
+                    return True
 
         # Last updated date threshold
-        threshold_months = settings.get("course_update_threshold_months", 24)
+        threshold_months = settings.get("course_update_threshold_months", 24) or 24
         if threshold_months > 0 and course.last_update:
             try:
                 date_parts = [int(p) for p in re.findall(r"\d+", course.last_update)]
@@ -904,9 +932,11 @@ class UdemyClient:
                     if diff_months > threshold_months:
                         course.is_excluded = True
                         course.error = f"Course last updated {diff_months} months ago (Threshold: {threshold_months})"
-                        return
+                        return True
             except Exception as e:
                 logger.debug(f"Failed to parse course last_update '{course.last_update}': {e}")
+
+        return bool(course.is_excluded)
 
     async def _du_checkout(self, course: Course):
         """DUCE-style single course checkout using persistent CloudScraper session."""
@@ -923,6 +953,24 @@ class UdemyClient:
             f"is_coupon_valid={course.is_coupon_valid}"
         )
         logger.info(sanitize_log_message(log_msg))
+
+        # Guard: never attempt checkout on known paid courses without 100% free status
+        try:
+            is_definitely_paid = (
+                course.price is not None
+                and float(course.price) > 0
+                and not (course.is_free or course.is_coupon_valid)
+            )
+        except (ValueError, TypeError):
+            is_definitely_paid = False
+
+        if is_definitely_paid:
+            logger.warning(
+                f"[DU_CHECKOUT] Skipping paid/non-free course {course.title} "
+                f"(Price: {course.currency or ''}{course.price}, is_free={course.is_free}, is_coupon_valid={course.is_coupon_valid})"
+            )
+            course.status = False
+            return
 
         # Step 1: Preflight GET to checkout page to warm up the session
         checkout_page_url = "https://www.udemy.com/payment/checkout/"

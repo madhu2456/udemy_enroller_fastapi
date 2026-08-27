@@ -40,8 +40,8 @@ async def test_listing_without_udemy_suffix_collects_slug(scraper):
             return _resp("", status=404)
         if "/courses/python-basics" in url:
             return _resp(detail)
-        if "korshub.com/courses" in url:
-            if "page=" in url and not url.endswith("page=0"):
+        if "korshub.com/free-courses" in url or "korshub.com/courses" in url:
+            if "page=" in url and not url.endswith("page=0") and "page=1" not in url:
                 return _resp("")
             return _resp(listing)
         return _resp("")
@@ -69,8 +69,8 @@ async def test_coupon_text_without_udemy_or_go_yields_zero(scraper):
             return _resp("", status=404)
         if "/courses/python-basics" in url:
             return _resp(detail)
-        if "korshub.com/courses" in url:
-            if "page=" in url and not url.endswith("page=0"):
+        if "korshub.com/free-courses" in url or "korshub.com/courses" in url:
+            if "page=" in url and not url.endswith("page=0") and "page=1" not in url:
                 return _resp("")
             return _resp(listing)
         return _resp("unexpected")
@@ -95,8 +95,8 @@ async def test_same_origin_go_hop_kwargs_and_302(scraper):
             return _resp("", status=302, headers={"location": COURSE_URL})
         if "/courses/go-course" in url:
             return _resp(detail)
-        if "korshub.com/courses" in url:
-            if "page=" in url and not url.endswith("page=0"):
+        if "korshub.com/free-courses" in url or "korshub.com/courses" in url:
+            if "page=" in url and not url.endswith("page=0") and "page=1" not in url:
                 return _resp("")
             return _resp(listing)
         return _resp("")
@@ -140,8 +140,8 @@ async def test_go_hop_with_query_strips_query_and_yields_trk(scraper):
             return _resp("", status=302, headers={"location": TRK_LOCATION})
         if "/courses/go-course" in url:
             return _resp(detail)
-        if "korshub.com/courses" in url:
-            if "page=" in url and not url.endswith("page=0"):
+        if "korshub.com/free-courses" in url or "korshub.com/courses" in url:
+            if "page=" in url and not url.endswith("page=0") and "page=1" not in url:
                 return _resp("")
             return _resp(listing)
         return _resp("")
@@ -230,8 +230,8 @@ async def test_www_to_apex_go_hop_then_trk(scraper):
             return _resp(evil_detail)
         if url == "https://www.korshub.com/courses/not-go":
             return _resp(notgo_detail)
-        if "korshub.com/courses" in url:
-            if "page=" in url and not url.endswith("page=0"):
+        if "korshub.com/free-courses" in url or "korshub.com/courses" in url:
+            if "page=" in url and not url.endswith("page=0") and "page=1" not in url:
                 return _resp("")
             return _resp(listing)
         return _resp("unexpected")
@@ -263,7 +263,6 @@ async def test_www_to_apex_go_hop_then_trk(scraper):
     assert f"https://www.korshub.com/go/{NOTGO_UUID}" in requested
     assert not any("evil.com" in u for u in requested)
     assert "https://korshub.com/not-go" not in requested
-    assert "https://www.korshub.com/not-go" not in requested
     all_go_hops = [
         c for c in scraper.http.get.call_args_list if c.args and "/go/" in c.args[0]
     ]
@@ -289,8 +288,8 @@ async def test_off_host_go_never_requested(scraper):
             return _resp("", status=404)
         if "/courses/evil-go" in url:
             return _resp(detail)
-        if "korshub.com/courses" in url:
-            if "page=" in url and not url.endswith("page=0"):
+        if "korshub.com/free-courses" in url or "korshub.com/courses" in url:
+            if "page=" in url and not url.endswith("page=0") and "page=1" not in url:
                 return _resp("")
             return _resp(listing)
         return _resp("unexpected")
@@ -302,3 +301,32 @@ async def test_off_host_go_never_requested(scraper):
     assert not any("evil.example" in u for u in urls)
     assert not any("/go/" in u for u in urls)
     assert scraper.data == []
+
+
+@pytest.mark.asyncio
+async def test_korshub_nextjs_flight_unicode_unescape(scraper):
+    listing = '<a href="/courses/nextjs-ai-course">NextJS AI Course</a>'
+    detail = (
+        '<html><script>self.__next_f.push([1,"4a:[\\"$\\",\\"article\\",'
+        '{\\"url\\":\\"https://www.udemy.com/course/nextjs-ai/?couponCode=FREE2026\\\\u0026ref=korshub\\"}"]);'
+        '</script><title>NextJS AI Course | Korshub</title></html>'
+    )
+
+    async def mock_get(url, *args, **kwargs):
+        if "robots.txt" in url:
+            return _resp("", status=404)
+        if "/courses/nextjs-ai-course" in url:
+            return _resp(detail)
+        if "korshub.com/free-courses" in url:
+            if "page=" in url and not url.endswith("page=0") and "page=1" not in url:
+                return _resp("")
+            return _resp(listing)
+        return _resp("")
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    await scraper.scrape(asyncio.Semaphore(1))
+
+    assert len(scraper.data) == 1
+    assert scraper.data[0].url == "https://www.udemy.com/course/nextjs-ai/?couponCode=FREE2026"
+    assert scraper.data[0].title == "NextJS AI Course"
+

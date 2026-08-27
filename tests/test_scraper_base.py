@@ -7,6 +7,7 @@ from app.services.scraper import Scraper
 class FakeHTTPClient:
     def __init__(self):
         self.get = AsyncMock()
+        self.post = AsyncMock()
         self.head = AsyncMock()
 
 class DummyScraper(Scraper):

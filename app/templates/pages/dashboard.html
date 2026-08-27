@@ -96,6 +96,67 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         </div>
     </div>
 
+    <!-- Desktop GUI & Rich CLI Hero Card -->
+    <div
+        id="desktop-cli-banner"
+        class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6"
+    >
+        <div class="space-y-3 max-w-3xl">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80">
+                    <i data-lucide="monitor" class="w-3.5 h-3.5 text-blue-600" aria-hidden="true"></i>
+                    Native Desktop &amp; Terminal Apps
+                </span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                    <i data-lucide="zap" class="w-3 h-3 text-emerald-600" aria-hidden="true"></i>
+                    1-Click Auto Cookie Extraction
+                </span>
+            </div>
+
+            <div>
+                <h2 class="text-base sm:text-lg font-semibold text-gray-900 tracking-tight">
+                    Prefer Running Locally? Native GUI &amp; Terminal CLI Available
+                </h2>
+                <p class="text-sm text-gray-600 leading-relaxed mt-1">
+                    Automate Udemy enrollments with 1-click browser cookie auto-detection across <strong class="font-medium text-gray-800">Chrome, Edge, Firefox, Brave, Opera, and Chromium</strong> without copying tokens manually. Features Dark/Light theme switching, 17-scraper controls, dual progress bars, and a 1000-line ring-buffer log box.
+                </p>
+            </div>
+
+            <!-- Command snippets & features -->
+            <div class="flex flex-wrap items-center gap-3 pt-1">
+                <div class="inline-flex items-center gap-2 bg-gray-900 text-gray-100 font-mono text-xs px-3 py-1.5 rounded-lg border border-gray-800 shadow-xs">
+                    <span class="text-gray-500 select-none">$</span>
+                    <code class="text-emerald-400 font-semibold">python gui.py</code>
+                    <span class="text-gray-400 text-[11px] ml-1"># Desktop GUI</span>
+                </div>
+                <div class="inline-flex items-center gap-2 bg-gray-900 text-gray-100 font-mono text-xs px-3 py-1.5 rounded-lg border border-gray-800 shadow-xs">
+                    <span class="text-gray-500 select-none">$</span>
+                    <code class="text-sky-400 font-semibold">python cli.py enroll</code>
+                    <span class="text-gray-400 text-[11px] ml-1"># Terminal CLI</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-row sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-stretch gap-2.5 w-full sm:w-auto lg:w-48 flex-shrink-0">
+            <a
+                href="/guides#desktop-gui-cli"
+                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-900 hover:bg-gray-800 text-white transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 text-center"
+            >
+                <i data-lucide="book-open" class="w-4 h-4 text-gray-300" aria-hidden="true"></i>
+                Desktop &amp; CLI Guide
+            </a>
+            <a
+                href="https://github.com/madhu2456/udemy_enroller_fastapi"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 text-center"
+            >
+                <i data-lucide="github" class="w-4 h-4 text-gray-700" aria-hidden="true"></i>
+                Source Code
+            </a>
+        </div>
+    </div>
+
     <!-- Running Banner (shown only when active run is running) -->
     <div
         id="running-banner"

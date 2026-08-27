@@ -240,7 +240,7 @@ async def test_udemyfreebies_rejects_hostile_location(freebies_scraper, hostile_
         assert call.kwargs.get("allow_redirects") is False
         assert call.kwargs.get("follow_redirects") is False
         assert call.kwargs.get("raise_for_status") is False
-        assert call.kwargs.get("attempts") == 1
+        assert call.kwargs.get("attempts") == 2
 
 
 @pytest.mark.asyncio
@@ -272,7 +272,7 @@ async def test_udemyfreebies_accepts_legit_location(freebies_scraper):
         assert call.kwargs.get("allow_redirects") is False
         assert call.kwargs.get("follow_redirects") is False
         assert call.kwargs.get("raise_for_status") is False
-        assert call.kwargs.get("attempts") == 1
+        assert call.kwargs.get("attempts") == 2
 
 
 UF_SLUG = "ace-every-job-interview-master-blueprint-and-get-your-dream-job"
@@ -309,7 +309,7 @@ async def test_udemyfreebies_rewrites_single_segment_location(freebies_scraper):
         assert call.kwargs.get("allow_redirects") is False
         assert call.kwargs.get("follow_redirects") is False
         assert call.kwargs.get("raise_for_status") is False
-        assert call.kwargs.get("attempts") == 1
+        assert call.kwargs.get("attempts") == 2
         assert call.kwargs.get("timeout") == 15
 
 

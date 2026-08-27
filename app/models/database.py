@@ -137,6 +137,11 @@ class UserSettings(Base):
             "iDownloadCoupon": True,
             "Courson": True,
             "CouponScorpion": True,
+            "Real Discount": True,
+            "OnlineCourses.ooo": True,
+            "FreebiesGlobal": True,
+            "GeeksGod": True,
+            "TutorialBar": True,
         }
 
     @staticmethod

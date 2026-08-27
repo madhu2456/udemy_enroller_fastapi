@@ -42,6 +42,11 @@ LIVE_FLEET = [
     "iDownloadCoupon",
     "Courson",
     "CouponScorpion",
+    "Real Discount",
+    "OnlineCourses.ooo",
+    "FreebiesGlobal",
+    "GeeksGod",
+    "TutorialBar",
 ]
 
 CLASS_ATTR_CAPS = {
@@ -52,19 +57,24 @@ CLASS_ATTR_CAPS = {
     },
     "E-next": {"MAX_COURSES": 5, "MAX_LISTING_PAGES": 1},
     "Interview Gig": {"MAX_COURSES": 5, "MAX_API_PAGES": 1},
+    "Coursesity": {"MAX_COURSES": 5, "MAX_LISTING_PAGES": 1},
     "CouponScorpion": {"MAX_COURSES": 5},
     "Courson": {"MAX_COUPON_PAGES": 2},
+    "UdemyFreebies": {"MAX_COURSES": 5, "MAX_LISTING_PAGES": 1},
+    "iDownloadCoupon": {"MAX_COURSES": 5, "MAX_PAGES": 1},
+    "Real Discount": {"MAX_COURSES": 5, "MAX_PAGES": 1},
+    "OnlineCourses.ooo": {"MAX_COURSES": 5, "MAX_LISTING_PAGES": 1},
+    "FreebiesGlobal": {"MAX_COURSES": 5, "MAX_PAGES": 1},
+    "GeeksGod": {"MAX_COURSES": 5, "MAX_PAGES": 1},
+    "TutorialBar": {"MAX_COURSES": 5, "MAX_PAGES": 1},
 }
 
 # Local max_courses=500 inside scrape(); listing limiter + StopSmoke after 5 URLs.
 LOCAL_MAX_SITES = {
     "UdemyXpert",
-    "Coursesity",
     "Course Folder",
     "Couponami",
     "Korshub",
-    "UdemyFreebies",
-    "iDownloadCoupon",
 }
 
 LISTING_URL_RE = {
@@ -72,9 +82,18 @@ LISTING_URL_RE = {
     "Coursesity": re.compile(r"/provider/free/udemy-courses", re.I),
     "Course Folder": re.compile(r"free-udemy-coupon\.php", re.I),
     "Couponami": re.compile(r"post-sitemap", re.I),
-    "Korshub": re.compile(r"/courses\?page=", re.I),
+    "Korshub": re.compile(r"/(?:courses|free-courses)\?page=", re.I),
     "UdemyFreebies": re.compile(r"/free-udemy-courses/", re.I),
-    "iDownloadCoupon": re.compile(r"idownloadcoupon\.com/page/", re.I),
+    "iDownloadCoupon": re.compile(
+        r"idownloadcoupon\.com/(?:page/|wp-json/wc/store/)", re.I
+    ),
+    "Real Discount": re.compile(r"cdn\.real\.discount/api/courses", re.I),
+    "OnlineCourses.ooo": re.compile(r"onlinecourses\.ooo/(?:feed/|page/)?", re.I),
+    "FreebiesGlobal": re.compile(
+        r"freebiesglobal\.com/(?:tag/udemy-100-off|dealstore/udemy)", re.I
+    ),
+    "GeeksGod": re.compile(r"geeksgod\.com/courses", re.I),
+    "TutorialBar": re.compile(r"tutorialbar\.com/live-coupons", re.I),
 }
 
 HOP_URL_RE = re.compile(
@@ -291,8 +310,8 @@ async def _smoke_one(site: str, http: AsyncHTTPClient) -> dict:
 @pytest.mark.asyncio(loop_scope="function")
 async def test_live_registry_scrapers_yield_udemy_urls(http_client):
     assert list(SCRAPER_REGISTRY) == LIVE_FLEET
+    assert "Real Discount" in SCRAPER_REGISTRY
     assert "FreeWebCart" not in SCRAPER_REGISTRY
-    assert "Real Discount" not in SCRAPER_REGISTRY
     assert "Discudemy" not in SCRAPER_REGISTRY
 
     log_path = REPO_ROOT / LOG_PATH

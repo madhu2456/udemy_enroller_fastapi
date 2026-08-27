@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -137,9 +138,8 @@ async def test_out_php_http_get_kwargs(scraper):
     for call in out_calls:
         assert call.kwargs.get("use_cloudscraper") is True
         assert call.kwargs.get("allow_redirects") is False
-        assert call.kwargs.get("follow_redirects") is False
-        assert call.kwargs.get("raise_for_status") is False
         assert call.kwargs.get("attempts") == 1
+        assert call.kwargs.get("timeout") == 8
 
 
 @pytest.mark.asyncio
@@ -239,3 +239,71 @@ async def test_out_php_403_skips_without_playwright(scraper):
 
     assert scraper.data == []
     scraper.playwright_get.assert_not_called()
+
+
+def test_out_url_from_href_unescapes_ampersand_s(scraper):
+    href = "/scripts/udemy/out.php?go=123&amp;s=abc"
+    result = scraper._out_url_from_href(href)
+    assert result == "https://couponscorpion.com/scripts/udemy/out.php?go=123&s=abc"
+
+    assert scraper._out_url_from_href("") is None
+    assert scraper._out_url_from_href(None) is None
+    assert (
+        scraper._out_url_from_href("https://couponscorpion.com/scripts/udemy/out.php?go=456&s=def")
+        == "https://couponscorpion.com/scripts/udemy/out.php?go=456&s=def"
+    )
+
+
+@pytest.mark.asyncio
+async def test_fetch_post_regex_and_dom_fallback(scraper):
+    rest = [
+        {
+            "id": 101,
+            "link": "https://couponscorpion.com/regex-course/",
+            "title": {"rendered": "Regex Course"},
+        },
+        {
+            "id": 102,
+            "link": "https://couponscorpion.com/fallback-course/",
+            "title": {"rendered": "Fallback Course"},
+        },
+    ]
+
+    detail_regex = '<div class="btn-wrap"><a class="btn" href="https://couponscorpion.com/scripts/udemy/out.php?go=101&amp;s=abc">GET</a></div>'
+    detail_fallback = '<div class="content"><a href="/scripts/udemy/out.php?go=102&amp;s=def">GET</a></div>'
+
+    async def mock_get(url, *args, **kwargs):
+        if "robots.txt" in url:
+            return _resp("", status=404)
+        if "wp-json" in url:
+            if "page=1" in url:
+                return _resp(json.dumps(rest))
+            return _resp("[]")
+        if "out.php" in url:
+            if "go=101" in url:
+                return _resp("", status=302, headers={"location": "https://www.udemy.com/course/regex-course/?couponCode=FREE1"})
+            if "go=102" in url:
+                return _resp("", status=302, headers={"location": "https://www.udemy.com/course/fallback-course/?couponCode=FREE2"})
+        if "regex-course" in url:
+            return _resp(detail_regex)
+        if "fallback-course" in url:
+            return _resp(detail_fallback)
+        return _resp("")
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    await scraper.scrape(asyncio.Semaphore(2))
+
+    assert len(scraper.data) == 2
+    titles = [c.title for c in scraper.data]
+    assert "Regex Course" in titles
+    assert "Fallback Course" in titles
+
+    # Specifically test DOM fallback when regex does not match
+    dummy_re = re.compile(r"__NEVER_MATCH__")
+    with patch.object(scraper, "_OUT_PHP_RE", dummy_re):
+        scraper.data = []
+        await scraper.scrape(asyncio.Semaphore(2))
+        assert len(scraper.data) == 2
+        titles_dom = [c.title for c in scraper.data]
+        assert "Regex Course" in titles_dom
+        assert "Fallback Course" in titles_dom

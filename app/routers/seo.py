@@ -34,6 +34,8 @@ async def manifest():
 SITE_URL = "https://udemyenroller.madhudadi.in"
 BLOG_URL = "https://madhudadi.in/blog"
 PORTFOLIO_URL = "https://madhudadi.in"
+DEALS_URL = "https://deals.madhudadi.in"
+ADTICKS_URL = "https://adticks.com"
 # Person.url SSOT — profile path (not apex) aligns with portfolio/Adticks FOUNDER_PERSON.
 PERSON_URL = "https://madhudadi.in/profile/"
 CASE_STUDY_URL = "https://madhudadi.in/case-studies/udemy-enroller-fastapi/"
@@ -732,6 +734,8 @@ async def ai_profile_json(db: Session = Depends(get_db)):
             "relatedProfiles": [
                 f"{PORTFOLIO_URL}/ai-profile.json",
                 f"{BLOG_URL}/ai-profile.json",
+                f"{DEALS_URL}/ai-profile.json",
+                f"{ADTICKS_URL}/ai-profile.json",
             ],
             "endpoints": {
                 "llmsFeed": f"{SITE_URL}/llms.txt",
