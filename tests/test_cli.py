@@ -53,11 +53,13 @@ def test_enroll_dry_run_success(tmp_path):
         title="Python Mastery 2026",
         url="https://www.udemy.com/course/python-mastery/?couponCode=FREE100",
     )
-    dummy_course.price = Decimal("84.99")
+    dummy_course.price = Decimal("0.00")
+    dummy_course.list_price = Decimal("84.99")
     dummy_course.rating = 4.8
     dummy_course.language = "English"
     dummy_course.category = "Development"
     dummy_course.is_free = True
+    dummy_course.is_coupon_valid = True
     dummy_course.is_already_enrolled = False
     dummy_course.is_expired = False
 

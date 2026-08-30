@@ -82,20 +82,24 @@ def test_enroll_dry_run_with_filter_combinations(tmp_path):
     """Enroll with --dry-run, categories, languages, min-rating, limit, and json output."""
     json_out = tmp_path / "enroll_results.json"
 
-    # Create dummy courses
+    # Create dummy courses — FM-036: price must be 0.00 to be considered free (fail-closed 9999.0)
     c1 = Course(title="Python Masterclass 2026", url="https://www.udemy.com/course/python-masterclass/?couponCode=FREE1")
-    c1.price = Decimal("94.99")
+    c1.price = Decimal("0.00")
+    c1.list_price = Decimal("94.99")
     c1.rating = 4.8
     c1.language = "English"
     c1.category = "Development"
     c1.is_free = True
+    c1.is_coupon_valid = True
 
     c2 = Course(title="Spanish React Course", url="https://www.udemy.com/course/react-spanish/?couponCode=FREE2")
-    c2.price = Decimal("49.99")
+    c2.price = Decimal("0.00")
+    c2.list_price = Decimal("49.99")
     c2.rating = 4.9
     c2.language = "Spanish"
     c2.category = "Development"
     c2.is_free = True
+    c2.is_coupon_valid = True
 
     async def mock_stream(self):
         s_mock = MagicMock()

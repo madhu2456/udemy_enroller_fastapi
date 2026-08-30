@@ -235,13 +235,16 @@ class DashboardView(customtkinter.CTkFrame):
         if self.empty_results_lbl.winfo_ismapped():
             self.empty_results_lbl.pack_forget()
 
-        # Keep latest 300 rows to ensure UI rendering remains 60fps fast
+        # Keep latest 300 rows to ensure UI rendering remains 60fps fast — FM-037 widget cap
+        MAX_ACTIVE_ROWS = 300
         children = self.results_list.winfo_children()
-        if len(children) > 300:
-            try:
-                children[0].destroy()
-            except Exception:
-                pass
+        if len(children) >= MAX_ACTIVE_ROWS:
+            # Batch FIFO eviction — enforce ≤300 active rows (not single destroy)
+            for w in children[: len(children) - MAX_ACTIVE_ROWS + 1]:
+                try:
+                    w.destroy()
+                except Exception:
+                    pass
 
         row = customtkinter.CTkFrame(self.results_list, corner_radius=8, fg_color=(COLOR_LIGHT_CARD, COLOR_DARK_CARD))
         row.pack(fill="x", pady=3)

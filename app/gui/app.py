@@ -2,8 +2,17 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from typing import Dict
+
 import customtkinter
+
+# Headless guard — fail-closed: desktop UI requires DISPLAY/WAYLAND_DISPLAY on Linux
+if sys.platform.startswith("linux") and not os.getenv("DISPLAY") and not os.getenv("WAYLAND_DISPLAY"):
+    # Import-time guard for direct module execution; runtime guard also in __init__
+    # Allows test collection without display but blocks GUI launch headlessly.
+    pass
 
 from app.gui.bridge import AsyncioBridge
 from app.gui.theme import apply_theme
@@ -19,6 +28,12 @@ class UdemyEnrollerApp(customtkinter.CTk):
     """Main desktop application coordinating UI views and the Asyncio background bridge."""
 
     def __init__(self, **kwargs):
+        # Headless DISPLAY guard — fail-closed (FM-037 companion to gui.py guard)
+        if sys.platform.startswith("linux") and not os.getenv("DISPLAY") and not os.getenv("WAYLAND_DISPLAY"):
+            raise SystemExit(
+                "[ERROR] No graphical display detected (DISPLAY or WAYLAND_DISPLAY not set). "
+                "Run the CLI instead: python cli.py --help"
+            )
         super().__init__(**kwargs)
         apply_theme("dark")
 

@@ -783,10 +783,18 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
         });
 
         // Hydrate: keep SSR HTML when present (no duplicate tojson + re-fetch).
-        // Only hit the API for deep-link search or empty SSR.
+        // TBT 860 optimization (2026-08-30): defer non-critical fetch until idle to reduce main-thread blocking on /udemycoupons LCP window.
+        // Keep FM-038 contrast intact — no visual change.
         const hasSSR = {{ 'true' if initial_courses else 'false' }};
+        function scheduleFetch() {
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(function(){ fetchCoupons(); }, { timeout: 2000 });
+            } else {
+                setTimeout(fetchCoupons, 150);
+            }
+        }
         if (urlSearchQuery) {
-            fetchCoupons();
+            scheduleFetch();
         } else if (hasSSR) {
             state.loading = false;
             updateUI();
@@ -794,7 +802,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                 lucide.createIcons();
             }
         } else {
-            fetchCoupons();
+            scheduleFetch();
         }
     });
 </script>

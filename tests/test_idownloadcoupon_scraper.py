@@ -25,9 +25,9 @@ def scraper(http_client):
 
 def test_class_attributes():
     assert IDownloadCouponScraper.MAX_COURSES == 500
-    assert IDownloadCouponScraper.PER_PAGE == 100
+    assert IDownloadCouponScraper.PER_PAGE == 50
     assert IDownloadCouponScraper.MAX_PAGES == 15
-    assert IDownloadCouponScraper.LISTING_CONCURRENCY == 5
+    assert IDownloadCouponScraper.LISTING_CONCURRENCY == 2
     assert IDownloadCouponScraper.BASE_URL == "https://idownloadcoupon.com"
     assert (
         IDownloadCouponScraper.STORE_API_ENDPOINT

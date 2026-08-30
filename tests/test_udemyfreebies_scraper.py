@@ -27,7 +27,7 @@ def test_class_attributes():
     assert UdemyFreebiesScraper.MAX_COURSES == 500
     assert UdemyFreebiesScraper.COURSES_PER_PAGE == 12
     assert UdemyFreebiesScraper.MAX_LISTING_PAGES == 85
-    assert UdemyFreebiesScraper.LISTING_CONCURRENCY == 6
+    assert UdemyFreebiesScraper.LISTING_CONCURRENCY == 2
     assert (
         UdemyFreebiesScraper.LISTING_ENDPOINT
         == "https://www.udemyfreebies.com/free-udemy-courses"

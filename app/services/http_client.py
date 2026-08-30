@@ -96,7 +96,7 @@ class AsyncHTTPClient:
         self.client = httpx.AsyncClient(
             proxy=self.proxy,
             timeout=httpx.Timeout(15.0, connect=30.0),
-            follow_redirects=True,
+            follow_redirects=False,
             limits=httpx.Limits(
                 max_connections=40, max_keepalive_connections=20, keepalive_expiry=20.0
             ),
@@ -442,7 +442,7 @@ class AsyncHTTPClient:
         elif allow_kw is not None:
             redirect_policy = bool(allow_kw)
         else:
-            redirect_policy = True
+            redirect_policy = False
 
         custom_cookies = kwargs.pop("cookies", {})
 
@@ -595,7 +595,7 @@ class AsyncHTTPClient:
         elif allow_kw is not None:
             redirect_policy = bool(allow_kw)
         else:
-            redirect_policy = True
+            redirect_policy = False
 
         await self._apply_human_like_delay()
 
@@ -690,7 +690,7 @@ class AsyncHTTPClient:
         elif allow_kw is not None:
             redirect_policy = bool(allow_kw)
         else:
-            redirect_policy = True
+            redirect_policy = False
 
         custom_cookies = kwargs.pop("cookies", {})
         custom_headers = kwargs.pop("headers", None)

@@ -940,6 +940,18 @@ class UdemyClient:
 
     async def _du_checkout(self, course: Course):
         """DUCE-style single course checkout using persistent CloudScraper session."""
+        # FM-036 fail-closed: is_definitely_paid at absolute top before any _cs_get/fetch
+        try:
+            is_definitely_paid = course.price is not None and float(course.price) > 0
+        except (ValueError, TypeError):
+            is_definitely_paid = False
+        if is_definitely_paid:
+            logger.warning(
+                f"[DU_CHECKOUT] Skipping paid/non-free course {course.title} "
+                f"(Price: {course.currency or ''}{course.price}, is_free={course.is_free}, is_coupon_valid={course.is_coupon_valid})"
+            )
+            course.status = False
+            return
         if self.cs is None:
             logger.error(f"[DU_CHECKOUT] No CloudScraper session for {course.title}")
             course.status = False
@@ -953,24 +965,6 @@ class UdemyClient:
             f"is_coupon_valid={course.is_coupon_valid}"
         )
         logger.info(sanitize_log_message(log_msg))
-
-        # Guard: never attempt checkout on known paid courses without 100% free status
-        try:
-            is_definitely_paid = (
-                course.price is not None
-                and float(course.price) > 0
-                and not (course.is_free or course.is_coupon_valid)
-            )
-        except (ValueError, TypeError):
-            is_definitely_paid = False
-
-        if is_definitely_paid:
-            logger.warning(
-                f"[DU_CHECKOUT] Skipping paid/non-free course {course.title} "
-                f"(Price: {course.currency or ''}{course.price}, is_free={course.is_free}, is_coupon_valid={course.is_coupon_valid})"
-            )
-            course.status = False
-            return
 
         # Step 1: Preflight GET to checkout page to warm up the session
         checkout_page_url = "https://www.udemy.com/payment/checkout/"
@@ -1124,6 +1118,15 @@ class UdemyClient:
 
     async def free_checkout(self, course: Course):
         """Free course checkout: GET subscribe URL then verify enrollment via API."""
+        # FM-036: is_definitely_paid at absolute top before any fetch
+        try:
+            is_definitely_paid = course.price is not None and float(course.price) > 0
+        except (ValueError, TypeError):
+            is_definitely_paid = False
+        if is_definitely_paid:
+            logger.warning(f"[FREE_CHECKOUT] Skipping paid course {course.title} (price={course.price})")
+            course.status = False
+            return
         logger.info(f"[FREE_CHECKOUT] {course.title} | ID={course.course_id}")
 
         # Step 1: GET the subscribe URL (old working checkout logic)
@@ -1206,6 +1209,15 @@ class UdemyClient:
 
     async def checkout_single(self, course: Course) -> bool:
         """DUCE-style single course enrollment."""
+        # FM-036 fail-closed: is_definitely_paid at absolute top before any _cs_get/fetch
+        try:
+            is_definitely_paid = course.price is not None and float(course.price) > 0
+        except (ValueError, TypeError):
+            is_definitely_paid = False
+        if is_definitely_paid:
+            logger.warning(f"[CHECKOUT_SINGLE] Skipping definitely paid course {course.title} (price={course.price})")
+            course.status = False
+            return False
         logger.info(f"[CHECKOUT_SINGLE] {course.title} | free={course.is_free} | has_coupon={bool(course.coupon_code)}")
 
         if course.is_free and not course.coupon_code:

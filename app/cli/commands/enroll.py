@@ -26,6 +26,7 @@ from app.cli.ui import (
     run_sync,
     setup_signal_handlers,
 )
+from app.core.constants import FM036_PRICE_UNKNOWN  # W3-02: FM036 unknown-price sentinel 9999.0
 from app.services.browser_cookies import get_udemy_cookies
 from app.services.course import Course
 from app.services.scraper import SCRAPER_REGISTRY, ScraperService
@@ -211,7 +212,15 @@ async def _run_enrollment_pipeline(
 
                     is_already = getattr(course, "status", "") == "Already Enrolled" or getattr(course, "is_already_enrolled", False)
                     is_exp = (course.error and "expired" in str(course.error).lower()) or getattr(course, "is_expired", False)
-                    is_valid_free = (course.is_coupon_valid or course.is_free) and not is_exp
+                    # FM-036 / W3-02: price-gated free eligibility — fail-closed: price None => not free (FM036_PRICE_UNKNOWN=9999.0)
+                    try:
+                        _price_tmp = float(course.price) if course.price is not None else FM036_PRICE_UNKNOWN
+                    except (ValueError, TypeError):
+                        _price_tmp = FM036_PRICE_UNKNOWN
+                    _coupon_free = bool(course.is_coupon_valid) and _price_tmp == 0
+                    _explicit_free = bool(course.is_free) and _price_tmp == 0
+                    is_valid_free = (_coupon_free or _explicit_free) and not is_exp and course.price is not None
+                    is_definitely_paid = course.price is not None and _price_tmp > 0 and not _coupon_free and not _explicit_free  # noqa: F841 -- FM-036 guard
 
                     if is_already:
                         udemy_client.already_enrolled_c += 1

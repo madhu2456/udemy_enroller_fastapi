@@ -51,19 +51,22 @@ async def test_resolve_trk_redirect_long_link_with_outer_coupon(scraper):
 @pytest.mark.asyncio
 async def test_resolve_trk_redirect_short_link(scraper):
     short_link = "https://trk.udemy.com/abc12345"
-    
+
     scraper.http.get = AsyncMock()
     mock_resp = MagicMock()
     mock_resp.url = "https://www.udemy.com/course/test-course/?couponCode=123"
+    mock_resp.status_code = 200
+    mock_resp.headers = {}
     scraper.http.get.return_value = mock_resp
-    
+
     result = await scraper._resolve_trk_redirect(short_link)
-    
+
     assert result == "https://www.udemy.com/course/test-course/?couponCode=123"
     scraper.http.get.assert_called_once_with(
         short_link,
         use_cloudscraper=True,
-        follow_redirects=True,
+        follow_redirects=False,
+        allow_redirects=False,
         raise_for_status=False,
         log_failures=False,
         randomize_headers=True,

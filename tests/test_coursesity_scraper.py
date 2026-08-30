@@ -432,7 +432,7 @@ async def test_scraper_contract_and_max_courses_cap(scraper):
     assert scraper.MAX_COURSES == 500
     assert scraper.COURSES_PER_PAGE == 15
     assert scraper.MAX_LISTING_PAGES == 205
-    assert scraper.LISTING_CONCURRENCY == 5
+    assert scraper.LISTING_CONCURRENCY == 2
     assert scraper.LISTING_ENDPOINT == "https://coursesity.com/provider/free/udemy-courses"
 
     # Cap enforcement

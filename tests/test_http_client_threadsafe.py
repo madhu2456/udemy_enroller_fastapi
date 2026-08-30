@@ -82,7 +82,7 @@ async def test_redirect_kwargs_normalization_httpx():
         assert "allow_redirects" not in kwargs
         assert kwargs.get("follow_redirects") is False
 
-        # Case 3: Default is True
+        # Case 3: Default is False (SSRF hardening)
         mock_get.reset_mock()
         mock_get.return_value = httpx.Response(
             200,
@@ -93,7 +93,7 @@ async def test_redirect_kwargs_normalization_httpx():
         assert mock_get.call_count == 1
         _, kwargs = mock_get.call_args
         assert "allow_redirects" not in kwargs
-        assert kwargs.get("follow_redirects") is True
+        assert kwargs.get("follow_redirects") is False
 
     await client.close()
 

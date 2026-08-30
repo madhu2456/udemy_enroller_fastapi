@@ -27,3 +27,8 @@ shutdown_event = asyncio.Event()
 
 # Known false-positive course IDs from Udemy (not actual courses)
 BLACKLIST_IDS = {"562413829"}
+
+# FM-036 / W3-02: Unknown-price sentinel — fail-closed to 9999.0 so that
+# courses with price=None are never treated as free (is_valid_free requires
+# price is not None AND price == 0). Shared constant for bridge, enroll, check.
+FM036_PRICE_UNKNOWN: float = 9999.0

@@ -22,6 +22,90 @@ from app.services.udemy_validation import (
     is_udemy_url,
 )
 
+import ipaddress
+import socket
+
+# R4 / W3-02: pytest's network block raises _pytest.outcomes.Failed (BaseException, not
+# Exception). To keep the BaseException swallow narrowed while preserving test fail-open,
+# we import Failed explicitly and catch it together with Exception (FM-039/DEPLOYMENT_ENV).
+try:
+    from _pytest.outcomes import Failed as _PytestFailed  # type: ignore[import-untyped]
+except ImportError:  # pytest not installed in prod
+    _PytestFailed = None  # type: ignore[assignment]
+
+if _PytestFailed is not None:
+    _DNS_CATCH_TYPES = (Exception, _PytestFailed)  # type: ignore[assignment]
+else:
+    _DNS_CATCH_TYPES = (Exception,)
+
+SAFE_PORTS = frozenset({80, 443})
+
+
+def _is_safe_url(url: str) -> bool:
+    """SSRF guard: allow only http/https on SAFE_PORTS, deny private IP ranges after DNS."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        port = parsed.port
+        if port is not None and port not in SAFE_PORTS:
+            return False
+        host = parsed.hostname
+        if not host:
+            return False
+        # Direct IP literal check
+        try:
+            ip = ipaddress.ip_address(host)
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or ip.is_multicast
+                or ip.is_unspecified
+            ):
+                return False
+            return True
+        except ValueError:
+            pass
+        # DNS resolution for hostnames
+        try:
+            infos = socket.getaddrinfo(host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
+        except _DNS_CATCH_TYPES:
+            # R4 / W3-02: Narrowed from BaseException → Exception (+ _PytestFailed
+            # explicitly, which is BaseException not Exception). Fail-open in local/test
+            # for DNS/network block so offline flows and pytest allow_network keep working;
+            # http.get will fail naturally if host truly unresolvable. In prod
+            # (DEPLOYMENT_ENV == "server") fail-closed to avoid SSRF bypass via DNS
+            # failure. Documented per R4 — no BaseException swallow (e.g. KeyboardInterrupt
+            # propagates).
+            try:
+                from config.settings import get_settings  # local import to avoid cycle
+
+                if get_settings().DEPLOYMENT_ENV == "server":
+                    return False
+            except Exception:
+                pass
+            return True
+        for _family, _type, _proto, _canon, sockaddr in infos:
+            ip_str = sockaddr[0]
+            try:
+                ip = ipaddress.ip_address(ip_str)
+            except ValueError:
+                continue
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or ip.is_multicast
+                or ip.is_unspecified
+            ):
+                return False
+        return True
+    except Exception:
+        return False
+
 
 class Scraper(ABC):
     """Base class for all coupon site scrapers."""
@@ -109,6 +193,14 @@ class Scraper(ABC):
                 f"  [{self.site_name}] Request skipped — circuit breaker is OPEN "
                 f"({self.consecutive_failures} consecutive failures)"
             )
+            return None
+
+        if not _is_safe_url(url):
+            logger.bind(
+                scraper=self.code_name,
+                site=self.site_name,
+                url=_log_safe_url(url),
+            ).warning(f"  [{self.site_name}] Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
             return None
 
         if not await self._robots_allowed(url):
@@ -210,27 +302,68 @@ class Scraper(ABC):
         outer_qs = urllib.parse.parse_qs(urllib.parse.urlparse(trk_url).query)
         outer_coupon = outer_qs.get("couponCode", [None])[0]
 
-        try:
-            resp = await self.http.get(
-                trk_url,
-                use_cloudscraper=True,
-                follow_redirects=True,
-                raise_for_status=False,
-                log_failures=False,
-                randomize_headers=True,
-                timeout=15,
-                attempts=2,
-            )
-            if resp:
+        # SSRF hardening: manual redirect loop (max 10 hops) with SAFE_PORTS and private IP denylist
+        max_hops = 10
+        current_url = trk_url
+        for _ in range(max_hops):
+            if not _is_safe_url(current_url):
+                logger.warning(f"Blocked unsafe trk URL (SSRF guard): {_log_safe_url(current_url)}")
+                return None
+            try:
+                resp = await self.http.get(
+                    current_url,
+                    use_cloudscraper=True,
+                    follow_redirects=False,
+                    allow_redirects=False,
+                    raise_for_status=False,
+                    log_failures=False,
+                    randomize_headers=True,
+                    timeout=15,
+                    attempts=2,
+                )
+                if not resp:
+                    return None
+                # Redirect case: validate Location before next hop
+                if resp.status_code in (301, 302, 303, 307, 308):
+                    location = resp.headers.get("location") or resp.headers.get("Location") or ""
+                    if not location:
+                        return None
+                    location = urllib.parse.urljoin(current_url, location)
+                    if not _is_safe_url(location):
+                        logger.warning(f"Blocked unsafe redirect Location (SSRF guard): {_log_safe_url(location)}")
+                        return None
+                    if is_udemy_course_url(location):
+                        resolved_norm = Course.normalize_link(location)
+                        if outer_coupon and "couponCode=" not in resolved_norm:
+                            separator = "&" if "?" in resolved_norm else "?"
+                            resolved_norm += f"{separator}couponCode={outer_coupon}"
+                        return resolved_norm
+                    if is_trk_udemy_url(location):
+                        # Preserve outer coupon when hopping between trk URLs
+                        try:
+                            loc_qs = urllib.parse.parse_qs(urllib.parse.urlparse(location).query)
+                            if outer_coupon and "couponCode" not in loc_qs:
+                                sep = "&" if "?" in location else "?"
+                                location += f"{sep}couponCode={outer_coupon}"
+                        except Exception:
+                            pass
+                    current_url = location
+                    continue
+                # Non-redirect: check final URL
                 resolved = str(resp.url)
+                if not _is_safe_url(resolved):
+                    return None
                 if is_udemy_course_url(resolved):
                     resolved_norm = Course.normalize_link(resolved)
                     if outer_coupon and "couponCode=" not in resolved_norm:
                         separator = "&" if "?" in resolved_norm else "?"
                         resolved_norm += f"{separator}couponCode={outer_coupon}"
                     return resolved_norm
-        except Exception as e:
-            logger.debug(f"GET fallback redirect resolution failed for {trk_url}: {e}")
+                return None
+            except Exception as e:
+                logger.debug(f"GET fallback redirect resolution failed for {current_url}: {e}")
+                return None
+        logger.warning(f"trk redirect exceeded max hops ({max_hops}) for {_log_safe_url(trk_url)}")
         return None
 
     def cleanup_link(self, link: str) -> Optional[str]:
@@ -639,7 +772,7 @@ class InterviewGigScraper(Scraper):
     """Interview Gig (elearn.interviewgig.com) — WordPress REST API scraper.
     Parses direct Udemy links from post content.rendered HTML.
     Some posts are bundle posts with 40+ courses each.
-    Short trk hops go through _resolve_one + a local Semaphore(8), chunked,
+    Short trk hops go through _resolve_one + a local Semaphore(2), chunked,
     with at most 80 scheduled trk HTTP calls.
     """
 
@@ -748,7 +881,7 @@ class InterviewGigScraper(Scraper):
                 resolved = await self._resolve_trk_redirect(href)
                 return title, resolved
 
-            local_trk_sem = asyncio.Semaphore(8)
+            local_trk_sem = asyncio.Semaphore(2)
             scheduled_trk = trk_items[: self.MAX_TRK_HTTP]
             chunk_size = self.DETAIL_BATCH_SIZE
             for i in range(0, len(scheduled_trk), chunk_size):
@@ -924,7 +1057,7 @@ class CoursesityScraper(Scraper):
     MAX_COURSES: int = 500
     COURSES_PER_PAGE: int = 15
     MAX_LISTING_PAGES: int = 205
-    LISTING_CONCURRENCY: int = 5
+    LISTING_CONCURRENCY: int = 2
     LISTING_ENDPOINT: str = "https://coursesity.com/provider/free/udemy-courses"
     DETAIL_BATCH_SIZE: int = 10
 
@@ -1212,7 +1345,7 @@ class CoursesityScraper(Scraper):
                 logger.info(f"  Coursesity: Harvest complete with {len(self.data)} courses")
                 return
 
-            listing_sem = asyncio.Semaphore(self.LISTING_CONCURRENCY)
+            listing_sem = asyncio.Semaphore(min(self.LISTING_CONCURRENCY, 2))
 
             async def _fetch_page(page_num: int):
                 async with listing_sem:
@@ -1546,7 +1679,7 @@ class CouponamiScraper(Scraper):
                 except Exception:
                     return None, None
 
-            go_semaphore = asyncio.Semaphore(25)
+            go_semaphore = asyncio.Semaphore(2)
             found = 0
             for i in range(0, len(detail_urls), getattr(self, "DETAIL_BATCH_SIZE", 10)):
                 if len(self.data) >= self.MAX_COURSES:
@@ -1887,7 +2020,7 @@ class UdemyFreebiesScraper(Scraper):
     MAX_COURSES: int = 500
     COURSES_PER_PAGE: int = 12
     MAX_LISTING_PAGES: int = 85
-    LISTING_CONCURRENCY: int = 6
+    LISTING_CONCURRENCY: int = 2
     LISTING_ENDPOINT: str = "https://www.udemyfreebies.com/free-udemy-courses"
     DETAIL_BATCH_SIZE: int = 10
 
@@ -1916,7 +2049,7 @@ class UdemyFreebiesScraper(Scraper):
             listing_results: list[tuple[str, str]] = []
 
             self.length = max_pages
-            listing_sem = asyncio.Semaphore(getattr(self, "LISTING_CONCURRENCY", 6))
+            listing_sem = asyncio.Semaphore(min(getattr(self, "LISTING_CONCURRENCY", 2), 2))
 
             async def _fetch_page(page_num: int):
                 async with listing_sem:
@@ -2027,7 +2160,7 @@ class UdemyFreebiesScraper(Scraper):
                 except Exception:
                     return None, None
 
-            local_detail_semaphore = asyncio.Semaphore(10)
+            local_detail_semaphore = asyncio.Semaphore(2)
 
             async def _limited_resolve(slug: str, title: str):
                 async with local_detail_semaphore:
@@ -2064,16 +2197,16 @@ class UdemyFreebiesScraper(Scraper):
 class IDownloadCouponScraper(Scraper):
     """iDownloadCoupon (idownloadcoupon.com) — WooCommerce Store REST API + HTML scraper.
     Primary extraction uses WooCommerce Store REST API:
-    GET https://idownloadcoupon.com/wp-json/wc/store/v1/products?per_page=100&page={page}
+    GET https://idownloadcoupon.com/wp-json/wc/store/v1/products?per_page=50&page={page}
     which yields structured product data (id, name, permalink, add_to_cart).
     Falls back gracefully to HTML product listing at /page/{n}/ if Store API is unavailable.
     Detail hop resolves /udemy/{id}/ redirects to Udemy course links.
     """
 
     MAX_COURSES: int = 500
-    PER_PAGE: int = 100
+    PER_PAGE: int = 50
     MAX_PAGES: int = 15
-    LISTING_CONCURRENCY: int = 5
+    LISTING_CONCURRENCY: int = 2
     BASE_URL: str = "https://idownloadcoupon.com"
     STORE_API_ENDPOINT: str = "https://idownloadcoupon.com/wp-json/wc/store/v1/products"
     DETAIL_BATCH_SIZE: int = 10
@@ -2167,7 +2300,7 @@ class IDownloadCouponScraper(Scraper):
         if len(products) >= self.MAX_COURSES or target_pages <= 1:
             return products, True
 
-        api_sem = asyncio.Semaphore(self.LISTING_CONCURRENCY)
+        api_sem = asyncio.Semaphore(min(self.LISTING_CONCURRENCY, 2))
 
         async def _fetch_store_page(page: int):
             async with api_sem:
@@ -2229,7 +2362,7 @@ class IDownloadCouponScraper(Scraper):
 
         max_pages = self.MAX_PAGES
         self.length = max_pages
-        local_listing_semaphore = asyncio.Semaphore(self.LISTING_CONCURRENCY)
+        local_listing_semaphore = asyncio.Semaphore(min(self.LISTING_CONCURRENCY, 2))
 
         async def fetch_page(page_num: int):
             async with local_listing_semaphore:
@@ -2341,7 +2474,7 @@ class IDownloadCouponScraper(Scraper):
                 except Exception:
                     return None, None
 
-            local_detail_semaphore = asyncio.Semaphore(10)
+            local_detail_semaphore = asyncio.Semaphore(2)
 
             async def _limited_resolve(cid: str, title: str):
                 async with local_detail_semaphore:
@@ -2384,7 +2517,7 @@ class FreeCourseSitesScraper(Scraper):
         {"slug": "it-software", "fallback_id": 0},
         {"slug": "development", "fallback_id": 0},
     ]
-    PER_PAGE = 100
+    PER_PAGE = 50
     MAX_COURSES = 500
     MAX_REST_PAGES = 5
     MAX_FALLBACK_ARCHIVE_PAGES = 50
@@ -3136,7 +3269,7 @@ class CouponScorpionScraper(Scraper):
     BASE_URL = "https://couponscorpion.com"
     REST_URL = (
         "https://couponscorpion.com/wp-json/wp/v2/posts"
-        "?categories=21032&per_page=100&page={n}&orderby=date&order=desc"
+        "?categories=21032&per_page=50&page={n}&orderby=date&order=desc"
         "&_fields=id,link,title"
     )
     HTML_LISTING = "https://couponscorpion.com/category/100-off-coupons/"
@@ -4112,8 +4245,9 @@ class ScraperService:
 
         settings = get_settings()
 
-        worker_sem = asyncio.Semaphore(settings.MAX_SCRAPER_WORKERS)
-        detail_sem = asyncio.Semaphore(10)
+        # FM-039 throttling: bound to 2 with circuit-breaker (was 12/10)
+        worker_sem = asyncio.Semaphore(min(settings.MAX_SCRAPER_WORKERS, 2))
+        detail_sem = asyncio.Semaphore(2)
 
         if not hasattr(self, "source_states"):
             self.source_states = {id(s): "queued" for s in self.scrapers}

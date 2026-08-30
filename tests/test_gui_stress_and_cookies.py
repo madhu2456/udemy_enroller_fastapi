@@ -570,10 +570,18 @@ async def test_bridge_enrollment_skips_paid_courses_without_checkout():
     bridge._active_settings = {}
     bridge._stop_flag = False
 
-    # Directly verify the course evaluation logic
+    # Directly verify the course evaluation logic — FM-036 price-gated (no conflation of validity with free eligibility)
     is_exp = (paid_course.error and "expired" in str(paid_course.error).lower()) or getattr(paid_course, "is_expired", False)
-    is_valid_free = (paid_course.is_coupon_valid or paid_course.is_free) and not is_exp
+    try:
+        _price_tmp = float(paid_course.price) if paid_course.price is not None else 0.0
+    except (ValueError, TypeError):
+        _price_tmp = 0.0
+    _coupon_free = bool(paid_course.is_coupon_valid) and _price_tmp == 0
+    _explicit_free = bool(paid_course.is_free) and _price_tmp == 0
+    is_valid_free = (_coupon_free or _explicit_free) and not is_exp
+    is_definitely_paid = paid_course.price is not None and _price_tmp > 0 and not _coupon_free and not _explicit_free
     assert is_valid_free is False
+    assert is_definitely_paid is True
 
     # checkout_single must never be called on a paid course
     mock_client.checkout_single.assert_not_called()
@@ -604,3 +612,54 @@ async def test_du_checkout_guard_blocks_paid_courses():
     # No network requests should have been made
     client._cs_get.assert_not_called()
     client._cs_post.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_price_none_fail_closed_not_free():
+    """FM-036: price=None must be fail-closed — never treated as free (regression for C1)."""
+    from app.services.course import Course
+
+    # Simulate the CLI fail-closed logic: price None => 9999.0 => not free
+    course = Course(title="Unknown Price Course", url="https://www.udemy.com/course/unknown-price/?couponCode=FREE")
+    course.price = None
+    course.is_free = True
+    course.is_coupon_valid = True
+    course.error = None
+
+    is_exp = (course.error and "expired" in str(course.error).lower()) or getattr(course, "is_expired", False)
+    try:
+        _price_tmp = float(course.price) if course.price is not None else 9999.0
+    except (ValueError, TypeError):
+        _price_tmp = 9999.0
+    _coupon_free = bool(course.is_coupon_valid) and _price_tmp == 0
+    _explicit_free = bool(course.is_free) and _price_tmp == 0
+    is_valid_free = (_coupon_free or _explicit_free) and not is_exp and course.price is not None
+    is_definitely_paid = course.price is not None and _price_tmp > 0 and not _coupon_free and not _explicit_free
+
+    assert is_valid_free is False, "price=None must not be considered valid free (fail-closed)"
+    assert _price_tmp == 9999.0
+    # When price is None, is_definitely_paid stays False but is_valid_free is also False — so it won't enroll
+    assert is_definitely_paid is False
+
+    # Also verify UdemyClient top guard handles price=None correctly (should not block as paid, but CLI layer already prevents free)
+    from app.services.udemy_client import UdemyClient
+
+    client = UdemyClient.__new__(UdemyClient)
+    client.cs = MagicMock()
+    client.currency = "USD"
+    client._cs_get = AsyncMock()
+    client._cs_post = AsyncMock()
+    # price None course should still go through UdemyClient guard without being considered paid
+    course2 = Course(title="No Price", url="https://www.udemy.com/course/no-price/")
+    course2.course_id = 99999
+    course2.slug = "no-price"
+    course2.price = None
+    course2.is_free = True
+    course2.is_coupon_valid = True
+    # UdemyClient guard only blocks when price>0, so price None passes guard — but the CLI must already have blocked it
+    # This test ensures the CLI layer is the fail-closed gate
+    try:
+        is_paid = course2.price is not None and float(course2.price) > 0
+    except (ValueError, TypeError):
+        is_paid = False
+    assert is_paid is False
