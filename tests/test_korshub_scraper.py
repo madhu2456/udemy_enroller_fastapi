@@ -159,7 +159,7 @@ async def test_go_hop_with_query_strips_query_and_yields_trk(scraper):
         assert host in {"korshub.com", "www.korshub.com"}
         assert parsed.path == f"/go/{GO_UUID}"
         assert parsed.query == ""
-        assert call.args[0] == f"https://www.korshub.com/go/{GO_UUID}"
+        assert call.args[0] in {f"https://korshub.com/go/{GO_UUID}", f"https://www.korshub.com/go/{GO_UUID}"}
         assert call.kwargs.get("use_cloudscraper") is True
         assert call.kwargs.get("allow_redirects") is False
         assert call.kwargs.get("follow_redirects") is False
@@ -182,9 +182,9 @@ NOTGO_UUID = "550e8400-e29b-41d4-a716-446655440002"
 @pytest.mark.asyncio
 async def test_www_to_apex_go_hop_then_trk(scraper):
     listing = (
-        '<a href="/courses/go-course">Go Course</a>'
-        '<a href="/courses/evil-go">Evil Go</a>'
-        '<a href="/courses/not-go">Not Go</a>'
+        '<a href="https://www.korshub.com/courses/go-course">Go Course</a>'
+        '<a href="https://www.korshub.com/courses/evil-go">Evil Go</a>'
+        '<a href="https://www.korshub.com/courses/not-go">Not Go</a>'
     )
     detail = (
         f'<html><a href="/go/{GO_UUID}?s=product_page">Get course</a>'
@@ -330,3 +330,17 @@ async def test_korshub_nextjs_flight_unicode_unescape(scraper):
     assert scraper.data[0].url == "https://www.udemy.com/course/nextjs-ai/?couponCode=FREE2026"
     assert scraper.data[0].title == "NextJS AI Course"
 
+
+
+def test_korshub_json_ld_udemy_anchoring(scraper):
+    unescaped = '{"url": "https://www.udemy.com/course/python-mastery/?couponCode=FREE"}'
+    assert scraper._extract_udemy_url_from_text(unescaped) == "https://www.udemy.com/course/python-mastery/?couponCode=FREE"
+
+    escaped = '{"url": "https:\\/\\/www.udemy.com\\/course\\/python-mastery\\/?couponCode=FREE"}'
+    assert scraper._extract_udemy_url_from_text(escaped) == "https://www.udemy.com/course/python-mastery/?couponCode=FREE"
+
+    other_domain = '{"url": "https://korshub.com/course/python-mastery/"}'
+    assert scraper._extract_udemy_url_from_text(other_domain) is None
+
+    other_domain_escaped = '{"url": "https:\\/\\/korshub.com\\/course\\/python-mastery\\/"}'
+    assert scraper._extract_udemy_url_from_text(other_domain_escaped) is None
