@@ -3562,7 +3562,7 @@ class CouponScorpionScraper(Scraper):
         seen_links: set[str] = set()
         buffer_limit = min(
             getattr(self, "CANDIDATE_BUFFER", 800),
-            max(self.MAX_COURSES * 8, 250),
+            max(self.MAX_COURSES * 3, 50),
         )
         max_pages = getattr(self, "MAX_REST_PAGES", 8)
         self.length = max_pages

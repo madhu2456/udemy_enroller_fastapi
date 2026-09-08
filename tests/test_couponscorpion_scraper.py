@@ -307,3 +307,32 @@ async def test_fetch_post_regex_and_dom_fallback(scraper):
         titles_dom = [c.title for c in scraper.data]
         assert "Regex Course" in titles_dom
         assert "Fallback Course" in titles_dom
+
+
+@pytest.mark.asyncio
+async def test_candidate_buffer_diversity_floor(scraper):
+    scraper.MAX_COURSES = 10
+    scraper.CANDIDATE_BUFFER = 800
+    posts = [
+        {
+            "id": i,
+            "link": f"https://couponscorpion.com/course-{i}/",
+            "title": {"rendered": f"Course {i}"},
+        }
+        for i in range(300)
+    ]
+
+    async def mock_get(url, *args, **kwargs):
+        if "wp-json" in url:
+            m = re.search(r"[?&]page=(\d+)", url)
+            page = int(m.group(1)) if m else 1
+            start = (page - 1) * 50
+            end = start + 50
+            batch = posts[start:end]
+            return _resp(json.dumps(batch), status=200)
+        return _resp("", status=404)
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    collected = await scraper._collect_rest_posts()
+    assert len(collected) == 50
+
