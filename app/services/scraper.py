@@ -158,6 +158,22 @@ class Scraper(ABC):
         """Scrape courses from the site."""
         pass
 
+    @staticmethod
+    def _is_cf_challenge(resp) -> bool:
+        if resp is None or getattr(resp, "status_code", None) not in (403, 429, 503):
+            return False
+        text = (getattr(resp, "text", "") or "")[:4096].lower()
+        cf_signatures = (
+            "just a moment",
+            "cf-browser-verification",
+            "attention required",
+            "cf-challenge",
+            "cf_chl",
+            "cf-turnstile",
+            "challenges.cloudflare.com",
+        )
+        return any(sig in text for sig in cf_signatures)
+
     def parse_html(self, content: Union[str, bytes]) -> BeautifulSoup:
         """Helper to parse HTML with BeautifulSoup."""
         import warnings
@@ -2590,6 +2606,11 @@ class FreeCourseSitesScraper(Scraper):
             resp = await self._http_get(
                 url, use_cloudscraper=True, timeout=15, raise_for_status=False
             )
+            if self._is_cf_challenge(resp) or (resp is not None and resp.status_code == 403):
+                logger.warning(f"  [{self.site_name}] Cloudflare Turnstile/WAF challenge on category ID.")
+                self._cf_403_observed = True
+                self.error = "Blocked by Cloudflare Turnstile WAF"
+                return fallback_id
             data = await self.http.safe_json(resp, "freecoursesites_category")
             if isinstance(data, list) and data and data[0].get("id"):
                 return int(data[0]["id"])
@@ -2880,12 +2901,16 @@ class FreeCourseSitesScraper(Scraper):
 
     async def _scrape_rest_api(self, seen_urls: set[str]) -> None:
         for source in self.CATEGORY_SOURCES:
+            if getattr(self, "_cf_403_observed", False) or self.circuit_open:
+                break
             if len(self.data) >= self.MAX_COURSES:
                 break
 
             slug = source["slug"]
             fallback_id = source["fallback_id"]
             cat_id = await self._get_category_id(slug, fallback_id)
+            if getattr(self, "_cf_403_observed", False) or self.circuit_open:
+                break
 
             logger.info(
                 f"  {self.site_name}: REST scraping category {slug} (ID: {cat_id})"
@@ -2904,8 +2929,11 @@ class FreeCourseSitesScraper(Scraper):
                 resp = await self._http_get(
                     url, use_cloudscraper=True, timeout=20, raise_for_status=False
                 )
-                if resp is not None and resp.status_code == 403:
-                    self._cf_403_observed = True  # T4-T2 CF-403 signature
+                if self._is_cf_challenge(resp) or (resp is not None and resp.status_code == 403):
+                    logger.warning(f"  [{self.site_name}] Cloudflare Turnstile/WAF challenge on REST category '{slug}' page {page}.")
+                    self._cf_403_observed = True
+                    self.error = "Blocked by Cloudflare Turnstile WAF"
+                    break
                 if not resp or resp.status_code != 200:
                     break
 
@@ -3821,8 +3849,13 @@ class OnlineCoursesScraper(Scraper):
         candidates = []
         try:
             resp = await self._http_get(
-                self.FEED_URL, use_cloudscraper=True, timeout=20
+                self.FEED_URL, use_cloudscraper=True, timeout=20, raise_for_status=False
             )
+            if self._is_cf_challenge(resp) or (resp is not None and resp.status_code == 403):
+                logger.warning(f"  [{self.site_name}] Cloudflare Turnstile/WAF challenge on feed.")
+                self._cf_403_observed = True
+                self.error = "Blocked by Cloudflare Turnstile WAF"
+                return []
             if resp and resp.status_code == 200 and resp.text:
                 items = re.findall(
                     r"<item>(.*?)</item>", resp.text, re.DOTALL | re.IGNORECASE
@@ -3848,6 +3881,8 @@ class OnlineCoursesScraper(Scraper):
             candidates: list[tuple[str, str]] = []
 
             feed_items = await self._fetch_feed_items()
+            if getattr(self, "_cf_403_observed", False) or self.error == "Blocked by Cloudflare Turnstile WAF":
+                return
             for link, title in feed_items:
                 if link not in seen_pages:
                     seen_pages.add(link)
@@ -3862,8 +3897,13 @@ class OnlineCoursesScraper(Scraper):
                     else f"{self.BASE_URL}/page/{page_num}/"
                 )
                 resp = await self._http_get(
-                    url, use_cloudscraper=True, timeout=15
+                    url, use_cloudscraper=True, timeout=15, raise_for_status=False
                 )
+                if self._is_cf_challenge(resp) or (resp is not None and resp.status_code == 403):
+                    logger.warning(f"  [{self.site_name}] Cloudflare Turnstile/WAF challenge on page {page_num}.")
+                    self._cf_403_observed = True
+                    self.error = "Blocked by Cloudflare Turnstile WAF"
+                    break
                 if not resp or resp.status_code != 200 or not resp.text:
                     if page_num == 1 and not candidates:
                         self.error = "Failed to fetch listing page 1"

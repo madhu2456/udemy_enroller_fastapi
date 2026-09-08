@@ -99,3 +99,16 @@ async def test_onlinecourses_listing_pagination_fallback(scraper):
 
     assert len(scraper.data) == 1
     assert "couponCode=PYFREE" in scraper.data[0].url
+
+
+@pytest.mark.asyncio
+async def test_onlinecourses_turnstile_fails_fast_with_error(scraper):
+    challenge_html = '<html><head><title>Attention Required! | Cloudflare</title></head><body><div id="cf-turnstile"></div></body></html>'
+    mock_resp = _resp(challenge_html, status=403)
+    scraper.http.get = AsyncMock(return_value=mock_resp)
+
+    await scraper.scrape(asyncio.Semaphore(2))
+
+    assert scraper.error == "Blocked by Cloudflare Turnstile WAF"
+    assert len(scraper.data) == 0
+    assert getattr(scraper, "_cf_403_observed", False) is True

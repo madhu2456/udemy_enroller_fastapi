@@ -1,3 +1,12 @@
+
+def _resp(text="", status=200, headers=None, url=""):
+    mock = MagicMock()
+    mock.status_code = status
+    mock.text = text
+    mock.content = text.encode("utf-8") if isinstance(text, str) else text
+    mock.headers = headers or {}
+    mock.url = url
+    return mock
 import pytest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock
@@ -257,3 +266,68 @@ async def test_multiple_categories_exhaustion(scraper):
     coupon_idx = next(i for i, url in enumerate(rest_urls) if "categories=137426" in url)
     archive_idx = next(i for i, url in enumerate(rest_urls) if "categories=67983" in url)
     assert coupon_idx < archive_idx
+
+
+@pytest.mark.asyncio
+async def test_html_fallback_403_halts_outer_loop(scraper):
+    mock_resp = MagicMock()
+    mock_resp.status_code = 403
+    mock_resp.text = "Forbidden"
+    scraper._http_get_fallback = AsyncMock(return_value=mock_resp)
+
+    seen_urls = set()
+    await scraper._scrape_html_fallback(asyncio.Semaphore(1), seen_urls)
+
+    assert scraper._cf_403_observed is True
+    assert scraper._http_get_fallback.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_html_fallback_cf_challenge_halts_outer_loop(scraper):
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.text = "<html><title>Just a moment...</title>cf-browser-verification</html>"
+    scraper._http_get_fallback = AsyncMock(return_value=mock_resp)
+
+    seen_urls = set()
+    await scraper._scrape_html_fallback(asyncio.Semaphore(1), seen_urls)
+
+    assert scraper._cf_403_observed is True
+    assert scraper._http_get_fallback.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_html_fallback_skips_when_cf_403_previously_observed(scraper):
+    scraper._cf_403_observed = True
+    scraper._http_get_fallback = AsyncMock()
+
+    seen_urls = set()
+    remaining = await scraper._scrape_html_fallback(asyncio.Semaphore(1), seen_urls, fallback_budget=5)
+
+    assert remaining == 5
+    scraper._http_get_fallback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_html_fallback_circuit_open_none_halts_outer_loop(scraper):
+    scraper.circuit_open = True
+    scraper.consecutive_failures = scraper.max_consecutive_failures
+    scraper._http_get_fallback = AsyncMock(return_value=None)
+
+    seen_urls = set()
+    await scraper._scrape_html_fallback(asyncio.Semaphore(1), seen_urls)
+
+    assert scraper._http_get_fallback.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_fcs_turnstile_fails_fast_with_error(scraper):
+    challenge_html = '<html><head><title>Just a moment...</title></head><body><div class="cf-turnstile"></div></body></html>'
+    mock_resp = _resp(challenge_html, status=403)
+    scraper.http.get = AsyncMock(return_value=mock_resp)
+
+    await scraper.scrape(asyncio.Semaphore(2))
+
+    assert scraper.error == "Blocked by Cloudflare Turnstile WAF"
+    assert len(scraper.data) == 0
+    assert getattr(scraper, "_cf_403_observed", False) is True
