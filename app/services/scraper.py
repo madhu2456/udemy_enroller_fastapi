@@ -3,8 +3,9 @@
 import asyncio
 import html
 import json
-import random
+import os
 import re
+import time
 import traceback
 import urllib.parse
 from abc import ABC, abstractmethod
@@ -13,7 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 from bs4 import BeautifulSoup
 from loguru import logger
 
-from app.services.course import Course
+from app.services.course import Course, sanitize_course_title
 from app.services.http_client import AsyncHTTPClient, _log_safe_url
 from app.services.robots_gate import RobotsGate
 from app.services.udemy_validation import (
@@ -447,6 +448,7 @@ class Scraper(ABC):
 
     def append_to_list(self, title: str, url: str):
         """Add a course to the data list with deduplication logic."""
+        title = sanitize_course_title(title)
         if not title or not url or not is_udemy_url(url):
             return
 
@@ -496,15 +498,28 @@ class Scraper(ABC):
         on coupon aggregator sites. playwright-stealth applies browser fingerprint
         patches to reduce detection by anti-bot systems. The stealth library is
         optional — if not installed, Playwright runs without patches.
+
+        Wall-clock bound (T4-T1 hardening): internal timeouts sum to at most
+        35s (goto 15000ms + optional wait_for_selector 5000ms + single CF-retry
+        reload 15000ms) plus one page.wait_for_timeout(2000) settle; typical
+        single-load path completes in ~17-22s. At most 2 page loads
+        (1 goto + 1 CF-retry reload). wait_until=commit is used for speed.
+        Returns "" on ANY failure, never raises, and never mutates the circuit
+        breaker. Missing binary/libs (or missing playwright import) returns ""
+        immediately with a BLOCKED_BY_ENV log (reason=binary|libs).
+
+        Caller contract (SSRF/robots gating lives in the caller, NOT here):
+        the caller (T4-T2 wiring) MUST pre-check _is_safe_url(url),
+        _robots_allowed(url) and same-host scope before calling this helper.
         """
         try:
-            from playwright.async_api import async_playwright
-
-            stealth_async = None
             try:
-                from playwright_stealth import stealth_async
-            except (ImportError, ModuleNotFoundError):
-                logger.warning("  playwright_stealth not found, proceeding without it.")
+                from playwright.async_api import async_playwright
+            except ImportError as e:
+                logger.bind(reason="binary", error=type(e).__name__).warning(
+                    f"  Playwright BLOCKED_BY_ENV (reason=binary): import failed for {url}: {e}"
+                )
+                return ""
 
             async with async_playwright() as p:
                 launch_kwargs = {
@@ -518,7 +533,24 @@ class Scraper(ABC):
                 if self.proxy:
                     launch_kwargs["proxy"] = {"server": self.proxy}
 
-                browser = await p.chromium.launch(**launch_kwargs)
+                try:
+                    browser = await p.chromium.launch(**launch_kwargs)
+                except Exception as e:
+                    _msg = str(e).lower()
+                    if "executable" in _msg or "has not been downloaded" in _msg:
+                        _reason = "binary"
+                    elif (
+                        "missing depend" in _msg
+                        or "host system is missing" in _msg
+                        or "shared librar" in _msg
+                    ):
+                        _reason = "libs"
+                    else:
+                        raise
+                    logger.bind(reason=_reason, error=type(e).__name__).warning(
+                        f"  Playwright BLOCKED_BY_ENV (reason={_reason}) for {url}: {e}"
+                    )
+                    return ""
                 try:
                     context = await browser.new_context(
                         viewport={"width": 1920, "height": 1080},
@@ -527,45 +559,61 @@ class Scraper(ABC):
                     )
                     page = await context.new_page()
 
-                    if stealth_async:
-                        await stealth_async(page)
+                    try:
+                        from playwright_stealth import Stealth
 
-                    await asyncio.sleep(random.uniform(1, 3))
+                        await Stealth().apply_stealth_async(page)
+                    except ImportError:
+                        logger.warning(
+                            "  playwright_stealth not installed, proceeding without stealth patches."
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"  Playwright stealth patch failed, proceeding without it: {e}"
+                        )
 
-                    await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                    await page.goto(url, wait_until="commit", timeout=15000)
+
+                    await page.wait_for_timeout(2000)
 
                     if wait_selector:
                         try:
-                            await page.wait_for_selector(wait_selector, timeout=10000)
+                            await page.wait_for_selector(wait_selector, timeout=5000)
                         except Exception:
                             pass
 
-                    await asyncio.sleep(3)
-
                     content = await page.content()
 
-                    # Check for Cloudflare block
+                    # Check for Cloudflare block (single reload retry: max 2 loads)
                     if (
                         "Just a moment..." in content
                         or "cf-browser-verification" in content
                         or "Attention Required!" in content
                     ):
                         logger.warning(
-                            f"  Playwright hit Cloudflare block on {url}, waiting 10 more seconds..."
+                            f"  Playwright hit Cloudflare block on {url}, single reload retry..."
                         )
-                        await asyncio.sleep(20)
+                        try:
+                            await page.reload(wait_until="commit", timeout=15000)
+                        except Exception:
+                            return ""
                         content = await page.content()
                         if (
                             "Just a moment..." in content
                             or "cf-browser-verification" in content
+                            or "Attention Required!" in content
                         ):
-                            raise Exception(
-                                "Cloudflare challenge unresolved by Playwright."
+                            logger.warning(
+                                f"  Playwright Cloudflare challenge unresolved for {url}."
                             )
+                            return ""
 
                     return content
                 finally:
-                    await browser.close()
+                    try:
+                        await browser.close()
+                    except Exception:
+                        pass
         except Exception as e:
             logger.warning(f"  Playwright fetch failed for {url}: {e}")
             return ""
@@ -1720,7 +1768,7 @@ class KorshubScraper(Scraper):
     MAX_PAGES: int = 80
     CANDIDATE_BUFFER: int = 750
     DETAIL_BATCH_SIZE: int = 10
-    LISTING_ENDPOINT: str = "https://www.korshub.com/free-courses"
+    LISTING_ENDPOINT: str = "https://korshub.com/free-courses"
 
     GO_NETLOCS = frozenset({"korshub.com", "www.korshub.com"})
     GO_PATH_RE = re.compile(r"^/go/[A-Za-z0-9_-]+$")
@@ -1734,7 +1782,7 @@ class KorshubScraper(Scraper):
         return "kh"
 
     def _listing_detail_url(self, href: str) -> Optional[str]:
-        candidate = urllib.parse.urljoin("https://www.korshub.com/", href)
+        candidate = urllib.parse.urljoin("https://korshub.com/", href)
         parsed = urllib.parse.urlparse(candidate)
         host = parsed.netloc.lower().split(":")[0]
         if host not in self.GO_NETLOCS:
@@ -1742,17 +1790,19 @@ class KorshubScraper(Scraper):
         parts = [p for p in parsed.path.split("/") if p]
         if len(parts) != 2 or parts[0] != "courses" or not parts[1]:
             return None
-        return f"https://www.korshub.com/courses/{parts[1]}"
+        scheme = parsed.scheme or "https"
+        return f"{scheme}://{host}/courses/{parts[1]}"
 
     def _allowed_go_hop(self, href: str, base: str) -> Optional[str]:
-        candidate = urllib.parse.urljoin(base, href)
+        candidate = urllib.parse.urljoin(base or "https://korshub.com/", href)
         parsed = urllib.parse.urlparse(candidate)
         host = parsed.netloc.lower().split(":")[0]
         if host not in self.GO_NETLOCS:
             return None
         if not self.GO_PATH_RE.fullmatch(parsed.path or ""):
             return None
-        return f"https://www.korshub.com{parsed.path}"
+        scheme = parsed.scheme or "https"
+        return f"{scheme}://{host}{parsed.path}"
 
     def _allowed_extra_go_hop(self, location: str) -> Optional[str]:
         """Same-origin www↔apex /go/{uuid} Location for one extra hop. Host is not rewritten."""
@@ -1827,7 +1877,7 @@ class KorshubScraper(Scraper):
                     )
                     # Fallback to general /courses if /free-courses is unavailable
                     if (not resp or resp.status_code != 200) and page_num == 1:
-                        fallback_url = f"https://www.korshub.com/courses?page={page_num - 1}"
+                        fallback_url = f"https://korshub.com/courses?page={page_num - 1}"
                         resp = await self._http_get(
                             fallback_url,
                             use_cloudscraper=True,
@@ -1851,7 +1901,8 @@ class KorshubScraper(Scraper):
                         break
 
                     detail_urls.extend(sorted(page_urls))
-                    if len(detail_urls) >= getattr(self, "CANDIDATE_BUFFER", 750):
+                    buffer_limit = min(getattr(self, "CANDIDATE_BUFFER", 750), max(self.MAX_COURSES * 8, 40))
+                    if len(detail_urls) >= buffer_limit:
                         break
                 except Exception:
                     continue
@@ -1859,7 +1910,8 @@ class KorshubScraper(Scraper):
             if not detail_urls:
                 return
 
-            detail_urls = detail_urls[: getattr(self, "CANDIDATE_BUFFER", 750)]
+            buffer_limit = min(getattr(self, "CANDIDATE_BUFFER", 750), max(self.MAX_COURSES * 8, 40))
+            detail_urls = detail_urls[:buffer_limit]
             self.length = len(detail_urls)
             self.progress = 0
             logger.info(f"  Korshub: Found {len(detail_urls)} detail URLs to fetch")
@@ -2521,6 +2573,8 @@ class FreeCourseSitesScraper(Scraper):
     MAX_COURSES = 500
     MAX_REST_PAGES = 5
     MAX_FALLBACK_ARCHIVE_PAGES = 50
+    _last_playwright_ts: float = 0.0
+    _PLAYWRIGHT_COOLDOWN_S = 1800.0
 
     @property
     def site_name(self) -> str:
@@ -2555,6 +2609,7 @@ class FreeCourseSitesScraper(Scraper):
         html: str,
         fallback_title: str,
         seen_urls: set[str],
+        resolve_trk: bool = True,
     ) -> list[tuple[str, str]]:
         soup = self.parse_html(html)
 
@@ -2578,6 +2633,8 @@ class FreeCourseSitesScraper(Scraper):
                 continue
 
             if is_trk_udemy_url(href):
+                if not resolve_trk:
+                    continue
                 resolved = await self._resolve_trk_redirect(href)
                 if resolved:
                     href = resolved
@@ -2605,13 +2662,97 @@ class FreeCourseSitesScraper(Scraper):
 
         return courses
 
+    async def _http_get_fallback(self, url: str, **kwargs) -> Optional[object]:
+        """Breaker-aware listing fetch for the HTML fallback (T3).
+
+        The primary ``_http_get`` gate blocks ALL fetches while
+        ``circuit_open`` is True, which would starve the HTML fallback even
+        though it targets the same per-host listing path. This helper
+        intentionally bypasses the OPEN gate for *listing* pages only, under a
+        fresh isolated ``fallback_budget=5`` per ``scrape()`` invocation
+        (decremented per attempt, hard-stop at 0 — enforced by the caller).
+        No retry loop lives outside that budget and no cross-host fan-out is
+        introduced (all URLs stay on ``BASE_URL`` / freecoursesites.com), so a
+        primary trip on 403/500/host-down cannot double-hammer: at most 5
+        fallback listing hits total, and detail tasks stay gated via
+        ``_run_detail_task`` (0 HTTP for detail while OPEN).
+
+        Reset-on-200 only (no unconditional reset in ``scrape`` entry):
+        - 200 clears ``consecutive_failures`` to 0 AND clears ``circuit_open``
+          so a recovered listing re-enables gated detail tasks.
+        - Non-200/exception increments ``consecutive_failures`` (no reset)
+          and re-trips ``circuit_open`` at threshold, so fallback failures
+          count toward instant re-trip.
+        """
+        if not url or not isinstance(url, str):
+            return None
+        if not _is_safe_url(url):
+            logger.bind(
+                scraper=self.code_name,
+                site=self.site_name,
+                url=_log_safe_url(url),
+            ).warning(f"  [{self.site_name}] Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+            return None
+        if not await self._robots_allowed(url):
+            logger.bind(
+                scraper=self.code_name,
+                site=self.site_name,
+                url=_log_safe_url(url),
+            ).info(f"  {self.site_name}: skipped {url} — robots.txt Disallow (F252)")
+            return None
+        if "timeout" not in kwargs:
+            kwargs["timeout"] = self.request_timeout
+        try:
+            resp = await self.http.get(url, **kwargs)
+            if resp is not None and getattr(resp, "status_code", None) == 200:
+                self.consecutive_failures = 0
+                if self.circuit_open:
+                    self.circuit_open = False
+                    logger.bind(
+                        scraper=self.code_name, site=self.site_name
+                    ).info(f"  [{self.site_name}] Circuit breaker CLEARED via fallback 200")
+                return resp
+            status = getattr(resp, "status_code", "None")
+            self.consecutive_failures += 1
+            if self.consecutive_failures >= self.max_consecutive_failures:
+                self.circuit_open = True
+                self.error = (
+                    f"Circuit breaker tripped after {self.consecutive_failures} consecutive failures"
+                )
+            return resp
+        except Exception as exc:
+            self.consecutive_failures += 1
+            logger.bind(
+                scraper=self.code_name,
+                site=self.site_name,
+                url=_log_safe_url(url),
+                error=type(exc).__name__,
+                consecutive_failures=self.consecutive_failures,
+            ).warning(f"  [{self.site_name}] Fallback fetch exception ({type(exc).__name__}): {exc}")
+            if self.consecutive_failures >= self.max_consecutive_failures:
+                self.circuit_open = True
+                self.error = (
+                    f"Circuit breaker tripped after {self.consecutive_failures} consecutive failures"
+                )
+            return None
+
     async def _scrape_html_fallback(
         self,
         detail_semaphore: asyncio.Semaphore,
         seen_urls: set[str],
-    ) -> None:
+        fallback_budget: int = 5,
+    ) -> int:
+        """HTML fallback bounded by an isolated per-scrape listing budget."""
+        fallback_remaining = fallback_budget
+        if getattr(self, "_cf_403_observed", False):
+            logger.info(f"  {self.site_name}: Skipping HTML fallback — Cloudflare 403 previously observed")
+            return fallback_remaining
+
         logger.info(f"  {self.site_name}: Using HTML fallback")
         no_new_links_count = 0
+        # T3: fresh isolated counter per scrape() — NOT shared with primary
+        # consecutive_failures; each listing attempt spends 1, hard-stop at 0.
+        blocked_by_waf = False
 
         async def _fetch_detail(url: str, post_title: str):
             try:
@@ -2628,7 +2769,11 @@ class FreeCourseSitesScraper(Scraper):
                 return []
 
         for source in self.CATEGORY_SOURCES:
+            if blocked_by_waf:
+                break
             if len(self.data) >= self.MAX_COURSES:
+                break
+            if fallback_remaining <= 0:
                 break
 
             slug = source["slug"]
@@ -2638,15 +2783,36 @@ class FreeCourseSitesScraper(Scraper):
             for page in range(1, self.MAX_FALLBACK_ARCHIVE_PAGES + 1):
                 if len(self.data) >= self.MAX_COURSES:
                     break
+                if fallback_remaining <= 0:
+                    break
 
                 if page == 1:
                     url = f"{self.BASE_URL}/category/{slug}/"
                 else:
                     url = f"{self.BASE_URL}/category/{slug}/page/{page}/"
 
-                resp = await self._http_get(
+                # T3: spend 1 unit of the isolated fallback budget per listing
+                # attempt (same-host only); bypasses OPEN gate via helper but
+                # hard-stops at 0 so a tripped primary cannot double-hammer.
+                # Detail fetches below stay gated by _run_detail_task (0 HTTP
+                # for detail while OPEN unless a fallback 200 clears it).
+                fallback_remaining -= 1
+                resp = await self._http_get_fallback(
                     url, use_cloudscraper=True, timeout=20, raise_for_status=False
                 )
+                is_cf = False
+                if resp is not None:
+                    resp_text = (getattr(resp, "text", "") or "")[:4096].lower()
+                    is_cf = any(m in resp_text for m in ("just a moment", "cf-browser-verification", "attention required", "cf-challenge", "cf_chl"))
+                if resp is not None and (resp.status_code == 403 or is_cf):
+                    logger.warning(f"  [{self.site_name}] 403/Cloudflare block on category '{slug}' (status={resp.status_code}, is_cf={is_cf}). Halting HTML fallback.")
+                    self._cf_403_observed = True
+                    blocked_by_waf = True
+                    break
+                if resp is None and (self.circuit_open or self.consecutive_failures >= self.max_consecutive_failures):
+                    logger.warning(f"  [{self.site_name}] Circuit open / failure limit reached in fallback. Halting outer category loop.")
+                    blocked_by_waf = True
+                    break
                 if not resp or resp.status_code != 200:
                     break
 
@@ -2708,6 +2874,9 @@ class FreeCourseSitesScraper(Scraper):
 
                 if no_new_links_count >= 3:
                     break
+            if blocked_by_waf:
+                break
+        return fallback_remaining  # T4-T2: resort gate needs exhaustion signal
 
     async def _scrape_rest_api(self, seen_urls: set[str]) -> None:
         for source in self.CATEGORY_SOURCES:
@@ -2735,6 +2904,8 @@ class FreeCourseSitesScraper(Scraper):
                 resp = await self._http_get(
                     url, use_cloudscraper=True, timeout=20, raise_for_status=False
                 )
+                if resp is not None and resp.status_code == 403:
+                    self._cf_403_observed = True  # T4-T2 CF-403 signature
                 if not resp or resp.status_code != 200:
                     break
 
@@ -2749,6 +2920,8 @@ class FreeCourseSitesScraper(Scraper):
                         self.length = actual_max_pages
 
                 posts = await self.http.safe_json(resp, "freecoursesites_posts")
+                if posts is None:
+                    self._cf_403_observed = True  # T4-T2 safe_json CF-None signature
                 if not isinstance(posts, list) or not posts:
                     break
 
@@ -2775,12 +2948,60 @@ class FreeCourseSitesScraper(Scraper):
                 f"  {self.site_name}: Extracted {added} unique courses from {slug}. Total so far: {len(self.data)}"
             )
 
+    async def _scrape_playwright_resort(self, seen_urls: set[str], fallback_remaining: int = 0) -> None:
+        """Playwright last-resort (T4-T2, OFF unless FCS_PLAYWRIGHT_FALLBACK=1).
+        Triple-guard: empty data + exhausted budget + (OPEN or fails>=thr w/ CF-403
+        sig). Single same-host listing from CATEGORY_SOURCES[0]; wait_for 40s, no
+        wait_selector. ""/timeout/CF -> 0 courses, zero breaker mutation; only
+        semantic success clears OPEN. Cooldown 1800s in-mem (single-replica)."""
+        if os.getenv("FCS_PLAYWRIGHT_FALLBACK", "0") != "1":
+            return
+        if len(self.data) != 0 or (isinstance(fallback_remaining, int) and fallback_remaining > 0):
+            return
+        cf_sig = bool(getattr(self, "_cf_403_observed", False))
+        if not (self.circuit_open or (self.consecutive_failures >= self.max_consecutive_failures and cf_sig)):
+            return
+        now = time.monotonic()
+        if type(self)._last_playwright_ts > 0 and now - type(self)._last_playwright_ts < self._PLAYWRIGHT_COOLDOWN_S:
+            logger.bind(scraper=self.code_name, site=self.site_name).info(f"  [{self.site_name}] Playwright resort skipped — cooldown active")
+            return
+        url = f"{self.BASE_URL}/category/{self.CATEGORY_SOURCES[0]['slug']}/"
+        if urllib.parse.urlparse(url).netloc != urllib.parse.urlparse(self.BASE_URL).netloc or not _is_safe_url(url) or not await self._robots_allowed(url):
+            logger.bind(scraper=self.code_name, site=self.site_name).warning(f"  [{self.site_name}] Playwright resort blocked (SSRF/scope/robots): {_log_safe_url(url)}")
+            return
+        type(self)._last_playwright_ts = now
+        try:
+            html_text = await asyncio.wait_for(self.playwright_get(url), timeout=40)
+        except Exception as exc:
+            logger.bind(scraper=self.code_name, site=self.site_name).warning(f"  [{self.site_name}] Playwright resort failed ({type(exc).__name__}): {exc}")
+            return
+        if not html_text:
+            logger.bind(scraper=self.code_name, site=self.site_name).warning(f"  [{self.site_name}] Playwright resort BLOCKED_BY_ENV: 0 courses, breaker untouched")
+            return
+        if "Just a moment..." in html_text or "cf-browser-verification" in html_text or "Attention Required!" in html_text:
+            logger.bind(scraper=self.code_name, site=self.site_name).warning(f"  [{self.site_name}] Playwright resort CF unresolved — breaker stays OPEN")
+            return
+        before = len(self.data)
+        for t, link in await self._extract_courses_from_html(html_text, self.CATEGORY_SOURCES[0]["slug"].replace("-", " ").title(), seen_urls, resolve_trk=False):
+            self.append_to_list(t, link)
+        if len(self.data) - before >= 2:
+            self.consecutive_failures = 0
+            if self.circuit_open:
+                self.circuit_open = False
+                logger.bind(scraper=self.code_name, site=self.site_name).info(f"  [{self.site_name}] Circuit breaker CLEARED via playwright resort")
+        elif len(self.data) > before:
+            logger.bind(scraper=self.code_name, site=self.site_name).warning(f"  [{self.site_name}] Playwright resort-partial — breaker stays OPEN")
+
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
             seen_urls: set[str] = set()
             await self._scrape_rest_api(seen_urls)
             if len(self.data) < self.MAX_COURSES:
-                await self._scrape_html_fallback(detail_semaphore, seen_urls)
+                # T3: fresh isolated fallback budget (5) per scrape() invocation.
+                # No unconditional breaker reset here — recovery is 200-only
+                # via _http_get/_http_get_fallback semantics.
+                fallback_remaining = await self._scrape_html_fallback(detail_semaphore, seen_urls, fallback_budget=5)
+                await self._scrape_playwright_resort(seen_urls, fallback_remaining)
         except Exception:
             self.error = traceback.format_exc()
 
@@ -3023,6 +3244,10 @@ class CoursonScraper(Scraper):
     MAX_COUPON_PAGES = 750
     DETAIL_BATCH_SIZE = 10
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._api_coupon_items: dict[str, dict] = {}
+
     @property
     def site_name(self) -> str:
         return "Courson"
@@ -3099,6 +3324,11 @@ class CoursonScraper(Scraper):
                     if not id_name:
                         continue
                     url = f"{self.BASE_URL}/coupon/{id_name}"
+                    self._api_coupon_items[url] = {
+                        "title": (item.get("title") or item.get("course_title") or "").strip(),
+                        "coupon_code": (item.get("coupon_code") or item.get("coupon") or "").strip(),
+                        "id_name": id_name,
+                    }
                     if url not in seen:
                         seen.add(url)
                         urls.append(url)
@@ -3148,6 +3378,7 @@ class CoursonScraper(Scraper):
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
         try:
+            self._api_coupon_items = {}
             coupon_urls: list[str] = await self._collect_api_posts()
             if not coupon_urls:
                 homepage_urls: list[str] = []
@@ -3193,6 +3424,15 @@ class CoursonScraper(Scraper):
             async def _fetch_coupon(page_url: str):
                 if self._is_claim_url(page_url) or not self._is_coupon_page(page_url):
                     return None, None
+                cached = getattr(self, "_api_coupon_items", {}).get(page_url)
+                if cached:
+                    c_id = cached.get("id_name")
+                    c_code = cached.get("coupon_code")
+                    if c_id and c_code:
+                        udemy_url = f"https://www.udemy.com/course/{c_id}/?couponCode={c_code}"
+                        if is_udemy_course_url(udemy_url):
+                            c_title = cached.get("title") or c_id.replace("-", " ").title()
+                            return c_title, udemy_url
                 try:
                     resp = await self._gated_http_get(
                         page_url, use_cloudscraper=True, timeout=15
@@ -3320,6 +3560,10 @@ class CouponScorpionScraper(Scraper):
 
         posts: list[tuple[str, str]] = []
         seen_links: set[str] = set()
+        buffer_limit = min(
+            getattr(self, "CANDIDATE_BUFFER", 800),
+            max(self.MAX_COURSES * 8, 250),
+        )
         max_pages = getattr(self, "MAX_REST_PAGES", 8)
         self.length = max_pages
         for page_num in range(1, max_pages + 1):
@@ -3352,7 +3596,7 @@ class CouponScorpionScraper(Scraper):
                 if not title:
                     continue
                 posts.append((link, title))
-                if len(posts) >= getattr(self, "CANDIDATE_BUFFER", 800):
+                if len(posts) >= buffer_limit:
                     return posts
         return posts
 
@@ -3737,9 +3981,17 @@ class FreebiesGlobalScraper(Scraper):
             self.progress = 0
             seen_udemy: set[str] = set()
             candidates: list[str] = []
+            candidate_limit = min(
+                getattr(self, "CANDIDATE_BUFFER", 750),
+                max(self.MAX_COURSES * 3, 20),
+            )
 
             for page_num in range(1, self.MAX_PAGES + 1):
-                if len(self.data) >= self.MAX_COURSES:
+                if (
+                    len(self.data) >= self.MAX_COURSES
+                    or len(candidates) >= candidate_limit
+                    or len(self.data) + len(candidates) >= candidate_limit
+                ):
                     break
                 url = (
                     f"{self.LISTING_ENDPOINT}/"
@@ -3795,11 +4047,19 @@ class FreebiesGlobalScraper(Scraper):
                         ):
                             candidates.append(post_url)
                             page_found += 1
+                            if (
+                                len(candidates) >= candidate_limit
+                                or len(self.data) + len(candidates) >= candidate_limit
+                            ):
+                                break
 
                 self.progress = page_num
                 if page_num > 1 and page_found == 0:
                     break
-                if len(self.data) + len(candidates) >= self.CANDIDATE_BUFFER:
+                if (
+                    len(candidates) >= candidate_limit
+                    or len(self.data) + len(candidates) >= candidate_limit
+                ):
                     break
 
             # Process collected detail candidate pages
@@ -3810,9 +4070,10 @@ class FreebiesGlobalScraper(Scraper):
                     try:
                         r = await self.http.get(
                             post_url,
-                            use_cloudscraper=True,
-                            timeout=10,
+                            attempts=1,
+                            timeout=8,
                             raise_for_status=False,
+                            use_cloudscraper=True,
                         )
                         if not r or r.status_code != 200 or not r.text:
                             return None, None
@@ -4025,30 +4286,52 @@ class TutorialBarScraper(Scraper):
         results = []
         if not raw_text:
             return results
-        # Match Next.js RSC serialized stream objects (with escaped or unescaped quotes)
-        pattern = re.findall(
-            r'\\?"title\\?":\s*\\?"(?P<title>(?:\\.|[^"\\])+?)\\?",.*?\\?"couponUrl\\?":\s*\\?"(?P<url>https:[^"\\]+?)\\?"',
+
+        # 1. Match Next.js RSC course objects with negative lookahead preventing cross-course bleeding
+        p1 = re.findall(
+            r'\\?"course\\?":\s*\{(?:(?!\\?"course\\?":).)*?\\?"title\\?":\s*\\?"((?:\\.|[^"\\])+?)\\?"(?:(?!\\?"course\\?":).)*?\\?"couponUrl\\?":\s*\\?"(https:[^"\\]+?)\\?"',
             raw_text,
             re.DOTALL,
         )
-        for title_match, url_match in pattern:
+        p2 = re.findall(
+            r'\\?"course\\?":\s*\{(?:(?!\\?"course\\?":).)*?\\?"couponUrl\\?":\s*\\?"(https:[^"\\]+?)\\?"(?:(?!\\?"course\\?":).)*?\\?"title\\?":\s*\\?"((?:\\.|[^"\\])+?)\\?"',
+            raw_text,
+            re.DOTALL,
+        )
+        for title_match, url_match in p1:
             clean_title = self._unescape_rsc_string(title_match)
             clean_url = self._unescape_rsc_string(url_match)
             if clean_title and clean_url:
                 results.append((clean_title, clean_url))
+        for url_match, title_match in p2:
+            clean_title = self._unescape_rsc_string(title_match)
+            clean_url = self._unescape_rsc_string(url_match)
+            if clean_title and clean_url and (clean_title, clean_url) not in results:
+                results.append((clean_title, clean_url))
 
+        # 2. Fallback for un-nested flight formats (e.g. synthetic test fixtures)
         if not results:
-            url_matches = re.findall(
-                r'\\?"couponUrl\\?":\s*\\?"(https:[^"\\]+?)\\?"', raw_text
+            f1 = re.findall(
+                r'\{(?:(?!\{).)*?\\?"title\\?":\s*\\?"((?:\\.|[^"\\])+?)\\?"(?:(?!\{).)*?\\?"couponUrl\\?":\s*\\?"(https:[^"\\]+?)\\?"',
+                raw_text,
+                re.DOTALL,
             )
-            title_matches = re.findall(
-                r'\\?"title\\?":\s*\\?"((?:\\.|[^"\\])+?)\\?"', raw_text
+            f2 = re.findall(
+                r'\{(?:(?!\{).)*?\\?"couponUrl\\?":\s*\\?"(https:[^"\\]+?)\\?"(?:(?!\{).)*?\\?"title\\?":\s*\\?"((?:\\.|[^"\\])+?)\\?"',
+                raw_text,
+                re.DOTALL,
             )
-            for u, t in zip(url_matches, title_matches, strict=False):
-                cu = self._unescape_rsc_string(u)
-                ct = self._unescape_rsc_string(t)
-                if cu and ct:
-                    results.append((ct, cu))
+            for title_match, url_match in f1:
+                clean_title = self._unescape_rsc_string(title_match)
+                clean_url = self._unescape_rsc_string(url_match)
+                if clean_title and clean_url:
+                    results.append((clean_title, clean_url))
+            for url_match, title_match in f2:
+                clean_title = self._unescape_rsc_string(title_match)
+                clean_url = self._unescape_rsc_string(url_match)
+                if clean_title and clean_url and (clean_title, clean_url) not in results:
+                    results.append((clean_title, clean_url))
+
         return results
 
     async def scrape(self, detail_semaphore: asyncio.Semaphore):
@@ -4061,7 +4344,7 @@ class TutorialBarScraper(Scraper):
                 if len(self.data) >= self.MAX_COURSES:
                     break
                 url = (
-                    f"{self.LISTING_ENDPOINT}/"
+                    f"{self.LISTING_ENDPOINT}"
                     if page_num == 1
                     else f"{self.LISTING_ENDPOINT}?page={page_num}"
                 )

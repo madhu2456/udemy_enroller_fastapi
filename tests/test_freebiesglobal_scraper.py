@@ -111,3 +111,36 @@ async def test_freebiesglobal_page1_failure_reports_error(scraper):
 
     assert scraper.error == "Failed to fetch listing page 1"
     assert scraper.data == []
+
+
+@pytest.mark.asyncio
+async def test_freebiesglobal_candidate_bounding_and_detail_options(scraper):
+    scraper.MAX_COURSES = 5
+    articles_html = "".join([
+        f'<article class="post"><h2><a href="https://freebiesglobal.com/course-{i}/">Course {i}</a></h2></article>'
+        for i in range(30)
+    ])
+    listing_html = f"<html>{articles_html}</html>"
+    detail_html = """<html><h1>Course Title</h1><a class="btn_offer_block" href="https://www.udemy.com/course/course-slug/?couponCode=FREE">Get Deal</a></html>"""
+
+    async def mock_get(url, *args, **kwargs):
+        if "robots.txt" in url:
+            return _resp("", status=404)
+        if "tag/udemy-100-off" in url:
+            return _resp(listing_html, status=200)
+        if "freebiesglobal.com/course-" in url:
+            return _resp(detail_html, status=200)
+        return _resp("", status=404)
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    await scraper.scrape(asyncio.Semaphore(5))
+
+    assert len(scraper.data) <= 5
+    detail_calls = [
+        call for call in scraper.http.get.call_args_list
+        if "freebiesglobal.com/course-" in str(call)
+    ]
+    assert len(detail_calls) > 0
+    for call in detail_calls:
+        assert call.kwargs.get("attempts") == 1
+        assert call.kwargs.get("timeout") == 8
