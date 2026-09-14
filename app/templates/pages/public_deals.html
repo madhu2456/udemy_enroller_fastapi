@@ -626,7 +626,10 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
         }
 
         window.copyCoupon = function(btn, code) {
-            navigator.clipboard.writeText(code);
+            // F008/RPN-18: count only successful copies (matches coupon_detail semantics).
+            navigator.clipboard.writeText(code).then(() => {
+                if (window.ueEvent) window.ueEvent('coupon_code_copy', { source: 'grid' });
+            });
             const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-green-500"></i>';
             if (window.lucide) lucide.createIcons();
@@ -746,21 +749,33 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
             searchTimeout = setTimeout(() => {
                 state.search = e.target.value;
                 state.page = 1;
+                if (window.ueEvent) window.ueEvent('search_filter_use', { filter_type: 'search' });
                 fetchCoupons();
             }, 400);
         });
 
-        els.categorySelect.addEventListener('change', (e) => { state.category = e.target.value; state.page = 1; fetchCoupons(); });
-        els.statusSelect.addEventListener('change', (e) => { state.status = e.target.value; state.page = 1; fetchCoupons(); });
+        els.categorySelect.addEventListener('change', (e) => {
+            state.category = e.target.value; state.page = 1;
+            if (window.ueEvent) window.ueEvent('search_filter_use', { filter_type: 'category' });
+            fetchCoupons();
+        });
+        els.statusSelect.addEventListener('change', (e) => {
+            state.status = e.target.value; state.page = 1;
+            if (window.ueEvent) window.ueEvent('search_filter_use', { filter_type: 'status' });
+            fetchCoupons();
+        });
         els.clearFiltersBtn.addEventListener('click', () => {
             state.search = ''; state.category = ''; state.status = 'enrolled';
             els.searchInput.value = ''; els.categorySelect.value = ''; els.statusSelect.value = 'enrolled';
-            state.page = 1; fetchCoupons();
+            state.page = 1;
+            if (window.ueEvent) window.ueEvent('search_filter_use', { filter_type: 'clear_all' });
+            fetchCoupons();
         });
 
         els.prevBtn.addEventListener('click', () => {
             if (state.page > 1) {
                 state.page--;
+                if (window.ueEvent) window.ueEvent('page_change', { direction: 'prev', page: state.page });
                 fetchCoupons();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -769,6 +784,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
         els.nextBtn.addEventListener('click', () => {
             if (state.page < state.totalPages) {
                 state.page++;
+                if (window.ueEvent) window.ueEvent('page_change', { direction: 'next', page: state.page });
                 fetchCoupons();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }

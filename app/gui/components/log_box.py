@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import datetime
+import tkinter
 import customtkinter
 
 from app.gui.theme import (
@@ -17,6 +18,10 @@ from app.gui.theme import (
 class LogBox(customtkinter.CTkFrame):
     """Circular ring buffer logging console with auto-scroll and controls."""
 
+    # T5-T2: display-side filter; SUCCESS counts as WARNING-visible.
+    LEVEL_ORDER = {"DEBUG": 10, "INFO": 20, "SUCCESS": 30, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+    LEVEL_OPTIONS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
     def __init__(self, master, max_lines: int = 1000, **kwargs):
         super().__init__(
             master,
@@ -27,6 +32,7 @@ class LogBox(customtkinter.CTkFrame):
         self.max_lines = max_lines
         self.log_buffer: collections.deque = collections.deque(maxlen=max_lines)
         self.auto_scroll_enabled = True
+        self.min_level = "WARNING"
 
         # Header toolbar
         self.toolbar = customtkinter.CTkFrame(self, fg_color="transparent", height=32)
@@ -54,6 +60,19 @@ class LogBox(customtkinter.CTkFrame):
         )
         self.clear_btn.pack(side="right", padx=4)
 
+        self.level_menu = None
+        if isinstance(master, tkinter.Misc):  # real Tk host only; mock masters skip
+            try:
+                self.level_menu = customtkinter.CTkOptionMenu(
+                    self.toolbar, values=list(self.LEVEL_OPTIONS),
+                    command=self.set_min_level, width=110, height=24,
+                    font=customtkinter.CTkFont(size=11),
+                )
+                self.level_menu.set(self.min_level)
+                self.level_menu.pack(side="right", padx=4)
+            except Exception:
+                self.level_menu = None
+
         # Auto-scroll checkbox
         self.autoscroll_cb = customtkinter.CTkCheckBox(
             self.toolbar,
@@ -80,13 +99,35 @@ class LogBox(customtkinter.CTkFrame):
     def _toggle_autoscroll(self) -> None:
         self.auto_scroll_enabled = bool(self.autoscroll_cb.get())
 
+    def set_min_level(self, level: str) -> None:
+        """Set display filter; buffer retains all, display filters only."""
+        lvl = str(level or "WARNING").upper()
+        self.min_level = lvl if lvl in self.LEVEL_OPTIONS else "WARNING"
+        if self.level_menu is not None:
+            try: self.level_menu.set(self.min_level)
+            except Exception: pass
+        self._refresh_display()
+
+    def _level_visible(self, level: str) -> bool:
+        return self.LEVEL_ORDER.get(str(level or "").upper(), 0) >= self.LEVEL_ORDER.get(self.min_level, 30)
+
+    def _refresh_display(self) -> None:
+        self.textbox.configure(state="normal")
+        self.textbox.delete("1.0", "end")
+        shown = [t for lv, t in self.log_buffer if self._level_visible(lv)][-self.max_lines :]
+        for text in shown: self.textbox.insert("end", text + "\n")
+        self.textbox.configure(state="disabled")
+
     def append_log(self, text: str, level: str = "INFO") -> None:
         """Append a log line with timestamp and level prefix."""
+        norm = str(level or "INFO").upper()
         now_str = datetime.datetime.now().strftime("%H:%M:%S")
-        prefix = f"[{now_str}] [{level.upper():<7}]"
+        prefix = f"[{now_str}] [{norm:<7}]"
         line = f"{prefix} {text}"
 
-        self.log_buffer.append(line)
+        self.log_buffer.append((norm, line))
+        if not self._level_visible(norm):
+            return
 
         self.textbox.configure(state="normal")
         self.textbox.insert("end", line + "\n")

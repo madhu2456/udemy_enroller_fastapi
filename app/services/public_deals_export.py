@@ -37,6 +37,23 @@ DEFAULT_SITEMAP_META_PATH = os.path.join(_PROJECT_ROOT, "sitemap.meta.json")
 SITEMAP_DEAL_LIMIT = 500
 SITE_URL_DEFAULT = "https://udemyenroller.madhudadi.in"
 
+# Honest lastmod for the 7 static SEO pages whose URLs have no deal data.
+# Values are the git content-change dates of each page template's latest
+# commit (verifiable: `git log -1 --format=%cs -- app/templates/pages/<t>`),
+# captured at implementation time (2026-09). Template git history is not
+# queryable at runtime, so these are pinned constants with the derivation
+# documented here and in docs/ops/indexnow.md. Bump the value (and only the
+# value) when a page's template content actually changes.
+STATIC_PAGE_LASTMOD: dict[str, str] = {
+    "/faq": "2026-08-27",
+    "/about": "2026-07-28",
+    "/guides": "2026-08-27",
+    "/privacy": "2026-08-21",
+    "/contact": "2026-08-03",
+    "/terms": "2026-08-03",
+    "/accessibility": "2026-09-04",
+}
+
 
 def get_public_deals_path() -> str:
     """Resolved path for public_deals.json (settings override, else project root).
@@ -487,17 +504,25 @@ def build_sitemap_xml(
             return deals_lastmod
         return raw[:10] if len(raw) >= 10 else deals_lastmod
 
+    # Static pages: deal-driven hubs reuse deals_lastmod (their content IS the
+    # catalog); the 7 content pages carry honest per-template lastmod dates
+    # (STATIC_PAGE_LASTMOD above) instead of None.
     pages: list[tuple[str, str | None, str, str]] = [
         ("/udemycoupons", deals_lastmod, "0.95", "daily"),
         ("/", deals_lastmod, "1.00", "daily"),
         ("/guides/free-udemy-coupons", deals_lastmod, "0.92", "weekly"),
-        ("/faq", None, "0.90", "weekly"),
-        ("/about", None, "0.80", "monthly"),
-        ("/guides", None, "0.80", "weekly"),
-        ("/privacy", None, "0.30", "monthly"),
-        ("/contact", None, "0.30", "monthly"),
-        ("/terms", None, "0.30", "monthly"),
-        ("/accessibility", None, "0.30", "yearly"),
+        ("/faq", STATIC_PAGE_LASTMOD.get("/faq"), "0.90", "weekly"),
+        ("/about", STATIC_PAGE_LASTMOD.get("/about"), "0.80", "monthly"),
+        ("/guides", STATIC_PAGE_LASTMOD.get("/guides"), "0.80", "weekly"),
+        ("/privacy", STATIC_PAGE_LASTMOD.get("/privacy"), "0.30", "monthly"),
+        ("/contact", STATIC_PAGE_LASTMOD.get("/contact"), "0.30", "monthly"),
+        ("/terms", STATIC_PAGE_LASTMOD.get("/terms"), "0.30", "monthly"),
+        (
+            "/accessibility",
+            STATIC_PAGE_LASTMOD.get("/accessibility"),
+            "0.30",
+            "yearly",
+        ),
     ]
 
     # Category hub pages (only categories that currently have valid deals)
@@ -611,14 +636,43 @@ def save_public_deals(
         if parent:
             os.makedirs(parent, exist_ok=True)
 
+        # RPN-24 change gate: ping only when the catalog payload actually
+        # differs from what is already published. Capture the previous file
+        # bytes (LF-normalized) before the atomic overwrite; a byte-identical
+        # re-export means nothing changed and search engines have nothing
+        # new to re-crawl, so the IndexNow ping is skipped.
+        previous_bytes: Optional[bytes] = None
+        try:
+            with open(json_path, "rb") as f:
+                previous_bytes = f.read().replace(b"\r\n", b"\n")
+        except OSError:
+            previous_bytes = None  # first publish (or unreadable) → ping
+
+        new_payload = json.dumps(export_data, ensure_ascii=False, indent=2)
         _atomic_write_text(
             json_path,
-            json.dumps(export_data, ensure_ascii=False, indent=2),
+            new_payload,
         )
         logger.info(f"Saved {len(export_data)} deals to {json_path}")
 
         if refresh_sitemap:
             write_sitemap_files(deals_path=json_path)
+            # IndexNow ping (SEO): changed deal URLs + catalog hubs, OFF
+            # unless INDEXNOW_KEY is set. Fired ONLY when the catalog bytes
+            # changed (RPN-24) — a no-change cycle pings nothing. Mid-run
+            # snapshots (refresh_sitemap=False above) never reach here.
+            # Fire-and-forget on a daemon thread (the checker's loop closes
+            # right after this save) — failures are logged inside the service
+            # and never break the export.
+            catalog_changed = previous_bytes != new_payload.encode("utf-8")
+            if catalog_changed:
+                from app.services.indexnow import ping_catalog_publish
+
+                ping_catalog_publish(export_data)
+            else:
+                logger.info(
+                    "IndexNow ping skipped: public_deals.json unchanged"
+                )
 
         return len(export_data)
     except Exception as e:

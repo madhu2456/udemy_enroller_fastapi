@@ -221,3 +221,35 @@ async def test_collect_api_posts_fallback_on_error(scraper):
     assert scraper.data[0].title == "Fallback Course"
     assert "couponCode=FALLBACK100" in scraper.data[0].url
 
+
+@pytest.mark.asyncio
+async def test_courson_fast_hybrid_json_extraction_skips_detail_get(scraper):
+    import json
+
+    api_response = {
+        "coupons": [
+            {
+                "id_name": "python-masterclass",
+                "title": "Complete Python Masterclass",
+                "coupon_code": "PYTHONFREE",
+            }
+        ],
+        "total_count": 1,
+    }
+    scraper.http.post = AsyncMock(
+        return_value=_resp(json.dumps(api_response), status=200)
+    )
+    scraper.http.get = AsyncMock(return_value=_resp("", status=404))
+
+    await scraper.scrape(asyncio.Semaphore(1))
+
+    assert len(scraper.data) == 1
+    assert scraper.data[0].title == "Complete Python Masterclass"
+    assert (
+        scraper.data[0].url
+        == "https://www.udemy.com/course/python-masterclass/?couponCode=PYTHONFREE"
+    )
+    get_urls = [c.args[0] for c in scraper.http.get.call_args_list if c.args]
+    assert not any("/coupon/" in u for u in get_urls)
+
+

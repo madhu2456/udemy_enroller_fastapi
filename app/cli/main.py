@@ -40,6 +40,7 @@ app.command(name="server", help="Launch the FastAPI Web Interface via Uvicorn.")
 
 @app.callback()
 def main(
+    ctx: typer.Context,
     version: Optional[bool] = typer.Option(
         None,
         "--version",
@@ -48,9 +49,47 @@ def main(
         callback=version_callback,
         is_eager=True,
     ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-V",
+        help="Enable INFO logging (stderr-only).",
+    ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable DEBUG logging (wins over --verbose).",
+    ),
+    log_level: Optional[str] = typer.Option(
+        None,
+        "--log-level",
+        help="Log level override: DEBUG, INFO, WARNING, ERROR. Default WARNING.",
+    ),
+    log_file: Optional[str] = typer.Option(
+        None,
+        "--log-file",
+        help="Write logs to this file in addition to stderr.",
+    ),
 ) -> None:
     """Udemy Course Enroller CLI application."""
-    pass
+    if ctx.invoked_subcommand is None and not verbose and not debug and log_level is None and log_file is None:
+        return
+    if log_level is not None and log_level.upper() not in ("DEBUG", "INFO", "WARNING", "ERROR"):
+        raise typer.BadParameter("log-level must be one of: DEBUG, INFO, WARNING, ERROR")
+    if log_level is not None:
+        resolved = log_level.upper()
+    elif debug:
+        resolved = "DEBUG"
+    elif verbose:
+        resolved = "INFO"
+    else:
+        resolved = None  # setup_logging falls back to settings.LOG_LEVEL (WARNING)
+    ctx.ensure_object(dict)
+    ctx.obj["log_level"] = resolved
+    ctx.obj["log_file"] = log_file
+    from app.logging_config import setup_logging
+
+    setup_logging(level=resolved, log_file=log_file)
 
 
 if __name__ == "__main__":

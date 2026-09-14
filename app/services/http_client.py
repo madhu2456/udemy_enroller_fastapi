@@ -73,6 +73,7 @@ class AsyncHTTPClient:
         self._thread_local = threading.local()
         self._scrapers_lock = threading.Lock()
         self._all_scrapers: set = set()
+        self._ua_pins: Dict[str, str] = {}
         self._init_client()
 
         from config.settings import get_settings
@@ -183,11 +184,18 @@ class AsyncHTTPClient:
         self, parsed_url, custom_headers: Optional[Dict], req_type: str
     ) -> Dict[str, str]:
         """Original local header generation (unchanged from SEO commit)."""
-        ua = random.choice(self._USER_AGENTS_LOCAL)
-        if custom_headers and "User-Agent" in custom_headers:
-            ua = custom_headers["User-Agent"]
-        elif self.client.headers.get("User-Agent"):
-            ua = self.client.headers.get("User-Agent")
+        pin_key = f"{parsed_url.netloc}::{req_type}"
+        custom_ua = (custom_headers or {}).get("User-Agent") or (custom_headers or {}).get("user-agent")
+        if custom_ua:
+            ua = custom_ua
+        elif pin_key in self._ua_pins:
+            ua = self._ua_pins[pin_key]
+        else:
+            ua = random.choice(self._USER_AGENTS_LOCAL)
+            client_ua = self.client.headers.get("User-Agent", "")
+            if client_ua and "python-httpx" not in client_ua:
+                ua = client_ua
+            self._ua_pins[pin_key] = ua
 
         headers = {
             "Host": parsed_url.netloc,
@@ -206,8 +214,9 @@ class AsyncHTTPClient:
             }
         )
         if not is_mobile:
+            major = self._extract_chrome_major(ua) or "133"
             headers["sec-ch-ua"] = (
-                '"Not_A Brand";v="99", "Chromium";v="124", "Google Chrome";v="124"'
+                f'"Not_A Brand";v="8", "Chromium";v="{major}", "Google Chrome";v="{major}"'
             )
 
         if req_type == "document":
@@ -267,9 +276,15 @@ class AsyncHTTPClient:
         self, parsed_url, custom_headers: Optional[Dict], req_type: str
     ) -> Dict[str, str]:
         """Expanded server header generation with diverse UAs and dynamic hints."""
-        ua = random.choice(self._USER_AGENTS_SERVER)
-        if custom_headers and "User-Agent" in custom_headers:
-            ua = custom_headers["User-Agent"]
+        pin_key = f"{parsed_url.netloc}::{req_type}"
+        custom_ua = (custom_headers or {}).get("User-Agent") or (custom_headers or {}).get("user-agent")
+        if custom_ua:
+            ua = custom_ua
+        elif pin_key in self._ua_pins:
+            ua = self._ua_pins[pin_key]
+        else:
+            ua = random.choice(self._USER_AGENTS_SERVER)
+            self._ua_pins[pin_key] = ua
 
         is_mobile = (
             "UdemyAndroid" in ua
@@ -457,7 +472,7 @@ class AsyncHTTPClient:
                 headers = kwargs.get("headers")
 
             is_mobile_request = (
-                "UdemyAndroid" in str(headers.get("User-Agent", ""))
+                "UdemyAndroid" in str((headers or {}).get("User-Agent", ""))
                 or req_type == "mobile"
             )
 
@@ -512,7 +527,7 @@ class AsyncHTTPClient:
                         custom_cookies.update(dict(response.cookies))
 
                 if response.status_code == 403 and log_failures:
-                    ua_preview = str(headers.get("User-Agent", "unknown"))[:60]
+                    ua_preview = str(((scraper_headers if use_cloudscraper else headers) or {}).get("User-Agent", "unknown"))[:60]
                     logger.warning(
                         f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {_log_safe_url(url)} | UA: {ua_preview}"
                     )
@@ -643,14 +658,11 @@ class AsyncHTTPClient:
             scraper_headers["Referer"] = headers["Referer"]
         if headers and "Authorization" in headers:
             scraper_headers["Authorization"] = headers["Authorization"]
-
-        explicit_ua = (kwargs.get("headers") or {}).get("User-Agent")
-        if explicit_ua:
-            scraper_headers["User-Agent"] = explicit_ua
-        elif is_mobile_request:
-            if headers and "User-Agent" in headers:
-                scraper_headers["User-Agent"] = headers["User-Agent"]
-
+        if headers and headers.get("User-Agent"):
+            scraper_headers["User-Agent"] = headers["User-Agent"]
+        for hint in ("sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform"):
+            if headers and hint in headers:
+                scraper_headers[hint] = headers[hint]
         scraper_headers["Accept-Encoding"] = "identity"
         return scraper_headers
 
@@ -667,9 +679,11 @@ class AsyncHTTPClient:
                 scraper_headers["Referer"] = headers["Referer"]
             if headers and "Authorization" in headers:
                 scraper_headers["Authorization"] = headers["Authorization"]
-            explicit_ua = (kwargs.get("headers") or {}).get("User-Agent")
-            if explicit_ua:
-                scraper_headers["User-Agent"] = explicit_ua
+            if headers and headers.get("User-Agent"):
+                scraper_headers["User-Agent"] = headers["User-Agent"]
+            for hint in ("sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform"):
+                if headers and hint in headers:
+                    scraper_headers[hint] = headers[hint]
             scraper_headers["Accept-Encoding"] = "identity"
         return scraper_headers
 
@@ -776,7 +790,7 @@ class AsyncHTTPClient:
                         custom_cookies.update(dict(response.cookies))
 
                 if response.status_code == 403 and log_failures:
-                    ua_preview = str(headers.get("User-Agent", "unknown"))[:60]
+                    ua_preview = str(((scraper_headers if use_cloudscraper else headers) or {}).get("User-Agent", "unknown"))[:60]
                     logger.warning(
                         f"  [{'CloudScraper' if use_cloudscraper else 'HTTPX'} 403] URL: {_log_safe_url(url)} | UA: {ua_preview}"
                     )
@@ -856,16 +870,64 @@ class AsyncHTTPClient:
         try:
             return response.json()
         except Exception as initial_e:
+            # T2: Cloudflare-aware pre-check (before wasted brotli/gzip on CF HTML).
+            try:
+                status = response.status_code
+            except Exception:
+                status = "?"
+            try:
+                ctype = str(response.headers.get("content-type", ""))
+            except Exception:
+                ctype = ""
+            ctype_low = ctype.lower()
+            try:
+                raw_url = str(getattr(response, "url", "") or "")
+            except Exception:
+                raw_url = ""
+            safe_url = _log_safe_url(raw_url) if raw_url else (context or "unknown")
+            try:
+                preview_full = response.text
+            except Exception:
+                try:
+                    preview_full = bytes(response.content or b"").decode(
+                        "utf-8", errors="replace"
+                    )
+                except Exception:
+                    preview_full = ""
+            preview_low = (preview_full or "")[:4096].lower()
+            is_cf = (
+                any(
+                    m in preview_low
+                    for m in (
+                        "just a moment",
+                        "cf-browser-verification",
+                        "attention required",
+                        "cf-challenge",
+                        "cf_chl",
+                    )
+                )
+                or "text/html" in ctype_low
+                or "<html" in preview_low
+            )
+            collapsed = " ".join((preview_full or "").split())
+            snippet = sanitize_log_message(collapsed[:120])[:120]
+            if is_cf:
+                logger.warning(
+                    f"CF challenge in {context or 'unknown'} | URL: {safe_url} | status={status} ctype={ctype} | snippet: {snippet}"
+                )
+                return None
+            try:
+                nbytes = len(response.content or b"")
+            except Exception:
+                nbytes = -1
             content = response.content
             text = None
-            decompression_method = None
 
             # 1. Try Brotli
             try:
                 import brotli
 
                 text = brotli.decompress(content).decode("utf-8", errors="replace")
-                decompression_method = "brotli"
             except Exception:
                 pass
 
@@ -875,7 +937,6 @@ class AsyncHTTPClient:
                     import gzip
 
                     text = gzip.decompress(content).decode("utf-8", errors="replace")
-                    decompression_method = "gzip"
                 except Exception:
                     pass
 
@@ -888,12 +949,10 @@ class AsyncHTTPClient:
                         text = zlib.decompress(content).decode(
                             "utf-8", errors="replace"
                         )
-                        decompression_method = "zlib"
                     except Exception:
                         text = zlib.decompress(content, -zlib.MAX_WBITS).decode(
                             "utf-8", errors="replace"
                         )
-                        decompression_method = "raw_deflate"
                 except Exception:
                     pass
 
@@ -902,18 +961,10 @@ class AsyncHTTPClient:
 
                 try:
                     return json.loads(text)
-                except Exception as json_e:
-                    logger.error(
-                        f"JSONDecodeError after manual {decompression_method} decompression in {context or 'unknown'}: {json_e}"
-                    )
-                    return None
-
-            try:
-                body_preview = response.text[:500]
-            except Exception:
-                body_preview = f"<binary data: {len(content)} bytes>"
+                except Exception:
+                    pass
 
             logger.error(
-                f"JSON error in {context or 'unknown'}: {initial_e}. Body: {body_preview}"
+                f"JSON error in {context or 'unknown'} | URL: {safe_url} | status={status} ctype={ctype} len={nbytes} | snippet: {snippet} | err={type(initial_e).__name__}"
             )
             return None

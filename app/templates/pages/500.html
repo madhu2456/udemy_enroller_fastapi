@@ -1,0 +1,30 @@
+{% extends "components/base.html" %}
+{% block title %}Server Error (500) - Udemy Enroller{% endblock %}
+{% block meta_title %}Server Error (500) - Udemy Enroller{% endblock %}
+{% block meta_description %}Something went wrong on our side. Return to the Udemy Enroller homepage or browse free Udemy coupons while we work on it.{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_title %}Server Error - Udemy Enroller{% endblock %}
+{% block og_description %}Something went wrong on our side. Return to the Udemy Enroller homepage or browse free Udemy coupons.{% endblock %}
+{% block twitter_title %}Server Error - Udemy Enroller{% endblock %}
+{% block twitter_description %}Something went wrong on our side. Return to the Udemy Enroller homepage or browse free Udemy coupons.{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center px-6">
+  <div class="text-center max-w-md">
+    <p class="text-6xl font-bold text-gray-200 mb-4" role="img" aria-label="Error 500">500</p>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-3">Something went wrong</h1>
+    <p class="text-sm text-gray-500 mb-8">An unexpected error occurred on our side. The issue has been logged and we are on it. Please try again in a few minutes.</p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="/" class="inline-flex items-center gap-2 bg-[#2563EB] text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Go to Homepage</a>
+      <a href="/udemycoupons" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 rounded-lg px-5 py-2.5 text-sm font-semibold hover:border-gray-300 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Browse Free Coupons</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script nonce="{{ request.state.nonce }}">
+  // F040: error_view — buffered dataLayer event (no new network calls).
+  if (window.ueEvent) window.ueEvent('error_view', { error_code: '500' });
+</script>
+{% endblock %}

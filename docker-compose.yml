@@ -28,6 +28,14 @@ services:
       # Cloudflare/nginx proxy (PUBLIC_BASE_URL in the host .env, e.g.
       # https://udemyenroller.madhudadi.in). Empty = fall back to request.base_url.
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
+      # Host-header pinning (F049): comma-separated allowlist forwarded to
+      # TrustedHostMiddleware (comma-separated, NOT JSON — see
+      # config/settings.py allowed_hosts_list). Unset/empty = the secure
+      # pinned default baked into the image (loopback + testserver +
+      # udemyenroller.madhudadi.in + www variant). Override on the host .env
+      # only to pin additional real hosts. "*" disables the middleware
+      # entirely — NEVER in a server deployment (docker-entrypoint.sh warns).
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-}
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs

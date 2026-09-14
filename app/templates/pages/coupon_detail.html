@@ -236,10 +236,18 @@
     var code = btn.getAttribute('data-coupon') || '';
     if (!code || !navigator.clipboard) return;
     navigator.clipboard.writeText(code).then(function () {
+      if (window.ueEvent) window.ueEvent('coupon_code_copy', { source: 'detail' });
       var prev = btn.textContent;
       btn.textContent = 'Copied';
       setTimeout(function () { btn.textContent = prev; }, 1500);
     });
   });
+  // F008: course_enroll_click — primary "Open on Udemy" CTA (coarse: slug only).
+  var enrollCta = document.querySelector('article a[href^="https://www.udemy.com/"], article a[href^="https://udemy.com/"]');
+  if (enrollCta) {
+    enrollCta.addEventListener('click', function () {
+      if (window.ueEvent) window.ueEvent('course_enroll_click', { course_slug: {{ course.slug | tojson }} });
+    });
+  }
 </script>
 {% endblock %}

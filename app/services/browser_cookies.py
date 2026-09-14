@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from loguru import logger
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.padding import PKCS7
@@ -198,6 +199,90 @@ def _get_chromium_master_key_windows(user_data_dir: Path) -> Optional[bytes]:
         return None
 
 
+# Chromium os_crypt_linux.cc contract: base64->strip DPAPI/v10->PBKDF2HMAC-SHA1(saltysalt,iter=1,len=16).derive(secret)->AES-128-CBC(iv spaces).decrypt(key[3:])->unpad.
+_LINUX_KEYRING_LABELS = {"chrome": ["Chrome Safe Storage"], "chromium": ["Chromium Safe Storage"], "brave": ["Brave Safe Storage", "Chromium Safe Storage"], "edge": ["Chromium Safe Storage", "Chrome Safe Storage"], "opera": ["Chromium Safe Storage", "Chrome Safe Storage"]}
+
+def _get_chromium_master_key_linux(user_data_dir: Path, browser_name: str = "chrome") -> Optional[bytes]:
+    """Retrieve Chromium AES master key from Local State JSON on Linux via Secret Service."""
+    local_state_path = user_data_dir / "Local State"
+    if not local_state_path.exists():
+        return None
+
+    try:
+        with open(local_state_path, "r", encoding="utf-8") as f:
+            local_state = json.load(f)
+
+        encrypted_key_b64 = local_state.get("os_crypt", {}).get("encrypted_key")
+        if not encrypted_key_b64:
+            return None
+
+        encrypted_key = base64.b64decode(encrypted_key_b64)
+        if encrypted_key.startswith(b"DPAPI"):
+            encrypted_key = encrypted_key[5:]
+        if not encrypted_key:
+            return None
+    except Exception as e:
+        logger.debug(f"Failed to extract Linux master key from {local_state_path}: {type(e).__name__}")
+        return None
+
+    try:
+        import secretstorage
+    except ImportError:
+        return None
+
+    try:
+        # Short timeout; never prompt for password nor unlock the keyring.
+        try:
+            bus = secretstorage.dbus_init(timeout=2)
+        except TypeError:
+            bus = secretstorage.dbus_init()
+        collection = secretstorage.get_default_collection(bus)
+        if collection is None:
+            return None
+        try:
+            if collection.is_locked():
+                return None
+        except Exception:
+            return None
+        try:
+            items = list(collection.get_all_items())
+        except Exception:
+            return None
+        labels = _LINUX_KEYRING_LABELS.get((browser_name or "chrome").lower(), ["Chrome Safe Storage", "Chromium Safe Storage"])
+        secret: Optional[bytes] = None
+        for item in items:
+            try:
+                label = item.get_label()
+            except Exception:
+                continue
+            if label in labels:
+                try:
+                    secret = item.get_secret()
+                except Exception:
+                    return None
+                break
+        else:
+            return None
+        secret = secret.encode() if isinstance(secret, str) else secret
+        if not secret:
+            return None
+        try:
+            key = PBKDF2HMAC(algorithm=hashes.SHA1(), length=16, salt=b"saltysalt", iterations=1).derive(secret)  # iter=1 (not peanuts iter=24)
+            blob = encrypted_key[3:] if encrypted_key.startswith(b"v10") else encrypted_key
+            decryptor = Cipher(algorithms.AES(key), modes.CBC(b" " * 16)).decryptor()
+            padded = decryptor.update(blob) + decryptor.finalize()
+            unpadder = PKCS7(128).unpadder()
+            master = unpadder.update(padded) + unpadder.finalize()
+            return master if len(master) in (16, 24, 32) else None
+        except Exception as e:
+            logger.debug(f"Linux key unwrap failed: {type(e).__name__} blob={len(encrypted_key)}")
+            return None
+    except Exception as e:
+        # SecretServiceNotAvailable, DBusException, LockedException -> None
+        logger.debug(f"Failed to decrypt Linux master key from {local_state_path}: {type(e).__name__}")
+        return None
+
+
 # =====================================================================
 # Linux / macOS Key Derivation
 # =====================================================================
@@ -252,8 +337,8 @@ def _decrypt_chromium_cookie_value(
         )
         return "", note
 
-    # 2. Windows v10 / v11 (AES-GCM)
-    if encrypted_value.startswith(b"v10") or encrypted_value.startswith(b"v11"):
+    # 2. Windows v10 / v11 / v80 (AES-GCM)
+    if encrypted_value.startswith((b"v10", b"v11", b"v80")):
         if sys.platform == "win32" and master_key:
             try:
                 nonce = encrypted_value[3:15]
@@ -264,10 +349,28 @@ def _decrypt_chromium_cookie_value(
             except Exception as e:
                 return "", f"AES-GCM decryption failed: {e}"
 
-        # Linux v10 / v11 (AES-128-CBC with saltysalt PBKDF2)
+        # Linux v10 / v11 / v80 (GCM-first via Local State, CBC-peanuts fallback)
         if sys.platform.startswith("linux"):
+            gcm_note: Optional[str] = None
+            if (
+                master_key is not None
+                and len(master_key) in (16, 24, 32)
+                and len(encrypted_value) >= 19
+            ):
+                try:
+                    nonce = encrypted_value[3:15]
+                    ciphertext_and_tag = encrypted_value[15:]
+                    aesgcm = AESGCM(master_key)
+                    decrypted_bytes = aesgcm.decrypt(nonce, ciphertext_and_tag, None)
+                    return decrypted_bytes.decode("utf-8", errors="ignore"), None
+                except InvalidTag as e:
+                    gcm_note = f"Linux GCM decryption failed: {type(e).__name__}"
+                    logger.debug(gcm_note)
+                except Exception as e:
+                    gcm_note = f"Linux GCM decryption failed: {type(e).__name__}"
+                    logger.debug(gcm_note)
             try:
-                key = master_key or _derive_key_linux()
+                key = _derive_key_linux()
                 iv = b" " * 16
                 ciphertext = encrypted_value[3:]
                 cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
@@ -277,7 +380,12 @@ def _decrypt_chromium_cookie_value(
                 unpadded = unpadder.update(decrypted_padded) + unpadder.finalize()
                 return unpadded.decode("utf-8", errors="ignore"), None
             except Exception as e:
-                return "", f"Linux CBC decryption failed: {e}"
+                cbc_note = f"Linux CBC decryption failed: {type(e).__name__}"
+                if master_key is None:
+                    return "", ("Brave on Linux: Local State has no encrypted_key (portal/running instance). Fully quit Brave, unlock GNOME Keyring, retry; or use Firefox, browser extension, or manual cookie paste." if browser_name == "brave" else "Chrome uses GNOME Keyring for cookie encryption — unlock the GNOME keyring, or use Firefox, manual cookie paste, or the browser extension.")
+                if gcm_note:
+                    return "", f"{gcm_note} | {cbc_note}"
+                return "", cbc_note
 
         # macOS v10 / v11 (AES-128-CBC with 1003 iterations)
         if sys.platform == "darwin":
@@ -437,6 +545,8 @@ def _extract_from_chromium_db(
     master_key = None
     if sys.platform == "win32" and local_state_path and local_state_path.exists():
         master_key = _get_chromium_master_key_windows(local_state_path.parent)
+    elif sys.platform.startswith("linux") and local_state_path and local_state_path.exists():
+        master_key = _get_chromium_master_key_linux(local_state_path.parent, browser_name)
 
     query = (
         "SELECT name, value, encrypted_value, host_key, path "

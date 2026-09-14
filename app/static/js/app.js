@@ -84,11 +84,13 @@ function handleSuccessfulLogout() {
   window.location.href = "/";
 }
 
-// GTM/GA4 tracking — sends events via gtag() which is loaded by the GA4 Config tag in GTM.
-// The gtag() stub (defined in base.html) queues events until gtag.js loads.
+// GTM/GA4 tracking — F008: pushes {event, ...params} objects onto
+// window.dataLayer via base.html's ueEvent helper so the GTM container's
+// custom-event triggers can consume them. ueEvent only exists when analytics
+// IDs are configured; without them this is a silent no-op (zero analytics).
 function trackEvent(eventName, params) {
-  if (typeof gtag === "function") {
-    gtag("event", eventName, params);
+  if (typeof window.ueEvent === "function") {
+    window.ueEvent(eventName, params);
   }
 }
 

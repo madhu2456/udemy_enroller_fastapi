@@ -267,6 +267,13 @@
                     ad_personalization:'denied'
                 });
             }
+            // F008: dataLayer event helper. Client-side buffered only — GTM
+            // loads after consent, and pre-consent pushes stay in the buffer
+            // (no network calls, pixels, or loaders are added here).
+            window.ueEvent = function(name, params) {
+                if (typeof name !== 'string' || !name) return;
+                dataLayer.push(Object.assign({event: name}, params || {}));
+            };
         </script>
         {% endif %}
         {% if request.app.state.gtm_container_id %}
@@ -878,6 +885,16 @@
                     btn.addEventListener('click', () => logout());
                 });
 
+                // F008: nav_click — delegated for header, mobile, and footer nav.
+                // Coarse (path only): no link text, no query, no PII in events.
+                document.querySelectorAll('header nav a[href], #mobile-nav nav a[href], footer nav a[href]').forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (window.ueEvent) window.ueEvent('nav_click', {
+                            nav_path: (link.getAttribute('href') || '').split('?')[0]
+                        });
+                    });
+                });
+
                 // F316: hamburger below sm — full labels, no mid-glyph mask
                 (function initMobileNav() {
                     var toggle = document.getElementById("nav-toggle");
@@ -1014,6 +1031,7 @@
                     localStorage.setItem('cookie_consent', 'accepted');
                     localStorage.removeItem('cookie_consent_time');
                     hideCookieBanner();
+                    if (window.ueEvent) window.ueEvent('consent_granted', {banner: 'cookie'});
                     gtag('consent','update',{
                         analytics_storage:'granted',
                         ad_storage:'denied',
@@ -1024,7 +1042,10 @@
                     if (window._loadGA4) window._loadGA4();
                 });
                 
-                document.getElementById('cookie-decline').addEventListener('click', declineCookies);
+                document.getElementById('cookie-decline').addEventListener('click', function(){
+                    if (window.ueEvent) window.ueEvent('consent_denied', {banner: 'cookie'});
+                    declineCookies();
+                });
             })();
         </script>
         {% endif %}

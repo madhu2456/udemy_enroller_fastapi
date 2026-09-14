@@ -11,10 +11,13 @@ import csv
 import json
 import queue
 import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
+
+from app.logging_config import sanitize_log_message
 
 from app.core.constants import FM036_PRICE_UNKNOWN  # W3-02: FM036 unknown-price sentinel 9999.0
 from app.models.database import EnrollmentRun, SessionLocal
@@ -33,6 +36,10 @@ from app.services.udemy_client import UdemyClient
 class AsyncioBridge:
     """Thread-safe bridge between Tkinter main UI and background Asyncio worker."""
 
+    # T5-T2: queue-only loguru sink + token-bucket 20 LOG/s. SUCCESS=WARNING.
+    LOG_ORDER = {"DEBUG": 10, "INFO": 20, "SUCCESS": 30, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+    LOG_RATE, LOG_BURST, LOG_MAXQ = 20.0, 20.0, 500
+
     def __init__(self):
         self.command_queue: queue.Queue = queue.Queue()
         self.event_queue: queue.Queue = queue.Queue()
@@ -44,41 +51,99 @@ class AsyncioBridge:
         self._cancel_requested: bool = False
         self._active_udemy_client: Optional[UdemyClient] = None
         self._is_paused: bool = False
+        self._log_sink_id: Optional[int] = None
+        self._log_level = "WARNING"
+        self._log_tokens, self._log_last, self._log_dropped = 20.0, time.monotonic(), 0
 
-    def start(self) -> None:
+    def start(self, log_level: str = "WARNING") -> None:
         """Start the background worker thread and event loop."""
         if self.running:
             return
+        lvl = str(log_level or "WARNING").upper()
+        self._log_level = lvl if lvl in self.LOG_ORDER else "WARNING"
+        self._log_tokens, self._log_last, self._log_dropped = float(self.LOG_BURST), time.monotonic(), 0
         self.running = True
         self.worker_thread = threading.Thread(target=self._worker_loop, name="GUI-AsyncioBridge", daemon=True)
         self.worker_thread.start()
+        self._attach_log_sink()
 
     def stop(self) -> None:
         """Stop background worker and terminate event loop."""
         self.running = False
         self._cancel_requested = True
+        try:  # unblock paused worker so join(timeout=2) can proceed
+            if self._pause_event is not None and self.loop is not None and self.loop.is_running():
+                self.loop.call_soon_threadsafe(self._pause_event.set)
+        except Exception:
+            pass
         if self.loop and self.loop.is_running():
             self.loop.call_soon_threadsafe(self.loop.stop)
         if self.worker_thread and self.worker_thread.is_alive():
             self.worker_thread.join(timeout=2.0)
+        self._detach_log_sink()
+        self.loop = None
+
+    def set_log_level(self, level: str) -> None:
+        lvl = str(level or "WARNING").upper()  # opt-in INFO/DEBUG, default WARNING
+        self._log_level = lvl if lvl in self.LOG_ORDER else "WARNING"
+        if self.running: self._detach_log_sink(); self._attach_log_sink()
+
+    def _attach_log_sink(self) -> None:
+        if self._log_sink_id is not None:  # idempotent: no dupes on double-start
+            return
+        floor = "SUCCESS" if self._log_level == "WARNING" else self._log_level
+        try: self._log_sink_id = logger.add(self._gui_log_sink, level=floor)
+        except Exception: self._log_sink_id = None
+
+    def _detach_log_sink(self) -> None:
+        if self._log_sink_id is None:
+            return
+        try: logger.remove(self._log_sink_id)
+        except Exception: pass
+        self._log_sink_id = None
+
+    def _gui_log_sink(self, message) -> None:
+        """Queue-only loguru sink: level-filter, sanitize, rate-cap, emit LOG."""
+        try:
+            rec = getattr(message, "record", {}) or {}
+            lv = rec.get("level", "INFO")
+            level = str(getattr(lv, "name", lv)).upper()
+            text = sanitize_log_message(str(rec.get("message", "") or str(message).strip()))
+        except Exception:
+            return
+        if self.LOG_ORDER.get(level, 0) < self.LOG_ORDER.get(self._log_level, 30):
+            return
+        now = time.monotonic()
+        self._log_tokens = min(self.LOG_BURST, self._log_tokens + max(0.0, now - self._log_last) * self.LOG_RATE)
+        self._log_last = now
+        if self._log_tokens < 1.0: self._log_dropped += 1; return
+        self._log_tokens -= 1.0
+        extra = f" [+{self._log_dropped} coalesced]" if self._log_dropped else ""
+        self._log_dropped = 0
+        self.emit_event("LOG", {"level": level, "message": text + extra})  # queue-only, never Tk
 
     def send_command(self, command: str, payload: Optional[Dict[str, Any]] = None) -> None:
         """Send a command from UI thread to background worker."""
         self.command_queue.put({"command": command, "payload": payload or {}})
 
     def emit_event(self, event: str, data: Optional[Dict[str, Any]] = None) -> None:
-        """Push an event from worker to UI queue."""
+        """Push an event from worker to UI queue (drop-oldest on LOG overflow)."""
+        if event == "LOG" and self.event_queue.qsize() >= self.LOG_MAXQ:
+            try: self.event_queue.get_nowait(); self._log_dropped += 1
+            except queue.Empty: pass
         self.event_queue.put({"event": event, "data": data or {}})
 
     def poll_events(self, max_count: int = 100) -> List[Dict[str, Any]]:
-        """Retrieve pending events from the queue (called by Tkinter root.after)."""
+        """Retrieve pending events (callers poll 50 per 50ms budget)."""
         events = []
         try:
             while len(events) < max_count:
-                item = self.event_queue.get_nowait()
-                events.append(item)
+                events.append(self.event_queue.get_nowait())
         except queue.Empty:
             pass
+        prog = [e for e in events if e.get("event") == "SCRAPER_PROGRESS"]
+        if len(prog) > 1:  # coalesce progress storms: newest wins
+            events = [e for e in events if e.get("event") != "SCRAPER_PROGRESS"] + prog[-1:]
         return events
 
     def _worker_loop(self) -> None:
@@ -179,9 +244,6 @@ class AsyncioBridge:
                 {
                     "error": "Saved Udemy session has expired.",
                     "notes": "Udemy session cookies expire every 30-90 days. Please update your tokens in the Login tab.",
-                    "access_token": session_data.get("access_token", ""),
-                    "client_id": session_data.get("client_id", ""),
-                    "csrf_token": session_data.get("csrf_token", ""),
                 },
             )
             self.emit_event(
@@ -194,10 +256,17 @@ class AsyncioBridge:
             return
 
         # No saved session exists: try browser auto-extraction fallback
-        browser = payload.get("browser", "auto")
+        browser = (payload or {}).get("browser", "auto") or "auto"
         extracted = get_udemy_cookies(browser=browser)
         if extracted.is_valid:
-            await self._handle_test_login(extracted.to_dict())
+            await self._handle_test_login(
+                {
+                    "access_token": extracted.access_token,
+                    "client_id": extracted.client_id,
+                    "csrf_token": extracted.csrf_token,
+                    "browser": browser,
+                }
+            )
         else:
             self.emit_event(
                 "LOG",
@@ -215,20 +284,26 @@ class AsyncioBridge:
 
     async def _handle_test_login(self, payload: Dict[str, Any]) -> None:
         """Test credentials against Udemy API and persist for long-term use."""
-        access_token = payload.get("access_token", "")
-        client_id = payload.get("client_id", "")
-        csrf_token = payload.get("csrf_token", "")
-        browser = payload.get("browser", "auto")
+        payload = payload or {}
+        access_token = payload.get("access_token", "") or ""
+        client_id = payload.get("client_id", "") or ""
+        csrf_token = payload.get("csrf_token", "") or ""
+        browser = payload.get("browser", "auto") or "auto"
 
         self.emit_event("LOG", {"level": "INFO", "message": "Testing Udemy session credentials..."})
 
-        if not access_token:
+        # T6-2: re-extract on from_extract flag or display-truncated tokens ("..." + len<=32).
+        needs_reextract = bool(payload.get("from_extract")) or any(
+            isinstance(v, str) and v.endswith("...") and len(v) <= 32 for v in (access_token, client_id, csrf_token)
+        )
+        if not access_token or needs_reextract:
             extracted = get_udemy_cookies(browser=browser)
             if extracted.is_valid:
                 access_token = extracted.access_token
                 client_id = extracted.client_id
                 csrf_token = extracted.csrf_token
-                self.emit_event("LOG", {"level": "SUCCESS", "message": f"Extracted credentials from {extracted.browser_name.title()}"})
+                browser = extracted.browser_name or browser
+                self.emit_event("LOG", {"level": "SUCCESS", "message": f"Extracted credentials from {browser.title()}"})
             else:
                 self.emit_event("AUTH_FAILED", {"error": extracted.error or "No browser cookies found", "notes": extracted.notes})
                 return
@@ -241,7 +316,7 @@ class AsyncioBridge:
                 try:
                     await client.get_enrolled_courses()
                 except Exception as e:
-                    self.emit_event("LOG", {"level": "WARNING", "message": f"Could not pre-fetch library: {e}"})
+                    self.emit_event("LOG", {"level": "WARNING", "message": sanitize_log_message(f"Could not pre-fetch library: {e}")})
                 lib_count = len(client.enrolled_courses or {})
                 curr = (client.currency or "USD").upper()
 
@@ -277,22 +352,43 @@ class AsyncioBridge:
                 self.emit_event("AUTH_FAILED", {"error": "Invalid or expired credentials"})
                 self.emit_event("LOG", {"level": "ERROR", "message": "Authentication failed: Invalid credentials."})
         except Exception as e:
-            self.emit_event("AUTH_FAILED", {"error": str(e) or "Authentication error"})
-            self.emit_event("LOG", {"level": "ERROR", "message": f"Authentication error: {e}"})
+            # T6-2 discriminator: OSError/timeout/httpx -> "Could not connect to Udemy".
+            if isinstance(e, (OSError, TimeoutError, ConnectionError)) or e.__class__.__name__ in (
+                "ConnectError",
+                "ConnectTimeout",
+                "ReadTimeout",
+                "TimeoutException",
+                "HTTPError",
+            ):
+                err_msg = f"Could not connect to Udemy: {e}"
+            else:
+                err_msg = str(e) or "Authentication error"
+            err_msg = sanitize_log_message(err_msg)
+            self.emit_event("AUTH_FAILED", {"error": err_msg})
+            self.emit_event("LOG", {"level": "ERROR", "message": sanitize_log_message(f"Authentication error: {err_msg}")})
         finally:
             await client.close()
 
     async def _handle_auto_extract_cookies(self, payload: Dict[str, Any]) -> None:
         """Auto extract browser cookies."""
-        browser = payload.get("browser", "auto")
+        browser = (payload or {}).get("browser", "auto") or "auto"
         self.emit_event("LOG", {"level": "INFO", "message": f"Scanning browser cookies ({browser})..."})
         extracted = get_udemy_cookies(browser=browser)
         if extracted.is_valid:
-            self.emit_event("COOKIES_EXTRACTED", extracted.to_dict())
+            display = extracted.to_dict()
+            display["auth"] = {
+                "access_token": extracted.access_token,
+                "client_id": extracted.client_id,
+                "csrf_token": extracted.csrf_token,
+                "browser": extracted.browser_name or browser,
+            }
+            display["from_extract"] = True
+            display["browser"] = extracted.browser_name or browser
+            self.emit_event("COOKIES_EXTRACTED", display)
             self.emit_event("LOG", {"level": "SUCCESS", "message": f"Successfully extracted Udemy cookies from {extracted.browser_name.title()}"})
         else:
             self.emit_event("COOKIES_EXTRACTED_FAILED", {"error": extracted.error, "notes": extracted.notes})
-            self.emit_event("LOG", {"level": "ERROR", "message": f"Cookie extraction failed: {extracted.error}"})
+            self.emit_event("LOG", {"level": "ERROR", "message": sanitize_log_message(f"Cookie extraction failed: {extracted.error}")})
 
     async def _handle_fetch_stats(self) -> None:
         """Fetch lifetime database stats and past runs."""

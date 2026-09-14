@@ -20,6 +20,14 @@ _test_log_path = Path(_test_database_dir.name) / "test_app.log"
 os.environ["DATABASE_URL"] = f"sqlite:///{_test_database_path}"
 os.environ["LOG_FILE"] = str(_test_log_path)
 
+# Test-only host allowlist (F049): "testserver" is the default Host sent by
+# starlette/httpx TestClient. The shipped secure default
+# (config.settings.DEFAULT_ALLOWED_HOSTS) deliberately excludes it, so the
+# suite injects it here — BEFORE any app import pins the middleware — via the
+# same env-var mechanism as DATABASE_URL above. Env vars rank above the .env
+# file in pydantic-settings, so this also overrides an ambient .env value.
+os.environ["ALLOWED_HOSTS"] = "localhost,127.0.0.1,testserver,udemyenroller.madhudadi.in,www.udemyenroller.madhudadi.in"
+
 
 def _load_database_bind():
     from app.models.database import Base, engine

@@ -22,3 +22,9 @@
   </div>
 </div>
 {% endblock %}
+{% block scripts %}
+<script nonce="{{ request.state.nonce }}">
+  // F008: error_view — buffered dataLayer event (no new network calls).
+  if (window.ueEvent) window.ueEvent('error_view', { error_code: '404' });
+</script>
+{% endblock %}

@@ -3,6 +3,7 @@
 import datetime
 import html
 import os
+import re
 from email.utils import format_datetime
 
 from config.settings import experience_years_label, get_settings
@@ -885,3 +886,48 @@ async def terms_page(request: Request):
 @router.get("/accessibility", response_class=HTMLResponse)
 async def accessibility_page(request: Request):
     return templates.TemplateResponse(request, "pages/accessibility.html")
+
+
+# ---------------------------------------------------------------------------
+# IndexNow domain-ownership verification key file
+# ---------------------------------------------------------------------------
+
+_INDEXNOW_HEX_KEY_RE = re.compile(r"^[a-f0-9]{32}$", re.I)
+
+
+@router.get("/{key}.txt", response_class=Response, include_in_schema=False)
+async def indexnow_key_file(key: str):
+    """Serve the IndexNow verification key at ``/{key}.txt`` (fail-closed).
+
+    Mirrors the portfolio dynamic route (``src/app/[key].txt/route.ts``):
+    search engines (Bing, Yandex) verify domain ownership by fetching
+    ``https://udemyenroller.madhudadi.in/<INDEXNOW_KEY>.txt``. Malformed
+    (non-32-hex) keys, an unset ``INDEXNOW_KEY``, or a mismatch all return
+    404 — an unconfigured or half-rotated key must never serve. The key is
+    read at request time (env rotation = zero code change). The 200 response
+    is browser-private (``max-age=86400`` only, no shared-cache ``s-maxage``)
+    so a CDN can never pin a rotated-away key for a day.
+    """
+    from app.services.indexnow import indexnow_configured
+
+    requested = (key or "").strip()
+    configured = (os.environ.get("INDEXNOW_KEY") or "").strip()
+    if (
+        not _INDEXNOW_HEX_KEY_RE.match(requested)
+        or requested != configured
+        or not indexnow_configured()
+    ):
+        return Response(
+            content="Not Found",
+            status_code=404,
+            media_type="text/plain; charset=utf-8",
+        )
+    return Response(
+        content=requested,
+        media_type="text/plain; charset=utf-8",
+        headers={
+            # No s-maxage: a CDN must not pin a rotated-away key for a day;
+            # only the visitor's browser caches (private, 24 h).
+            "Cache-Control": "private, max-age=86400",
+        },
+    )

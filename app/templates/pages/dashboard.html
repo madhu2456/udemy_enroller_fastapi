@@ -1238,9 +1238,11 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             const data = await resp.json();
             if (data.success) {
                 trackEvent("enrollment_start", {});
+                if (window.ueEvent) window.ueEvent('enroll_result', { outcome: 'start_success' });
                 showProgressPanel();
                 startProgressPolling();
             } else {
+                if (window.ueEvent) window.ueEvent('enroll_result', { outcome: 'start_fail' });
                 alert(
                     data.detail || data.message || "Failed to start enrollment",
                 );
@@ -1248,6 +1250,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 btn.innerHTML = origText;
             }
         } catch (e) {
+            if (window.ueEvent) window.ueEvent('enroll_result', { outcome: 'start_error' });
             alert("Error starting enrollment");
             btn.disabled = false;
             btn.innerHTML = origText;

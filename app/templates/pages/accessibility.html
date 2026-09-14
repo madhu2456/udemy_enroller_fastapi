@@ -1,6 +1,14 @@
-{% extends "components/base.html" %} {% block title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block meta_title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block meta_description %}Udemy Enroller accessibility: WCAG 2.2 Level AA target, known limits, and how to report barriers. Contact and founder hub links.{% endblock %} {% block og_type
-%}article{% endblock %} {% block og_title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block og_description %}Udemy Enroller accessibility commitment: WCAG 2.2 Level AA target, measures we take, known limits, feedback channel.{% endblock %} {% block twitter_title %}Accessibility Statement - Udemy Enroller{% endblock %} {% block twitter_description %}Udemy Enroller accessibility commitment: WCAG 2.2 Level AA target, measures we take, known limits, feedback channel.{%
-endblock %} {% block content %}
+{% extends "components/base.html" %}
+{% block title %}Accessibility Statement - Udemy Enroller{% endblock %}
+{% block meta_title %}Accessibility Statement - Udemy Enroller{% endblock %}
+{% block meta_description %}Udemy Enroller accessibility: WCAG 2.2 Level AA target, known limits, and how to report barriers. Contact and founder hub links.{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_title %}Accessibility Statement - Udemy Enroller{% endblock %}
+{% block og_description %}Udemy Enroller accessibility commitment: WCAG 2.2 Level AA target, measures we take, known limits, feedback channel.{% endblock %}
+{% block twitter_title %}Accessibility Statement - Udemy Enroller{% endblock %}
+{% block twitter_description %}Udemy Enroller accessibility commitment: WCAG 2.2 Level AA target, measures we take, known limits, feedback channel.{% endblock %}
+
+{% block content %}
 <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -57,7 +65,7 @@ endblock %} {% block content %}
                 >
                     Accessibility Statement
                 </h1>
-                <p class="text-sm text-gray-500 mb-8">Last updated: August 10, 2026</p>
+                <p class="text-sm text-gray-500 mb-8">Last updated: September 4, 2026</p>
             </div>
 
             <div class="space-y-8 text-sm leading-7 text-gray-600">
@@ -70,6 +78,29 @@ endblock %} {% block content %}
                         for public marketing and documentation surfaces. This is a continuous
                         improvement goal, not a formal third-party certification claim.
                     </p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-gray-900">Conformance status</h2>
+                    <p class="mt-2">
+                        Public pages (home, guides, FAQ, about, privacy, and the
+                        free-coupon listings) pass automated axe-core checks for WCAG 2.1/2.2 A
+                        and AA rules at desktop and mobile widths. The terms and contact
+                        pages are pending automated audit. We manually verify the
+                        keyboard path (skip link, focus order, and menu behaviour) on every
+                        release. Automated checks cannot catch every barrier, so passing them
+                        is evidence of effort, not proof of full conformance.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold text-gray-900">Keyboard and focus support</h2>
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                        <li>A &ldquo;skip to main content&rdquo; link is the first focusable element on every page.</li>
+                        <li>All navigation, menus, and primary controls are operable by keyboard; the mobile menu closes on <kbd class="px-1 py-0.5 text-xs border border-gray-300 rounded">Escape</kbd> and returns focus to its toggle.</li>
+                        <li>Visible focus rings are preserved on interactive elements; no control removes the focus indicator.</li>
+                        <li>Animations and transitions respect the <code class="px-1 py-0.5 text-xs bg-gray-100 rounded">prefers-reduced-motion</code> setting (WCAG 2.3.3).</li>
+                    </ul>
                 </section>
 
                 <section>
@@ -92,6 +123,10 @@ endblock %} {% block content %}
                         <li>
                             <strong class="text-gray-900">Third-party services:</strong>
                             analytics (after consent) and external links to Udemy or GitHub are outside full first-party control.
+                        </li>
+                        <li>
+                            <strong class="text-gray-900">Alternatives exist:</strong>
+                            for any barrier on the web app, the desktop GUI and CLI offer complete enrollment and scraping workflows without a browser.
                         </li>
                     </ul>
                 </section>

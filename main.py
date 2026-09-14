@@ -38,9 +38,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from loguru import logger
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.logging_config import setup_logging
 from app.mime import register_extra_mimetypes
@@ -60,7 +62,7 @@ from app.security import (
     analytics_rate_limiter,
     csp_report_rate_limiter,
 )
-from config.settings import get_settings
+from config.settings import allowed_hosts_list, get_settings
 
 # Configure logging with JSON support
 setup_logging()
@@ -533,6 +535,39 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+# Host-header pinning (F049): spoofed Host headers (e.g. Host: evil.example
+# hitting the origin directly) are rejected with 400 before routing.
+# - Allowlist source: allowed_hosts_list(app_settings) — unset/empty env =
+#   the secure pinned default (loopback + canonical production hosts,
+#   hosts, config/settings.py DEFAULT_ALLOWED_HOSTS); exact "*" = the
+#   env-overridable safe-disable (middleware not added at all) for local
+#   GUI dev.
+# - Order: added LAST (after CORS, GZip, and every @app.middleware function)
+#   so Starlette's reversed stack construction runs it OUTERMOST among user
+#   middleware — the spoofed-Host precheck fires before CORS, before the
+#   nonce/nav-auth/cache middlewares, and before routing.
+# - A 400 from TrustedHost is returned at the ASGI layer and intentionally
+#   BYPASSES the U2/F040 Exception handler (ServerErrorMiddleware handles
+#   only *unhandled exceptions*; TrustedHost returns a response, it never
+#   raises) — standard Starlette behavior for its 4xx middleware.
+# - www_redirect=False: the apex (udemyenroller.madhudadi.in) is canonical;
+#   www.<apex> serves through the nginx catch-all with apex canonicals
+#   (docs/ops/www-and-contact-fix.md). A 302 apex→www here would break SEO
+#   and serve NXDOMAIN targets, so both are pinned and redirecting is off.
+# - Captured once at import time (app factory), matching the existing
+#   middleware wiring style (CORS_ORIGINS above); live reloads out of scope.
+_allowed_hosts = allowed_hosts_list(app_settings)
+if _allowed_hosts != ["*"]:
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=_allowed_hosts,
+        www_redirect=False,
+    )
+    logger.info(f"TrustedHostMiddleware enabled (allowed_hosts={_allowed_hosts})")
+else:
+    logger.info("TrustedHostMiddleware disabled via ALLOWED_HOSTS=* (explicit override)")
+
+
 # Static files
 register_extra_mimetypes()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -686,4 +721,36 @@ async def not_found_handler(request: Request, exc):
         request, "pages/404.html", status_code=404
     )
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+@app.exception_handler(Exception)
+async def internal_error_handler(request: Request, exc: Exception):
+    """Return a safe 5xx page instead of Starlette's blank 500 (F040).
+
+    Catches only *unhandled* exceptions (registered at the ServerErrorMiddleware
+    layer, so deliberate JSON 5xx responses raised as HTTPException elsewhere
+    keep their contracts). Renders HTML for browser pages and keeps JSON for
+    API paths. Exception messages are never exposed to the response; only the
+    exception class name is logged, matching the logout-handler hygiene
+    (tests/test_logout_transaction.py). Starlette re-raises after the handler
+    so servers and TestClient keep normal error logging/raising.
+    """
+    logger.error(f"Unhandled server error on {request.url.path} ({type(exc).__name__})")
+    path = request.url.path
+    accepts_html = "text/html" in request.headers.get("accept", "")
+    if path.startswith("/api/") or not accepts_html:
+        # API or non-browser client: no stack, SQL, or env detail in the body
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error."},
+        )
+    else:
+        response = templates.TemplateResponse(
+            request, "pages/500.html", status_code=500
+        )
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response

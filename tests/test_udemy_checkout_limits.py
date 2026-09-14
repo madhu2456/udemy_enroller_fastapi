@@ -120,3 +120,133 @@ class TestIndeterminateResponses:
         )
         await udemy_client.free_checkout(course)
         assert course.status is not True
+
+
+
+class TestFreeCheckoutStatusMatrix:
+    """Task 3.2: free_checkout non-raising & status matrix."""
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_auth_error_fails_fast(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        r1 = MagicMock(status_code=403, headers={})
+        udemy_client.http.get = AsyncMock(return_value=r1)
+        await udemy_client.free_checkout(course)
+        assert course.status is False
+        assert "Auth error (403)" in course.error
+        assert udemy_client.http.get.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_404_not_enrolled(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        r1 = MagicMock(status_code=302, headers={})
+        r2 = MagicMock(status_code=404, headers={})
+        udemy_client.http.get = AsyncMock(side_effect=[r1, r2])
+        await udemy_client.free_checkout(course)
+        assert course.status is False
+        assert udemy_client.http.get.await_count == 2
+        calls = udemy_client.http.get.await_args_list
+        assert calls[0].kwargs.get("raise_for_status") is False
+        assert calls[1].kwargs.get("raise_for_status") is False
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_200_enrolled(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        r1 = MagicMock(status_code=200, headers={})
+        r2 = MagicMock(status_code=200, headers={})
+        udemy_client.http.get = AsyncMock(side_effect=[r1, r2])
+        udemy_client.http.safe_json = AsyncMock(return_value={"_class": "course", "id": 123})
+        await udemy_client.free_checkout(course)
+        assert course.status is True
+
+    @pytest.mark.asyncio
+    async def test_checkout_single_does_not_fallback_on_unknown(self, udemy_client):
+        course = _course()
+        course.is_free = True
+        course.coupon_code = None
+        udemy_client.free_checkout = AsyncMock(side_effect=lambda c: setattr(c, "status", None))
+        udemy_client._du_checkout = AsyncMock()
+
+        res = await udemy_client.checkout_single(course)
+        assert res is None
+        assert course.status is None
+        udemy_client._du_checkout.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_checkout_single_falls_back_on_false(self, udemy_client):
+        course = _course()
+        course.is_free = True
+        course.coupon_code = None
+        udemy_client.free_checkout = AsyncMock(side_effect=lambda c: setattr(c, "status", False))
+        udemy_client._du_checkout = AsyncMock()
+
+        await udemy_client.checkout_single(course)
+        udemy_client._du_checkout.assert_called_once_with(course)
+
+
+class TestDuCheckoutFailFastAndStatusMatrix:
+    """Task 4.3: _du_checkout fail-fast, 400 enrolled, and 500 retry control."""
+
+    @pytest.mark.asyncio
+    async def test_du_checkout_already_subscribed_400(self, udemy_client):
+        course = _course()
+        r = MagicMock(
+            status_code=400,
+            headers={"content-type": "application/json"},
+            url="https://www.udemy.com/payment/checkout-submit/",
+            text='{"message": "You are already subscribed to this course", "developer_message": "already_enrolled"}',
+        )
+        r.json = MagicMock(return_value={"message": "You are already subscribed to this course", "developer_message": "already_enrolled"})
+        await _run_du_checkout(udemy_client, course, [r])
+        assert course.status is True
+        assert udemy_client._cs_post.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_du_checkout_fatal_400_fails_fast(self, udemy_client):
+        course = _course()
+        r = MagicMock(
+            status_code=400,
+            headers={"content-type": "application/json"},
+            url="https://www.udemy.com/payment/checkout-submit/",
+            text='{"message": "Coupon expired"}',
+        )
+        r.json = MagicMock(return_value={"message": "Coupon expired"})
+        await _run_du_checkout(udemy_client, course, [r])
+        assert course.status is False
+        assert "Coupon expired" in course.error
+        assert udemy_client._cs_post.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_du_checkout_html_redirect_fails_fast(self, udemy_client):
+        course = _course()
+        r = MagicMock(
+            status_code=200,
+            headers={"content-type": "text/html; charset=utf-8"},
+            url="https://www.udemy.com/cart/",
+            text="<html><head><title>Cart</title></head><body>Your cart</body></html>",
+        )
+        await _run_du_checkout(udemy_client, course, [r])
+        assert course.status is False
+        assert "HTML redirect" in course.error
+        assert udemy_client._cs_post.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_du_checkout_server_error_500_max_one_retry(self, udemy_client):
+        course = _course()
+        r1 = MagicMock(
+            status_code=500,
+            headers={"content-type": "application/json"},
+            url="https://www.udemy.com/payment/checkout-submit/",
+        )
+        r2 = MagicMock(
+            status_code=500,
+            headers={"content-type": "application/json"},
+            url="https://www.udemy.com/payment/checkout-submit/",
+        )
+        await _run_du_checkout(udemy_client, course, [r1, r2, r2, r2])
+        assert course.status is False
+        assert "server error" in course.error
+        assert udemy_client._cs_post.await_count == 2

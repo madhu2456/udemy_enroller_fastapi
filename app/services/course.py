@@ -3,17 +3,36 @@
 from urllib.parse import parse_qs, urlparse, urlsplit, urlunparse, unquote
 import logging
 import html
+import re
 
 from app.services.udemy_validation import is_udemy_netloc, is_udemy_url
 
 logger = logging.getLogger(__name__)
+
+_HTML_TAG_RE = re.compile(r"<\/?(?:[a-zA-Z][a-zA-Z0-9]*|!--)[^>]*>")
+
+
+def sanitize_course_title(raw_title: object) -> str:
+    """Sanitize course title by stripping HTML tags, resolving nested entities, and collapsing whitespace."""
+    if raw_title is None or not isinstance(raw_title, (str, int, float)):
+        return ""
+    title = str(raw_title)
+    tag_re = _HTML_TAG_RE
+    title = tag_re.sub(" ", title)
+    for _ in range(3):
+        unescaped = html.unescape(title)
+        if unescaped == title:
+            break
+        title = unescaped
+    title = tag_re.sub(" ", title)
+    return " ".join(title.split())
 
 
 class Course:
     """Represents a Udemy course with metadata and enrollment state."""
 
     def __init__(self, title: str, url: str, site: str = None):
-        self.title = title
+        self.title = sanitize_course_title(title)
         self.site = site
         self.url = None
         self.slug = None

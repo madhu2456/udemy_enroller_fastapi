@@ -107,3 +107,37 @@ async def test_tutorialbar_page1_failure_reports_error(scraper):
 
     assert scraper.error == "Failed to fetch listing page 1"
     assert scraper.data == []
+
+
+@pytest.mark.asyncio
+async def test_tutorialbar_nested_course_rsc_flight_payload(scraper):
+    c1_url = "https://www.udemy.com/course/course-one/?couponCode=FREE1"
+    c2_url = "https://www.udemy.com/course/course-two/?couponCode=FREE2"
+    nested_rsc_html = f"""
+    <html>
+      <script>
+        self.__next_f.push([1, '1:[\"$\",\"$L1\",null,{{"course":{{"title\":\"Course One \\u0026 Intro\",\"couponUrl\":\"{c1_url}\",\"extra\":123}},"course":{{"title\":\"Course Two Advanced\",\"couponUrl\":\"{c2_url}\",\"extra\":456}}}}]']);
+      </script>
+    </html>
+    """
+
+    async def mock_get(url, *args, **kwargs):
+        if "robots.txt" in url:
+            return _resp("", status=404)
+        if "live-coupons" in url:
+            if "page=" in url:
+                return _resp("", status=404)
+            return _resp(nested_rsc_html, status=200)
+        return _resp("", status=404)
+
+    scraper.http.get = AsyncMock(side_effect=mock_get)
+    await scraper.scrape(asyncio.Semaphore(5))
+
+    assert len(scraper.data) == 2
+    assert scraper.data[0].title == "Course One & Intro"
+    assert scraper.data[0].url == c1_url
+    assert scraper.data[1].title == "Course Two Advanced"
+    assert scraper.data[1].url == c2_url
+    first_get_url = scraper.http.get.call_args_list[0].args[0]
+    assert not first_get_url.endswith("/live-coupons/")
+

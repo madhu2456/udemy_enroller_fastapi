@@ -146,6 +146,22 @@ else
     echo "WARNING: could not resolve bridge gateway; TRUSTED_PROXY_IPS fallback=[\"127.0.0.1\", \"::1\"]"
 fi
 
+# ---------------------------------------------------------------------------
+# Host-header pinning (F049): ALLOWED_HOSTS (comma-separated) feeds
+# TrustedHostMiddleware in main.py. Echo the effective value so the pinned
+# hosts are visible in `docker compose logs web` at every boot.
+# - unset/empty -> the secure pinned default baked into config/settings.py
+#   (loopback + canonical production hosts).
+# - exact "*" disables the middleware entirely (env-overridable safe-disable
+#   for local GUI dev). In a DEPLOYMENT_ENV=server container that is almost
+#   always a mistake — warn loudly, but keep it env-driven (do not hard-block
+#   a deliberate operator override).
+# ---------------------------------------------------------------------------
+echo "ALLOWED_HOSTS=${ALLOWED_HOSTS:-<unset -> secure pinned default>}"
+if [ "${ALLOWED_HOSTS:-}" = "*" ] && [ "${DEPLOYMENT_ENV:-}" = "server" ]; then
+    echo "WARNING: ALLOWED_HOSTS=* disables TrustedHostMiddleware in server mode — host pinning is OFF."
+fi
+
 # Fix volume permissions and drop privileges
 chown -R appuser:appuser /app/data /app/logs /app/Courses 2>/dev/null || true
 

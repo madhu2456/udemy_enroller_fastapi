@@ -138,9 +138,9 @@ class UdemyEnrollerApp(customtkinter.CTk):
 
                     elif ev_type == "COOKIES_EXTRACTED":
                         self.login_view.set_auth_success(data)
-                        # Auto test connection once extracted
-                        creds = self.login_view.get_credentials()
-                        self.bridge.send_command("TEST_LOGIN", creds)
+                        # T6-2: send FULL auth directly (no get_credentials re-read -> no stale-entry skew).
+                        auth = (data.get("auth") or data) if isinstance(data, dict) else {}
+                        self.bridge.send_command("TEST_LOGIN", dict(auth) if isinstance(auth, dict) else {})
 
                     elif ev_type == "COOKIES_EXTRACTED_FAILED":
                         self.login_view.set_auth_failed(data.get("error", "Failed to extract cookies"), notes=data.get("notes"))

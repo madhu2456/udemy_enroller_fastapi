@@ -1,21 +1,30 @@
 """Unit tests for universal browser cookie extraction service."""
 
+import base64
+import json
+import os
 import sqlite3
+import sys
+import types
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.padding import PKCS7
 
 from app.services.browser_cookies import (
     UdemyBrowserCookies,
+    _LINUX_KEYRING_LABELS,
     _decrypt_chromium_cookie_value,
     _extract_from_chromium_db,
     _extract_from_firefox_db,
     _find_chromium_cookie_dbs,
     _find_firefox_cookie_dbs,
+    _get_chromium_master_key_linux,
     _safe_query_sqlite_cookies,
     extract_all_browsers,
     get_udemy_cookies,
@@ -38,6 +47,65 @@ def _encrypt_linux_cookie(plain_text: str) -> bytes:
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(padded_data) + encryptor.finalize()
     return b"v10" + ciphertext
+
+
+def _encrypt_gcm_fixture(plain_text: str, key: bytes, prefix: bytes = b"v10") -> bytes:
+    """Encrypt a cookie with AES-GCM for Linux GCM-first tests (in-memory only)."""
+    nonce = os.urandom(12)
+    aesgcm = AESGCM(key)
+    ct_and_tag = aesgcm.encrypt(nonce, plain_text.encode("utf-8"), None)
+    return prefix + nonce + ct_and_tag
+
+
+def test_linux_peanuts_still_works():
+    """Regression: old Linux profiles using peanuts CBC still decrypt."""
+    blob = _encrypt_linux_cookie("peanuts_regression_secret")
+    with patch("sys.platform", "linux"):
+        with patch(
+            "app.services.browser_cookies._get_chromium_master_key_linux",
+            return_value=None,
+        ):
+            decrypted, note = _decrypt_chromium_cookie_value(blob, master_key=None)
+    assert decrypted == "peanuts_regression_secret"
+    assert note is None
+
+
+@pytest.mark.parametrize("prefix", [b"v10", b"v80"])
+def test_linux_gcm_known_key(prefix):
+    """GCM-first branch decrypts with known 32-byte master key (v10/v80 parity)."""
+    key32 = b"K" * 32
+    plain = "gcm_known_secret_123"
+    blob = _encrypt_gcm_fixture(plain, key32, prefix=prefix)
+    with patch("sys.platform", "linux"):
+        decrypted, note = _decrypt_chromium_cookie_value(blob, master_key=key32)
+    assert decrypted == plain
+    assert note is None
+
+
+def test_linux_no_keyring_note():
+    """GCM blob without keyring key yields GNOME Keyring guidance, not bare padding."""
+    key32 = b"K" * 32
+    # 23-char plain -> 51-byte payload (not multiple of 16) forces CBC fallback to fail.
+    blob = _encrypt_gcm_fixture("no_keyring_secret_value", key32, prefix=b"v10")
+    with patch("sys.platform", "linux"):
+        with patch(
+            "app.services.browser_cookies._get_chromium_master_key_linux",
+            return_value=None,
+        ):
+            decrypted, note = _decrypt_chromium_cookie_value(blob, master_key=None)
+    assert decrypted == ""
+    assert note is not None
+    assert "GNOME Keyring" in note
+    assert "Firefox" in note
+    assert "manual" in note.lower() or "extension" in note.lower()
+    assert "CBC decryption failed" not in note
+    # v20 guidance still mentions Extension/Firefox.
+    v_decrypted, v_note = _decrypt_chromium_cookie_value(
+        b"v20" + b"\x00" * 32, browser_name="chrome"
+    )
+    assert v_decrypted == ""
+    assert v_note is not None
+    assert "Extension" in v_note or "Firefox" in v_note
 
 
 def test_udemy_browser_cookies_dataclass():
@@ -226,3 +294,52 @@ def test_get_udemy_cookies_auto_fallback():
         assert cookies.is_valid is True
         assert cookies.browser_name == "edge"
         assert cookies.access_token == "edge_valid_token"
+
+
+def test_linux_label_map_covers_brave():
+    assert set(_LINUX_KEYRING_LABELS) == {"chrome", "chromium", "brave", "edge", "opera"}
+    assert _LINUX_KEYRING_LABELS["brave"][0] == "Brave Safe Storage"
+
+
+def test_linux_unwrap_with_secret_known_vector(tmp_path):
+    sec = b"fake-keyring-secret"
+    exp = b"V" * 32
+    wk = PBKDF2HMAC(algorithm=hashes.SHA1(), length=16, salt=b"saltysalt", iterations=1).derive(sec)
+    p = PKCS7(128).padder()
+    padded = p.update(exp) + p.finalize()
+    enc = Cipher(algorithms.AES(wk), modes.CBC(b" " * 16)).encryptor()
+    blob = b"v10" + enc.update(padded) + enc.finalize()
+    (tmp_path / "Local State").write_text(json.dumps({"os_crypt": {"encrypted_key": base64.b64encode(blob).decode()}}), encoding="utf-8")
+    mod = types.ModuleType("secretstorage")
+    mod.dbus_init = lambda *a, **k: object()
+    class _Item:
+        def get_label(self):
+            return "Brave Safe Storage"
+        def get_secret(self):
+            return sec
+    class _Col:
+        def is_locked(self):
+            return False
+        def get_all_items(self):
+            return [_Item()]
+    mod.get_default_collection = lambda bus: _Col()
+    with patch.dict(sys.modules, {"secretstorage": mod}):
+        with patch("sys.platform", "linux"):
+            got = _get_chromium_master_key_linux(tmp_path, "brave")
+    assert got == exp
+    gcm = _encrypt_gcm_fixture("brave_gcm_secret_xyz", got)
+    with patch("sys.platform", "linux"):
+        dec, note = _decrypt_chromium_cookie_value(gcm, master_key=got, browser_name="brave")
+    assert dec == "brave_gcm_secret_xyz"
+    assert note is None
+
+
+def test_linux_missing_key_brave_guidance(tmp_path):
+    (tmp_path / "Local State").write_text(json.dumps({"os_crypt": {}}), encoding="utf-8")
+    assert _get_chromium_master_key_linux(tmp_path, "brave") is None
+    blob = _encrypt_gcm_fixture("no_keyring_secret_value", b"K" * 32)
+    with patch("sys.platform", "linux"):
+        dec, note = _decrypt_chromium_cookie_value(blob, master_key=None, browser_name="brave")
+    assert dec == ""
+    assert "quit Brave" in note and "Firefox" in note
+    assert ("extension" in note.lower() or "manual" in note.lower()) and "CBC decryption failed" not in note

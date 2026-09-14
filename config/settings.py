@@ -61,6 +61,17 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
+    # Host-header pinning (F049): comma-separated allowlist for
+    # TrustedHostMiddleware (wired in main.py). Unset/empty = the secure
+    # pinned default (DEFAULT_ALLOWED_HOSTS below: loopback + canonical
+    # production hosts). Exact "*" disables the middleware entirely
+    # (env-overridable safe-disable for local GUI dev — never in server
+    # deployments; docker-entrypoint.sh warns on that combination).
+    # Kept as str (not list[str]) so plain comma-separated .env values load
+    # (pydantic-settings v2 would demand JSON for a list field). Parsed by
+    # allowed_hosts_list().
+    ALLOWED_HOSTS: str = ""
+
     # Public base URL (e.g. https://udemyenroller.madhudadi.in). When set, the
     # login CSRF origin gate compares the browser Origin/Referer netloc against
     # this value instead of request.base_url — required behind Cloudflare
@@ -199,6 +210,50 @@ class Settings(BaseSettings):
             if self.SECRET_KEY in _INSECURE_LOCAL_AUTOGEN_KEYS:
                 self.SECRET_KEY = secrets.token_hex(32)
         return self
+
+
+# Canonical production host (F049 host pinning). Sourced from the deployment
+# single source of truth: README "Live Demo" + nginx proxy_set_header Host
+# $host (scripts/deploy.sh) forward the browser's original Host header to the
+# app, and www.<apex> serves through the nginx catch-all with apex canonicals
+# (no origin redirect — docs/ops/www-and-contact-fix.md). The shipped secure
+# default deliberately EXCLUDES "testserver" (the starlette/httpx TestClient
+# default Host): the test suite injects it via tests/conftest.py instead.
+DEFAULT_ALLOWED_HOSTS: tuple[str, ...] = (
+    "localhost",
+    "127.0.0.1",
+    "udemyenroller.madhudadi.in",
+    "www.udemyenroller.madhudadi.in",
+)
+
+
+def allowed_hosts_list(settings: "Settings") -> list[str]:
+    """Parse the ALLOWED_HOSTS env value (F049) into a middleware host list.
+
+    "" / unset -> DEFAULT_ALLOWED_HOSTS (the secure pinned default).
+    "*" (possibly mixed with empty entries) -> ["*"], the explicit
+    env-overridable safe-disable: main.py skips the middleware entirely.
+    Otherwise -> stripped, non-empty, de-duplicated entries (order
+    preserved), with "localhost" always appended when an operator override
+    forgets it — the Docker HEALTHCHECK (urlopen http://localhost:8000/
+    api/health) must never start failing on a host-list override.
+    """
+    raw = (getattr(settings, "ALLOWED_HOSTS", "") or "").strip()
+    if not raw:
+        return list(DEFAULT_ALLOWED_HOSTS)
+    entries = [entry.strip() for entry in raw.split(",")]
+    entries = [entry for entry in entries if entry]
+    if not entries or "*" in entries:
+        return ["*"]
+    seen: set[str] = set()
+    hosts: list[str] = []
+    for entry in entries:
+        if entry not in seen:
+            seen.add(entry)
+            hosts.append(entry)
+    if "localhost" not in hosts:
+        hosts.append("localhost")
+    return hosts
 
 
 @lru_cache()

@@ -40,10 +40,16 @@ def sanitize_log_message(message: str) -> str:
     return message
 
 
-def setup_logging():
+_SINK_IDS: list[int] = []
+
+
+def setup_logging(level: str | None = None, log_file: str | None = None):
     """Configure logging with compact output and context tracking."""
-    # Force everything to WARNING to silence info/debug
-    settings_level = settings.LOG_LEVEL.upper()
+    # Resolve level: explicit arg wins, else settings.LOG_LEVEL. Default WARNING.
+    raw_level = level if level is not None else settings.LOG_LEVEL
+    settings_level = str(raw_level or "WARNING").upper()
+    if settings_level not in ("DEBUG", "INFO", "WARNING", "ERROR"):
+        settings_level = "WARNING"
     numeric_level = getattr(logging, settings_level, logging.WARNING)
 
     # 1. Silence standard logging (urllib3, httpx, etc.)
@@ -56,8 +62,19 @@ def setup_logging():
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-    # 2. Silence loguru
-    logger.remove()
+    # 2. Reset loguru sinks idempotently (track ids so repeated CLI invokes don't duplicate)
+    if _SINK_IDS:
+        for _sid in list(_SINK_IDS):
+            try:
+                logger.remove(_sid)
+            except ValueError:
+                pass  # already removed — idempotent reset
+        _SINK_IDS.clear()
+    else:
+        try:
+            logger.remove()
+        except ValueError:
+            pass  # no default handler present
 
     def concise_fmt(record):
         fmt = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{line} - {message}"
@@ -66,29 +83,35 @@ def setup_logging():
         fmt += "\n"
         return fmt
 
-    # Standard logging bridge
+    # Standard logging bridge (stderr by default, Live-safe)
     logging.basicConfig(
         level=numeric_level,
         format="%(asctime)s | %(levelname)-8s | %(name)s - %(message)s",
         force=True,
     )
 
-    # Add sinks with explicit level
-    logger.add(
-        sys.stdout,
-        format=concise_fmt,
-        level=settings_level,
-        colorize=False,
+    # Add sinks with explicit level (stderr-only so json/csv stdout stays clean)
+    _SINK_IDS.append(
+        logger.add(
+            sys.stderr,
+            format=concise_fmt,
+            level=settings_level,
+            colorize=False,
+        )
     )
-    logger.add(
-        settings.LOG_FILE,
-        format=concise_fmt,
-        level=settings_level,
-        colorize=False,
-        rotation="10 MB",
-        retention="7 days",
-        encoding="utf-8",
-    )
+    resolved_file = log_file if log_file is not None else settings.LOG_FILE
+    if resolved_file:
+        _SINK_IDS.append(
+            logger.add(
+                resolved_file,
+                format=concise_fmt,
+                level=settings_level,
+                colorize=False,
+                rotation="10 MB",
+                retention="7 days",
+                encoding="utf-8",
+            )
+        )
 
     return logger
 

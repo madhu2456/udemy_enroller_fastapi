@@ -168,6 +168,8 @@ def test_logbox_component_mocked_gui():
         from app.gui.components.log_box import LogBox
 
         log_box = LogBox(mock_master, max_lines=1000)
+        # T5-T2 WARNING-default: opt in to INFO display to exercise display path.
+        log_box.set_min_level("INFO")
         log_box.textbox = MagicMock()
         log_box.textbox.index.return_value = "1050.0"
         log_box.autoscroll_cb = MagicMock()

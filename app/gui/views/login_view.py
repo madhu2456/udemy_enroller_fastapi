@@ -224,27 +224,32 @@ class LoginView(customtkinter.CTkFrame):
 
     def set_auth_success(self, data: Dict[str, Any]) -> None:
         """Update view with successful connection status."""
-        name = data.get("display_name", "Udemy User")
+        data = data or {}
+        name = data.get("display_name") or data.get("browser_name") or "Udemy User"
         lib = data.get("library_count", 0)
         curr = data.get("currency", "USD")
         self.status_title.configure(text=f"✓ Connected as {name} (Session Saved)", text_color=COLOR_SUCCESS)
         self.status_details.configure(text=f"Library: {lib} courses • Currency: {curr} • Saved for long-term reuse")
 
-        # Fill entries
-        if data.get("access_token"):
+        # T6-2 shape-tolerant: AUTH_SUCCESS {full} vs COOKIES {display + auth FULL}.
+        tokens = data.get("auth", data) or data
+        if not isinstance(tokens, dict):
+            tokens = data
+        # Fill entries with FULL auth (never display-truncated).
+        if tokens.get("access_token"):
             self.token_entry.delete(0, "end")
-            self.token_entry.insert(0, data["access_token"])
-        if data.get("client_id"):
+            self.token_entry.insert(0, tokens["access_token"])
+        if tokens.get("client_id"):
             self.cid_entry.delete(0, "end")
-            self.cid_entry.insert(0, data["client_id"])
-        if data.get("csrf_token"):
+            self.cid_entry.insert(0, tokens["client_id"])
+        if tokens.get("csrf_token"):
             self.csrf_entry.delete(0, "end")
-            self.csrf_entry.insert(0, data["csrf_token"])
+            self.csrf_entry.insert(0, tokens["csrf_token"])
 
     def set_auth_failed(self, error: str, notes: Optional[str] = None) -> None:
         """Update view with failed connection status."""
         self.status_title.configure(text="✗ Connection Failed / Expired", text_color=COLOR_DANGER)
-        msg = error
+        msg = error or "Authentication failed"
         if notes:
             msg += f"\n\nNote: {notes}"
         self.status_details.configure(text=msg)
