@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import httpx
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from app.services.http_client import AsyncHTTPClient
 

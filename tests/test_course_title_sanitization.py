@@ -1,4 +1,3 @@
-import pytest
 from app.services.course import Course, sanitize_course_title
 from app.services.scraper import Scraper
 from app.services.http_client import AsyncHTTPClient

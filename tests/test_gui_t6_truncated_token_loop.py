@@ -51,7 +51,7 @@ def test_auto_extract_emits_display_truncated_auth_full():
 def test_test_login_flagged_truncated_reextracts_full():
     b = AsyncioBridge()
     mc = _ok_client()
-    with patch("app.gui.bridge.get_udemy_cookies", return_value=_full_cookies()) as mg, \
+    with patch("app.gui.bridge.get_udemy_cookies", return_value=_full_cookies()), \
          patch("app.gui.bridge.UdemyClient", return_value=mc), \
          patch("app.gui.bridge.save_persistent_session"):
         asyncio.run(b._handle_test_login({"access_token": "abcd1234...", "client_id": "cid...",

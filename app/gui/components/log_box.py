@@ -104,8 +104,10 @@ class LogBox(customtkinter.CTkFrame):
         lvl = str(level or "WARNING").upper()
         self.min_level = lvl if lvl in self.LEVEL_OPTIONS else "WARNING"
         if self.level_menu is not None:
-            try: self.level_menu.set(self.min_level)
-            except Exception: pass
+            try:
+                self.level_menu.set(self.min_level)
+            except Exception:
+                pass
         self._refresh_display()
 
     def _level_visible(self, level: str) -> bool:
@@ -115,7 +117,8 @@ class LogBox(customtkinter.CTkFrame):
         self.textbox.configure(state="normal")
         self.textbox.delete("1.0", "end")
         shown = [t for lv, t in self.log_buffer if self._level_visible(lv)][-self.max_lines :]
-        for text in shown: self.textbox.insert("end", text + "\n")
+        for text in shown:
+            self.textbox.insert("end", text + "\n")
         self.textbox.configure(state="disabled")
 
     def append_log(self, text: str, level: str = "INFO") -> None:

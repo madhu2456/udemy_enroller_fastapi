@@ -2733,7 +2733,6 @@ class FreeCourseSitesScraper(Scraper):
                         scraper=self.code_name, site=self.site_name
                     ).info(f"  [{self.site_name}] Circuit breaker CLEARED via fallback 200")
                 return resp
-            status = getattr(resp, "status_code", "None")
             self.consecutive_failures += 1
             if self.consecutive_failures >= self.max_consecutive_failures:
                 self.circuit_open = True

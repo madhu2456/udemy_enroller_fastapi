@@ -1,4 +1,12 @@
 
+import pytest
+import asyncio
+from unittest.mock import MagicMock, AsyncMock
+from app.services.scraper import FreeCourseSitesScraper
+from app.services.http_client import AsyncHTTPClient
+from app.services.course import Course
+
+
 def _resp(text="", status=200, headers=None, url=""):
     mock = MagicMock()
     mock.status_code = status
@@ -7,12 +15,6 @@ def _resp(text="", status=200, headers=None, url=""):
     mock.headers = headers or {}
     mock.url = url
     return mock
-import pytest
-import asyncio
-from unittest.mock import MagicMock, AsyncMock
-from app.services.scraper import FreeCourseSitesScraper
-from app.services.http_client import AsyncHTTPClient
-from app.services.course import Course
 
 @pytest.fixture
 def http_client():

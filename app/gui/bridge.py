@@ -86,20 +86,26 @@ class AsyncioBridge:
     def set_log_level(self, level: str) -> None:
         lvl = str(level or "WARNING").upper()  # opt-in INFO/DEBUG, default WARNING
         self._log_level = lvl if lvl in self.LOG_ORDER else "WARNING"
-        if self.running: self._detach_log_sink(); self._attach_log_sink()
+        if self.running:
+            self._detach_log_sink()
+            self._attach_log_sink()
 
     def _attach_log_sink(self) -> None:
         if self._log_sink_id is not None:  # idempotent: no dupes on double-start
             return
         floor = "SUCCESS" if self._log_level == "WARNING" else self._log_level
-        try: self._log_sink_id = logger.add(self._gui_log_sink, level=floor)
-        except Exception: self._log_sink_id = None
+        try:
+            self._log_sink_id = logger.add(self._gui_log_sink, level=floor)
+        except Exception:
+            self._log_sink_id = None
 
     def _detach_log_sink(self) -> None:
         if self._log_sink_id is None:
             return
-        try: logger.remove(self._log_sink_id)
-        except Exception: pass
+        try:
+            logger.remove(self._log_sink_id)
+        except Exception:
+            pass
         self._log_sink_id = None
 
     def _gui_log_sink(self, message) -> None:
@@ -116,7 +122,9 @@ class AsyncioBridge:
         now = time.monotonic()
         self._log_tokens = min(self.LOG_BURST, self._log_tokens + max(0.0, now - self._log_last) * self.LOG_RATE)
         self._log_last = now
-        if self._log_tokens < 1.0: self._log_dropped += 1; return
+        if self._log_tokens < 1.0:
+            self._log_dropped += 1
+            return
         self._log_tokens -= 1.0
         extra = f" [+{self._log_dropped} coalesced]" if self._log_dropped else ""
         self._log_dropped = 0
@@ -129,8 +137,11 @@ class AsyncioBridge:
     def emit_event(self, event: str, data: Optional[Dict[str, Any]] = None) -> None:
         """Push an event from worker to UI queue (drop-oldest on LOG overflow)."""
         if event == "LOG" and self.event_queue.qsize() >= self.LOG_MAXQ:
-            try: self.event_queue.get_nowait(); self._log_dropped += 1
-            except queue.Empty: pass
+            try:
+                self.event_queue.get_nowait()
+                self._log_dropped += 1
+            except queue.Empty:
+                pass
         self.event_queue.put({"event": event, "data": data or {}})
 
     def poll_events(self, max_count: int = 100) -> List[Dict[str, Any]]:
