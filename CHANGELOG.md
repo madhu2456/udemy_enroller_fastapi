@@ -9,6 +9,13 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### CI — `requirements.lock` was missing the GUI/CLI dependency set
+
+- **Root cause:** `requirements.lock` was last compiled 2026-08-15, but `requirements.txt` gained the desktop-GUI / Rich-CLI stack in `380ce96` (2026-08-27). CI installs from `requirements.lock` (`pip install -r requirements.lock`), so `typer`, `rich`, `customtkinter`, `pillow` and `pyinstaller` were absent at test time and pytest aborted during collection with `ModuleNotFoundError: No module named 'typer'` in `tests/test_cli.py`, `tests/test_cli_edge_cases_deep.py`, `tests/test_cli_log_flags.py` and `tests/test_session_store.py` (4 collection errors, run interrupted).
+- **Fix (surgical, no version churn):** appended the 11 missing distributions with `--hash=sha256:` entries and `# via` provenance to match the file's `pip-compile --generate-hashes` format — `typer 0.27.2`, `rich 15.0.0`, `customtkinter 6.0.0`, `darkdetect 0.8.0`, `pillow 12.3.0`, `pyinstaller 6.22.3`, `pyinstaller-hooks-contrib 2026.7`, `altgraph 0.17.5`, `markdown-it-py 4.2.0`, `mdurl 0.1.2`, `shellingham 1.5.4`. Existing pins were left untouched so no unrelated transitive upgrade can regress the suite.
+- **Verification:** a fresh `pip install -r requirements.lock` resolves and installs cleanly (hashes valid); full suite **1217 passed, 15 deselected, 0 failed**; the 4 previously-aborting modules now collect and pass (52 tests); `ruff check .` under the lock's pinned `ruff 0.15.22` still reports `All checks passed!`.
+- **Note:** `pyinstaller` requires an unpinned `setuptools>=42.0.0`. The lock's existing `--allow-unsafe` warning covers this and CI's Python 3.11 toolchain already provides `setuptools`, so `--require-hashes` resolution succeeds there. `setuptools` is intentionally not pinned (matches the pre-existing file contract).
+
 ### Scrapers — Plan v4 Performance Optimizations & Cloudflare Fail-Fast Hardening
 
 - **FreebiesGlobal (`FreebiesGlobalScraper` / `fg`)**:
