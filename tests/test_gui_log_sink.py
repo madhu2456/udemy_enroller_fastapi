@@ -89,7 +89,27 @@ def test_rate_cap_1000_debugs_filtered_no_freeze(bridge):
     assert len(bridge.poll_events(max_count=1000)) == 0  # all filtered at emit
 
 
-def test_rate_cap_debug_level_bounded():
+class _FrozenClock:
+    """monotonic() frozen at one value => zero token refill.
+
+    Delegates every other attribute to the real `time` module so the worker
+    thread's own use of `time` is unaffected.
+    """
+
+    def monotonic(self) -> float:
+        return 0.0
+
+    def __getattr__(self, name):
+        return getattr(time, name)
+
+
+def test_rate_cap_debug_level_bounded(monkeypatch):
+    # The token bucket refills from wall-clock elapsed time, so the exact
+    # emitted/dropped split was host-speed dependent: a loaded CI runner let
+    # enough refill through that `_log_dropped` (reset to 0 on every successful
+    # emit) landed far below 900. Freeze the clock so the burst budget itself --
+    # not machine speed -- decides the outcome: 20 emitted, 980 dropped.
+    monkeypatch.setattr("app.gui.bridge.time", _FrozenClock())
     b = AsyncioBridge()
     b.start(log_level="DEBUG")
     try:
@@ -97,7 +117,8 @@ def test_rate_cap_debug_level_bounded():
         for i in range(1000):
             logger.debug(f"t5t2-dbg-{i}")
         emitted = _logs(b)
-        assert len(emitted) <= 30  # burst 20 + minor refill
+        assert len(emitted) == 20  # exactly LOG_BURST, no refill
+        assert b._log_dropped == 980
         assert b._log_dropped >= 900
         assert len(emitted) + b._log_dropped == 1000
         b._log_tokens = 20.0  # deterministic refill -> next emit carries counter

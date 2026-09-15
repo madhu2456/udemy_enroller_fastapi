@@ -62,7 +62,14 @@ def test_version_short_flag_still_version():
     assert "v2.2.0" in res2.output
 
 
-def test_help_lists_logging_flags():
+def test_help_lists_logging_flags(monkeypatch):
+    # typer renders --help through rich, which *truncates* option names with an
+    # ellipsis below ~40 columns. On a CI runner the captured console width is
+    # not under the test's control, so pin it: assert the flag set, not the
+    # host terminal's wrapping.
+    import typer.rich_utils
+
+    monkeypatch.setattr(typer.rich_utils, "MAX_WIDTH", 120, raising=False)
     res = runner.invoke(app, ["--help"])
     assert res.exit_code == 0
     assert "--verbose" in res.output
