@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
@@ -62,23 +63,34 @@ def test_version_short_flag_still_version():
     assert "v2.2.0" in res2.output
 
 
+# ANSI CSI stripper. typer renders --help through rich; when the runner exports
+# FORCE_COLOR/TERM, rich emits styling codes that can split an option name across
+# separate spans (e.g. "-" + "-verbose"), so a raw substring match on the
+# rendered text is unreliable. Assert on the visible text, not the styling.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _visible(rendered: str) -> str:
+    return _ANSI_RE.sub("", rendered)
+
+
 def test_help_lists_logging_flags(monkeypatch):
-    # typer renders --help through rich, which *truncates* option names with an
-    # ellipsis below ~40 columns. On a CI runner the captured console width is
-    # not under the test's control, so pin it: assert the flag set, not the
-    # host terminal's wrapping.
+    # rich also *truncates* option names with an ellipsis below ~40 columns, and
+    # the captured console width on a CI runner is outside the test's control, so
+    # pin the width: assert the flag set, not the host terminal's wrapping.
     import typer.rich_utils
 
     monkeypatch.setattr(typer.rich_utils, "MAX_WIDTH", 120, raising=False)
     res = runner.invoke(app, ["--help"])
     assert res.exit_code == 0
-    assert "--verbose" in res.output
-    assert "-V" in res.output
-    assert "--debug" in res.output
-    assert "--log-level" in res.output
-    assert "--log-file" in res.output
+    out = _visible(res.output)
+    assert "--verbose" in out
+    assert "-V" in out
+    assert "--debug" in out
+    assert "--log-level" in out
+    assert "--log-file" in out
     # -v stays version, distinct from -V verbose
-    assert "-v" in res.output
+    assert "-v" in out
 
 
 def test_short_V_is_verbose_not_version():
