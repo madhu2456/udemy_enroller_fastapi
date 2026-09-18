@@ -94,6 +94,7 @@ def test_f319_robots_comments_search_visibility_not_citation_labels():
     assert "Disallow: /login" in body
     assert "Disallow: /settings" in body
     assert "Disallow: /api/" in body
+    assert "Disallow: /ws/" in body
     assert "Disallow: /dashboard" in body
     assert "Disallow: /" in body
     assert "Allow: /" in body
@@ -110,3 +111,17 @@ def test_humans_txt_status_and_content():
     assert response.status_code == 200
     assert "text/plain" in response.headers.get("content-type", "")
     assert "Developer: Madhu Dadi" in response.text
+
+
+def test_machine_discovery_tags_in_base_template():
+    """T-W1-05: verify dual machine discovery tags in <head>."""
+    client = TestClient(app)
+    try:
+        response = client.get("/")
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    assert '<link rel="ai-profile" type="application/json" href="/ai-profile.json">' in response.text
+    assert '<link rel="llms" type="text/plain" href="/llms.txt">' in response.text
+

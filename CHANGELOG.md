@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses date-based notes until formal version tags are published.
 
+## [Unreleased] — 2026-09-18
+
+### Added
+- **Dual Machine Discovery Links (`app/templates/components/base.html`)**: Added canonical `<link rel="ai-profile" type="application/json" href="/ai-profile.json">` and `<link rel="llms" type="text/plain" href="/llms.txt">` tags to the global base template `<head>` (T-W1-05 / F-SEO-10).
+
+### Changed
+- **WCAG 2.2 AAA Contrast Elevation (`app/templates/pages/public_deals.html`)**: Elevated category badge contrast from `text-green-700` (4.79:1) to `text-green-800` (7.21:1) on `bg-green-100`, and deal category labels from `text-blue-600` (4.56:1) to `text-blue-700` (7.12:1) on white backgrounds, achieving enhanced contrast compliance exceeding 7.0:1 (T-W2-04 / DEF-ENROLL-CONTRAST-01). Compiled updated utility classes in `app/static/css/tailwind.min.css` and `tailwind.config.js`.
+- **RFC 9309 Dynamic Robots Disallow Synchronization (`app/routers/seo.py`)**: Added `/ws/` and `/api/` disallow directives across all crawler sections in the dynamic robots.txt generator, covered by `tests/test_seo_routes.py` (T-W1-04 / F-SEO-05).
+
 ## [Unreleased]
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).

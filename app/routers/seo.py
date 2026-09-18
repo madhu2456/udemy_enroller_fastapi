@@ -78,6 +78,7 @@ Disallow: /history
 Disallow: /login
 Disallow: /settings
 Disallow: /api/
+Disallow: /ws/
 Disallow: /dashboard
 
 # Search engine crawlers — no Crawl-delay (Google ignores it; avoid slowing Bing/others)
@@ -93,6 +94,7 @@ Disallow: /history
 Disallow: /login
 Disallow: /settings
 Disallow: /api/
+Disallow: /ws/
 Disallow: /dashboard
 
 # AI search-visibility and user-triggered fetchers — ALLOW (AEO/GEO)
@@ -115,6 +117,7 @@ Disallow: /history
 Disallow: /login
 Disallow: /settings
 Disallow: /api/
+Disallow: /ws/
 Disallow: /dashboard
 
 # Model-training crawlers — DISALLOW (opt out of training use)
@@ -125,12 +128,16 @@ User-agent: anthropic-ai
 User-agent: CCBot
 User-agent: Applebot-Extended
 User-agent: FacebookBot
+User-agent: Bytespider
 Disallow: /
 
 # Sitemaps
 Sitemap: {SITE_URL}/sitemap.xml
 """
     return Response(content=content, media_type="text/plain")
+
+
+get_robots_txt = robots_txt
 
 
 @router.get("/sitemap.xml", response_class=Response)

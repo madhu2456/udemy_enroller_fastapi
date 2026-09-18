@@ -20,6 +20,12 @@ module.exports = {
     "text-gray-300",
     "bg-blue-900",
     "text-blue-300",
+    "text-green-900",
+    "text-red-900",
+    "text-green-800",
+    "text-blue-800",
+    "bg-green-100",
+    "bg-red-100",
   ],
   theme: {
     extend: {},
