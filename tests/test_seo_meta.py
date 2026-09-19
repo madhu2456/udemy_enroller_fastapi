@@ -156,7 +156,7 @@ class TestSoftwareApplicationJsonLd:
     def test_ai_profile_related_profiles(self):
         from fastapi.testclient import TestClient
         from main import app
-        from app.routers.seo import PORTFOLIO_URL, BLOG_URL, DEALS_URL, ADTICKS_URL
+        from app.routers.seo import PORTFOLIO_URL, BLOG_URL, DEALS_URL, ADTICKS_URL, TELEVAULT_URL
 
         client = TestClient(app)
         try:
@@ -174,12 +174,14 @@ class TestSoftwareApplicationJsonLd:
                 f"{BLOG_URL}/ai-profile.json",
                 f"{DEALS_URL}/ai-profile.json",
                 f"{ADTICKS_URL}/ai-profile.json",
+                f"{TELEVAULT_URL}/ai-profile.json",
             ]
             assert app_node.get("relatedProfiles") == expected_profiles
             assert "https://madhudadi.in/ai-profile.json" in app_node["relatedProfiles"]
             assert "https://madhudadi.in/blog/ai-profile.json" in app_node["relatedProfiles"]
             assert "https://deals.madhudadi.in/ai-profile.json" in app_node["relatedProfiles"]
             assert "https://adticks.com/ai-profile.json" in app_node["relatedProfiles"]
+            assert "https://televault.madhudadi.in/ai-profile.json" in app_node["relatedProfiles"]
         finally:
             client.close()
 

@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses date-based notes until formal version tags are published.
 
+## [Unreleased] — 2026-09-19
+
+### Added
+- **TeleVault Ecosystem Linkage (`app/routers/seo.py`, `app/templates/components/base.html`)**: Defined `TELEVAULT_URL = "https://televault.madhudadi.in"` in `seo.py` and added an outbound link to TeleVault in the footer ecosystem navigation in `base.html`.
+- **Cross-Ecosystem 5-Peer Related Profiles (`app/routers/seo.py`, `tests/test_seo_meta.py`)**: Added `f"{TELEVAULT_URL}/ai-profile.json"` to `ai-profile.json`'s `relatedProfiles` array establishing 5-peer reciprocity, and updated `TestSoftwareApplicationJsonLd.test_ai_profile_related_profiles` in `tests/test_seo_meta.py` to assert the complete 5-peer configuration.
+
 ## [Unreleased] — 2026-09-18
 
 ### Added
