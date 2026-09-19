@@ -9,6 +9,7 @@ and this project uses date-based notes until formal version tags are published.
 
 ### Added
 - **Dual Machine Discovery Links (`app/templates/components/base.html`)**: Added canonical `<link rel="ai-profile" type="application/json" href="/ai-profile.json">` and `<link rel="llms" type="text/plain" href="/llms.txt">` tags to the global base template `<head>` (T-W1-05 / F-SEO-10).
+- **IndexNow Search Engine Verification Placeholder (`.env.example`)**: Added `INDEXNOW_KEY=` placeholder under search engine verification settings for Bing/Yandex search crawler ownership validation (MIN-05).
 
 ### Changed
 - **WCAG 2.2 AAA Contrast Elevation (`app/templates/pages/public_deals.html`)**: Elevated category badge contrast from `text-green-700` (4.79:1) to `text-green-800` (7.21:1) on `bg-green-100`, and deal category labels from `text-blue-600` (4.56:1) to `text-blue-700` (7.12:1) on white backgrounds, achieving enhanced contrast compliance exceeding 7.0:1 (T-W2-04 / DEF-ENROLL-CONTRAST-01). Compiled updated utility classes in `app/static/css/tailwind.min.css` and `tailwind.config.js`.
