@@ -95,7 +95,7 @@ class TestURLValidation:
 
     def test_valid_socks5_url(self):
         """Test valid SOCKS5 URL."""
-        assert validate_proxy_url("socks5://localhost:1080") is True
+        assert validate_proxy_url("socks5://proxy.example.com:1080") is True
 
     def test_invalid_scheme(self):
         """Test URL with invalid scheme."""

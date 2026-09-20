@@ -131,6 +131,7 @@ async def test_http_client_403_warning_suppression():
         mock_resp.cookies = {}
         
         http_client.client.get = AsyncMock(return_value=mock_resp)
+        http_client._is_safe_url = lambda url: True
         
         with patch("app.services.http_client.logger") as mock_logger:
             await http_client.get("https://example.com", log_failures=False, raise_for_status=False, attempts=1)

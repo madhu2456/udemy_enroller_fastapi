@@ -25,6 +25,7 @@ async def _make_client(is_server=False):
     c = AsyncHTTPClient()
     c._is_server = is_server
     c._apply_human_like_delay = AsyncMock(return_value=None)
+    c._is_safe_url = lambda url: True
     return c
 
 

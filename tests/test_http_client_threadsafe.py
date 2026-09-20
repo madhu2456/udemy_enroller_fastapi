@@ -54,6 +54,7 @@ async def test_init_client_clears_old_scrapers():
 @pytest.mark.asyncio
 async def test_redirect_kwargs_normalization_httpx():
     client = AsyncHTTPClient()
+    client._is_safe_url = lambda url: True
 
     with patch.object(client.client, "get", new_callable=AsyncMock) as mock_get:
         mock_get.return_value = httpx.Response(
@@ -101,6 +102,7 @@ async def test_redirect_kwargs_normalization_httpx():
 @pytest.mark.asyncio
 async def test_redirect_kwargs_normalization_post_and_head():
     client = AsyncHTTPClient()
+    client._is_safe_url = lambda url: True
 
     with patch.object(client.client, "head", new_callable=AsyncMock) as mock_head:
         mock_head.return_value = httpx.Response(
