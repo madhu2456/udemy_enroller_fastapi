@@ -48,7 +48,7 @@ STATIC_PAGE_LASTMOD: dict[str, str] = {
     "/faq": "2026-08-27",
     "/about": "2026-07-28",
     "/guides": "2026-08-27",
-    "/privacy": "2026-08-21",
+    "/privacy": "2026-09-20",
     "/contact": "2026-08-03",
     "/terms": "2026-08-03",
     "/accessibility": "2026-09-04",

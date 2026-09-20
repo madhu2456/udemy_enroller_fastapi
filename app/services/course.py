@@ -6,6 +6,7 @@ import html
 import re
 
 from app.services.udemy_validation import is_udemy_netloc, is_udemy_url
+from app.logging_config import sanitize_log_message
 
 logger = logging.getLogger(__name__)
 
@@ -142,10 +143,10 @@ class Course:
         path_parts = parsed_url.path.split("/")
         if len(path_parts) > 2 and path_parts[1] == "course":
             self.slug = path_parts[2]
-        elif len(path_parts) > 1:
+        elif len(path_parts) > 1 and path_parts[1]:
             self.slug = path_parts[1]
         else:
-            logger.error(f"Invalid URL format: {self.url}")
+            logger.error(f"Invalid URL format: {sanitize_log_message(self.url)}")
             self.slug = None
 
     def extract_coupon_code(self):

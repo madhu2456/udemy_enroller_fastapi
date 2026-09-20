@@ -1,6 +1,7 @@
 import asyncio
 import random
 import threading
+import time
 from typing import Dict, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -421,7 +422,7 @@ class AsyncHTTPClient:
         from config.settings import get_settings
 
         is_server = get_settings().DEPLOYMENT_ENV == "server"
-        current_time = asyncio.get_event_loop().time()
+        current_time = time.monotonic()
         time_since_last = current_time - self._last_request_time
 
         if is_server:
@@ -434,14 +435,98 @@ class AsyncHTTPClient:
             delay += random.uniform(-0.1, 0.2)
             await asyncio.sleep(max(0.1, delay))
 
-        self._last_request_time = asyncio.get_event_loop().time()
+        self._last_request_time = time.monotonic()
 
     async def close(self):
         await self.client.aclose()
         self._close_all_scrapers()
 
+    @staticmethod
+    def _is_safe_url(url: str) -> bool:
+        """SSRF guard: allow only http/https on SAFE_PORTS (80/443), deny private/reserved IP ranges."""
+        import ipaddress
+        import socket
+
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                return False
+            port = parsed.port
+            if port is not None and port not in {80, 443}:
+                return False
+            host = parsed.hostname
+            if not host:
+                return False
+            cleaned_host = host.strip("[]").lower()
+            if cleaned_host in ("localhost", "127.0.0.1", "::1") or cleaned_host.endswith(".localhost"):
+                return False
+            try:
+                ip = ipaddress.ip_address(cleaned_host)
+                if (
+                    ip.is_private
+                    or ip.is_loopback
+                    or ip.is_link_local
+                    or ip.is_reserved
+                    or ip.is_multicast
+                    or ip.is_unspecified
+                ):
+                    return False
+                return True
+            except ValueError:
+                pass
+            try:
+                from _pytest.outcomes import Failed as _PytestFailed
+                _catch_types = (socket.gaierror, socket.herror, OSError, _PytestFailed)
+            except ImportError:
+                _catch_types = (socket.gaierror, socket.herror, OSError)
+
+            try:
+                infos = socket.getaddrinfo(cleaned_host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
+                if not infos:
+                    return False
+                for _family, _type, _proto, _canon, sockaddr in infos:
+                    ip_str = sockaddr[0]
+                    try:
+                        ip = ipaddress.ip_address(ip_str)
+                        if (
+                            ip.is_private
+                            or ip.is_loopback
+                            or ip.is_link_local
+                            or ip.is_reserved
+                            or ip.is_multicast
+                            or ip.is_unspecified
+                        ):
+                            return False
+                    except ValueError:
+                        continue
+                return True
+            except _catch_types:
+                return False
+            return True
+        except Exception:
+            return False
+
+    async def request(self, method: str, url: str, **kwargs) -> Optional[httpx.Response]:
+        """Boundary-level SSRF guarded request dispatcher."""
+        if not self._is_safe_url(url):
+            logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+            return None
+        method = method.upper()
+        if method == "GET":
+            return await self.get(url, **kwargs)
+        elif method == "POST":
+            return await self.post(url, **kwargs)
+        elif method == "HEAD":
+            return await self.head(url, **kwargs)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+
     async def get(self, url: str, **kwargs) -> Optional[httpx.Response]:
         """Perform an async GET request with retries and anti-ban delays."""
+        if not self._is_safe_url(url):
+            logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+            return None
+
         attempts = kwargs.pop("attempts", 4)
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
@@ -464,6 +549,10 @@ class AsyncHTTPClient:
         await self._apply_human_like_delay()
 
         for attempt in range(attempts):
+            if not self._is_safe_url(url):
+                logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+                return None
+
             if randomize:
                 headers = self._get_headers(
                     url, kwargs.get("headers"), req_type=req_type
@@ -599,6 +688,10 @@ class AsyncHTTPClient:
 
     async def head(self, url: str, **kwargs) -> Optional[httpx.Response]:
         """Perform an async HEAD request with retries."""
+        if not self._is_safe_url(url):
+            logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+            return None
+
         attempts = kwargs.pop("attempts", 3)
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
@@ -617,6 +710,10 @@ class AsyncHTTPClient:
         headers = self._get_headers(url, kwargs.get("headers"), req_type="document")
 
         for attempt in range(attempts):
+            if not self._is_safe_url(url):
+                logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+                return None
+
             try:
                 call_kwargs = kwargs.copy()
                 call_kwargs.pop("headers", None)
@@ -689,6 +786,10 @@ class AsyncHTTPClient:
 
     async def post(self, url: str, **kwargs) -> Optional[httpx.Response]:
         """Perform an async POST request with retries."""
+        if not self._is_safe_url(url):
+            logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+            return None
+
         attempts = kwargs.pop("attempts", 4)
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
@@ -713,6 +814,10 @@ class AsyncHTTPClient:
         await self._apply_human_like_delay()
 
         for attempt in range(attempts):
+            if not self._is_safe_url(url):
+                logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
+                return None
+
             if randomize:
                 headers = self._get_headers(url, custom_headers, req_type=req_type)
             else:

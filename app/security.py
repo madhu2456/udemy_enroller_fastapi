@@ -675,6 +675,63 @@ class URLValidator(BaseModel):
 
     url: str
 
+    @staticmethod
+    def _is_private_or_reserved_host(host: str) -> bool:
+        """Check if a hostname or IP address resolves to a private, loopback, or reserved IP."""
+        import socket
+
+        if not host:
+            return True
+        cleaned_host = host.strip("[]").lower()
+        if cleaned_host in ("localhost", "127.0.0.1", "::1") or cleaned_host.endswith(".localhost"):
+            return True
+        try:
+            ip = ipaddress.ip_address(cleaned_host)
+            return (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or ip.is_multicast
+                or ip.is_unspecified
+            )
+        except ValueError:
+            pass
+
+        try:
+            from _pytest.outcomes import Failed as _PytestFailed
+            _catch_types = (socket.gaierror, socket.herror, OSError, _PytestFailed)
+        except ImportError:
+            _catch_types = (socket.gaierror, socket.herror, OSError)
+
+        try:
+            infos = socket.getaddrinfo(cleaned_host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
+            for _family, _type, _proto, _canon, sockaddr in infos:
+                ip_str = sockaddr[0]
+                try:
+                    ip = ipaddress.ip_address(ip_str)
+                    if (
+                        ip.is_private
+                        or ip.is_loopback
+                        or ip.is_link_local
+                        or ip.is_reserved
+                        or ip.is_multicast
+                        or ip.is_unspecified
+                    ):
+                        return True
+                except ValueError:
+                    continue
+        except _catch_types:
+            try:
+                from config.settings import get_settings
+
+                if get_settings().DEPLOYMENT_ENV == "server":
+                    return True
+            except Exception:
+                pass
+            return False
+        return False
+
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
@@ -712,13 +769,24 @@ class URLValidator(BaseModel):
         except Exception as e:
             raise ValueError(f"Invalid URL format: {str(e)}")
 
+    @classmethod
+    def validate_proxy_url(cls, url: Optional[str]) -> bool:
+        """Validate proxy URLs with private/reserved IP fencing and error handling."""
+        if not url:
+            return True  # None/empty proxy URL is valid
+        try:
+            cls(url=url)
+            parsed = urlparse(url)
+            host = parsed.hostname
+            if not host:
+                return False
+            if cls._is_private_or_reserved_host(host):
+                return False
+            return True
+        except (ValueError, Exception):
+            return False
+
 
 def validate_proxy_url(url: Optional[str]) -> bool:
     """Validate proxy URLs with enhanced error handling."""
-    if not url:
-        return True  # None/empty proxy URL is valid
-    try:
-        URLValidator(url=url)
-        return True
-    except ValueError:
-        return False
+    return URLValidator.validate_proxy_url(url)

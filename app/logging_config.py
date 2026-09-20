@@ -40,6 +40,15 @@ def sanitize_log_message(message: str) -> str:
     return message
 
 
+def _safe_sink_filter(record: dict) -> bool:
+    try:
+        msg = record.get("message", "")
+        record["message"] = sanitize_log_message(msg)
+        return True
+    except Exception:
+        return True  # Fail-safe to avoid dropping logs
+
+
 _SINK_IDS: list[int] = []
 
 
@@ -97,6 +106,7 @@ def setup_logging(level: str | None = None, log_file: str | None = None):
             format=concise_fmt,
             level=settings_level,
             colorize=False,
+            filter=_safe_sink_filter,
         )
     )
     resolved_file = log_file if log_file is not None else settings.LOG_FILE
@@ -110,6 +120,7 @@ def setup_logging(level: str | None = None, log_file: str | None = None):
                 rotation="10 MB",
                 retention="7 days",
                 encoding="utf-8",
+                filter=_safe_sink_filter,
             )
         )
 

@@ -23,7 +23,56 @@ UDEMY_COURSE_SUBSCRIBE_URL = f"{UDEMY_BASE_URL}/course/subscribe/"
 # Common Headers
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
 
-shutdown_event = asyncio.Event()
+_shutdown_event: asyncio.Event | None = None
+
+
+def get_shutdown_event() -> asyncio.Event:
+    try:
+        loop = asyncio.get_running_loop()
+        if not hasattr(loop, "_shutdown_event"):
+            loop._shutdown_event = asyncio.Event()
+        return loop._shutdown_event
+    except RuntimeError:
+        global _shutdown_event
+        if _shutdown_event is None:
+            _shutdown_event = asyncio.Event()
+        return _shutdown_event
+
+
+def reset_shutdown_event() -> None:
+    global _shutdown_event
+    _shutdown_event = None
+    try:
+        loop = asyncio.get_running_loop()
+        if hasattr(loop, "_shutdown_event"):
+            delattr(loop, "_shutdown_event")
+    except RuntimeError:
+        pass
+
+
+class _ShutdownEventProxy:
+    """Transparent proxy delegating dynamically to loop-bound get_shutdown_event()."""
+
+    def __getattr__(self, name: str):
+        return getattr(get_shutdown_event(), name)
+
+    def is_set(self) -> bool:
+        return get_shutdown_event().is_set()
+
+    def set(self) -> None:
+        get_shutdown_event().set()
+
+    def clear(self) -> None:
+        get_shutdown_event().clear()
+
+    async def wait(self) -> bool:
+        return await get_shutdown_event().wait()
+
+    def __repr__(self) -> str:
+        return repr(get_shutdown_event())
+
+
+shutdown_event = _ShutdownEventProxy()
 
 # Known false-positive course IDs from Udemy (not actual courses)
 BLACKLIST_IDS = {"562413829"}
