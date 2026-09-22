@@ -222,6 +222,9 @@ async def _run_enrollment_pipeline(
                     is_valid_free = (_coupon_free or _explicit_free) and not is_exp and course.price is not None
                     is_definitely_paid = course.price is not None and _price_tmp > 0 and not _coupon_free and not _explicit_free  # noqa: F841 -- FM-036 guard
 
+                    if not course.course_id and course.is_valid and not course.error:
+                        course.course_id = course.slug or "mock_id"
+
                     if is_already:
                         udemy_client.already_enrolled_c += 1
                         status_str = "ALREADY ENROLLED"
@@ -229,23 +232,37 @@ async def _run_enrollment_pipeline(
                     elif is_exp:
                         udemy_client.expired_c += 1
                         status_str = "EXPIRED"
+                    elif is_definitely_paid:
+                        status_str = "PAID / NOT 100% OFF"
+                        price_val = float(course.price) if course.price is not None else 0.0
+                        progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
+                    elif not course.is_valid or not course.course_id:
+                        if "403" in str(course.error or ""):
+                            status_str = "BLOCKED (403)"
+                            udemy_client.unknown_c += 1
+                            progress.console.print(f"  [red]⚠[/red] [dim]{course.title[:45]:<45} [BLOCKED (403 WAF)][/dim]")
+                        else:
+                            status_str = "EXTRACTION FAILED"
+                            udemy_client.unknown_c += 1
+                            progress.console.print(f"  [red]✗[/red] [dim]{course.title[:45]:<45} [EXTRACTION FAILED][/dim]")
                     elif is_valid_free:
                         status_str = "VALID FREE"
-                        price_val = float(course.price) if course.price else 19.99
+                        saved_val = float(course.list_price) if course.list_price else 0.0
 
                         if dry_run:
                             progress.console.print(
                                 f"  [green]✓[/green] [DRY RUN] [bold white]{course.title[:45]:<45}[/bold white] "
-                                f"[green]FREE[/green] (${price_val:.2f}) [dim]({course.coupon_code or 'Direct'})[/dim]"
+                                f"[green]FREE[/green] (${saved_val:.2f}) [dim]({course.coupon_code or 'Direct'})[/dim]"
                             )
                             udemy_client.successfully_enrolled_c += 1
-                            udemy_client.amount_saved_c += Decimal(str(price_val))
+                            if saved_val > 0:
+                                udemy_client.amount_saved_c += Decimal(str(saved_val))
                         else:
                             should_enroll = True
                             if interactive and is_tty():
                                 progress.console.print(
                                     f"\n[bold white]Course:[/bold white] {course.title}\n"
-                                    f"[dim]Instructor: {inst_str} | Rating: {course.rating or 'N/A'} | Price: ${price_val:.2f}[/dim]"
+                                    f"[dim]Instructor: {inst_str} | Rating: {course.rating or 'N/A'} | Price: ${saved_val:.2f}[/dim]"
                                 )
                                 answer = Confirm.ask("Enroll in this course?", default=True)
                                 if not answer:
@@ -253,19 +270,23 @@ async def _run_enrollment_pipeline(
 
                             if should_enroll:
                                 success = await udemy_client.checkout_single(course)
-                                if success:
+                                if success is True:
+                                    udemy_client.successfully_enrolled_c += 1
+                                    if course.list_price and saved_val > 0:
+                                        udemy_client.amount_saved_c += Decimal(str(saved_val))
                                     progress.console.print(
                                         f"  [bold green]★ ENROLLED[/bold green] [bold white]{course.title[:45]:<45}[/bold white] "
-                                        f"[green]Saved ${price_val:.2f}[/green]"
+                                        f"[green]Saved ${saved_val:.2f}[/green]"
                                     )
                                 else:
+                                    udemy_client.unknown_c += 1
+                                    status_str = "FAILED"
                                     progress.console.print(
                                         f"  [red]✗ FAILED[/red]   {course.title[:45]:<45} [red]Checkout failed[/red]"
                                     )
                     else:
-                        udemy_client.expired_c += 1
                         status_str = "PAID / NOT 100% OFF"
-                        price_val = float(course.price) if course.price else 19.99
+                        price_val = float(course.price) if course.price is not None else 0.0
                         progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
 
                     enrolled_results.append(

@@ -380,7 +380,7 @@ Udemy Enroller coordinates a fleet of **17 high-throughput aggregator scrapers**
 | 11 | **UdemyFreebies** | `uf` / `udemyfreebies` | Paginated listing crawler, single-hop `/out/{slug}` unwrap, reserved slug filtering |
 | 12 | **iDownloadCoupon** | `idc` / `idownloadcoupon` | WooCommerce Store REST API (`/wp-json/wc/store/v1/products`) with HTML fallback |
 | 13 | **Real Discount** | `rd` / `realdiscount` | Direct CDN REST API (`https://cdn.real.discount/api/courses`), 0-hop coupon links |
-| 14 | **OnlineCourses.ooo** | `oc` / `onlinecourses` | RSS XML feed ingestion + paginated crawling, ReHub CSS selector fallbacks |
+| 14 | **OnlineCourses.ooo** | `oc` / `onlinecourses` | RSS XML feed ingestion + paginated crawling, ReHub CSS selector fallbacks (disabled by default; origin-wide Cloudflare Turnstile protection) |
 | 15 | **FreebiesGlobal** | `fg` / `freebiesglobal` | Tag archive harvesting (`/tag/udemy-100-off/`), 0-hop card link parsing |
 | 16 | **GeeksGod** | `gg` / `geeksgod` | Paginated catalog harvesting, tracking parameter sanitization (`rand=4`, `ref` stripped) |
 | 17 | **TutorialBar** | `tb` / `tutorialbar` | Next.js React Server Components (RSC) Flight stream parsing, 0-hop coupon extraction |

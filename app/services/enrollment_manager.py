@@ -215,6 +215,8 @@ class EnrollmentManager:
     async def _run_pipeline_impl(self):
         logger.warning(f"Starting enrollment pipeline for run {self.run_id}")
         db = SessionLocal()
+        stop_event = asyncio.Event()
+        heartbeat_task: Optional[asyncio.Task] = None
         try:
             run = db.get(EnrollmentRun, self.run_id)
             if not run:
@@ -225,6 +227,36 @@ class EnrollmentManager:
             run.last_heartbeat = _utcnow_naive()
             db.commit()
             self.status = "scraping"
+
+            async def _heartbeat_worker(stop_evt: asyncio.Event):
+                while not stop_evt.is_set():
+                    try:
+                        try:
+                            await asyncio.wait_for(stop_evt.wait(), timeout=30.0)
+                            break
+                        except asyncio.TimeoutError:
+                            pass
+
+                        def _update_db_heartbeat():
+                            from sqlalchemy import text
+                            now = _utcnow_naive()
+                            with SessionLocal() as heartbeat_db:
+                                heartbeat_db.execute(
+                                    text(
+                                        "UPDATE enrollment_runs SET last_heartbeat = :now "
+                                        "WHERE id = :run_id AND status IN ('pending', 'scraping', 'enrolling')"
+                                    ),
+                                    {"now": now, "run_id": self.run_id},
+                                )
+                                heartbeat_db.commit()
+
+                        await asyncio.to_thread(_update_db_heartbeat)
+                    except asyncio.CancelledError:
+                        break
+                    except Exception as hb_err:
+                        logger.warning(f"Heartbeat worker error for run {self.run_id}: {hb_err}")
+
+            heartbeat_task = asyncio.create_task(_heartbeat_worker(stop_event))
 
             enabled_sites = [k for k, v in self.settings.get("sites", {}).items() if v]
             logger.warning(f"Enabled sites: {enabled_sites}")
@@ -516,6 +548,20 @@ class EnrollmentManager:
             except Exception:
                 pass
         finally:
+            if stop_event:
+                stop_event.set()
+            if heartbeat_task:
+                try:
+                    await asyncio.wait_for(asyncio.shield(heartbeat_task), timeout=5.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    heartbeat_task.cancel()
+                    try:
+                        await asyncio.shield(heartbeat_task)
+                    except (asyncio.CancelledError, Exception):
+                        pass
+                except Exception as e:
+                    logger.warning(f"Error shutting down heartbeat worker: {e}")
+
             clear_user_caches(self.user_id)
             EnrollmentManager.active_tasks.pop(self.run_id, None)
             db.close()

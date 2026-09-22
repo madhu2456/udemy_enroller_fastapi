@@ -154,7 +154,7 @@ class TestMergeSitesForPutHelper:
         assert set(merged) == set(defaults)
         assert len(merged) == 17
         for name in _NEW_SEVEN:
-            assert merged[name] is True
+            assert merged[name] == defaults[name]
         assert merged["FreeCourseSites"] is False
         assert "FreeWebCart" not in merged
         assert "Course Joiner" not in merged
@@ -207,7 +207,7 @@ class TestSettingsSitesPersistHttp:
         assert set(stored) == set(UserSettings.default_sites())
         assert len(stored) == 17
         for name in _NEW_SEVEN:
-            assert stored[name] is True
+            assert stored[name] == UserSettings.default_sites()[name]
         assert stored["FreeCourseSites"] is False
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
@@ -251,7 +251,7 @@ class TestSettingsSitesPersistHttp:
         body = response.json()["sites"]
         defaults = UserSettings.default_sites()
         assert set(body) == set(defaults)
-        assert all(body[k] is True for k in defaults)
+        assert all(body[k] == defaults[k] for k in defaults)
         assert "FreeWebCart" not in body
         assert "Course Joiner" not in body
         assert "Discudemy" not in body
@@ -276,7 +276,7 @@ class TestSettingsSitesPersistHttp:
         assert "Discudemy" not in body
         assert "FreeWebCart" not in body
         assert "Course Joiner" not in body
-        assert all(body[k] is True for k in defaults)
+        assert all(body[k] == defaults[k] for k in defaults)
         after = _db_sites(user_id)
         assert after == before
         assert len(after) == 16
@@ -341,7 +341,7 @@ class TestSettingsSitesPersistHttp:
         assert "Discudemy" not in stored
         assert "Course Joiner" not in stored
         for name in _NEW_SEVEN:
-            assert stored[name] is True
+            assert stored[name] == UserSettings.default_sites()[name]
 
     def test_non_dict_put_sites_does_not_500(self, sites_client):
         client, _user_id, token = sites_client

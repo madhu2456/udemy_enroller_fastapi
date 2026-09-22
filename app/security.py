@@ -66,10 +66,14 @@ def _get_fernet() -> Fernet:
             "Generate a proper key with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
         )
     else:
-        logger.warning(
+        msg = (
             "COOKIE_ENCRYPTION_KEY is not set; deriving key from SECRET_KEY. "
             "Set COOKIE_ENCRYPTION_KEY explicitly in production for stronger security."
         )
+        if getattr(settings, "DEPLOYMENT_ENV", "local") != "server":
+            logger.debug(msg)
+        else:
+            logger.warning(msg)
     _fernet = Fernet(derived)
     _fernet_key_bytes = base64.urlsafe_b64decode(derived)
     return _fernet

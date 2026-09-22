@@ -138,7 +138,7 @@ class UserSettings(Base):
             "Courson": True,
             "CouponScorpion": True,
             "Real Discount": True,
-            "OnlineCourses.ooo": True,
+            "OnlineCourses.ooo": False,
             "FreebiesGlobal": True,
             "GeeksGod": True,
             "TutorialBar": True,

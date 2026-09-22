@@ -983,7 +983,7 @@ class UdemyXpertScraper(Scraper):
     """
 
     MAX_COURSES: int = 500
-    CANDIDATE_BUFFER: int = 750
+    CANDIDATE_BUFFER: int = 300
     DETAIL_BATCH_SIZE: int = 10
 
     @property
@@ -1079,7 +1079,7 @@ class UdemyXpertScraper(Scraper):
                 except Exception:
                     return None, None
 
-            urls_to_fetch = course_urls[: getattr(self, "CANDIDATE_BUFFER", 750)]
+            urls_to_fetch = course_urls[: getattr(self, "CANDIDATE_BUFFER", 300)]
             self.length = len(urls_to_fetch)
             found = 0
 
@@ -1614,7 +1614,7 @@ class CouponamiScraper(Scraper):
     """
 
     MAX_COURSES: int = 500
-    CANDIDATE_BUFFER: int = 750
+    CANDIDATE_BUFFER: int = 300
     DETAIL_BATCH_SIZE: int = 10
 
     @property
@@ -3803,6 +3803,14 @@ class CouponScorpionScraper(Scraper):
 
 
 class OnlineCoursesScraper(Scraper):
+    """OnlineCourses.ooo — RSS /feed/ then HTML pagination.
+
+    Origin-wide Cloudflare Turnstile abort-closes with error
+    'Blocked by Cloudflare Turnstile WAF'. unique=0 is WAF/site-down,
+    not a selector miss. RSS items are /coupon/ slugs. Do not add
+    Playwright. Do not unregister while indexed.
+    """
+
     BASE_URL = "https://www.onlinecourses.ooo"
     FEED_URL = "https://www.onlinecourses.ooo/feed/"
     MAX_COURSES = 500
@@ -4575,73 +4583,85 @@ class ScraperService:
             self.source_states = {id(s): "queued" for s in self.scrapers}
 
         async def _run_scraper(scraper: Scraper):
-            self.source_states[id(scraper)] = "scraping"
-            logger.warning(f"  Scraper started: {scraper.site_name}")
+            async with worker_sem:
+                self.source_states[id(scraper)] = "scraping"
+                logger.warning(f"  Scraper started: {scraper.site_name}")
 
-            try:
-                async with worker_sem:
+                try:
                     await asyncio.wait_for(
                         scraper.scrape(detail_sem),
                         timeout=settings.SCRAPER_SITE_TIMEOUT_SECONDS,
                     )
-                state = "failed" if scraper.error else "completed"
-                self.source_states[id(scraper)] = state
-                return scraper, state
-            except asyncio.TimeoutError:
-                logger.error(f"  Scraper timed out: {scraper.site_name}")
-                scraper.error = (
-                    f"Timed out after {settings.SCRAPER_SITE_TIMEOUT_SECONDS}s"
-                )
-                scraper.done = True
-                self.source_states[id(scraper)] = "timed_out"
-                return scraper, "timed_out"
-            except asyncio.CancelledError:
-                scraper.done = True
-                raise
-            except Exception as e:
-                logger.error(f"  Scraper failed: {scraper.site_name} - {e}")
-                scraper.error = str(e)
-                scraper.done = True
-                self.source_states[id(scraper)] = "failed"
-                return scraper, "failed"
-            finally:
-                scraper.done = True
+                    state = "failed" if scraper.error else "completed"
+                    self.source_states[id(scraper)] = state
+                    return scraper, state
+                except asyncio.TimeoutError:
+                    logger.error(f"  Scraper timed out: {scraper.site_name}")
+                    scraper.error = (
+                        f"Timed out after {settings.SCRAPER_SITE_TIMEOUT_SECONDS}s"
+                    )
+                    scraper.done = True
+                    self.source_states[id(scraper)] = "timed_out"
+                    return scraper, "timed_out"
+                except asyncio.CancelledError:
+                    scraper.done = True
+                    if self.source_states.get(id(scraper)) == "scraping":
+                        self.source_states[id(scraper)] = "timed_out"
+                        return scraper, "timed_out"
+                    raise
+                except Exception as e:
+                    logger.error(f"  Scraper failed: {scraper.site_name} - {e}")
+                    scraper.error = str(e)
+                    scraper.done = True
+                    self.source_states[id(scraper)] = "failed"
+                    return scraper, "failed"
+                finally:
+                    scraper.done = True
 
         tasks = [asyncio.create_task(_run_scraper(s)) for s in self.scrapers]
+        task_to_scraper = {task: scraper for task, scraper in zip(tasks, self.scrapers)}
         pending = set(tasks)
+        fleet_timeout_fired = False
 
         try:
             loop = asyncio.get_event_loop()
             end_time = loop.time() + settings.SCRAPER_RUN_TIMEOUT_SECONDS
 
+            def _cancel_inflight():
+                for task in list(pending):
+                    scraper = task_to_scraper[task]
+                    if self.source_states.get(id(scraper)) == "scraping":
+                        task.cancel()
+
             while pending:
-                timeout_left = max(0, end_time - loop.time())
-                if timeout_left <= 0:
-                    break
+                wait_timeout = None
+                if not fleet_timeout_fired:
+                    timeout_left = end_time - loop.time()
+                    if timeout_left <= 0:
+                        _cancel_inflight()
+                        fleet_timeout_fired = True
+                    else:
+                        wait_timeout = timeout_left
 
                 done, pending = await asyncio.wait(
-                    pending, return_when=asyncio.FIRST_COMPLETED, timeout=timeout_left
+                    pending, return_when=asyncio.FIRST_COMPLETED, timeout=wait_timeout
                 )
 
+                if not done and not fleet_timeout_fired:
+                    _cancel_inflight()
+                    fleet_timeout_fired = True
+                    continue
+
                 for task in done:
+                    scraper = task_to_scraper[task]
                     try:
-                        scraper, state = task.result()
-                        yield scraper, state
+                        result_scraper, state = task.result()
+                        yield result_scraper, state
                     except asyncio.CancelledError:
-                        pass
-
-            # Overall timeout
-            if pending:
-                for task in pending:
-                    task.cancel()
-                await asyncio.gather(*pending, return_exceptions=True)
-
-                for s in self.scrapers:
-                    if self.source_states.get(id(s)) in ("queued", "scraping"):
-                        s.error = "Run timed out overall"
-                        s.done = True
-                        self.source_states[id(s)] = "timed_out"
-                        yield s, "timed_out"
+                        scraper.done = True
+                        if self.source_states.get(id(scraper)) == "scraping":
+                            self.source_states[id(scraper)] = "timed_out"
+                            yield scraper, "timed_out"
 
         except asyncio.CancelledError:
             for task in pending:

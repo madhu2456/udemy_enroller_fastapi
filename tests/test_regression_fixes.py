@@ -29,6 +29,7 @@ async def test_udemy_client_locale_fallback():
         with patch.object(client.http, "safe_json", new_callable=AsyncMock) as mock_safe_json:
             mock_safe_json.return_value = mock_json
 
+            client._course_fetch_throttle = AsyncMock()
             await client.get_course_id(course)
 
             assert course.language == "English"
@@ -42,6 +43,7 @@ async def test_udemy_client_locale_fallback():
 async def test_idownloadcoupon_semaphore_enforcement():
     """Test that iDownloadCoupon uses a local detail semaphore."""
     scraper = IDownloadCouponScraper(http=AsyncMock())
+    scraper.robots_gate.is_allowed = AsyncMock(return_value=True)
 
     with patch("app.services.scraper.asyncio.Semaphore") as mock_sem:
         # Mock the local semaphore instance
