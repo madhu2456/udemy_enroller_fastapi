@@ -7,6 +7,7 @@ import random
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Optional, Dict, Set
+from urllib.parse import urljoin, quote
 
 from bs4 import BeautifulSoup as bs
 from loguru import logger
@@ -97,9 +98,17 @@ class UdemyClient:
         """Sync cookie_dict into the CloudScraper session."""
         if self.cs is None:
             return
-        self.cs.cookies.clear()
         for k, v in self.cookie_dict.items():
-            self.cs.cookies.set(k, v, domain="www.udemy.com")
+            try:
+                current_val = self.cs.cookies.get(k, domain=".udemy.com")
+            except Exception:
+                current_val = None
+            if current_val != v:
+                try:
+                    del self.cs.cookies[k]
+                except Exception:
+                    pass
+                self.cs.cookies.set(k, v, domain=".udemy.com")
 
     def _sync_cs_cookies_back(self):
         """Sync CloudScraper session cookies back into cookie_dict."""
@@ -413,7 +422,10 @@ class UdemyClient:
     async def get_enrolled_courses(self, known_slugs: set = None):
         """Fetch enrolled courses using Mobile API headers."""
         logger.info("Fetching enrolled courses...")
-        base_url = f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}?ordering=-enroll_time&fields[course]=enrollment_time,url&page_size=100"
+        url = (
+            f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}"
+            "?ordering=-enroll_time&fields[course]=enrollment_time,url&page_size=100"
+        )
         self.enrolled_courses = {}
 
         common_headers = {}
@@ -422,27 +434,45 @@ class UdemyClient:
                 f"Bearer {self.cookie_dict['access_token']}"
             )
 
-        resp = await self.http.get(
-            base_url,
-            cookies=self.cookie_dict,
-            headers=common_headers,
-            req_type="mobile",
-        )
-        data = await self.http.safe_json(resp, "courses")
-        if not data:
-            return
+        for _page in range(50):
+            resp = await self.http.get(
+                url,
+                cookies=self.cookie_dict,
+                headers=common_headers,
+                req_type="mobile",
+            )
+            data = await self.http.safe_json(resp, "courses")
+            if not data:
+                break
 
-        for c in data.get("results", []):
-            try:
-                # URL format: https://www.udemy.com/course/slug/
-                parts = c["url"].strip("/").split("/")
-                if "course" in parts:
-                    idx = parts.index("course")
-                    if len(parts) > idx + 1:
-                        slug = parts[idx + 1]
-                        self.enrolled_courses[slug] = c.get("enrollment_time", "")
-            except Exception:
-                continue
+            results = data.get("results") or []
+            if not results:
+                break
+
+            for c in results:
+                try:
+                    # URL format: https://www.udemy.com/course/slug/
+                    parts = c["url"].strip("/").split("/")
+                    if "course" in parts:
+                        idx = parts.index("course")
+                        if len(parts) > idx + 1:
+                            slug = parts[idx + 1]
+                            self.enrolled_courses[slug] = c.get("enrollment_time", "")
+                except Exception:
+                    continue
+
+            if len(results) < 100:
+                break
+
+            next_url = data.get("next")
+            if not next_url or not isinstance(next_url, str):
+                break
+
+            joined = urljoin(constants.UDEMY_SUBSCRIBED_COURSES_URL, next_url)
+            if not is_udemy_url(joined):
+                break
+            url = joined
+
         logger.info(
             f"Enrolled courses check complete: {len(self.enrolled_courses)} tracked."
         )
@@ -1160,6 +1190,8 @@ class UdemyClient:
                 f"status={status} | course_id={course.course_id}"
             )
 
+        if not course.error:
+            course.error = "Checkout failed (no response / challenge)"
         course.status = False
 
     async def free_checkout(self, course: Course):
@@ -1173,10 +1205,18 @@ class UdemyClient:
             logger.warning(f"[FREE_CHECKOUT] Skipping paid course {course.title} (price={course.price})")
             course.status = False
             return
+        if not course.course_id:
+            logger.warning(f"[FREE_CHECKOUT] Missing course_id for {course.title}")
+            course.status = False
+            course.error = "Missing course_id"
+            return
         logger.info(f"[FREE_CHECKOUT] {course.title} | ID={course.course_id}")
 
         # Step 1: GET the subscribe URL (old working checkout logic)
         sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
+        clean_code = (course.coupon_code or "").strip()
+        if clean_code:
+            sub_url += f"&couponCode={quote(clean_code)}"
         headers = {
             "User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
             "Referer": course.url or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/",
@@ -1254,6 +1294,7 @@ class UdemyClient:
         if r2.status_code == 404:
             logger.warning(f"[FREE_CHECKOUT] Course not found or not enrolled (404) for {course.title}")
             course.status = False
+            course.error = "Course not enrolled or coupon invalid (404)"
             return
 
         if r2.status_code == 200:
@@ -1266,6 +1307,7 @@ class UdemyClient:
             logger.info(f"[FREE_CHECKOUT] Verify response for {course.title}: status={r2.status_code} | _class={data.get('_class')} | has_error={bool(data.get('error'))}")
             course.status = data.get("_class") == "course"
             if course.status:
+                course.error = None
                 logger.info(f"[FREE_CHECKOUT] SUCCESS for {course.title}")
             else:
                 logger.warning(
@@ -1300,6 +1342,22 @@ class UdemyClient:
                 await self._du_checkout(course)
         else:
             await self._du_checkout(course)
+            if course.status is False and not is_definitely_paid:
+                err = (course.error or "").lower()
+                is_expired = "expired" in err or "invalid" in err or "max" in err
+                is_cf_or_403 = (
+                    "403" in err
+                    or "challenge" in err
+                    or "html redirect" in err
+                    or "no response" in err
+                    or not err
+                )
+                if is_cf_or_403 and not is_expired:
+                    logger.warning(
+                        f"[CHECKOUT_SINGLE] _du_checkout failed with Cloudflare/403 for {course.title}, "
+                        "falling back to free_checkout"
+                    )
+                    await self.free_checkout(course)
 
         if course.status:
             logger.info(f"[CHECKOUT_SINGLE] SUCCESS for {course.title}")

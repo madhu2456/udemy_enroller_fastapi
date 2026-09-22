@@ -7,6 +7,7 @@
 """
 
 import pytest
+import requests
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.udemy_client import UdemyClient
@@ -21,7 +22,9 @@ def udemy_client():
 
 
 def _course():
-    return Course("Test", "https://www.udemy.com/course/test/")
+    c = Course("Test", "https://www.udemy.com/course/test/")
+    c.course_id = "123"
+    return c
 
 
 async def _run_du_checkout(client, course, responses):
@@ -250,3 +253,157 @@ class TestDuCheckoutFailFastAndStatusMatrix:
         assert course.status is False
         assert "server error" in course.error
         assert udemy_client._cs_post.await_count == 2
+
+
+class TestCloudScraperCookieJarSync:
+    """Task 1: CloudScraper cookie jar sync and clearance protection."""
+
+    def test_sync_cs_cookies_preserves_clearance_cookies(self, udemy_client):
+        udemy_client.cs.cookies = requests.cookies.RequestsCookieJar()
+        jar = udemy_client.cs.cookies
+        jar.set("cf_clearance", "secret_cf_token", domain=".udemy.com")
+        udemy_client.cookie_dict = {"client_id": "xyz"}
+        udemy_client._sync_cs_cookies()
+        assert jar.get("cf_clearance", domain=".udemy.com") == "secret_cf_token"
+        assert jar.get("client_id", domain=".udemy.com") == "xyz"
+
+    def test_sync_cs_cookies_handles_cookie_conflict(self, udemy_client):
+        udemy_client.cs.cookies = requests.cookies.RequestsCookieJar()
+        jar = udemy_client.cs.cookies
+        jar.set("access_token", "old_token", domain="www.udemy.com")
+        jar.set("access_token", "domain_token", domain=".udemy.com")
+        udemy_client.cookie_dict = {"access_token": "new_token"}
+        # Should not raise CookieConflictError
+        udemy_client._sync_cs_cookies()
+        assert jar.get("access_token", domain=".udemy.com") == "new_token"
+
+    def test_sync_cs_cookies_updates_changed_cookie(self, udemy_client):
+        udemy_client.cs.cookies = requests.cookies.RequestsCookieJar()
+        jar = udemy_client.cs.cookies
+        jar.set("session_id", "val1", domain=".udemy.com")
+        udemy_client.cookie_dict = {"session_id": "val2"}
+        udemy_client._sync_cs_cookies()
+        assert jar.get("session_id", domain=".udemy.com") == "val2"
+
+    def test_sync_cs_cookies_back_populates_dict(self, udemy_client):
+        udemy_client.cs.cookies = requests.cookies.RequestsCookieJar()
+        jar = udemy_client.cs.cookies
+        jar.set("new_cookie", "from_scraper", domain=".udemy.com")
+        udemy_client.cookie_dict = {}
+        udemy_client._sync_cs_cookies_back()
+        assert udemy_client.cookie_dict.get("new_cookie") == "from_scraper"
+
+    def test_sync_cs_cookies_safe_when_cs_none(self):
+        client = UdemyClient()
+        client.cs = None
+        client.cookie_dict = {"key": "val"}
+        # Must not raise
+        client._sync_cs_cookies()
+        client._sync_cs_cookies_back()
+
+
+class TestFreeCheckoutCouponSupport:
+    """Task 2: free_checkout coupon handling & sanitization."""
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_missing_course_id_fails_fast(self, udemy_client):
+        course = _course()
+        course.course_id = None
+        await udemy_client.free_checkout(course)
+        assert course.status is False
+        assert course.error == "Missing course_id"
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_url_encodes_coupon_code(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        course.coupon_code = "CODE 100%"
+        udemy_client.http.get = AsyncMock(return_value=MagicMock(status_code=200, headers={}))
+        udemy_client.http.safe_json = AsyncMock(return_value={"_class": "course", "id": 123})
+        await udemy_client.free_checkout(course)
+        sub_call = udemy_client.http.get.await_args_list[0]
+        assert "couponCode=CODE%20100%25" in sub_call.args[0]
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_sets_404_error_message(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        r1 = MagicMock(status_code=302, headers={})
+        r2 = MagicMock(status_code=404, headers={})
+        udemy_client.http.get = AsyncMock(side_effect=[r1, r2])
+        await udemy_client.free_checkout(course)
+        assert course.status is False
+        assert course.error == "Course not enrolled or coupon invalid (404)"
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_clears_error_on_success(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        course.error = "Previous error"
+        r1 = MagicMock(status_code=200, headers={})
+        r2 = MagicMock(status_code=200, headers={})
+        udemy_client.http.get = AsyncMock(side_effect=[r1, r2])
+        udemy_client.http.safe_json = AsyncMock(return_value={"_class": "course", "id": 123})
+        await udemy_client.free_checkout(course)
+        assert course.status is True
+        assert course.error is None
+
+
+class TestCheckoutSingleCouponFallback:
+    """Task 3: checkout_single fallback for 100% off coupon courses."""
+
+    @pytest.mark.asyncio
+    async def test_checkout_single_falls_back_on_html_challenge(self, udemy_client):
+        course = _course()
+        course.is_free = False
+        course.coupon_code = "FREE100"
+        async def fake_du(c):
+            c.status = False
+            c.error = "HTML redirect (Cloudflare challenge or cart)"
+        udemy_client._du_checkout = AsyncMock(side_effect=fake_du)
+        udemy_client.free_checkout = AsyncMock()
+
+        await udemy_client.checkout_single(course)
+        udemy_client.free_checkout.assert_called_once_with(course)
+
+    @pytest.mark.asyncio
+    async def test_checkout_single_falls_back_on_no_response_challenge(self, udemy_client):
+        course = _course()
+        course.is_free = False
+        course.coupon_code = "FREE100"
+        async def fake_du(c):
+            c.status = False
+            c.error = "Checkout failed (no response / challenge)"
+        udemy_client._du_checkout = AsyncMock(side_effect=fake_du)
+        udemy_client.free_checkout = AsyncMock()
+
+        await udemy_client.checkout_single(course)
+        udemy_client.free_checkout.assert_called_once_with(course)
+
+    @pytest.mark.asyncio
+    async def test_checkout_single_no_fallback_on_expired_coupon(self, udemy_client):
+        course = _course()
+        course.is_free = False
+        course.coupon_code = "EXPIRED100"
+        async def fake_du(c):
+            c.status = False
+            c.error = "Coupon expired"
+        udemy_client._du_checkout = AsyncMock(side_effect=fake_du)
+        udemy_client.free_checkout = AsyncMock()
+
+        await udemy_client.checkout_single(course)
+        udemy_client.free_checkout.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_checkout_single_no_fallback_on_unknown_504(self, udemy_client):
+        course = _course()
+        course.is_free = False
+        course.coupon_code = "FREE100"
+        async def fake_du(c):
+            c.status = None
+            c.error = "unknown: 504 server unavailable"
+        udemy_client._du_checkout = AsyncMock(side_effect=fake_du)
+        udemy_client.free_checkout = AsyncMock()
+
+        await udemy_client.checkout_single(course)
+        udemy_client.free_checkout.assert_not_called()
