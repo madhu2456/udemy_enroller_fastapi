@@ -1222,12 +1222,17 @@ class UdemyClient:
             "Referer": course.url or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/",
             "X-Requested-With": "XMLHttpRequest",
         }
+        access_token = self.cookie_dict.get("access_token")
+        if access_token:
+            headers["Authorization"] = f"Bearer {access_token}"
+
         r1 = await self.http.get(
             sub_url,
             cookies=self.cookie_dict,
             headers=headers,
             req_type="mobile",
             use_cloudscraper=True,
+            follow_redirects=True,
             log_failures=False,
             raise_for_status=False,
         )
@@ -1237,6 +1242,9 @@ class UdemyClient:
             return
 
         logger.info(f"[FREE_CHECKOUT] Subscribe status={r1.status_code} for {course.title}")
+        if 300 <= r1.status_code < 400:
+            location = r1.headers.get("Location") or r1.headers.get("location") if r1.headers else None
+            logger.info(f"[FREE_CHECKOUT] Redirect Location: {location} for {course.title}")
         if r1.status_code in (503, 504):
             logger.warning(f"[FREE_CHECKOUT] {r1.status_code} from Udemy for {course.title} — server unavailable (unknown)")
             course.status = None
@@ -1247,11 +1255,12 @@ class UdemyClient:
             course.status = False
             course.error = f"Auth error ({r1.status_code})"
             return
-        if r1.status_code in (200, 302, 303, 307, 400):
+        if r1.status_code in (200, 301, 302, 303, 307, 308, 400):
             pass
         else:
             logger.warning(f"[FREE_CHECKOUT] Unexpected subscribe status={r1.status_code} for {course.title}")
             course.status = False
+            course.error = f"Unexpected subscribe status={r1.status_code}"
             return
 
         # Step 2: Verify enrollment via API

@@ -749,17 +749,25 @@ class AsyncHTTPClient:
         return None
 
     def _build_scraper_headers_local(self, headers, kwargs, is_mobile_request):
-        """Original minimal CloudScraper headers (local)."""
+        """Build CloudScraper headers (local), preserving required headers."""
         scraper_headers = {}
-        if headers and "Referer" in headers:
-            scraper_headers["Referer"] = headers["Referer"]
-        if headers and "Authorization" in headers:
-            scraper_headers["Authorization"] = headers["Authorization"]
-        if headers and headers.get("User-Agent"):
-            scraper_headers["User-Agent"] = headers["User-Agent"]
-        for hint in ("sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform"):
-            if headers and hint in headers:
-                scraper_headers[hint] = headers[hint]
+        if headers:
+            allowed_exact = {
+                "referer",
+                "authorization",
+                "user-agent",
+                "x-requested-with",
+                "accept",
+                "origin",
+                "content-type",
+                "sec-ch-ua",
+                "sec-ch-ua-mobile",
+                "sec-ch-ua-platform",
+            }
+            for k, v in headers.items():
+                k_lower = k.lower()
+                if (k_lower in allowed_exact or k_lower.startswith("x-")) and v is not None:
+                    scraper_headers[k] = v
         scraper_headers["Accept-Encoding"] = "identity"
         return scraper_headers
 

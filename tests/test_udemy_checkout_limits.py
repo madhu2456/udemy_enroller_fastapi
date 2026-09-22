@@ -166,6 +166,60 @@ class TestFreeCheckoutStatusMatrix:
         assert course.status is True
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("status_code", [301, 308])
+    async def test_free_checkout_301_308_redirect_proceeds_to_verification(self, udemy_client, status_code):
+        course = _course()
+        course.course_id = "123"
+        r1 = MagicMock(status_code=status_code, headers={"Location": "https://www.udemy.com/cart/subscribe/confirm/"})
+        r2 = MagicMock(status_code=200, headers={})
+        udemy_client.http.get = AsyncMock(side_effect=[r1, r2])
+        udemy_client.http.safe_json = AsyncMock(return_value={"_class": "course", "id": 123})
+        await udemy_client.free_checkout(course)
+        assert course.status is True
+        assert udemy_client.http.get.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_follow_redirects_and_bearer_token(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        udemy_client.cookie_dict = {"access_token": "test_token_123"}
+        r1 = MagicMock(status_code=200, headers={})
+        r2 = MagicMock(status_code=200, headers={})
+        udemy_client.http.get = AsyncMock(side_effect=[r1, r2])
+        udemy_client.http.safe_json = AsyncMock(return_value={"_class": "course", "id": 123})
+        await udemy_client.free_checkout(course)
+        assert udemy_client.http.get.await_count == 2
+        calls = udemy_client.http.get.await_args_list
+        r1_call = calls[0]
+        assert r1_call.kwargs.get("follow_redirects") is True
+        assert r1_call.kwargs.get("headers", {}).get("Authorization") == "Bearer test_token_123"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status_code,header_key", [(301, "Location"), (308, "location")])
+    async def test_free_checkout_logs_location_for_3xx(self, udemy_client, status_code, header_key):
+        course = _course()
+        course.course_id = "123"
+        target_url = f"https://www.udemy.com/target/{status_code}"
+        r1 = MagicMock(status_code=status_code, headers={header_key: target_url})
+        r2 = MagicMock(status_code=200, headers={})
+        udemy_client.http.get = AsyncMock(side_effect=[r1, r2])
+        udemy_client.http.safe_json = AsyncMock(return_value={"_class": "course", "id": 123})
+        with patch("app.services.udemy_client.logger") as mock_logger:
+            await udemy_client.free_checkout(course)
+            logged_messages = [call.args[0] for call in mock_logger.info.call_args_list if call.args]
+            assert any(target_url in msg for msg in logged_messages)
+
+    @pytest.mark.asyncio
+    async def test_free_checkout_unexpected_status_sets_error(self, udemy_client):
+        course = _course()
+        course.course_id = "123"
+        r1 = MagicMock(status_code=418, headers={})
+        udemy_client.http.get = AsyncMock(return_value=r1)
+        await udemy_client.free_checkout(course)
+        assert course.status is False
+        assert course.error == "Unexpected subscribe status=418"
+
+    @pytest.mark.asyncio
     async def test_checkout_single_does_not_fallback_on_unknown(self, udemy_client):
         course = _course()
         course.is_free = True
