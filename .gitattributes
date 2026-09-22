@@ -1,0 +1,20 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Shell scripts must strictly use LF
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+
+# Batch scripts must use CRLF for Windows CMD compatibility
+*.bat text eol=crlf
+
+# Python source files must use LF
+*.py text eol=lf
+
+# Config and documentation files
+*.json text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
