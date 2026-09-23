@@ -6,6 +6,7 @@ import asyncio
 import csv
 import inspect
 import json
+import random
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -60,6 +61,7 @@ async def _run_enrollment_pipeline(
     dry_run: bool,
     interactive: bool,
     workers: Optional[int] = None,
+    resync_library: bool = False,
 ) -> int:
     """Async implementation of the enrollment pipeline."""
     print_banner()
@@ -122,6 +124,11 @@ async def _run_enrollment_pipeline(
 
         # 3. Load Library
         print_info("Fetching existing enrolled courses to prevent duplicate checkouts...")
+        if resync_library:
+            udemy_client.full_sync_complete = False
+            udemy_client.archived_sync_complete = False
+            udemy_client.archived_sync_cursor_page = 1
+            udemy_client._save_enrolled_cache()
         await udemy_client.get_enrolled_courses()
         existing_count = len(udemy_client.enrolled_courses or {})
         print_success(f"Found [bold]{existing_count}[/bold] courses already in your library.")
@@ -311,6 +318,12 @@ async def _run_enrollment_pipeline(
                                     udemy_client.already_enrolled_c += 1
                                     status_str = "ALREADY ENROLLED"
                                     progress.console.print(f"  [yellow]●[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
+                                elif getattr(course, "error", "") == "checkout_circuit_open":
+                                    udemy_client.unknown_c += 1
+                                    status_str = "CIRCUIT OPEN"
+                                    progress.console.print(
+                                        f"  [yellow]⏸ CIRCUIT OPEN[/yellow]  {course.title[:45]:<45} [yellow]Cloudflare challenge cooldown active[/yellow]"
+                                    )
                                 else:
                                     udemy_client.unknown_c += 1
                                     status_str = "FAILED"
@@ -320,6 +333,9 @@ async def _run_enrollment_pipeline(
                                         progress.console.print(
                                             f"  [red]✗ FAILED[/red]   {course.title[:45]:<45} [red]Checkout failed[/red]"
                                         )
+
+                                if not dry_run and getattr(course, "error", "") != "checkout_circuit_open":
+                                    await asyncio.sleep(random.uniform(1.5, 2.5))
                     else:
                         status_str = "PAID / NOT 100% OFF"
                         progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
@@ -463,6 +479,11 @@ def enroll_command(
         "-i",
         help="Prompt for user confirmation before enrolling each course.",
     ),
+    resync_library: bool = typer.Option(
+        False,
+        "--resync-library",
+        help="Force a complete re-sync of active and archived library courses.",
+    ),
 ) -> None:
     """Batch enroll in free Udemy courses from top coupon websites."""
     code = run_sync(
@@ -481,6 +502,7 @@ def enroll_command(
             dry_run=dry_run,
             interactive=interactive,
             workers=workers,
+            resync_library=resync_library,
         )
     )
     if code != 0:

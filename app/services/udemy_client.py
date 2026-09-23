@@ -5,6 +5,7 @@ import re
 import asyncio
 import json
 import random
+import time
 from datetime import UTC, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -44,6 +45,12 @@ class LoginException(Exception):
 class UdemyClient:
     """Handles asynchronous authentication and enrollment using standard client emulation."""
 
+    _checkout_consecutive_403s: int = 0
+    _checkout_circuit_open_until: float = 0.0
+    _checkout_trip_count: int = 0
+    archived_sync_complete: bool = False
+    archived_sync_cursor_page: int = 1
+
     def __init__(self, proxy: Optional[str] = None):
         logger.warning("UdemyClient v2.1 (standard emulated client logic active)")
         self.http = AsyncHTTPClient(proxy=proxy)
@@ -57,6 +64,12 @@ class UdemyClient:
         self.enrolled_courses: Optional[Dict[str, str]] = None
         self.enrolled_course_ids: Set[str] = set()
         self.full_sync_complete: bool = False
+        self._checkout_semaphore: asyncio.Semaphore = asyncio.Semaphore(1)
+        self._checkout_consecutive_403s: int = 0
+        self._checkout_circuit_open_until: float = 0.0  # Monotonic time
+        self._checkout_trip_count: int = 0
+        self.archived_sync_complete: bool = False
+        self.archived_sync_cursor_page: int = 1
 
         # Enrollment counters
         self.successfully_enrolled_c = 0
@@ -99,6 +112,16 @@ class UdemyClient:
         self._global_403_count = 0
         self._account_block_active = False
         self._account_block_cooldown_until = None
+
+    def is_checkout_circuit_open(self) -> bool:
+        until = getattr(self, "_checkout_circuit_open_until", 0.0)
+        if until <= 0.0:
+            return False
+        if time.monotonic() >= until:
+            logger.info("[CIRCUIT BREAKER] Checkout cooldown expired; transitioning to HALF-OPEN")
+            self._checkout_circuit_open_until = 0.0
+            return False
+        return True
 
     def _init_cloudscraper(self):
         """Create a persistent CloudScraper session for enrollment (DUCE-style)."""
@@ -462,6 +485,8 @@ class UdemyClient:
                 courses = data.get("enrolled_courses") or data.get("courses") or {}
                 course_ids = data.get("enrolled_course_ids") or data.get("course_ids") or []
                 self.full_sync_complete = bool(data.get("full_sync_complete", False))
+                self.archived_sync_complete = bool(data.get("archived_sync_complete", False))
+                self.archived_sync_cursor_page = int(data.get("archived_sync_cursor_page", 1))
                 if isinstance(courses, dict):
                     if self.enrolled_courses is None:
                         self.enrolled_courses = {}
@@ -489,6 +514,8 @@ class UdemyClient:
             tmp_path = cache_path.with_suffix(".tmp")
             payload = {
                 "full_sync_complete": self.full_sync_complete,
+                "archived_sync_complete": self.archived_sync_complete,
+                "archived_sync_cursor_page": self.archived_sync_cursor_page,
                 "enrolled_courses": self.enrolled_courses or {},
                 "enrolled_course_ids": list(self.enrolled_course_ids),
             }
@@ -502,7 +529,7 @@ class UdemyClient:
             logger.warning(f"Failed to save enrolled courses cache: {e}")
             return False
 
-    async def get_enrolled_courses(self, known_slugs: set = None):
+    async def get_enrolled_courses(self, known_slugs: set = None, sync_archived: bool = True):
         """Fetch enrolled courses using Mobile API headers."""
         logger.info("Fetching enrolled courses...")
         self._load_enrolled_cache()
@@ -511,7 +538,7 @@ class UdemyClient:
 
         url = (
             f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}"
-            "?ordering=-enroll_time&fields[course]=id,enrollment_time,url&page_size=100"
+            "?is_archived=false&ordering=-enroll_time&fields[course]=id,enrollment_time,url&page_size=100"
         )
 
         common_headers = {}
@@ -621,6 +648,88 @@ class UdemyClient:
         logger.info(
             f"Enrolled courses check complete: {len(self.enrolled_courses)} tracked ({len(self.enrolled_course_ids)} IDs)."
         )
+
+        # Phase 2: Archived courses sync (only if user logged in and not yet fully archived)
+        if sync_archived and self.udemy_user_id and not self.archived_sync_complete:
+            logger.info("Syncing archived courses (Phase 2)...")
+            start_page = max(1, self.archived_sync_cursor_page)
+            sync_finished = False
+            last_page = start_page
+            for page in range(start_page, 501):
+                last_page = page
+                await asyncio.sleep(0.05)
+                archived_url = (
+                    f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}"
+                    f"?is_archived=true&ordering=-enroll_time&fields[course]=id,enrollment_time,url&page_size=100&page={page}"
+                )
+                retry_count = 0
+                resp = None
+                while retry_count < 3:
+                    resp = await self.http.get(
+                        archived_url,
+                        cookies=self.cookie_dict,
+                        headers=common_headers,
+                        req_type="mobile",
+                    )
+                    if resp and resp.status_code == 429:
+                        retry_after = 5
+                        if hasattr(resp, "headers") and resp.headers.get("Retry-After"):
+                            try:
+                                retry_after = int(resp.headers["Retry-After"])
+                            except (ValueError, TypeError):
+                                retry_after = 5
+                        logger.warning(f"Rate limited in archived get_enrolled_courses (429). Retrying after {retry_after}s.")
+                        await asyncio.sleep(retry_after)
+                        retry_count += 1
+                        continue
+                    break
+
+                data = await self.http.safe_json(resp, "archived courses")
+                if not data:
+                    self.archived_sync_cursor_page = page
+                    self._save_enrolled_cache()
+                    break
+
+                results = data.get("results") or []
+                if not results:
+                    sync_finished = True
+                    break
+
+                for c in results:
+                    cid = c.get("id")
+                    cid_str = str(cid) if cid is not None else None
+
+                    slug = None
+                    try:
+                        parts = (c.get("url") or "").strip("/").split("/")
+                        if "course" in parts:
+                            idx = parts.index("course")
+                            if len(parts) > idx + 1:
+                                slug = parts[idx + 1]
+                    except Exception:
+                        slug = None
+
+                    if slug:
+                        self.enrolled_courses[slug] = c.get("enrollment_time", "")
+                    if cid_str:
+                        self.enrolled_course_ids.add(cid_str)
+
+                # Checkpoint every 5 pages
+                if page % 5 == 0:
+                    self.archived_sync_cursor_page = page
+                    self._save_enrolled_cache()
+
+                if len(results) < 100 or not data.get("next"):
+                    sync_finished = True
+                    break
+
+            if sync_finished or last_page >= 500:
+                self.archived_sync_complete = True
+                self.archived_sync_cursor_page = 1
+                self._save_enrolled_cache()
+                logger.info(
+                    f"Archived courses sync complete: {len(self.enrolled_courses)} total tracked ({len(self.enrolled_course_ids)} IDs)."
+                )
 
     def _extract_course_id(self, html: str) -> Optional[str]:
         if not html:
@@ -1181,220 +1290,282 @@ class UdemyClient:
             course.status = False
             return
 
-        # Log course state at checkout time (sanitize coupon_code)
-        log_msg = (
-            f"[DU_CHECKOUT STATE] {course.title} | ID={course.course_id} | "
-            f"coupon={course.coupon_code or 'NONE'} | price={course.price} | "
-            f"list_price={course.list_price} | is_free={course.is_free} | "
-            f"is_coupon_valid={course.is_coupon_valid}"
-        )
-        logger.info(sanitize_log_message(log_msg))
+        if self.is_checkout_circuit_open():
+            course.status = False
+            course.error = "checkout_circuit_open"
+            return
 
-        # Step 1: Preflight GET to checkout page to warm up the session
-        checkout_page_url = "https://www.udemy.com/payment/checkout/"
-        checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
-        if checkout_resp is not None:
-            try:
-                fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
-                if fresh_csrf:
-                    self.cookie_dict["csrftoken"] = fresh_csrf
-                    self.cookie_dict["csrf_token"] = fresh_csrf
-            except Exception:
-                pass
+        sem = getattr(self, "_checkout_semaphore", None)
+        if sem is None:
+            sem = asyncio.Semaphore(1)
+            self._checkout_semaphore = sem
 
-        # Step 2: GET the course landing page to set checkout context cookies
-        course_page_url = f"https://www.udemy.com/course/{course.slug}/"
-        await self._cs_get(course_page_url, timeout=25)
+        async with sem:
+            if self.is_checkout_circuit_open():
+                course.status = False
+                course.error = "checkout_circuit_open"
+                return
 
-        # Step 3: Build payload.
-        # Udemy checkout expects the FINAL price the user pays. For 100% off coupons
-        # and free courses, this is always 0. check_course already validates the coupon.
-        checkout_currency = (course.currency or self.currency or "USD").upper()
-
-        def _build_payload(amount: float):
-            return {
-                "checkout_environment": "Marketplace",
-                "checkout_event": "Submit",
-                "payment_info": {
-                    "method_id": "0",
-                    "payment_method": "free-method",
-                    "payment_vendor": "Free",
-                },
-                "shopping_info": {
-                    "items": [
-                        {
-                            "buyable": {"id": str(course.course_id), "type": "course"},
-                            "discountInfo": {"code": course.coupon_code or ""},
-                            "price": {
-                                "amount": amount,
-                                "currency": checkout_currency,
-                            },
-                        }
-                    ],
-                    "is_cart": False,
-                },
-            }
-
-        # Simplified headers matching the old working Playwright/HTTPX fallback style.
-        # Avoid mobile-app emulation headers that can confuse Udemy with CloudScraper.
-        csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
-        headers = {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://www.udemy.com/payment/checkout/",
-            "Origin": "https://www.udemy.com",
-            "X-CSRF-Token": csrf_token,
-        }
-        if self.cookie_dict.get("access_token"):
-            headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
-
-        max_attempts = 5
-        # Rate-limit retries are iterative, never recursive (F-ENRL-C14):
-        # unbounded recursion could re-enter indefinitely under sustained 429s.
-        max_rate_limit_retries = 3
-        rate_limit_retries = 0
-        server_error_retries = 0
-        for attempt in range(max_attempts):
-            logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
-
-            # On retry, refresh checkout page and apply backoff
-            if attempt > 0:
-                checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
-                if checkout_resp is not None:
-                    try:
-                        fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
-                        if fresh_csrf:
-                            headers["X-CSRF-Token"] = fresh_csrf
-                            self.cookie_dict["csrftoken"] = fresh_csrf
-                            self.cookie_dict["csrf_token"] = fresh_csrf
-                    except Exception:
-                        pass
-                await asyncio.sleep(min(2 + attempt, 8))
-
-            # Always send amount=0 — check_course already validated the coupon.
-            # Udemy validates the discount server-side; the amount must be the final price.
-            payload = _build_payload(0.0)
-            # Log only metadata (not the full payload which contains coupon_code in discountInfo)
-            logger.info(f"[DU_CHECKOUT PAYLOAD] course_id={course.course_id} | currency={checkout_currency} | amount=0.0")
-
-            r = await self._cs_post(
-                "https://www.udemy.com/payment/checkout-submit/",
-                json=payload,
-                headers=headers,
-                timeout=25,
+            # Log course state at checkout time (sanitize coupon_code)
+            log_msg = (
+                f"[DU_CHECKOUT STATE] {course.title} | ID={course.course_id} | "
+                f"coupon={course.coupon_code or 'NONE'} | price={course.price} | "
+                f"list_price={course.list_price} | is_free={course.is_free} | "
+                f"is_coupon_valid={course.is_coupon_valid}"
             )
+            logger.info(sanitize_log_message(log_msg))
 
-            if r is None:
-                logger.warning(f"[DU_CHECKOUT] No response (attempt {attempt + 1}) for {course.title}")
-                continue
+            # Step 1: Preflight GET to checkout page to warm up the session
+            checkout_page_url = "https://www.udemy.com/payment/checkout/"
+            checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
+            if checkout_resp is not None:
+                try:
+                    fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
+                    if fresh_csrf:
+                        self.cookie_dict["csrftoken"] = fresh_csrf
+                        self.cookie_dict["csrf_token"] = fresh_csrf
+                except Exception:
+                    pass
 
-            status = getattr(r, "status_code", 0)
-            ctype = getattr(r, "headers", {}).get("content-type", "").lower()
-            final_url = str(getattr(r, "url", ""))
+            # Step 2: GET the course landing page to set checkout context cookies
+            course_page_url = f"https://www.udemy.com/course/{course.slug}/"
+            await self._cs_get(course_page_url, timeout=25)
 
-            logger.info(f"[DU_CHECKOUT] status={status} (attempt {attempt + 1}) for {course.title}")
+            # Step 3: Build payload.
+            # Udemy checkout expects the FINAL price the user pays. For 100% off coupons
+            # and free courses, this is always 0. check_course already validates the coupon.
+            checkout_currency = (course.currency or self.currency or "USD").upper()
 
-            if status == 429:
-                rate_limit_retries += 1
-                if rate_limit_retries > max_rate_limit_retries:
+            def _build_payload(amount: float):
+                return {
+                    "checkout_environment": "Marketplace",
+                    "checkout_event": "Submit",
+                    "payment_info": {
+                        "method_id": "0",
+                        "payment_method": "free-method",
+                        "payment_vendor": "Free",
+                    },
+                    "shopping_info": {
+                        "items": [
+                            {
+                                "buyable": {"id": str(course.course_id), "type": "course"},
+                                "discountInfo": {"code": course.coupon_code or ""},
+                                "price": {
+                                    "amount": amount,
+                                    "currency": checkout_currency,
+                                },
+                            }
+                        ],
+                        "is_cart": False,
+                    },
+                }
+
+            # Simplified headers matching the old working Playwright/HTTPX fallback style.
+            # Avoid mobile-app emulation headers that can confuse Udemy with CloudScraper.
+            csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
+            headers = {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": "https://www.udemy.com/payment/checkout/",
+                "Origin": "https://www.udemy.com",
+                "X-CSRF-Token": csrf_token,
+            }
+            if self.cookie_dict.get("access_token"):
+                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
+
+            max_attempts = 5
+            # Rate-limit retries are iterative, never recursive (F-ENRL-C14):
+            # unbounded recursion could re-enter indefinitely under sustained 429s.
+            max_rate_limit_retries = 3
+            rate_limit_retries = 0
+            server_error_retries = 0
+            for attempt in range(max_attempts):
+                logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
+
+                # On retry, refresh checkout page and apply backoff
+                if attempt > 0:
+                    checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
+                    if checkout_resp is not None:
+                        try:
+                            fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
+                            if fresh_csrf:
+                                headers["X-CSRF-Token"] = fresh_csrf
+                                self.cookie_dict["csrftoken"] = fresh_csrf
+                                self.cookie_dict["csrf_token"] = fresh_csrf
+                        except Exception:
+                            pass
+                    await asyncio.sleep(min(2 + attempt, 8))
+
+                # Always send amount=0 — check_course already validated the coupon.
+                # Udemy validates the discount server-side; the amount must be the final price.
+                payload = _build_payload(0.0)
+                # Log only metadata (not the full payload which contains coupon_code in discountInfo)
+                logger.info(f"[DU_CHECKOUT PAYLOAD] course_id={course.course_id} | currency={checkout_currency} | amount=0.0")
+
+                r = await self._cs_post(
+                    "https://www.udemy.com/payment/checkout-submit/",
+                    json=payload,
+                    headers=headers,
+                    timeout=25,
+                )
+
+                if r is None:
+                    logger.warning(f"[DU_CHECKOUT] No response (attempt {attempt + 1}) for {course.title}")
+                    continue
+
+                status = getattr(r, "status_code", 0)
+                ctype = getattr(r, "headers", {}).get("content-type", "").lower()
+                final_url = str(getattr(r, "url", ""))
+
+                logger.info(f"[DU_CHECKOUT] status={status} (attempt {attempt + 1}) for {course.title}")
+
+                if status == 429:
+                    rate_limit_retries += 1
+                    if rate_limit_retries > max_rate_limit_retries:
+                        logger.warning(
+                            f"[DU_CHECKOUT] Giving up on {course.title} after "
+                            f"{rate_limit_retries} rate-limit retries"
+                        )
+                        course.status = False
+                        return
+                    retry_after = 60
+                    if hasattr(r, "headers") and r.headers.get("Retry-After"):
+                        try:
+                            retry_after = int(r.headers["Retry-After"])
+                        except (ValueError, TypeError):
+                            # Non-numeric Retry-After must not crash the attempt (F-ENRL-C14)
+                            retry_after = 60
+                    logger.warning(f"Rate limited. Waiting {retry_after} seconds.")
+                    await asyncio.sleep(retry_after)
+                    continue
+
+                if status == 504:
+                    # Gateway timeout: Udemy did not confirm the enrollment (F-ENRL-O02).
+                    # Recorded as unknown — NOT enrolled — and counted separately.
                     logger.warning(
-                        f"[DU_CHECKOUT] Giving up on {course.title} after "
-                        f"{rate_limit_retries} rate-limit retries"
+                        f"[DU_CHECKOUT] 504 from Udemy for {course.title} — "
+                        "enrollment unconfirmed (unknown)"
+                    )
+                    course.status = None
+                    course.error = "unknown: 504 gateway timeout"
+                    return
+
+                if status in (500, 502, 503):
+                    server_error_retries += 1
+                    if server_error_retries > 1:
+                        course.status = False
+                        course.error = f"Udemy server error ({status})"
+                        return
+                    await asyncio.sleep(min(2 * server_error_retries, 5))
+                    continue
+
+                is_html = (
+                    "text/html" in ctype
+                    or "/cart" in final_url
+                    or "/join/login" in final_url
+                    or (isinstance(getattr(r, "text", None), str) and r.text.lstrip().startswith("<"))
+                )
+                body_text = getattr(r, "text", "") or ""
+                is_challenge = status == 403 or (
+                    is_html
+                    and status == 200
+                    and "/cart" not in final_url
+                    and "/join/login" not in final_url
+                    and (
+                        "just a moment" in body_text.lower()
+                        or "cf_chl" in body_text
+                        or "cloudflare" in body_text.lower()
+                    )
+                )
+                if is_challenge:
+                    self._checkout_consecutive_403s += 1
+                    if self._checkout_consecutive_403s >= 2:
+                        self._checkout_trip_count += 1
+                        backoff = min(45 * (2 ** (self._checkout_trip_count - 1)), 180)
+                        self._checkout_circuit_open_until = time.monotonic() + backoff
+                        logger.warning(
+                            f"[CHECKOUT_CIRCUIT_BREAKER] Tripped for {backoff}s after "
+                            f"{self._checkout_consecutive_403s} consecutive Cloudflare 403 challenges."
+                        )
+                        course.status = False
+                        course.error = "checkout_circuit_open"
+                        return
+
+                    # 1st 403: Soft retry with CSRF refresh
+                    logger.info(f"[DU_CHECKOUT] Soft 403 challenge encountered for {course.title}. Refreshing CSRF...")
+                    try:
+                        checkout_resp = await self._cs_get("https://www.udemy.com/payment/checkout/", timeout=25)
+                        if checkout_resp is not None:
+                            fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
+                            if fresh_csrf:
+                                headers["X-CSRF-Token"] = fresh_csrf
+                                self.cookie_dict["csrftoken"] = fresh_csrf
+                                self.cookie_dict["csrf_token"] = fresh_csrf
+                    except Exception as e:
+                        logger.debug(f"CSRF refresh failed on soft retry: {e}")
+                    await asyncio.sleep(random.uniform(2.5, 4.0))
+                    continue
+
+                # Any non-403 application response resets consecutive 403 streak
+                self._checkout_consecutive_403s = 0
+
+                if is_html:
+                    snippet = sanitize_log_message(" ".join((getattr(r, "text", "") or "")[:120].split()))
+                    logger.warning(
+                        f"[DU_CHECKOUT] HTML redirect/challenge for {course.title} | status={status} | "
+                        f"ctype={ctype} | url={sanitize_log_message(final_url)} | snippet={snippet}"
                     )
                     course.status = False
+                    course.error = f"HTML redirect or challenge (status={status})"
                     return
-                retry_after = 60
-                if hasattr(r, "headers") and r.headers.get("Retry-After"):
-                    try:
-                        retry_after = int(r.headers["Retry-After"])
-                    except (ValueError, TypeError):
-                        # Non-numeric Retry-After must not crash the attempt (F-ENRL-C14)
-                        retry_after = 60
-                logger.warning(f"Rate limited. Waiting {retry_after} seconds.")
-                await asyncio.sleep(retry_after)
-                continue
 
-            if status == 504:
-                # Gateway timeout: Udemy did not confirm the enrollment (F-ENRL-O02).
-                # Recorded as unknown — NOT enrolled — and counted separately.
-                logger.warning(
-                    f"[DU_CHECKOUT] 504 from Udemy for {course.title} — "
-                    "enrollment unconfirmed (unknown)"
-                )
-                course.status = None
-                course.error = "unknown: 504 gateway timeout"
-                return
-
-            if status in (500, 502, 503):
-                server_error_retries += 1
-                if server_error_retries > 1:
+                try:
+                    result = r.json() if callable(getattr(r, "json", None)) else {}
+                except (ValueError, json.JSONDecodeError, TypeError) as e:
+                    snippet = sanitize_log_message(" ".join((getattr(r, "text", "") or "")[:120].split()))
+                    logger.warning(f"[DU_CHECKOUT] JSON parse error for {course.title}: {e} | snippet={snippet}")
                     course.status = False
-                    course.error = f"Udemy server error ({status})"
+                    course.error = f"Malformed JSON (status={status})"
                     return
-                await asyncio.sleep(min(2 * server_error_retries, 5))
-                continue
 
-            is_html = (
-                "text/html" in ctype
-                or "/cart" in final_url
-                or "/join/login" in final_url
-                or (isinstance(getattr(r, "text", None), str) and r.text.lstrip().startswith("<"))
-            )
-            if is_html:
-                snippet = sanitize_log_message(" ".join((getattr(r, "text", "") or "")[:120].split()))
+                if result.get("status") == "succeeded":
+                    logger.info(f"[DU_CHECKOUT] SUCCESS for {course.title}")
+                    course.status = True
+                    self._checkout_consecutive_403s = 0
+                    self._checkout_trip_count = 0
+                    return
+
+                # Handle already subscribed
+                msg = str(result.get("message", ""))
+                dev_msg = str(result.get("developer_message", ""))
+                if "already subscribed" in msg.lower() or "already_enrolled" in dev_msg.lower():
+                    logger.info(f"[DU_CHECKOUT] Already enrolled: {course.title}")
+                    course.status = False
+                    course.is_already_enrolled = True
+                    course.error = "already_enrolled"
+                    if self.enrolled_courses is None:
+                        self.enrolled_courses = {}
+                    if course.slug:
+                        self.enrolled_courses[course.slug] = ""
+                    if course.course_id:
+                        self.enrolled_course_ids.add(str(course.course_id))
+                    self._save_enrolled_cache()
+                    return
+
+                if status in (400, 401, 403, 404, 409) or status != 200:
+                    course.status = False
+                    course.error = msg or dev_msg or f"Checkout failed (status={status})"
+                    return
+
+                # Log failure at WARNING with safe fields only (no payload/result which contain sensitive data)
                 logger.warning(
-                    f"[DU_CHECKOUT] HTML redirect/challenge for {course.title} | status={status} | "
-                    f"ctype={ctype} | url={sanitize_log_message(final_url)} | snippet={snippet}"
+                    f"[DU_CHECKOUT] Failed (attempt {attempt + 1}/{max_attempts}) for {course.title}: "
+                    f"status={status} | course_id={course.course_id}"
                 )
-                course.status = False
-                course.error = f"HTML redirect or challenge (status={status})"
-                return
 
-            try:
-                result = r.json() if callable(getattr(r, "json", None)) else {}
-            except (ValueError, json.JSONDecodeError, TypeError) as e:
-                snippet = sanitize_log_message(" ".join((getattr(r, "text", "") or "")[:120].split()))
-                logger.warning(f"[DU_CHECKOUT] JSON parse error for {course.title}: {e} | snippet={snippet}")
-                course.status = False
-                course.error = f"Malformed JSON (status={status})"
-                return
-
-            if result.get("status") == "succeeded":
-                logger.info(f"[DU_CHECKOUT] SUCCESS for {course.title}")
-                course.status = True
-                return
-
-            # Handle already subscribed
-            msg = str(result.get("message", ""))
-            dev_msg = str(result.get("developer_message", ""))
-            if "already subscribed" in msg.lower() or "already_enrolled" in dev_msg.lower():
-                logger.info(f"[DU_CHECKOUT] Already enrolled: {course.title}")
-                course.status = False
-                course.is_already_enrolled = True
-                course.error = "already_enrolled"
-                if self.enrolled_courses is None:
-                    self.enrolled_courses = {}
-                if course.slug:
-                    self.enrolled_courses[course.slug] = ""
-                if course.course_id:
-                    self.enrolled_course_ids.add(str(course.course_id))
-                self._save_enrolled_cache()
-                return
-
-            if status in (400, 401, 403, 404, 409) or status != 200:
-                course.status = False
-                course.error = msg or dev_msg or f"Checkout failed (status={status})"
-                return
-
-            # Log failure at WARNING with safe fields only (no payload/result which contain sensitive data)
-            logger.warning(
-                f"[DU_CHECKOUT] Failed (attempt {attempt + 1}/{max_attempts}) for {course.title}: "
-                f"status={status} | course_id={course.course_id}"
-            )
-
-        if not course.error:
-            course.error = "Checkout failed (no response / challenge)"
-        course.status = False
+            if not course.error:
+                course.error = "Checkout failed (no response / challenge)"
+            course.status = False
 
     async def free_checkout(self, course: Course):
         """Free course checkout: GET subscribe URL then verify enrollment via API."""
@@ -1571,6 +1742,11 @@ class UdemyClient:
 
     async def checkout_single(self, course: Course) -> bool:
         """DUCE-style single course enrollment."""
+        if self.is_checkout_circuit_open() or getattr(course, "error", "") == "checkout_circuit_open":
+            course.status = False
+            course.error = "checkout_circuit_open"
+            return False
+
         # FM-036 fail-closed: is_definitely_paid at absolute top before any _cs_get/fetch
         try:
             is_definitely_paid = course.price is not None and float(course.price) > 0
@@ -1595,12 +1771,23 @@ class UdemyClient:
             await self.free_checkout(course)
             # Fallback: use regular checkout pipeline with amount=0
             # (matches old working code behavior)
-            if course.status is False and not getattr(course, "is_already_enrolled", False):
+            if (
+                course.status is False
+                and not getattr(course, "is_already_enrolled", False)
+                and getattr(course, "error", "") != "checkout_circuit_open"
+                and not self.is_checkout_circuit_open()
+            ):
                 logger.warning(f"[CHECKOUT_SINGLE] Free-checkout failed, falling back to du-checkout for {course.title}")
                 await self._du_checkout(course)
         else:
             await self._du_checkout(course)
-            if course.status is False and not is_definitely_paid and not getattr(course, "is_already_enrolled", False):
+            if (
+                course.status is False
+                and not is_definitely_paid
+                and not getattr(course, "is_already_enrolled", False)
+                and getattr(course, "error", "") != "checkout_circuit_open"
+                and not self.is_checkout_circuit_open()
+            ):
                 err = (course.error or "").lower()
                 is_expired = "expired" in err or "invalid" in err or "max" in err
                 is_cf_or_403 = (
@@ -1621,6 +1808,8 @@ class UdemyClient:
             logger.info(f"[CHECKOUT_SINGLE] SUCCESS for {course.title}")
         elif getattr(course, "is_already_enrolled", False):
             logger.info(f"[CHECKOUT_SINGLE] ALREADY ENROLLED for {course.title}")
+        elif getattr(course, "error", "") == "checkout_circuit_open":
+            logger.warning(f"[CHECKOUT_SINGLE] CIRCUIT OPEN for {course.title}")
         elif course.status is None:
             logger.warning(
                 f"[CHECKOUT_SINGLE] UNKNOWN for {course.title} (unconfirmed response)"

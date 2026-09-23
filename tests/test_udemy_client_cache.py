@@ -24,6 +24,8 @@ class TestCacheLoadAndAtomicSave:
         client.enrolled_courses = {"python-101": "2026-01-01T00:00:00Z"}
         client.enrolled_course_ids = {"9999"}
         client.full_sync_complete = True
+        client.archived_sync_complete = True
+        client.archived_sync_cursor_page = 3
 
         saved = client._save_enrolled_cache()
         assert saved is True
@@ -38,6 +40,8 @@ class TestCacheLoadAndAtomicSave:
         assert client2.enrolled_courses == {"python-101": "2026-01-01T00:00:00Z"}
         assert client2.enrolled_course_ids == {"9999"}
         assert client2.full_sync_complete is True
+        assert client2.archived_sync_complete is True
+        assert client2.archived_sync_cursor_page == 3
 
     def test_cache_noop_when_user_id_empty(self, tmp_path):
         client = UdemyClient()
@@ -68,6 +72,7 @@ class TestGetEnrolledCoursesPagingAndCheckpoint:
         client = UdemyClient()
         client.udemy_user_id = "checkpoint_user"
         client._cache_dir = tmp_path
+        client.archived_sync_complete = True  # isolate Phase 1
 
         # Simulate 12 pages of results: pages 0-10 have 100 courses, page 11 has 5 courses
         page_results = []
@@ -87,9 +92,7 @@ class TestGetEnrolledCoursesPagingAndCheckpoint:
         current_page = 0
 
         async def mock_get(url, **kwargs):
-            nonlocal current_page
-            resp = MagicMock(status_code=200)
-            return resp
+            return MagicMock(status_code=200)
 
         async def mock_safe_json(resp, context):
             nonlocal current_page
@@ -175,6 +178,127 @@ class TestGetEnrolledCoursesPagingAndCheckpoint:
         # Did NOT early-stop on page 1 even though first 25 were known
         assert client.http.get.await_count == 2
         assert client.full_sync_complete is True
+
+
+class TestTwoPhaseArchivedLibrarySync:
+    """Wave 1 & 3: Two-Phase Complete Library Sync (Active + Archived courses)."""
+
+    @pytest.mark.asyncio
+    async def test_two_phase_sync_fetches_active_then_archived(self, tmp_path):
+        """Verifies Phase 1 queries is_archived=false, then Phase 2 queries is_archived=true."""
+        client = UdemyClient()
+        client.udemy_user_id = "two_phase_user"
+        client._cache_dir = tmp_path
+        client.full_sync_complete = False
+        client.archived_sync_complete = False
+
+        requested_urls = []
+
+        async def mock_get(url, **kwargs):
+            requested_urls.append(url)
+            return MagicMock(status_code=200)
+
+        # Phase 1: 1 page of active courses
+        phase1_data = {
+            "results": [{"id": 101, "url": "/course/active-1/", "enrollment_time": "2026-01-01T00:00:00Z"}],
+            "next": None,
+        }
+        # Phase 2: 1 page of archived courses
+        phase2_data = {
+            "results": [{"id": 202, "url": "/course/archived-1/", "enrollment_time": "2025-01-01T00:00:00Z"}],
+            "next": None,
+        }
+
+        async def mock_safe_json(resp, context):
+            if "archived" in context:
+                return phase2_data
+            return phase1_data
+
+        client.http.get = AsyncMock(side_effect=mock_get)
+        client.http.safe_json = AsyncMock(side_effect=mock_safe_json)
+
+        with patch("asyncio.sleep", AsyncMock()):
+            await client.get_enrolled_courses(sync_archived=True)
+
+        assert len(requested_urls) == 2
+        assert "is_archived=false" in requested_urls[0]
+        assert "is_archived=true" in requested_urls[1]
+        assert "active-1" in client.enrolled_courses
+        assert "archived-1" in client.enrolled_courses
+        assert client.full_sync_complete is True
+        assert client.archived_sync_complete is True
+        assert client.archived_sync_cursor_page == 1
+
+    @pytest.mark.asyncio
+    async def test_phase_2_skipped_when_archived_sync_complete(self, tmp_path):
+        """When archived_sync_complete is True, Phase 2 makes 0 network calls."""
+        client = UdemyClient()
+        client.udemy_user_id = "cached_archived_user"
+        client._cache_dir = tmp_path
+        client.full_sync_complete = True
+        client.archived_sync_complete = True
+
+        requested_urls = []
+
+        async def mock_get(url, **kwargs):
+            requested_urls.append(url)
+            return MagicMock(status_code=200)
+
+        phase1_data = {
+            "results": [{"id": 303, "url": "/course/active-303/", "enrollment_time": "2026-01-01T00:00:00Z"}],
+            "next": None,
+        }
+
+        client.http.get = AsyncMock(side_effect=mock_get)
+        client.http.safe_json = AsyncMock(return_value=phase1_data)
+
+        with patch("asyncio.sleep", AsyncMock()):
+            await client.get_enrolled_courses(sync_archived=True)
+
+        assert len(requested_urls) == 1
+        assert "is_archived=false" in requested_urls[0]
+        # No is_archived=true request was made
+        assert not any("is_archived=true" in u for u in requested_urls)
+
+    @pytest.mark.asyncio
+    async def test_archived_sync_cursor_resumes_from_checkpoint(self, tmp_path):
+        """Phase 2 starts requesting from archived_sync_cursor_page and checkpoints."""
+        client = UdemyClient()
+        client.udemy_user_id = "resuming_user"
+        client._cache_dir = tmp_path
+        client.full_sync_complete = True
+        client.archived_sync_complete = False
+        client.archived_sync_cursor_page = 5
+
+        requested_urls = []
+
+        async def mock_get(url, **kwargs):
+            requested_urls.append(url)
+            return MagicMock(status_code=200)
+
+        phase1_data = {"results": [], "next": None}
+        phase2_data = {
+            "results": [{"id": 404, "url": "/course/archived-404/", "enrollment_time": "2025-01-01T00:00:00Z"}],
+            "next": None,
+        }
+
+        async def mock_safe_json(resp, context):
+            if "archived" in context:
+                return phase2_data
+            return phase1_data
+
+        client.http.get = AsyncMock(side_effect=mock_get)
+        client.http.safe_json = AsyncMock(side_effect=mock_safe_json)
+
+        with patch("asyncio.sleep", AsyncMock()):
+            await client.get_enrolled_courses(sync_archived=True)
+
+        # First request was Phase 1, second request was Phase 2 starting at page 5
+        assert len(requested_urls) == 2
+        assert "page=5" in requested_urls[1]
+        assert "is_archived=true" in requested_urls[1]
+        assert client.archived_sync_complete is True
+        assert client.archived_sync_cursor_page == 1
 
 
 class TestFreeCheckoutPreOwnedDetection:
