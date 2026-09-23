@@ -8,7 +8,7 @@ import random
 from datetime import UTC, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
-from typing import Optional, Dict, Set
+from typing import Optional, Dict, Set, Any
 from urllib.parse import urljoin, quote
 
 from bs4 import BeautifulSoup as bs
@@ -21,6 +21,18 @@ from app.core import constants
 from app.logging_config import sanitize_log_message
 
 from app.core.constants import BLACKLIST_IDS
+
+
+def _is_valid_course_id(cid: Any) -> bool:
+    if cid is None:
+        return False
+    cid_str = str(cid).strip()
+    return (
+        cid_str.isascii()
+        and cid_str.isdigit()
+        and 4 < len(cid_str) < 12
+        and cid_str not in BLACKLIST_IDS
+    )
 
 
 class LoginException(Exception):
@@ -611,18 +623,49 @@ class UdemyClient:
         )
 
     def _extract_course_id(self, html: str) -> Optional[str]:
+        if not html:
+            return None
+
+        # Tier 1: Canonical mobile deeplink (escaped \?)
+        m = re.search(r"udemy://discover\?courseId=(\d+)", html)
+        if m and _is_valid_course_id(m.group(1)):
+            return m.group(1)
+
+        # Tier 2: Next.js SSR Props / DMA JSON regex (using [^{}]*? to prevent traversing child objects)
+        for m in re.finditer(
+            r'"course"\s*:\s*\{[^{}]*?"id"\s*:\s*[\'"]?(\d+)[\'"]?', html
+        ):
+            if _is_valid_course_id(m.group(1)):
+                return m.group(1)
+
+        # Tier 3: Scoped DOM Tags via Lazy BS4 (Body or CLP container only)
         soup = bs(html, "lxml")
         body = soup.find("body")
         if body:
             cid = body.get("data-clp-course-id") or body.get("data-course-id")
-            if cid and str(cid) not in BLACKLIST_IDS:
-                return str(cid)
+            if _is_valid_course_id(cid):
+                return str(cid).strip()
 
-        # Meta/Script regex fallbacks
-        matches = re.findall(r'["\']?course_?id["\']?\s*[:=]\s*(\d+)', html, re.I)
-        for cid in matches:
-            if 4 < len(cid) < 12 and cid not in BLACKLIST_IDS:
-                return cid
+        clp_elem = soup.find(attrs={"data-clp-course-id": True})
+        if clp_elem:
+            cid = clp_elem.get("data-clp-course-id")
+            if _is_valid_course_id(cid):
+                return str(cid).strip()
+
+        # Tier 4: Quoted/escaped key-value regex (case-insensitive)
+        for m in re.finditer(
+            r'(?<![a-zA-Z0-9_-])course_?id(?:&quot;|["\'\\])*\s*[:=]\s*(?:&quot;|["\'\\])*[\'"]?(\d+)[\'"]?',
+            html,
+            re.I,
+        ):
+            if _is_valid_course_id(m.group(1)):
+                return m.group(1)
+
+        # Tier 5: JSON object fallback
+        for m in re.finditer(r'"id"\s*:\s*(\d{5,11})\s*,\s*"title"', html):
+            if _is_valid_course_id(m.group(1)):
+                return m.group(1)
+
         return None
 
     def _extract_device_market_attributes(self, html: str) -> Optional[dict]:
@@ -709,15 +752,18 @@ class UdemyClient:
                 course.url = final_url
                 course.extract_coupon_code()
 
-            if not course.course_id:
-                course.course_id = self._extract_course_id(resp.text)
-
             dma = self._extract_device_market_attributes(resp.text)
             if dma:
                 course.set_metadata(dma)
                 self._course_fetch_report(200)
             else:
                 logger.warning(f"  Failed to extract device market attributes for {course.title}")
+
+            if not course.is_valid:
+                return
+
+            if not course.course_id:
+                course.course_id = self._extract_course_id(resp.text)
         else:
             status = resp.status_code if resp else "No Response"
             logger.warning(f"  Failed to fetch course page for metadata (Status: {status})")
@@ -807,12 +853,20 @@ class UdemyClient:
                 course.url = final_url
                 course.extract_coupon_code()
 
-            course.course_id = self._extract_course_id(resp.text)
+            # Un-gated DMA extraction: always extract DMA and set metadata first
+            dma = self._extract_device_market_attributes(resp.text)
+            if dma:
+                course.set_metadata(dma)
+
+            if not course.is_valid:
+                # Access restricted error detected in DMA
+                self._course_fetch_report(200)
+                return
+
+            if not course.course_id:
+                course.course_id = self._extract_course_id(resp.text)
+
             if course.course_id:
-                # Also extract and set metadata since we have fetched the HTML anyway!
-                dma = self._extract_device_market_attributes(resp.text)
-                if dma:
-                    course.set_metadata(dma)
                 self._course_fetch_report(200)
                 return
             else:

@@ -157,40 +157,68 @@ class Course:
             self.coupon_code = coupon
 
     def set_metadata(self, dma):
+        if not dma or not isinstance(dma, dict):
+            return
+
         from app.core.constants import BLACKLIST_IDS
 
         try:
+            ssp = (
+                dma.get("serverSideProps")
+                if isinstance(dma.get("serverSideProps"), dict)
+                else {}
+            )
+            course_data = (
+                ssp.get("course") if isinstance(ssp.get("course"), dict) else {}
+            )
+
             if dma.get("view_restriction"):
                 self.is_valid = False
-                self.error = (
-                    dma.get("serverSideProps", {})
-                    .get("limitedAccess", {})
-                    .get("errorMessage", {})
-                    .get("title", "Access Restricted")
+                limited = (
+                    ssp.get("limitedAccess")
+                    if isinstance(ssp.get("limitedAccess"), dict)
+                    else {}
                 )
+                err_msg = (
+                    limited.get("errorMessage")
+                    if isinstance(limited.get("errorMessage"), dict)
+                    else {}
+                )
+                self.error = err_msg.get("title", "Access Restricted")
                 return
 
             # Check for course ID in DMA if we don't have it
             if not self.course_id:
-                cid = dma.get("serverSideProps", {}).get("course", {}).get("id")
-                if cid and str(cid) not in BLACKLIST_IDS:
-                    self.course_id = str(cid)
+                cid = course_data.get("id")
+                if cid is not None:
+                    cid_str = str(cid).strip()
+                    if (
+                        cid_str.isascii()
+                        and cid_str.isdigit()
+                        and 4 < len(cid_str) < 12
+                        and cid_str not in BLACKLIST_IDS
+                    ):
+                        self.course_id = cid_str
 
-            course_data = dma.get("serverSideProps", {}).get("course", {})
             if not course_data:
                 return
 
+            instructors_data = (
+                course_data.get("instructors")
+                if isinstance(course_data.get("instructors"), dict)
+                else {}
+            )
             self.instructors = [
                 i["absolute_url"].split("/")[-2]
-                for i in course_data.get("instructors", {}).get("instructors_info", [])
-                if i.get("absolute_url")
+                for i in instructors_data.get("instructors_info", [])
+                if isinstance(i, dict) and i.get("absolute_url")
             ]
             self.language = course_data.get("localeSimpleEnglishTitle")
 
             breadcrumbs = (
-                dma.get("serverSideProps", {})
-                .get("topicMenu", {})
-                .get("breadcrumbs", [])
+                ssp.get("topicMenu", {}).get("breadcrumbs", [])
+                if isinstance(ssp.get("topicMenu"), dict)
+                else []
             )
             if breadcrumbs:
                 self.category = breadcrumbs[0].get("title")
