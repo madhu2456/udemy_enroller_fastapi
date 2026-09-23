@@ -242,12 +242,16 @@ python cli.py enroll --dry-run
 python cli.py enroll --browser chrome
 python cli.py enroll --token YOUR_UDEMY_ACCESS_TOKEN
 
+# Custom scraper worker concurrency (overrides MAX_SCRAPER_WORKERS default of 6)
+python cli.py enroll --workers 6
+
 # Apply custom filters and export results to JSON
 python cli.py enroll \
   --categories "Development,IT & Software" \
   --languages "English,Spanish" \
   --min-rating 4.2 \
   --limit 30 \
+  --workers 6 \
   --output results.json
 ```
 
@@ -258,8 +262,8 @@ Scrapes free Udemy courses across aggregator sites without submitting enrollment
 # Scrape and print as a formatted terminal table
 python cli.py scrape
 
-# Scrape specific sites and export to JSON or CSV
-python cli.py scrape --sites "Courson,CouponScorpion" --format json --output scraped_courses.json
+# Scrape specific sites with custom worker concurrency and export to JSON or CSV
+python cli.py scrape --sites "Courson,CouponScorpion" --workers 4 --format json --output scraped_courses.json
 python cli.py scrape --sites "FreeCourseSites,TutorialBar" --format csv --output scraped_courses.csv --limit 100
 ```
 
@@ -387,6 +391,7 @@ Udemy Enroller coordinates a fleet of **17 high-throughput aggregator scrapers**
 
 ### Fleet Highlights
 * **Fleet Capacity Scaling**: Standardized to harvest up to **500 latest active courses per scraper** across all 17 sources.
+* **Domain-Partitioned Pacing & Concurrency**: Domain-isolated pacing delays eliminate inter-site bottlenecking while preserving courteous request rates, backed by bounded site concurrency (`MAX_SCRAPER_WORKERS = 6`, `SCRAPER_DETAIL_CONCURRENCY = 6`, `CLOUDSCRAPER_MAX_CONCURRENCY = 12`, `SCRAPER_SITE_TIMEOUT_SECONDS = 900`).
 * **0-Hop Resolution**: Direct coupon extraction via React Server Components (RSC) Flight chunks, Angular SSR TransferState, and JSON REST APIs, minimizing intermediary network hops.
 * **Anti-Zombie Chunked Batching**: All scrapers execute concurrent detail resolution in discrete chunks (`DETAIL_BATCH_SIZE = 10`) with immediate loop termination, eliminating background task leaks.
 

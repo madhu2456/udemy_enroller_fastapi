@@ -37,6 +37,7 @@ async def _run_scrape_pipeline(
     limit: Optional[int],
     output: Optional[str],
     format_type: str,
+    workers: Optional[int] = None,
 ) -> int:
     """Async implementation of the standalone scraper command."""
     if format_type.lower() == "table":
@@ -62,7 +63,7 @@ async def _run_scrape_pipeline(
         print_info(f"Targeting [bold]{len(selected_sites)}[/bold] coupon scrapers: {', '.join(selected_sites)}")
         print_header("Scraping Coupon Sites")
 
-    scraper_service = ScraperService(sites_to_scrape=selected_sites)
+    scraper_service = ScraperService(sites_to_scrape=selected_sites, max_workers=workers)
     all_courses: List[Course] = []
 
     if format_type.lower() == "table":
@@ -190,6 +191,12 @@ def scrape_command(
         "-s",
         help="Comma-separated scraper site names (default: all 17 scrapers).",
     ),
+    workers: Optional[int] = typer.Option(
+        None,
+        "--workers",
+        "-w",
+        help="Number of concurrent scraper workers (default: settings.MAX_SCRAPER_WORKERS).",
+    ),
     categories: Optional[str] = typer.Option(
         None,
         "--categories",
@@ -236,6 +243,7 @@ def scrape_command(
             limit=limit,
             output=output,
             format_type=format_type,
+            workers=workers,
         )
     )
     if code != 0:

@@ -58,6 +58,7 @@ async def _run_enrollment_pipeline(
     output: Optional[str],
     dry_run: bool,
     interactive: bool,
+    workers: Optional[int] = None,
 ) -> int:
     """Async implementation of the enrollment pipeline."""
     print_banner()
@@ -144,7 +145,7 @@ async def _run_enrollment_pipeline(
 
         # 5. Scrape Courses
         print_header("Scraping Coupon Sources")
-        scraper_service = ScraperService(sites_to_scrape=selected_sites)
+        scraper_service = ScraperService(sites_to_scrape=selected_sites, max_workers=workers)
         all_courses: List[Course] = []
 
         with create_progress_bar() as progress:
@@ -234,7 +235,6 @@ async def _run_enrollment_pipeline(
                         status_str = "EXPIRED"
                     elif is_definitely_paid:
                         status_str = "PAID / NOT 100% OFF"
-                        price_val = float(course.price) if course.price is not None else 0.0
                         progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
                     elif not course.is_valid or not course.course_id:
                         if "403" in str(course.error or ""):
@@ -286,7 +286,6 @@ async def _run_enrollment_pipeline(
                                     )
                     else:
                         status_str = "PAID / NOT 100% OFF"
-                        price_val = float(course.price) if course.price is not None else 0.0
                         progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
 
                     enrolled_results.append(
@@ -379,6 +378,12 @@ def enroll_command(
         "-s",
         help="Comma-separated scraper site names (default: all 17 scrapers).",
     ),
+    workers: Optional[int] = typer.Option(
+        None,
+        "--workers",
+        "-w",
+        help="Number of concurrent scraper workers (default: settings.MAX_SCRAPER_WORKERS).",
+    ),
     categories: Optional[str] = typer.Option(
         None,
         "--categories",
@@ -439,6 +444,7 @@ def enroll_command(
             output=output,
             dry_run=dry_run,
             interactive=interactive,
+            workers=workers,
         )
     )
     if code != 0:

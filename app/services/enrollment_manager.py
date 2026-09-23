@@ -265,6 +265,7 @@ class EnrollmentManager:
                 # User proxy honored only when ALLOW_USER_PROXY is enabled
                 # (server mode hard-disables it — F-ENRL-C05)
                 proxy=resolve_user_proxy(self.settings.get("proxy_url")),
+                max_workers=self.settings.get("scraper_workers") or self.settings.get("max_scraper_workers"),
             )
 
             enrolled_slugs: set[str] = set()

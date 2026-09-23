@@ -71,6 +71,8 @@ class AsyncHTTPClient:
         self.proxy = proxy
         self._request_semaphore = asyncio.Semaphore(max(1, max_concurrency))
         self._last_request_time = 0.0
+        self._domain_locks: Dict[str, asyncio.Lock] = {}
+        self._domain_last_request_times: Dict[str, float] = {}
         self._thread_local = threading.local()
         self._scrapers_lock = threading.Lock()
         self._all_scrapers: set = set()
@@ -80,6 +82,9 @@ class AsyncHTTPClient:
         from config.settings import get_settings
 
         self._is_server = get_settings().DEPLOYMENT_ENV == "server"
+        raw_cs = getattr(get_settings(), "CLOUDSCRAPER_MAX_CONCURRENCY", 12)
+        cs_concurrency = raw_cs if isinstance(raw_cs, int) else 12
+        self._cloudscraper_semaphore = asyncio.Semaphore(max(1, cs_concurrency))
 
     def _close_all_scrapers(self):
         with self._scrapers_lock:
@@ -413,29 +418,46 @@ class AsyncHTTPClient:
         m = re.search(r"UdemyAndroid\s+([\d.]+(?:\(\d+\))?)", ua)
         return m.group(1) if m else None
 
-    async def _apply_human_like_delay(self):
+    async def _apply_human_like_delay(self, url: Optional[str] = None):
         """Apply a polite delay between requests to respect rate limits.
 
         On server deployments, uses much longer delays to avoid Udemy rate limits.
         Local runs keep the original fast settings.
         """
-        from config.settings import get_settings
+        domain = "default"
+        if url:
+            try:
+                parsed = urlparse(url)
+                domain = (parsed.hostname or parsed.netloc or "").lower() or "default"
+            except Exception:
+                domain = "default"
 
-        is_server = get_settings().DEPLOYMENT_ENV == "server"
-        current_time = time.monotonic()
-        time_since_last = current_time - self._last_request_time
+        lock = self._domain_locks.get(domain)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._domain_locks[domain] = lock
 
-        if is_server:
-            target_delay = random.uniform(5.0, 12.0)
-        else:
-            target_delay = random.uniform(1.0, 4.0)
+        async with lock:
+            from config.settings import get_settings
 
-        if time_since_last < target_delay:
-            delay = target_delay - time_since_last
-            delay += random.uniform(-0.1, 0.2)
-            await asyncio.sleep(max(0.1, delay))
+            is_server = getattr(get_settings(), "DEPLOYMENT_ENV", "local") == "server"
+            current_time = time.monotonic()
+            last_time = self._domain_last_request_times.get(domain, 0.0)
+            time_since_last = current_time - last_time
 
-        self._last_request_time = time.monotonic()
+            if is_server:
+                target_delay = random.uniform(5.0, 12.0)
+            else:
+                target_delay = random.uniform(1.0, 4.0)
+
+            if last_time > 0.0 and time_since_last < target_delay:
+                delay = target_delay - time_since_last
+                delay += random.uniform(-0.1, 0.2)
+                await asyncio.sleep(max(0.1, delay))
+
+            now = time.monotonic()
+            self._domain_last_request_times[domain] = now
+            self._last_request_time = now
 
     async def close(self):
         await self.client.aclose()
@@ -546,7 +568,7 @@ class AsyncHTTPClient:
 
         custom_cookies = kwargs.pop("cookies", {})
 
-        await self._apply_human_like_delay()
+        await self._apply_human_like_delay(url)
 
         for attempt in range(attempts):
             if not self._is_safe_url(url):
@@ -591,7 +613,8 @@ class AsyncHTTPClient:
                             custom_cookies.update(resp.cookies.get_dict())
                         return resp
 
-                    resp_sync = await asyncio.to_thread(_do_scrape)
+                    async with self._cloudscraper_semaphore:
+                        resp_sync = await asyncio.to_thread(_do_scrape)
                     response = httpx.Response(
                         status_code=resp_sync.status_code,
                         content=resp_sync.content,
@@ -705,7 +728,7 @@ class AsyncHTTPClient:
         else:
             redirect_policy = False
 
-        await self._apply_human_like_delay()
+        await self._apply_human_like_delay(url)
 
         headers = self._get_headers(url, kwargs.get("headers"), req_type="document")
 
@@ -819,7 +842,7 @@ class AsyncHTTPClient:
         custom_headers = kwargs.pop("headers", None)
         json_payload = kwargs.pop("json", None)
 
-        await self._apply_human_like_delay()
+        await self._apply_human_like_delay(url)
 
         for attempt in range(attempts):
             if not self._is_safe_url(url):
@@ -873,7 +896,8 @@ class AsyncHTTPClient:
                             custom_cookies.update(resp.cookies.get_dict())
                         return resp
 
-                    resp_sync = await asyncio.to_thread(_do_scrape)
+                    async with self._cloudscraper_semaphore:
+                        resp_sync = await asyncio.to_thread(_do_scrape)
                     response = httpx.Response(
                         status_code=resp_sync.status_code,
                         content=resp_sync.content,

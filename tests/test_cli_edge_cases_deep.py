@@ -229,7 +229,7 @@ def test_enroll_site_filter_valid_and_unknown():
         result = runner.invoke(app, ["enroll", "--token", "tok", "--dry-run", "--sites", "TutorialBar,NonExistentSite"])
         assert result.exit_code == 0
         assert "Unknown scraper site 'NonExistentSite'" in result.output
-        mock_scraper_service.assert_called_with(sites_to_scrape=["TutorialBar"])
+        mock_scraper_service.assert_called_with(sites_to_scrape=["TutorialBar"], max_workers=None)
 
 
 def test_enroll_live_checkout_interactive_confirmation():
@@ -268,6 +268,117 @@ def test_enroll_live_checkout_interactive_confirmation():
         assert result.exit_code == 0
         # User said No, so checkout_single should not have been called
         mock_client.checkout_single.assert_not_called()
+
+
+def _free_cli_course(title: str, slug: str) -> Course:
+    course = Course(
+        title=title,
+        url=f"https://www.udemy.com/course/{slug}/?couponCode=FREE100",
+    )
+    course.price = Decimal("0.00")
+    course.list_price = Decimal("24.99")
+    course.is_free = True
+    course.is_coupon_valid = True
+    course.is_expired = False
+    course.is_already_enrolled = False
+    return course
+
+
+def _cli_enroll_client(checkout_side_effect=None, checkout_return=True):
+    mock_client = MagicMock()
+    mock_client.get_session_info = AsyncMock(return_value=True)
+    mock_client.get_enrolled_courses = AsyncMock(return_value={})
+    mock_client.check_course = AsyncMock()
+    if checkout_side_effect is not None:
+        mock_client.checkout_single = AsyncMock(side_effect=checkout_side_effect)
+    else:
+        mock_client.checkout_single = AsyncMock(return_value=checkout_return)
+    mock_client.close = AsyncMock()
+    mock_client.display_name = "QA Engineer"
+    mock_client.currency = "USD"
+    mock_client.enrolled_courses = {}
+    mock_client.successfully_enrolled_c = 0
+    mock_client.already_enrolled_c = 0
+    mock_client.expired_c = 0
+    mock_client.excluded_c = 0
+    mock_client.unknown_c = 0
+    mock_client.amount_saved_c = Decimal(0)
+    mock_client.is_course_excluded = MagicMock(return_value=False)
+    return mock_client
+
+
+def test_enroll_paid_not_100_does_not_increment_expired():
+    """Paid / not-100% off courses skip checkout and must not bump expired_c."""
+    paid = Course(
+        title="Paid Course 40% Off",
+        url="https://www.udemy.com/course/paid-course/?couponCode=DISCOUNT40",
+    )
+    paid.price = Decimal("479.00")
+    paid.list_price = Decimal("799.00")
+    paid.is_free = False
+    paid.is_coupon_valid = False
+    paid.is_expired = False
+
+    async def mock_stream(self):
+        s_mock = MagicMock()
+        s_mock.site_name = "TutorialBar"
+        s_mock.courses = [paid]
+        yield s_mock, "completed"
+
+    with patch("app.cli.commands.enroll.UdemyClient") as mock_client_cls, \
+         patch("app.cli.commands.enroll.ScraperService.stream_results", new=mock_stream):
+        mock_client = _cli_enroll_client()
+        mock_client_cls.return_value = mock_client
+
+        result = runner.invoke(app, ["enroll", "--token", "dummy_access_token"])
+        assert result.exit_code == 0
+        mock_client.checkout_single.assert_not_called()
+        assert mock_client.expired_c == 0
+        assert isinstance(mock_client.expired_c, int)
+        assert "PAID" in result.output or "NOT 100%" in result.output
+
+
+def test_enroll_live_false_none_checkout_marks_failed_unknown(tmp_path):
+    """False/None checkout results increment unknown_c and status is FAILED, not VALID FREE."""
+    c1 = _free_cli_course("Failing Checkout One", "failing-checkout-one")
+    c2 = _free_cli_course("Failing Checkout Two", "failing-checkout-two")
+    json_out = tmp_path / "failed_enroll.json"
+
+    async def mock_stream(self):
+        s_mock = MagicMock()
+        s_mock.site_name = "TutorialBar"
+        s_mock.courses = [c1, c2]
+        yield s_mock, "completed"
+
+    with patch("app.cli.commands.enroll.UdemyClient") as mock_client_cls, \
+         patch("app.cli.commands.enroll.ScraperService.stream_results", new=mock_stream):
+        mock_client = _cli_enroll_client(checkout_side_effect=[False, None])
+        mock_client_cls.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            [
+                "enroll",
+                "--token",
+                "dummy_access_token",
+                "--output",
+                str(json_out),
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert mock_client.unknown_c == 2
+        assert isinstance(mock_client.unknown_c, int)
+        assert mock_client.successfully_enrolled_c == 0
+        assert isinstance(mock_client.successfully_enrolled_c, int)
+        assert "FAILED" in result.output
+        assert "VALID FREE" not in result.output
+        assert json_out.exists()
+        with open(json_out) as f:
+            data = json.load(f)
+        statuses = [row["status"] for row in data["courses"]]
+        assert statuses == ["FAILED", "FAILED"]
+        assert "VALID FREE" not in statuses
 
 
 # =====================================================================

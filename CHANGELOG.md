@@ -25,6 +25,12 @@ and this project uses date-based notes until formal version tags are published.
 
 Work in the working tree since `e6bc1c2` (not necessarily committed yet).
 
+### Scrapers — High-Concurrency Scaling & Domain-Partitioned Pacing
+
+- **Domain-Partitioned Pacing (`app/services/http_client.py`)**: Replaced global inter-request delays with granular per-domain monotonic timestamps and domain locks, eliminating artificial request queuing across independent coupon aggregator hosts while honoring safe pacing on a per-site basis.
+- **Worker Concurrency CLI Flags (`app/cli/commands/enroll.py`, `app/cli/commands/scrape.py`)**: Added `--workers` / `-w` CLI option to `enroll` and `scrape` commands, allowing operators to dynamically override the default scraper worker concurrency.
+- **Concurrency & Timeout Bounds (`config/settings.py`, `.env.example`)**: Updated scraper worker concurrency bounds and timeouts (`MAX_SCRAPER_WORKERS = 6`, `SCRAPER_DETAIL_CONCURRENCY = 6`, `CLOUDSCRAPER_MAX_CONCURRENCY = 12`, `SCRAPER_SITE_TIMEOUT_SECONDS = 900`).
+
 ### CI — `requirements.lock` was missing the GUI/CLI dependency set
 
 - **Root cause:** `requirements.lock` was last compiled 2026-08-15, but `requirements.txt` gained the desktop-GUI / Rich-CLI stack in `380ce96` (2026-08-27). CI installs from `requirements.lock` (`pip install -r requirements.lock`), so `typer`, `rich`, `customtkinter`, `pillow` and `pyinstaller` were absent at test time and pytest aborted during collection with `ModuleNotFoundError: No module named 'typer'` in `tests/test_cli.py`, `tests/test_cli_edge_cases_deep.py`, `tests/test_cli_log_flags.py` and `tests/test_session_store.py` (4 collection errors, run interrupted).

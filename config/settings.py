@@ -115,10 +115,12 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_REST_URL: str = ""
     UPSTASH_REDIS_REST_TOKEN: str = ""
 
-    # Scraper defaults — FM-039 throttling: bounded to 2 concurrent workers (was 12)
+    # Scraper defaults — FM-039 throttling: bounded to 6 concurrent workers (was 12)
     # Circuit-breaker: failures >= SCRAPER_CIRCUIT_BREAKER_FAILURES (5) opens circuit per scraper
-    MAX_SCRAPER_WORKERS: int = 2
-    SCRAPER_SITE_TIMEOUT_SECONDS: int = 1800
+    MAX_SCRAPER_WORKERS: int = 6
+    SCRAPER_DETAIL_CONCURRENCY: int = 6
+    CLOUDSCRAPER_MAX_CONCURRENCY: int = 12
+    SCRAPER_SITE_TIMEOUT_SECONDS: int = 900
     SCRAPER_RUN_TIMEOUT_SECONDS: int = 2700
     SCRAPER_REQUEST_TIMEOUT_SECONDS: float = 5.0
     SCRAPER_CIRCUIT_BREAKER_FAILURES: int = 5

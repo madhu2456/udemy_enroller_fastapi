@@ -4551,7 +4551,13 @@ SCRAPER_REGISTRY = {
 
 
 class ScraperService:
-    def __init__(self, sites_to_scrape: List[str] = None, proxy: Optional[str] = None):
+    def __init__(
+        self,
+        sites_to_scrape: Optional[List[str]] = None,
+        proxy: Optional[str] = None,
+        max_workers: Optional[int] = None,
+    ):
+        self.max_workers = max_workers
         self.http = AsyncHTTPClient(proxy=proxy)
         self.sites = sites_to_scrape or list(SCRAPER_REGISTRY.keys())
         self.scrapers: List[Scraper] = []
@@ -4575,9 +4581,13 @@ class ScraperService:
 
         settings = get_settings()
 
-        # FM-039 throttling: bound to 2 with circuit-breaker (was 12/10)
-        worker_sem = asyncio.Semaphore(min(settings.MAX_SCRAPER_WORKERS, 2))
-        detail_sem = asyncio.Semaphore(2)
+        raw_workers = self.max_workers if self.max_workers is not None else getattr(settings, "MAX_SCRAPER_WORKERS", 6)
+        worker_concurrency = raw_workers if isinstance(raw_workers, int) else 6
+        worker_sem = asyncio.Semaphore(max(1, min(worker_concurrency, 32)))
+
+        raw_detail = getattr(settings, "SCRAPER_DETAIL_CONCURRENCY", 6)
+        detail_concurrency = raw_detail if isinstance(raw_detail, int) else 6
+        detail_sem = asyncio.Semaphore(max(1, min(detail_concurrency, 32)))
 
         if not hasattr(self, "source_states"):
             self.source_states = {id(s): "queued" for s in self.scrapers}
