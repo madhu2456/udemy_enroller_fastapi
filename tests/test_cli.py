@@ -116,6 +116,64 @@ def test_enroll_dry_run_success(tmp_path):
         assert json_out.exists()
 
 
+def _free_course(title: str, slug: str) -> Course:
+    course = Course(
+        title=title,
+        url=f"https://www.udemy.com/course/{slug}/?couponCode=FREE100",
+    )
+    course.price = Decimal("0.00")
+    course.list_price = Decimal("19.99")
+    course.is_free = True
+    course.is_coupon_valid = True
+    course.is_expired = False
+    course.is_already_enrolled = False
+    return course
+
+
+def test_enroll_live_limit_stops_after_two_checkouts():
+    """Live --limit 2 with three free courses must stop after two successful checkouts."""
+    c1 = _free_course("Live Python One", "live-python-one")
+    c2 = _free_course("Live Python Two", "live-python-two")
+    c3 = _free_course("Live Python Three", "live-python-three")
+
+    async def mock_stream(self):
+        scraper_mock = MagicMock()
+        scraper_mock.site_name = "TutorialBar"
+        scraper_mock.courses = [c1, c2, c3]
+        yield scraper_mock, "completed"
+
+    with patch("app.cli.commands.enroll.UdemyClient") as mock_client_cls, \
+         patch("app.cli.commands.enroll.ScraperService.stream_results", new=mock_stream):
+        mock_client = MagicMock()
+        mock_client.get_session_info = AsyncMock(return_value=True)
+        mock_client.get_enrolled_courses = AsyncMock(return_value={})
+        mock_client.check_course = AsyncMock()
+        mock_client.checkout_single = AsyncMock(return_value=True)
+        mock_client.close = AsyncMock()
+        mock_client.display_name = "Test Learner"
+        mock_client.currency = "USD"
+        mock_client.enrolled_courses = {}
+        mock_client.successfully_enrolled_c = 0
+        mock_client.already_enrolled_c = 0
+        mock_client.expired_c = 0
+        mock_client.excluded_c = 0
+        mock_client.unknown_c = 0
+        mock_client.amount_saved_c = Decimal(0)
+        mock_client.is_course_excluded = MagicMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            ["enroll", "--token", "dummy_access_token", "--limit", "2"],
+        )
+
+        assert result.exit_code == 0
+        assert mock_client.checkout_single.await_count == 2
+        assert mock_client.successfully_enrolled_c == 2
+        assert isinstance(mock_client.successfully_enrolled_c, int)
+        assert "Reached specified limit of 2" in result.output
+
+
 def test_scrape_json_format(tmp_path):
     """Test scrape subcommand with JSON output format."""
     dummy_course = Course(

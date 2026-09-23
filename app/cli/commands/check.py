@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Optional
 
 import typer
@@ -57,6 +58,15 @@ async def _run_check_pipeline(
             if access_token:
                 udemy_client.cookie_login(access_token=access_token, client_id=cid, csrf_token=csrf_token)
                 await udemy_client.get_session_info()
+
+            is_enrolled = udemy_client.is_already_enrolled(course)
+            if inspect.isawaitable(is_enrolled):
+                is_enrolled = await is_enrolled
+            elif not isinstance(is_enrolled, bool):
+                is_enrolled = False
+
+            if is_enrolled:
+                course.is_already_enrolled = True
 
             print_info("Querying Udemy API for course and coupon metadata...")
             try:

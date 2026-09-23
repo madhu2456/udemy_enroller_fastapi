@@ -438,6 +438,7 @@ def test_bridge_enrollment_per_course_error_isolation():
     mock_client.already_enrolled_c = 0
     mock_client.expired_c = 0
     mock_client.excluded_c = 0
+    mock_client.unknown_c = 0
     mock_client.amount_saved_c = 39.98
     mock_client.cookie_login = MagicMock()
     mock_client.get_session_info = AsyncMock(return_value=True)

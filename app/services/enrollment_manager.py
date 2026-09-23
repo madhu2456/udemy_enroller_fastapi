@@ -339,6 +339,10 @@ class EnrollmentManager:
                     if course.list_price:
                         self.udemy.amount_saved_c += course.list_price
                     logger.info(f"✅ Enrollment Success: {course.title} ({duration:.1f}s)")
+                elif getattr(course, "is_already_enrolled", False):
+                    status = "already_enrolled"
+                    self.udemy.already_enrolled_c += 1
+                    logger.info(f"ℹ️ Already Enrolled: {course.title} ({duration:.1f}s)")
                 else:
                     err = (course.error or "").lower()
                     if "price mismatch" in err or "expired" in err:
@@ -403,6 +407,7 @@ class EnrollmentManager:
 
                     try:
                         if await self.udemy.is_already_enrolled(course, enrolled_slugs):
+                            course.is_already_enrolled = True
                             self.udemy.already_enrolled_c += 1
                             course_status = "already_enrolled"
                             logger.debug(f"  Status: Already enrolled (DB cache: {course.slug})")
@@ -417,6 +422,7 @@ class EnrollmentManager:
                                     self.udemy.excluded_c += 1
                                     course_status = "invalid"
                             elif await self.udemy.check_already_enrolled_live(course):
+                                course.is_already_enrolled = True
                                 self.udemy.already_enrolled_c += 1
                                 course_status = "already_enrolled"
                             else:

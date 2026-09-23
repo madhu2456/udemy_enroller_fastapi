@@ -1,11 +1,13 @@
 """Udemy API client for authentication and course enrollment - standard emulated client logic (No Playwright)."""
 
+import os
 import re
 import asyncio
 import json
 import random
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 from typing import Optional, Dict, Set
 from urllib.parse import urljoin, quote
 
@@ -41,6 +43,8 @@ class UdemyClient:
         self.currency: str = "usd"
         self.cookie_dict: dict = {}
         self.enrolled_courses: Optional[Dict[str, str]] = None
+        self.enrolled_course_ids: Set[str] = set()
+        self.full_sync_complete: bool = False
 
         # Enrollment counters
         self.successfully_enrolled_c = 0
@@ -419,14 +423,84 @@ class UdemyClient:
                 logger.exception("Failed to get session info")
             raise LoginException(f"Session failed: {str(e)}")
 
+    def _get_cache_dir(self) -> Path:
+        if getattr(self, "_cache_dir", None):
+            return Path(self._cache_dir)
+        return Path("data/cache")
+
+    def _get_cache_path(self) -> Optional[Path]:
+        if not self.udemy_user_id:
+            return None
+        return self._get_cache_dir() / f"enrolled_courses_{self.udemy_user_id}.json"
+
+    def _load_enrolled_cache(self) -> bool:
+        """Safely load enrolled courses cache from disk if available."""
+        if not self.udemy_user_id:
+            return False
+        cache_path = self._get_cache_path()
+        if not cache_path or not cache_path.exists():
+            return False
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                return False
+
+            if "enrolled_courses" in data or "enrolled_course_ids" in data or "courses" in data:
+                courses = data.get("enrolled_courses") or data.get("courses") or {}
+                course_ids = data.get("enrolled_course_ids") or data.get("course_ids") or []
+                self.full_sync_complete = bool(data.get("full_sync_complete", False))
+                if isinstance(courses, dict):
+                    if self.enrolled_courses is None:
+                        self.enrolled_courses = {}
+                    self.enrolled_courses.update(courses)
+                if isinstance(course_ids, (list, set)):
+                    self.enrolled_course_ids.update(str(cid) for cid in course_ids)
+            else:
+                if self.enrolled_courses is None:
+                    self.enrolled_courses = {}
+                self.enrolled_courses.update(data)
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to load enrolled courses cache: {e}")
+            return False
+
+    def _save_enrolled_cache(self) -> bool:
+        """Atomically save enrolled courses cache to disk."""
+        if not self.udemy_user_id:
+            return False
+        cache_path = self._get_cache_path()
+        if not cache_path:
+            return False
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = cache_path.with_suffix(".tmp")
+            payload = {
+                "full_sync_complete": self.full_sync_complete,
+                "enrolled_courses": self.enrolled_courses or {},
+                "enrolled_course_ids": list(self.enrolled_course_ids),
+            }
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, cache_path)
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to save enrolled courses cache: {e}")
+            return False
+
     async def get_enrolled_courses(self, known_slugs: set = None):
         """Fetch enrolled courses using Mobile API headers."""
         logger.info("Fetching enrolled courses...")
+        self._load_enrolled_cache()
+        if self.enrolled_courses is None:
+            self.enrolled_courses = {}
+
         url = (
             f"{constants.UDEMY_SUBSCRIBED_COURSES_URL}"
-            "?ordering=-enroll_time&fields[course]=enrollment_time,url&page_size=100"
+            "?ordering=-enroll_time&fields[course]=id,enrollment_time,url&page_size=100"
         )
-        self.enrolled_courses = {}
 
         common_headers = {}
         if self.cookie_dict.get("access_token"):
@@ -434,13 +508,35 @@ class UdemyClient:
                 f"Bearer {self.cookie_dict['access_token']}"
             )
 
-        for _page in range(50):
-            resp = await self.http.get(
-                url,
-                cookies=self.cookie_dict,
-                headers=common_headers,
-                req_type="mobile",
-            )
+        consecutive_known = 0
+        early_stopped = False
+        max_pages = 500
+
+        for page in range(max_pages):
+            await asyncio.sleep(0.05)
+
+            retry_count = 0
+            resp = None
+            while retry_count < 3:
+                resp = await self.http.get(
+                    url,
+                    cookies=self.cookie_dict,
+                    headers=common_headers,
+                    req_type="mobile",
+                )
+                if resp and resp.status_code == 429:
+                    retry_after = 5
+                    if hasattr(resp, "headers") and resp.headers.get("Retry-After"):
+                        try:
+                            retry_after = int(resp.headers["Retry-After"])
+                        except (ValueError, TypeError):
+                            retry_after = 5
+                    logger.warning(f"Rate limited in get_enrolled_courses (429). Retrying after {retry_after}s.")
+                    await asyncio.sleep(retry_after)
+                    retry_count += 1
+                    continue
+                break
+
             data = await self.http.safe_json(resp, "courses")
             if not data:
                 break
@@ -450,16 +546,51 @@ class UdemyClient:
                 break
 
             for c in results:
+                cid = c.get("id")
+                cid_str = str(cid) if cid is not None else None
+
+                slug = None
                 try:
-                    # URL format: https://www.udemy.com/course/slug/
-                    parts = c["url"].strip("/").split("/")
+                    parts = (c.get("url") or "").strip("/").split("/")
                     if "course" in parts:
                         idx = parts.index("course")
                         if len(parts) > idx + 1:
                             slug = parts[idx + 1]
-                            self.enrolled_courses[slug] = c.get("enrollment_time", "")
                 except Exception:
-                    continue
+                    slug = None
+
+                is_known = False
+                if slug and slug in self.enrolled_courses:
+                    is_known = True
+                elif cid_str and cid_str in self.enrolled_course_ids:
+                    is_known = True
+                elif known_slugs and slug and slug in known_slugs:
+                    is_known = True
+
+                if self.full_sync_complete:
+                    if is_known:
+                        consecutive_known += 1
+                    else:
+                        consecutive_known = 0
+
+                if slug:
+                    self.enrolled_courses[slug] = c.get("enrollment_time", "")
+                if cid_str:
+                    self.enrolled_course_ids.add(cid_str)
+
+                if self.full_sync_complete and consecutive_known >= 10:
+                    logger.info(f"Early-stop triggered: {consecutive_known} consecutive known courses encountered.")
+                    early_stopped = True
+                    break
+
+            if early_stopped:
+                break
+
+            if (page + 1) % 10 == 0:
+                was_full = self.full_sync_complete
+                self.full_sync_complete = False
+                self._save_enrolled_cache()
+                self.full_sync_complete = was_full
 
             if len(results) < 100:
                 break
@@ -473,8 +604,10 @@ class UdemyClient:
                 break
             url = joined
 
+        self.full_sync_complete = True
+        self._save_enrolled_cache()
         logger.info(
-            f"Enrolled courses check complete: {len(self.enrolled_courses)} tracked."
+            f"Enrolled courses check complete: {len(self.enrolled_courses)} tracked ({len(self.enrolled_course_ids)} IDs)."
         )
 
     def _extract_course_id(self, html: str) -> Optional[str]:
@@ -807,9 +940,15 @@ class UdemyClient:
     ) -> bool:
         if known_slugs and course.slug in known_slugs:
             return True
-        return (
-            self.enrolled_courses is not None and course.slug in self.enrolled_courses
-        )
+        if (
+            self.enrolled_courses is not None
+            and course.slug
+            and course.slug in self.enrolled_courses
+        ):
+            return True
+        if course.course_id and str(course.course_id) in self.enrolled_course_ids:
+            return True
+        return False
 
     async def check_already_enrolled_live(self, course: Course) -> bool:
         """Live API check: is the user already enrolled in this specific course?
@@ -1176,7 +1315,16 @@ class UdemyClient:
             dev_msg = str(result.get("developer_message", ""))
             if "already subscribed" in msg.lower() or "already_enrolled" in dev_msg.lower():
                 logger.info(f"[DU_CHECKOUT] Already enrolled: {course.title}")
-                course.status = True
+                course.status = False
+                course.is_already_enrolled = True
+                course.error = "already_enrolled"
+                if self.enrolled_courses is None:
+                    self.enrolled_courses = {}
+                if course.slug:
+                    self.enrolled_courses[course.slug] = ""
+                if course.course_id:
+                    self.enrolled_course_ids.add(str(course.course_id))
+                self._save_enrolled_cache()
                 return
 
             if status in (400, 401, 403, 404, 409) or status != 200:
@@ -1196,6 +1344,12 @@ class UdemyClient:
 
     async def free_checkout(self, course: Course):
         """Free course checkout: GET subscribe URL then verify enrollment via API."""
+        if getattr(course, "is_already_enrolled", False) or await self.is_already_enrolled(course):
+            course.status = False
+            course.is_already_enrolled = True
+            course.error = "already_enrolled"
+            return
+
         # FM-036: is_definitely_paid at absolute top before any fetch
         try:
             is_definitely_paid = course.price is not None and float(course.price) > 0
@@ -1211,6 +1365,8 @@ class UdemyClient:
             course.error = "Missing course_id"
             return
         logger.info(f"[FREE_CHECKOUT] {course.title} | ID={course.course_id}")
+
+        checkout_start_dt = datetime.now(timezone.utc)
 
         # Step 1: GET the subscribe URL (old working checkout logic)
         sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
@@ -1266,8 +1422,7 @@ class UdemyClient:
         # Step 2: Verify enrollment via API
         verify_url = (
             f"{constants.UDEMY_API_BASE}/users/me/subscribed-courses/"
-            f"{course.course_id}/?fields%5Bcourse%5D=%40default%2C"
-            f"buyable_object_type%2Cprimary_subcategory%2Cis_private"
+            f"{course.course_id}/?fields%5Bcourse%5D=%40default%2Cenrollment_time"
         )
         r2 = await self.http.get(
             verify_url,
@@ -1314,15 +1469,47 @@ class UdemyClient:
                 return
 
             logger.info(f"[FREE_CHECKOUT] Verify response for {course.title}: status={r2.status_code} | _class={data.get('_class')} | has_error={bool(data.get('error'))}")
-            course.status = data.get("_class") == "course"
-            if course.status:
-                course.error = None
-                logger.info(f"[FREE_CHECKOUT] SUCCESS for {course.title}")
+            enrollment_time = data.get("enrollment_time")
+            is_pre_owned = False
+            if enrollment_time and isinstance(enrollment_time, str):
+                try:
+                    enroll_dt = datetime.fromisoformat(enrollment_time.replace("Z", "+00:00"))
+                    if enroll_dt.tzinfo is None:
+                        enroll_dt = enroll_dt.replace(tzinfo=timezone.utc)
+                    if (checkout_start_dt - enroll_dt).total_seconds() > 15:
+                        is_pre_owned = True
+                except Exception as ex:
+                    logger.debug(f"Could not parse enrollment_time '{enrollment_time}': {ex}")
+
+            if is_pre_owned:
+                logger.info(f"[FREE_CHECKOUT] Pre-owned course detected: {course.title} (enrolled at {enrollment_time})")
+                course.status = False
+                course.is_already_enrolled = True
+                course.error = "already_enrolled"
+                if self.enrolled_courses is None:
+                    self.enrolled_courses = {}
+                if course.slug:
+                    self.enrolled_courses[course.slug] = enrollment_time or ""
+                if course.course_id:
+                    self.enrolled_course_ids.add(str(course.course_id))
+                self._save_enrolled_cache()
             else:
-                logger.warning(
-                    f"[FREE_CHECKOUT] FAILED for {course.title} | _class={data.get('_class')} | "
-                    f"status={r2.status_code}"
-                )
+                course.status = data.get("_class") == "course"
+                if course.status:
+                    course.error = None
+                    logger.info(f"[FREE_CHECKOUT] SUCCESS for {course.title}")
+                    if self.enrolled_courses is None:
+                        self.enrolled_courses = {}
+                    if course.slug:
+                        self.enrolled_courses[course.slug] = enrollment_time or ""
+                    if course.course_id:
+                        self.enrolled_course_ids.add(str(course.course_id))
+                    self._save_enrolled_cache()
+                else:
+                    logger.warning(
+                        f"[FREE_CHECKOUT] FAILED for {course.title} | _class={data.get('_class')} | "
+                        f"status={r2.status_code}"
+                    )
             return
 
         logger.warning(f"[FREE_CHECKOUT] Unexpected verify status={r2.status_code} for {course.title}")
@@ -1339,6 +1526,14 @@ class UdemyClient:
             logger.warning(f"[CHECKOUT_SINGLE] Skipping definitely paid course {course.title} (price={course.price})")
             course.status = False
             return False
+
+        if getattr(course, "is_already_enrolled", False) or await self.is_already_enrolled(course):
+            logger.info(f"[CHECKOUT_SINGLE] Already enrolled: {course.title}")
+            course.status = False
+            course.is_already_enrolled = True
+            course.error = "already_enrolled"
+            return False
+
         logger.info(f"[CHECKOUT_SINGLE] {course.title} | free={course.is_free} | has_coupon={bool(course.coupon_code)}")
 
         if course.is_free and not course.coupon_code:
@@ -1346,12 +1541,12 @@ class UdemyClient:
             await self.free_checkout(course)
             # Fallback: use regular checkout pipeline with amount=0
             # (matches old working code behavior)
-            if course.status is False:
+            if course.status is False and not getattr(course, "is_already_enrolled", False):
                 logger.warning(f"[CHECKOUT_SINGLE] Free-checkout failed, falling back to du-checkout for {course.title}")
                 await self._du_checkout(course)
         else:
             await self._du_checkout(course)
-            if course.status is False and not is_definitely_paid:
+            if course.status is False and not is_definitely_paid and not getattr(course, "is_already_enrolled", False):
                 err = (course.error or "").lower()
                 is_expired = "expired" in err or "invalid" in err or "max" in err
                 is_cf_or_403 = (
@@ -1370,6 +1565,8 @@ class UdemyClient:
 
         if course.status:
             logger.info(f"[CHECKOUT_SINGLE] SUCCESS for {course.title}")
+        elif getattr(course, "is_already_enrolled", False):
+            logger.info(f"[CHECKOUT_SINGLE] ALREADY ENROLLED for {course.title}")
         elif course.status is None:
             logger.warning(
                 f"[CHECKOUT_SINGLE] UNKNOWN for {course.title} (unconfirmed response)"

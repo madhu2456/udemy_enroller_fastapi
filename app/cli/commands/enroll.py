@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import inspect
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -202,6 +203,34 @@ async def _run_enrollment_pipeline(
                         progress.advance(enroll_task, 1)
                         continue
 
+                    # Check if already enrolled in library
+                    is_enrolled = udemy_client.is_already_enrolled(course)
+                    if inspect.isawaitable(is_enrolled):
+                        is_enrolled = await is_enrolled
+                    elif not isinstance(is_enrolled, bool):
+                        is_enrolled = False
+
+                    if is_enrolled:
+                        course.is_already_enrolled = True
+                        udemy_client.already_enrolled_c += 1
+                        progress.console.print(f"  [yellow]●[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
+                        inst_list = getattr(course, "instructors", None)
+                        inst_str = ", ".join(inst_list) if inst_list else getattr(course, "instructor", "Unknown")
+                        enrolled_results.append(
+                            {
+                                "title": course.title,
+                                "url": course.url,
+                                "coupon_code": course.coupon_code,
+                                "status": "ALREADY ENROLLED",
+                                "price": float(course.price) if course.price else 0.0,
+                                "instructor": inst_str,
+                                "rating": course.rating,
+                                "language": course.language,
+                            }
+                        )
+                        progress.advance(enroll_task, 1)
+                        continue
+
                     # Check coupon status on Udemy
                     try:
                         await udemy_client.check_course(course)
@@ -278,12 +307,19 @@ async def _run_enrollment_pipeline(
                                         f"  [bold green]★ ENROLLED[/bold green] [bold white]{course.title[:45]:<45}[/bold white] "
                                         f"[green]Saved ${saved_val:.2f}[/green]"
                                     )
+                                elif getattr(course, "is_already_enrolled", False):
+                                    udemy_client.already_enrolled_c += 1
+                                    status_str = "ALREADY ENROLLED"
+                                    progress.console.print(f"  [yellow]●[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
                                 else:
                                     udemy_client.unknown_c += 1
                                     status_str = "FAILED"
-                                    progress.console.print(
-                                        f"  [red]✗ FAILED[/red]   {course.title[:45]:<45} [red]Checkout failed[/red]"
-                                    )
+                                    if success is None:
+                                        progress.console.print(f"  [yellow]?[/yellow] [dim]{course.title[:45]:<45} [INDETERMINATE / TIMEOUT][/dim]")
+                                    else:
+                                        progress.console.print(
+                                            f"  [red]✗ FAILED[/red]   {course.title[:45]:<45} [red]Checkout failed[/red]"
+                                        )
                     else:
                         status_str = "PAID / NOT 100% OFF"
                         progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")

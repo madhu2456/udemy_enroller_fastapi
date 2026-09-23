@@ -3,6 +3,7 @@
 import collections
 import os
 import time
+from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -163,3 +164,156 @@ def test_gui_headless_guard():
         with pytest.raises(SystemExit):
             run_gui()
         assert mock_exit.called
+
+
+def _free_gui_course(title: str, slug: str) -> Course:
+    course = Course(
+        title=title,
+        url=f"https://www.udemy.com/course/{slug}/?couponCode=FREE100",
+    )
+    course.price = Decimal("0.00")
+    course.list_price = Decimal("19.99")
+    course.is_free = True
+    course.is_coupon_valid = True
+    course.is_expired = False
+    course.is_already_enrolled = False
+    return course
+
+
+def _gui_enroll_client(checkout_side_effect=None, checkout_return=True):
+    mock_client = MagicMock()
+    mock_client.is_authenticated = True
+    mock_client.display_name = "Jane Developer"
+    mock_client.udemy_user_id = "98765"
+    mock_client.currency = "USD"
+    mock_client.enrolled_courses = {}
+    mock_client.successfully_enrolled_c = 0
+    mock_client.already_enrolled_c = 0
+    mock_client.expired_c = 0
+    mock_client.excluded_c = 0
+    mock_client.unknown_c = 0
+    mock_client.amount_saved_c = Decimal(0)
+    mock_client.cookie_login = MagicMock()
+    mock_client.get_session_info = AsyncMock(return_value=True)
+    mock_client.get_enrolled_courses = AsyncMock(return_value={})
+    mock_client.check_course = AsyncMock()
+    mock_client.is_course_excluded = MagicMock(return_value=False)
+    mock_client.close = AsyncMock()
+    if checkout_side_effect is not None:
+        mock_client.checkout_single = AsyncMock(side_effect=checkout_side_effect)
+    else:
+        mock_client.checkout_single = AsyncMock(return_value=checkout_return)
+    return mock_client
+
+
+@pytest.mark.asyncio
+async def test_bridge_live_enroll_respects_limit():
+    """_handle_start_enroll with filters.limit=2 stops after two live enrollments."""
+    bridge = AsyncioBridge()
+    c1 = _free_gui_course("GUI Python One", "gui-python-one")
+    c2 = _free_gui_course("GUI Python Two", "gui-python-two")
+    c3 = _free_gui_course("GUI Python Three", "gui-python-three")
+
+    mock_client = _gui_enroll_client(checkout_return=True)
+    mock_scraper = MagicMock()
+    mock_scraper.courses = [c1, c2, c3]
+    mock_scraper.site_name = "FreeCourseSites"
+
+    async def mock_stream():
+        yield mock_scraper, "completed"
+
+    with patch("app.gui.bridge.UdemyClient", return_value=mock_client), \
+         patch("app.gui.bridge.ScraperService.stream_results", side_effect=mock_stream), \
+         patch("app.gui.bridge.save_persistent_session"):
+        await bridge._handle_start_enroll(
+            {
+                "access_token": "dummy_access_token",
+                "client_id": "dummy_client_id",
+                "csrf_token": "dummy_csrf_token",
+                "sites": ["FreeCourseSites"],
+                "filters": {"limit": 2},
+            }
+        )
+
+    assert mock_client.checkout_single.await_count == 2
+    assert mock_client.successfully_enrolled_c == 2
+    assert isinstance(mock_client.successfully_enrolled_c, int)
+
+
+@pytest.mark.asyncio
+async def test_bridge_paid_path_does_not_increment_expired_c():
+    """GUI paid / not-100% path must not increment expired_c and must skip checkout."""
+    bridge = AsyncioBridge()
+    paid = Course(
+        title="Paid Course 40% Off",
+        url="https://www.udemy.com/course/paid-gui/?couponCode=DISCOUNT40",
+    )
+    paid.price = Decimal("479.00")
+    paid.is_free = False
+    paid.is_coupon_valid = False
+    paid.is_expired = False
+
+    mock_client = _gui_enroll_client()
+    mock_scraper = MagicMock()
+    mock_scraper.courses = [paid]
+    mock_scraper.site_name = "FreeCourseSites"
+
+    async def mock_stream():
+        yield mock_scraper, "completed"
+
+    with patch("app.gui.bridge.UdemyClient", return_value=mock_client), \
+         patch("app.gui.bridge.ScraperService.stream_results", side_effect=mock_stream), \
+         patch("app.gui.bridge.save_persistent_session"):
+        await bridge._handle_start_enroll(
+            {
+                "access_token": "dummy_access_token",
+                "client_id": "dummy_client_id",
+                "csrf_token": "dummy_csrf_token",
+                "sites": ["FreeCourseSites"],
+            }
+        )
+
+    mock_client.checkout_single.assert_not_called()
+    assert mock_client.expired_c == 0
+    assert isinstance(mock_client.expired_c, int)
+    events = bridge.poll_events(max_count=200)
+    processed = [e for e in events if e.get("event") == "COURSE_PROCESSED"]
+    assert len(processed) == 1
+    assert processed[0]["data"]["status"] == "PAID"
+
+
+@pytest.mark.asyncio
+async def test_bridge_false_none_checkout_increments_unknown_c():
+    """GUI False/None checkout results increment unknown_c and mark FAILED."""
+    bridge = AsyncioBridge()
+    c1 = _free_gui_course("GUI Fail One", "gui-fail-one")
+    c2 = _free_gui_course("GUI Fail Two", "gui-fail-two")
+
+    mock_client = _gui_enroll_client(checkout_side_effect=[False, None])
+    mock_scraper = MagicMock()
+    mock_scraper.courses = [c1, c2]
+    mock_scraper.site_name = "FreeCourseSites"
+
+    async def mock_stream():
+        yield mock_scraper, "completed"
+
+    with patch("app.gui.bridge.UdemyClient", return_value=mock_client), \
+         patch("app.gui.bridge.ScraperService.stream_results", side_effect=mock_stream), \
+         patch("app.gui.bridge.save_persistent_session"):
+        await bridge._handle_start_enroll(
+            {
+                "access_token": "dummy_access_token",
+                "client_id": "dummy_client_id",
+                "csrf_token": "dummy_csrf_token",
+                "sites": ["FreeCourseSites"],
+            }
+        )
+
+    assert mock_client.unknown_c == 2
+    assert isinstance(mock_client.unknown_c, int)
+    assert mock_client.successfully_enrolled_c == 0
+    assert isinstance(mock_client.successfully_enrolled_c, int)
+    events = bridge.poll_events(max_count=200)
+    processed = [e for e in events if e.get("event") == "COURSE_PROCESSED"]
+    assert len(processed) == 2
+    assert [e["data"]["status"] for e in processed] == ["FAILED", "FAILED"]

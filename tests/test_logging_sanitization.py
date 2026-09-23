@@ -215,3 +215,26 @@ class TestLogSafeUrl:
         assert "HIDDEN" not in safe
         assert "couponCode" not in safe
         assert "client_id" not in safe
+
+
+class TestSafeSinkFilter:
+    """Tests for exception-safe Loguru sink filter (WP-UDEMY-01 / SEC-UDEMY-01)."""
+
+    def test_sink_filter_redacts_sensitive_message(self):
+        from app.logging_config import _safe_sink_filter
+
+        record = {"message": "User login access_token=SECRET123 password=MyPassword! coupon=SAVE50"}
+        result = _safe_sink_filter(record)
+        assert result is True
+        assert "SECRET123" not in record["message"]
+        assert "MyPassword!" not in record["message"]
+        assert "SAVE50" not in record["message"]
+        assert "***REDACTED***" in record["message"]
+
+    def test_sink_filter_exception_safety(self):
+        from app.logging_config import _safe_sink_filter
+
+        # Non-dict or malformed record should not raise and return True (fail-safe)
+        assert _safe_sink_filter(None) is True
+        assert _safe_sink_filter({}) is True
+        assert _safe_sink_filter({"message": 12345}) is True

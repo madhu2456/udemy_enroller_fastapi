@@ -258,7 +258,9 @@ class TestDuCheckoutFailFastAndStatusMatrix:
         )
         r.json = MagicMock(return_value={"message": "You are already subscribed to this course", "developer_message": "already_enrolled"})
         await _run_du_checkout(udemy_client, course, [r])
-        assert course.status is True
+        assert course.status is False
+        assert course.is_already_enrolled is True
+        assert course.error == "already_enrolled"
         assert udemy_client._cs_post.await_count == 1
 
     @pytest.mark.asyncio

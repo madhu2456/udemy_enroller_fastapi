@@ -1,6 +1,7 @@
 """Tests for the ScraperService."""
 
-from unittest.mock import MagicMock
+import asyncio
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -93,3 +94,60 @@ def test_registry_keeps_frozen_ten_and_appends_seven():
     assert "Discudemy" not in keys
     assert "FreeWebCart" not in keys
     assert "Course Joiner" not in keys
+
+
+@pytest.mark.asyncio
+async def test_stream_results_one_shot_fleet_timeout_spares_queued():
+    """Fleet timeout cancels in-flight scrapers once; queued workers still complete."""
+    service = ScraperService(
+        sites_to_scrape=["FreeCourseSites", "E-next", "Interview Gig", "UdemyXpert"]
+    )
+    assert len(service.scrapers) == 4
+
+    acquire_n = 0
+
+    async def gated_scrape(detail_sem):
+        nonlocal acquire_n
+        acquire_n += 1
+        if acquire_n <= 2:
+            await asyncio.sleep(2.0)
+        else:
+            await asyncio.sleep(0.05)
+
+    for scraper in service.scrapers:
+        scraper.scrape = gated_scrape
+        scraper.error = None
+        scraper.done = False
+
+    mock_settings = MagicMock()
+    mock_settings.MAX_SCRAPER_WORKERS = 2
+    mock_settings.SCRAPER_RUN_TIMEOUT_SECONDS = 0.35
+    mock_settings.SCRAPER_SITE_TIMEOUT_SECONDS = 5
+
+    outcomes = []
+    try:
+        with patch("config.settings.get_settings", return_value=mock_settings):
+            async for scraper, state in service.stream_results():
+                outcomes.append(
+                    {
+                        "site": scraper.site_name,
+                        "state": state,
+                        "error": scraper.error,
+                    }
+                )
+    finally:
+        await service.close()
+
+    assert len(outcomes) == 4
+    timed_out = [row for row in outcomes if row["state"] == "timed_out"]
+    completed = [row for row in outcomes if row["state"] == "completed"]
+    assert timed_out, "expected in-flight scrapers to be cancelled as timed_out"
+    assert completed, "expected queued scrapers to finish after acquiring a worker"
+    assert all(
+        "Run timed out overall" not in str(row["error"] or "") for row in completed
+    )
+    assert all(
+        "Run timed out overall" not in str(row["error"] or "")
+        for row in outcomes
+        if row["state"] != "timed_out"
+    )

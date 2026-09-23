@@ -59,6 +59,7 @@ class Course:
         self.ready_time = None
         self.error: str = None
         self.status = None
+        self.is_already_enrolled: bool = False
 
         self.set_url(url)
         self.extract_coupon_code()

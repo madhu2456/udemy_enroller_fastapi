@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import inspect
 import json
 import queue
 import threading
@@ -648,6 +649,48 @@ class AsyncioBridge:
                     except Exception as e:
                         logger.debug(f"Filter evaluation error for {getattr(course, 'title', '')}: {e}")
 
+                    # Check if already enrolled in library
+                    is_enrolled = self._active_udemy_client.is_already_enrolled(course)
+                    if inspect.isawaitable(is_enrolled):
+                        is_enrolled = await is_enrolled
+                    elif not isinstance(is_enrolled, bool):
+                        is_enrolled = False
+
+                    if is_enrolled:
+                        course.is_already_enrolled = True
+                        self._active_udemy_client.already_enrolled_c += 1
+                        status_text = "ALREADY ENROLLED"
+                        self.emit_event("LOG", {"level": "INFO", "message": f"[ALREADY OWNED] {getattr(course, 'title', '')[:45]}"})
+                        inst_list = getattr(course, "instructors", None)
+                        inst_str = ", ".join(inst_list) if inst_list else getattr(course, "instructor", "Unknown")
+                        price_val = float(course.price) if getattr(course, "price", None) else 0.0
+                        self.emit_event(
+                            "COURSE_PROCESSED",
+                            {
+                                "title": getattr(course, "title", "Untitled"),
+                                "url": getattr(course, "url", ""),
+                                "coupon_code": getattr(course, "coupon_code", ""),
+                                "instructor": inst_str,
+                                "rating": getattr(course, "rating", None),
+                                "price": price_val,
+                                "status": status_text,
+                                "source": getattr(course, "source", "") or getattr(course, "site_name", "") or getattr(course, "site", "Web"),
+                            },
+                        )
+                        self.emit_event("ENROLL_PROGRESS", {"completed": processed_count + 1, "total": len(unique_courses), "current_title": getattr(course, "title", "")})
+                        self.emit_event(
+                            "KPI_UPDATE",
+                            {
+                                "enrolled": self._active_udemy_client.successfully_enrolled_c,
+                                "already_enrolled": self._active_udemy_client.already_enrolled_c,
+                                "expired": self._active_udemy_client.expired_c,
+                                "excluded": self._active_udemy_client.excluded_c,
+                                "money_saved": float(self._active_udemy_client.amount_saved_c),
+                                "total_scraped": len(unique_courses),
+                            },
+                        )
+                        continue
+
                     # Check coupon status on Udemy
                     try:
                         await self._active_udemy_client.check_course(course)
@@ -684,15 +727,25 @@ class AsyncioBridge:
                             logger.error(f"Checkout exception for {getattr(course, 'title', '')}: {e}")
                             success = False
 
-                        if success:
+                        if success is True:
+                            self._active_udemy_client.successfully_enrolled_c += 1
+                            if course.list_price:
+                                self._active_udemy_client.amount_saved_c += course.list_price
                             status_text = "ENROLLED"
                             self.emit_event("LOG", {"level": "SUCCESS", "message": f"★ ENROLLED: {getattr(course, 'title', '')[:45]} (Saved ${price_val:.2f})"})
+                        elif getattr(course, "is_already_enrolled", False):
+                            self._active_udemy_client.already_enrolled_c += 1
+                            status_text = "ALREADY ENROLLED"
+                            self.emit_event("LOG", {"level": "INFO", "message": f"[ALREADY OWNED] {getattr(course, 'title', '')[:45]}"})
                         else:
+                            self._active_udemy_client.unknown_c += 1
                             status_text = "FAILED"
-                            self.emit_event("LOG", {"level": "ERROR", "message": f"✗ Checkout failed: {getattr(course, 'title', '')[:45]}"})
+                            if success is None:
+                                self.emit_event("LOG", {"level": "WARNING", "message": f"? Timeout / Indeterminate: {getattr(course, 'title', '')[:45]}"})
+                            else:
+                                self.emit_event("LOG", {"level": "ERROR", "message": f"✗ Checkout failed: {getattr(course, 'title', '')[:45]}"})
                     else:
                         status_text = "PAID"
-                        self._active_udemy_client.expired_c += 1
                         self.emit_event("LOG", {"level": "WARNING", "message": f"[NOT 100% FREE] {getattr(course, 'title', '')[:45]} (Price: {getattr(course, 'currency', '$')}{price_val:.2f})"})
 
                     self.emit_event(
