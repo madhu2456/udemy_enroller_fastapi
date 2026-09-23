@@ -1,6 +1,6 @@
 """Targeted security tests for proxy validation and SSRF fencing (WP-UDEMY-03)."""
 
-from app.security import validate_proxy_url, URLValidator
+from app.security import validate_proxy_url
 
 
 def test_proxy_url_ssrf():

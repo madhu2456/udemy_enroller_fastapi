@@ -1,7 +1,6 @@
 """Targeted tests for Course URL parsing and redaction (WP-UDEMY-02 / SEC-UDEMY-02)."""
 
 import logging
-from unittest.mock import patch
 
 from app.services.course import Course
 
