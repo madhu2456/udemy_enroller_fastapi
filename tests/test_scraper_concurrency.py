@@ -1,6 +1,7 @@
 """Unit tests for High-Concurrency & Domain-Partitioned Scraper Scaling."""
 
 import asyncio
+import re
 import time
 from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -283,21 +284,36 @@ async def test_enrollment_manager_passes_max_workers():
     assert call_kwargs.get("max_workers") == 7
 
 
-def test_cli_scrape_help_displays_workers_option():
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _visible(rendered: str) -> str:
+    return _ANSI_RE.sub("", rendered)
+
+
+def test_cli_scrape_help_displays_workers_option(monkeypatch):
     """Verify CLI scrape --help displays --workers and -w options."""
+    import typer.rich_utils
+
+    monkeypatch.setattr(typer.rich_utils, "MAX_WIDTH", 120, raising=False)
     runner = CliRunner()
     result = runner.invoke(app, ["scrape", "--help"])
     assert result.exit_code == 0
-    assert "--workers" in result.output
-    assert "-w" in result.output
-    assert "MAX_SCRAPER_WORKERS" in result.output
+    out = _visible(result.output)
+    assert "--workers" in out
+    assert "-w" in out
+    assert "MAX_SCRAPER_WORKERS" in out
 
 
-def test_cli_enroll_help_displays_workers_option():
+def test_cli_enroll_help_displays_workers_option(monkeypatch):
     """Verify CLI enroll --help displays --workers and -w options."""
+    import typer.rich_utils
+
+    monkeypatch.setattr(typer.rich_utils, "MAX_WIDTH", 120, raising=False)
     runner = CliRunner()
     result = runner.invoke(app, ["enroll", "--help"])
     assert result.exit_code == 0
-    assert "--workers" in result.output
-    assert "-w" in result.output
-    assert "MAX_SCRAPER_WORKERS" in result.output
+    out = _visible(result.output)
+    assert "--workers" in out
+    assert "-w" in out
+    assert "MAX_SCRAPER_WORKERS" in out
