@@ -207,7 +207,6 @@ async def _run_enrollment_pipeline(
                     # Category / Language / Rating Filter
                     if udemy_client.is_course_excluded(course, settings_dict):
                         udemy_client.excluded_c += 1
-                        progress.advance(enroll_task, 1)
                         continue
 
                     # Check if already enrolled in library
@@ -235,7 +234,6 @@ async def _run_enrollment_pipeline(
                                 "language": course.language,
                             }
                         )
-                        progress.advance(enroll_task, 1)
                         continue
 
                     # Check coupon status on Udemy

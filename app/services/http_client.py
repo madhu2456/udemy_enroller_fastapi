@@ -124,13 +124,14 @@ class AsyncHTTPClient:
         """Initialize or re-initialize the internal httpx client and cloudscraper."""
         self._close_all_scrapers()
         self._thread_local = threading.local()
+        self.limits = httpx.Limits(
+            max_connections=40, max_keepalive_connections=40, keepalive_expiry=120.0
+        )
         self.client = httpx.AsyncClient(
             proxy=self.proxy,
             timeout=httpx.Timeout(15.0, connect=30.0),
             follow_redirects=False,
-            limits=httpx.Limits(
-                max_connections=40, max_keepalive_connections=20, keepalive_expiry=20.0
-            ),
+            limits=self.limits,
         )
 
     def _get_scraper(self, is_mobile: bool = False):

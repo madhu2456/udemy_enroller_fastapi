@@ -279,6 +279,36 @@ class TestDuCheckoutFailFastAndStatusMatrix:
         assert udemy_client._cs_post.await_count == 1
 
     @pytest.mark.asyncio
+    async def test_du_checkout_http_200_rejection_fails_fast(self, udemy_client):
+        course = _course()
+        r = MagicMock(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            url="https://www.udemy.com/payment/checkout-submit/",
+            text='{"status": "failed", "message": "Coupon code invalid"}',
+        )
+        r.json = MagicMock(return_value={"status": "failed", "message": "Coupon code invalid"})
+        await _run_du_checkout(udemy_client, course, [r, r, r])
+        assert course.status is False
+        assert "Coupon code invalid" in course.error
+        assert udemy_client._cs_post.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_du_checkout_http_200_rejection_developer_message_fallback(self, udemy_client):
+        course = _course()
+        r = MagicMock(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            url="https://www.udemy.com/payment/checkout-submit/",
+            text='{"status": "failed", "developer_message": "Transaction declined by gateway"}',
+        )
+        r.json = MagicMock(return_value={"status": "failed", "developer_message": "Transaction declined by gateway"})
+        await _run_du_checkout(udemy_client, course, [r, r, r])
+        assert course.status is False
+        assert "Transaction declined by gateway" in course.error
+        assert udemy_client._cs_post.await_count == 1
+
+    @pytest.mark.asyncio
     async def test_du_checkout_html_redirect_fails_fast(self, udemy_client):
         course = _course()
         r = MagicMock(

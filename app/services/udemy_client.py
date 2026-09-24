@@ -1528,7 +1528,7 @@ class UdemyClient:
                     course.error = f"Malformed JSON (status={status})"
                     return
 
-                if result.get("status") == "succeeded":
+                if isinstance(result, dict) and result.get("status") == "succeeded":
                     logger.info(f"[DU_CHECKOUT] SUCCESS for {course.title}")
                     course.status = True
                     self._checkout_consecutive_403s = 0
@@ -1536,8 +1536,8 @@ class UdemyClient:
                     return
 
                 # Handle already subscribed
-                msg = str(result.get("message", ""))
-                dev_msg = str(result.get("developer_message", ""))
+                msg = str(result.get("message", "")) if isinstance(result, dict) else ""
+                dev_msg = str(result.get("developer_message", "")) if isinstance(result, dict) else ""
                 if "already subscribed" in msg.lower() or "already_enrolled" in dev_msg.lower():
                     logger.info(f"[DU_CHECKOUT] Already enrolled: {course.title}")
                     course.status = False
@@ -1550,6 +1550,18 @@ class UdemyClient:
                     if course.course_id:
                         self.enrolled_course_ids.add(str(course.course_id))
                     self._save_enrolled_cache()
+                    return
+
+                if not isinstance(result, dict):
+                    course.status = False
+                    course.error = f"Malformed JSON response: expected object (status={status})"
+                    return
+
+                if status == 200 and result.get("status") != "succeeded" and not getattr(course, "is_already_enrolled", False):
+                    checkout_status = result.get("status")
+                    course.status = False
+                    course.error = msg or dev_msg or f"Checkout rejected: {checkout_status or 'failed'}"
+                    logger.warning(f"[DU_CHECKOUT] Rejected by Udemy for {course.title}: {course.error}")
                     return
 
                 if status in (400, 401, 403, 404, 409) or status != 200:

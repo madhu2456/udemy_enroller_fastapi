@@ -220,3 +220,14 @@ def test_is_safe_url_private_ip_after_dns_rejected(env):
                 assert AsyncHTTPClient._is_safe_url("http://dns-rebinding-lan.example.com/path") is False
     finally:
         _resolve_host_ips.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_async_http_client_connection_pool_limits():
+    client = AsyncHTTPClient()
+    try:
+        assert client.limits.max_keepalive_connections == 40
+        assert client.limits.max_connections == 40
+        assert client.limits.keepalive_expiry == 120.0
+    finally:
+        await client.close()

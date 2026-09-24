@@ -381,6 +381,64 @@ def test_enroll_live_false_none_checkout_marks_failed_unknown(tmp_path):
         assert "VALID FREE" not in statuses
 
 
+def test_enroll_progress_bar_advances_exactly_once_per_course():
+    """Verify that enroll progress bar advances exactly once per course item (SSOT invariance)."""
+    c_excluded = Course(
+        title="Excluded Course",
+        url="https://www.udemy.com/course/excluded-course/?couponCode=FREE100",
+    )
+    c_excluded.slug = "excluded-course"
+    c_excluded.price = Decimal("0.00")
+    c_excluded.language = "German"
+
+    c_already = Course(
+        title="Already Owned Course",
+        url="https://www.udemy.com/course/already-owned-course/?couponCode=FREE100",
+    )
+    c_already.slug = "already-owned-course"
+    c_already.price = Decimal("0.00")
+
+    c_valid = Course(
+        title="Valid Free Course",
+        url="https://www.udemy.com/course/valid-free-course/?couponCode=FREE100",
+    )
+    c_valid.slug = "valid-free-course"
+    c_valid.price = Decimal("0.00")
+    c_valid.list_price = Decimal("29.99")
+    c_valid.is_free = True
+    c_valid.is_coupon_valid = True
+    c_valid.is_expired = False
+
+    courses = [c_excluded, c_already, c_valid]
+
+    async def mock_stream(self, sites=None):
+        s_mock = MagicMock()
+        s_mock.site_name = "TutorialBar"
+        s_mock.courses = courses
+        yield s_mock, "completed"
+
+    mock_scrape_progress = MagicMock()
+    mock_scrape_progress.__enter__.return_value = mock_scrape_progress
+
+    mock_progress = MagicMock()
+    mock_progress.__enter__.return_value = mock_progress
+    mock_progress.add_task.return_value = "enroll_task"
+
+    with patch("app.cli.commands.enroll.UdemyClient") as mock_client_cls, \
+         patch("app.cli.commands.enroll.ScraperService.stream_results", new=mock_stream), \
+         patch("app.cli.commands.enroll.create_progress_bar", side_effect=[mock_scrape_progress, mock_progress]):
+
+        mock_client = _cli_enroll_client()
+        mock_client.is_course_excluded = MagicMock(side_effect=lambda c, s: c.title == "Excluded Course")
+        mock_client.is_already_enrolled = MagicMock(side_effect=lambda c: c.title == "Already Owned Course")
+        mock_client_cls.return_value = mock_client
+
+        result = runner.invoke(app, ["enroll", "--token", "dummy_token", "--dry-run"])
+        assert result.exit_code == 0
+        assert mock_progress.advance.call_count == len(courses)
+        mock_progress.advance.assert_called_with("enroll_task", 1)
+
+
 # =====================================================================
 # 2. SCRAPE Subcommand Edge Cases
 # =====================================================================
