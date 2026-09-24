@@ -4587,7 +4587,6 @@ class ScraperService:
 
         raw_detail = getattr(settings, "SCRAPER_DETAIL_CONCURRENCY", 6)
         detail_concurrency = raw_detail if isinstance(raw_detail, int) else 6
-        detail_sem = asyncio.Semaphore(max(1, min(detail_concurrency, 32)))
 
         if not hasattr(self, "source_states"):
             self.source_states = {id(s): "queued" for s in self.scrapers}
@@ -4596,6 +4595,7 @@ class ScraperService:
             async with worker_sem:
                 self.source_states[id(scraper)] = "scraping"
                 logger.warning(f"  Scraper started: {scraper.site_name}")
+                detail_sem = asyncio.Semaphore(max(1, min(detail_concurrency, 32)))
 
                 try:
                     await asyncio.wait_for(

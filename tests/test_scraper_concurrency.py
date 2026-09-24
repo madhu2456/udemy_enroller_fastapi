@@ -211,7 +211,9 @@ async def test_scraper_service_worker_sem_scaling():
 
     assert captured_sem_values[0] == expected_setting_workers  # Matches setting, NOT hardcapped at 2!
     assert captured_sem_values[0] > 2
-    assert captured_sem_values[1] == 6  # detail_sem = 6
+    assert len(captured_sem_values) >= 2
+    assert captured_sem_values[0] == expected_setting_workers
+    assert captured_sem_values.count(6) >= 2
 
 
 @pytest.mark.asyncio
