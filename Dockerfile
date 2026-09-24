@@ -34,6 +34,11 @@ RUN groupadd --system --gid 1001 appuser && \
     chmod +x docker-entrypoint.sh && \
     chown -R appuser:appuser /app
 
+# F008: drop root at the image level. Every process (entrypoint, alembic
+# migrations, uvicorn, HEALTHCHECK python) now runs as uid 1001 (appuser).
+# Fresh named volumes (app-data/app-logs/app-courses) inherit this image
+# ownership, so /app/data, /app/logs and /app/Courses stay writable.
+USER appuser
 
 # Expose port
 EXPOSE 8000

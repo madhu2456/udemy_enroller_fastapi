@@ -163,7 +163,13 @@ if [ "${ALLOWED_HOSTS:-}" = "*" ] && [ "${DEPLOYMENT_ENV:-}" = "server" ]; then
 fi
 
 # Fix volume permissions and drop privileges
+# NOTE (F008): the image sets USER appuser (Dockerfile), so this entrypoint and
+# uvicorn already run as uid 1001. The chown below is a best-effort back-compat
+# shim for named volumes created root-owned by an older image; as non-root it
+# cannot succeed, hence the silent `|| true`.
 chown -R appuser:appuser /app/data /app/logs /app/Courses 2>/dev/null || true
 
 # Start the application as non-root user
-exec su appuser -c "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1"
+# F008: no su-based privilege drop needed anymore — `su appuser` would be a
+# same-uid (passwordless) no-op that adds a PAM failure mode in slim images.
+exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
