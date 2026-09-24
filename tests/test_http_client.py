@@ -1,10 +1,12 @@
 """Targeted tests for AsyncHTTPClient boundary SSRF protection (WP-UDEMY-04 / SEC-UDEMY-04)."""
 
-import pytest
-from unittest.mock import AsyncMock, patch
-import httpx
+import socket
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.http_client import AsyncHTTPClient
+import httpx
+import pytest
+
+from app.services.http_client import AsyncHTTPClient, _resolve_host_ips
 
 
 @pytest.mark.asyncio
@@ -136,3 +138,85 @@ def test_build_scraper_headers_local_empty_and_none():
     client = AsyncHTTPClient()
     assert client._build_scraper_headers_local(None, {}, False) == {"Accept-Encoding": "identity"}
     assert client._build_scraper_headers_local({}, {}, False) == {"Accept-Encoding": "identity"}
+
+
+def test_resolve_host_ips_caching():
+    _resolve_host_ips.cache_clear()
+    try:
+        with patch("socket.getaddrinfo") as mock_gai:
+            mock_gai.return_value = [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
+            ]
+            first = _resolve_host_ips("example.com")
+            second = _resolve_host_ips("example.com")
+            assert first == ("93.184.216.34",)
+            assert second == ("93.184.216.34",)
+            assert mock_gai.call_count == 1
+    finally:
+        _resolve_host_ips.cache_clear()
+
+
+def test_resolve_host_ips_negative_cache_exclusion():
+    _resolve_host_ips.cache_clear()
+    try:
+        with patch("socket.getaddrinfo") as mock_gai:
+            mock_gai.side_effect = socket.gaierror(-2, "Name or service not known")
+            with pytest.raises(socket.gaierror):
+                _resolve_host_ips("unresolvable-domain.test")
+            assert mock_gai.call_count == 1
+
+            mock_gai.side_effect = None
+            mock_gai.return_value = [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
+            ]
+            second = _resolve_host_ips("unresolvable-domain.test")
+            assert second == ("93.184.216.34",)
+            assert mock_gai.call_count == 2
+    finally:
+        _resolve_host_ips.cache_clear()
+
+
+def test_is_safe_url_dns_error_fail_open_local():
+    _resolve_host_ips.cache_clear()
+    try:
+        mock_settings = MagicMock()
+        mock_settings.DEPLOYMENT_ENV = "local"
+        with patch("config.settings.get_settings", return_value=mock_settings):
+            with patch("socket.getaddrinfo", side_effect=socket.gaierror(-2, "Name or service not known")):
+                assert AsyncHTTPClient._is_safe_url("http://failing-dns.example.com/test") is True
+    finally:
+        _resolve_host_ips.cache_clear()
+
+
+def test_is_safe_url_dns_error_fail_closed_server():
+    _resolve_host_ips.cache_clear()
+    try:
+        mock_settings = MagicMock()
+        mock_settings.DEPLOYMENT_ENV = "server"
+        with patch("config.settings.get_settings", return_value=mock_settings):
+            with patch("socket.getaddrinfo", side_effect=socket.gaierror(-2, "Name or service not known")):
+                assert AsyncHTTPClient._is_safe_url("http://failing-dns.example.com/test") is False
+    finally:
+        _resolve_host_ips.cache_clear()
+
+
+@pytest.mark.parametrize("env", ["local", "server", "test"])
+def test_is_safe_url_private_ip_after_dns_rejected(env):
+    _resolve_host_ips.cache_clear()
+    try:
+        mock_settings = MagicMock()
+        mock_settings.DEPLOYMENT_ENV = env
+        with patch("config.settings.get_settings", return_value=mock_settings):
+            with patch("socket.getaddrinfo") as mock_gai:
+                mock_gai.return_value = [
+                    (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 0))
+                ]
+                assert AsyncHTTPClient._is_safe_url("http://dns-rebinding-private.example.com/path") is False
+
+                _resolve_host_ips.cache_clear()
+                mock_gai.return_value = [
+                    (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.168.1.1", 0))
+                ]
+                assert AsyncHTTPClient._is_safe_url("http://dns-rebinding-lan.example.com/path") is False
+    finally:
+        _resolve_host_ips.cache_clear()
