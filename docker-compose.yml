@@ -40,6 +40,23 @@ services:
       - app-data:/app/data
       - app-logs:/app/logs
       - app-courses:/app/Courses
+    # F010 (UE-portion): runtime hardening. cap_drop ALL removes every Linux
+    # capability; no-new-privileges blocks escalation through setuid/setgid
+    # binaries (su, mount, newuidmap); read_only makes the rootfs immutable.
+    # Writable paths remain the named volumes (uid 1001 via image chown —
+    # Docker copies image ownership into fresh volumes) plus tmpfs scratch.
+    # NET_BIND_SERVICE is defensive only: both listeners (8000 here, 8001 on
+    # coupon-checker) are unprivileged ports that do not require it.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
@@ -72,6 +89,19 @@ services:
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
+    # F010 (UE-portion): same hardening as the web service (cap_drop ALL +
+    # no-new-privileges + read_only + tmpfs). Public-deal rewrites target the
+    # app-data volume; the liveness server binds an unprivileged port.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
     depends_on:
       web:
         condition: service_healthy
