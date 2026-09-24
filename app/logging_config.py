@@ -117,8 +117,10 @@ def setup_logging(level: str | None = None, log_file: str | None = None):
                 format=concise_fmt,
                 level=settings_level,
                 colorize=False,
+                # F055: retention >= 180 days on every app-owned logging sink
+                # (was 7 days). Asserted in tests/test_log_retention.py.
                 rotation="10 MB",
-                retention="7 days",
+                retention="180 days",
                 encoding="utf-8",
                 filter=_safe_sink_filter,
             )
