@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses date-based notes until formal version tags are published.
 
+## [Unreleased] — 2026-09-24
+
+### Added
+- **Two-Tier Resilient HTTP Fallback (`app/services/scraper.py`)**: Added [`_http_get_resilient()`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L177) to the [`Scraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L111) base class providing an optimistic native async HTTPX fast path (100ms) with automated CloudScraper fallback on HTTP 403, 503, or Cloudflare challenge detection (`_is_cf_challenge`) for [`ENextScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L736) and [`UdemyXpertScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L996).
+
+### Changed
+- **Scraper Concurrency Decoupling (`app/services/scraper.py`)**: Moved `detail_sem` from the global [`ScraperService`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L4644) stream to per-scraper isolation within [`_run_scraper()`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L4685), eliminating cross-domain head-of-line blocking and starvation across concurrent scrapers while respecting `MAX_SCRAPER_WORKERS` / `--workers`.
+- **Semaphore Pruning (`app/services/scraper.py`)**: Removed redundant nested `local_detail_semaphore = asyncio.Semaphore(2)` in [`UdemyFreebiesScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L2112) and [`IDownloadCouponScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L2292), delegating pacing to domain-level locks in [`AsyncHTTPClient`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/http_client.py#L27).
+- **Candidate Buffer Right-Sizing & Batched Pagination (`app/services/scraper.py`)**: Standardized `CANDIDATE_BUFFER = 700` across [`KorshubScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L1791), [`FreebiesGlobalScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L4050), [`GeeksGodScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L4252), and [`CouponScorpionScraper`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py#L3550) (guaranteeing >=500 courses with 15–25% coupon attrition), added batched pagination (`BATCH_SIZE = 6` / `REST_BATCH_SIZE = 4`), and safeguarded EOF pagination on page N > 1 without false circuit trips.
+- **Test Hardening (`tests/test_scraper_concurrency.py`)**: Updated [`tests/test_scraper_concurrency.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_scraper_concurrency.py#L1-L322) to validate per-scraper semaphore isolation and CLI workers scaling without timing fragility.
+
 ## [Unreleased] — 2026-09-23
 
 ### Added

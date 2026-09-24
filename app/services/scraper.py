@@ -174,6 +174,23 @@ class Scraper(ABC):
         )
         return any(sig in text for sig in cf_signatures)
 
+    async def _http_get_resilient(
+        self, url: str, timeout: float = 10.0, use_robots_circuit: bool = False, **kwargs
+    ) -> Optional[object]:
+        """Optimistic fast-path via async HTTPX with automated CloudScraper fallback."""
+        kwargs.pop("use_cloudscraper", None)
+        getter = self._http_get if use_robots_circuit else self.http.get
+        resp = await getter(
+            url, use_cloudscraper=False, timeout=timeout, raise_for_status=False, **kwargs
+        )
+        if (
+            resp is None
+            or getattr(resp, "status_code", None) in (403, 503)
+            or self._is_cf_challenge(resp)
+        ):
+            resp = await getter(url, use_cloudscraper=True, timeout=timeout, **kwargs)
+        return resp
+
     def parse_html(self, content: Union[str, bytes]) -> BeautifulSoup:
         """Helper to parse HTML with BeautifulSoup."""
         import warnings
@@ -738,8 +755,8 @@ class ENextScraper(Scraper):
 
             async def _fetch_details(item):
                 try:
-                    resp = await self.http.get(
-                        item["href"], use_cloudscraper=True, timeout=10
+                    resp = await self._http_get_resilient(
+                        item["href"], timeout=10
                     )
                     if not resp:
                         return None, None
@@ -998,8 +1015,8 @@ class UdemyXpertScraper(Scraper):
         try:
             logger.info("  UdemyXpert: Fetching sitemap...")
             self.length = 1  # Sitemap fetch
-            resp = await self._http_get(
-                "https://udemyxpert.com/sitemap.xml", use_cloudscraper=True, timeout=20
+            resp = await self._http_get_resilient(
+                "https://udemyxpert.com/sitemap.xml", timeout=20, use_robots_circuit=True
             )
             self.progress = 1
             if not resp or resp.status_code != 200:
@@ -1019,9 +1036,7 @@ class UdemyXpertScraper(Scraper):
 
             async def _fetch_detail(page_url: str):
                 try:
-                    page = await self.http.get(
-                        page_url, use_cloudscraper=True, timeout=15
-                    )
+                    page = await self._http_get_resilient(page_url, timeout=15)
                     if not page or page.status_code != 200:
                         return None, None
 
@@ -1782,7 +1797,7 @@ class KorshubScraper(Scraper):
 
     MAX_COURSES: int = 500
     MAX_PAGES: int = 80
-    CANDIDATE_BUFFER: int = 750
+    CANDIDATE_BUFFER: int = 700
     DETAIL_BATCH_SIZE: int = 10
     LISTING_ENDPOINT: str = "https://korshub.com/free-courses"
 
@@ -1879,21 +1894,36 @@ class KorshubScraper(Scraper):
         try:
             seen: set[str] = set()
             max_pages = getattr(self, "MAX_PAGES", 80)
+            batch_size = getattr(self, "BATCH_SIZE", 6)
+            buffer_limit = min(
+                getattr(self, "CANDIDATE_BUFFER", 700), max(self.MAX_COURSES * 8, 40)
+            )
 
             detail_urls: list[str] = []
 
-            # Step 1: Fetch listing pages sequentially
+            # Step 1: Fetch listing pages concurrently in batches
             self.length = max_pages
-            for page_num in range(1, max_pages + 1):
-                self.progress = page_num
-                url = f"{self.LISTING_ENDPOINT}?page={page_num}&platform=UDEMY"
-                try:
-                    resp = await self._http_get(
-                        url, use_cloudscraper=True, timeout=15, retry_403=True
+            stop_pagination = False
+            for start_page in range(1, max_pages + 1, batch_size):
+                end_page = min(start_page + batch_size, max_pages + 1)
+                page_tasks = [
+                    self._http_get(
+                        f"{self.LISTING_ENDPOINT}?page={p}&platform=UDEMY",
+                        use_cloudscraper=True,
+                        timeout=15,
+                        retry_403=True,
                     )
+                    for p in range(start_page, end_page)
+                ]
+                responses = await asyncio.gather(*page_tasks, return_exceptions=True)
+
+                for p, resp in zip(range(start_page, end_page), responses):
+                    self.progress = p
+                    if isinstance(resp, Exception):
+                        resp = None
                     # Fallback to general /courses if /free-courses is unavailable
-                    if (not resp or resp.status_code != 200) and page_num == 1:
-                        fallback_url = f"https://korshub.com/courses?page={page_num - 1}"
+                    if (not resp or getattr(resp, "status_code", None) != 200) and p == 1:
+                        fallback_url = f"https://korshub.com/courses?page={p - 1}"
                         resp = await self._http_get(
                             fallback_url,
                             use_cloudscraper=True,
@@ -1901,8 +1931,9 @@ class KorshubScraper(Scraper):
                             retry_403=True,
                         )
 
-                    if not resp or resp.status_code != 200:
-                        if page_num <= 1:
+                    if not resp or getattr(resp, "status_code", None) != 200:
+                        if p <= 1:
+                            stop_pagination = True
                             break
                         continue
 
@@ -1914,19 +1945,20 @@ class KorshubScraper(Scraper):
                             page_urls.add(detail)
 
                     if not page_urls:
+                        stop_pagination = True
                         break
 
                     detail_urls.extend(sorted(page_urls))
-                    buffer_limit = min(getattr(self, "CANDIDATE_BUFFER", 750), max(self.MAX_COURSES * 8, 40))
                     if len(detail_urls) >= buffer_limit:
+                        stop_pagination = True
                         break
-                except Exception:
-                    continue
+
+                if stop_pagination:
+                    break
 
             if not detail_urls:
                 return
 
-            buffer_limit = min(getattr(self, "CANDIDATE_BUFFER", 750), max(self.MAX_COURSES * 8, 40))
             detail_urls = detail_urls[:buffer_limit]
             self.length = len(detail_urls)
             self.progress = 0
@@ -2228,20 +2260,15 @@ class UdemyFreebiesScraper(Scraper):
                 except Exception:
                     return None, None
 
-            local_detail_semaphore = asyncio.Semaphore(2)
-
-            async def _limited_resolve(slug: str, title: str):
-                async with local_detail_semaphore:
-                    return await self._run_detail_task(
-                        detail_semaphore, _resolve_out, slug, title
-                    )
-
             found = 0
             for i in range(0, len(listing_results), getattr(self, "DETAIL_BATCH_SIZE", 10)):
                 if len(self.data) >= self.MAX_COURSES:
                     break
                 chunk = listing_results[i : i + getattr(self, "DETAIL_BATCH_SIZE", 10)]
-                chunk_tasks = [_limited_resolve(slug, title) for slug, title in chunk]
+                chunk_tasks = [
+                    self._run_detail_task(detail_semaphore, _resolve_out, slug, title)
+                    for slug, title in chunk
+                ]
                 results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
                 for res in results:
                     if isinstance(res, Exception) or not res:
@@ -2542,20 +2569,15 @@ class IDownloadCouponScraper(Scraper):
                 except Exception:
                     return None, None
 
-            local_detail_semaphore = asyncio.Semaphore(2)
-
-            async def _limited_resolve(cid: str, title: str):
-                async with local_detail_semaphore:
-                    return await self._run_detail_task(
-                        detail_semaphore, _resolve_redeem, cid, title
-                    )
-
             found = 0
             for i in range(0, len(unresolved_items), getattr(self, "DETAIL_BATCH_SIZE", 10)):
                 if len(self.data) >= self.MAX_COURSES:
                     break
                 chunk = unresolved_items[i : i + getattr(self, "DETAIL_BATCH_SIZE", 10)]
-                chunk_tasks = [_limited_resolve(cid, title) for cid, title in chunk]
+                chunk_tasks = [
+                    self._run_detail_task(detail_semaphore, _resolve_redeem, cid, title)
+                    for cid, title in chunk
+                ]
                 results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
                 for res in results:
                     if isinstance(res, Exception) or not res:
@@ -3542,7 +3564,7 @@ class CouponScorpionScraper(Scraper):
     HTML_LISTING = "https://couponscorpion.com/category/100-off-coupons/"
     MAX_COURSES = 500
     MAX_REST_PAGES = 8
-    CANDIDATE_BUFFER = 800
+    CANDIDATE_BUFFER = 700
     DETAIL_BATCH_SIZE = 10
     SKIP_PATH_PREFIXES = ("/category/", "/page/", "/scripts/")
     SKIP_PATH_SUBSTRINGS = (
@@ -3588,44 +3610,63 @@ class CouponScorpionScraper(Scraper):
         posts: list[tuple[str, str]] = []
         seen_links: set[str] = set()
         buffer_limit = min(
-            getattr(self, "CANDIDATE_BUFFER", 800),
+            getattr(self, "CANDIDATE_BUFFER", 700),
             max(self.MAX_COURSES * 3, 50),
         )
         max_pages = getattr(self, "MAX_REST_PAGES", 8)
+        batch_size = getattr(self, "REST_BATCH_SIZE", 4)
         self.length = max_pages
-        for page_num in range(1, max_pages + 1):
-            self.progress = page_num
-            url = self.REST_URL.format(n=page_num)
-            resp = await self._http_get(
-                url, use_cloudscraper=True, timeout=15
-            )
-            if not resp or resp.status_code != 200:
+
+        stop_pagination = False
+        for start_page in range(1, max_pages + 1, batch_size):
+            end_page = min(start_page + batch_size, max_pages + 1)
+            page_tasks = [
+                self._http_get(
+                    self.REST_URL.format(n=p),
+                    use_cloudscraper=True,
+                    timeout=15,
+                )
+                for p in range(start_page, end_page)
+            ]
+            responses = await asyncio.gather(*page_tasks, return_exceptions=True)
+
+            for page_num, resp in zip(range(start_page, end_page), responses):
+                self.progress = page_num
+                if isinstance(resp, Exception) or not resp or getattr(resp, "status_code", None) != 200:
+                    stop_pagination = True
+                    break
+                text = (getattr(resp, "text", "") or "").strip()
+                if not text:
+                    stop_pagination = True
+                    break
+                try:
+                    data = json.loads(text)
+                except Exception:
+                    stop_pagination = True
+                    break
+                if not isinstance(data, list) or not data:
+                    stop_pagination = True
+                    break
+                for post in data:
+                    if not isinstance(post, dict):
+                        continue
+                    link = (post.get("link") or "").strip()
+                    if not link or self._skip_listing_href(link):
+                        continue
+                    if link in seen_links:
+                        continue
+                    seen_links.add(link)
+                    title = self._post_title(post)
+                    if not title:
+                        continue
+                    posts.append((link, title))
+                    if len(posts) >= buffer_limit:
+                        return posts[:buffer_limit]
+
+            if stop_pagination or len(posts) >= buffer_limit:
                 break
-            text = (resp.text or "").strip()
-            if not text:
-                break
-            try:
-                data = json.loads(text)
-            except Exception:
-                break
-            if not isinstance(data, list) or not data:
-                break
-            for post in data:
-                if not isinstance(post, dict):
-                    continue
-                link = (post.get("link") or "").strip()
-                if not link or self._skip_listing_href(link):
-                    continue
-                if link in seen_links:
-                    continue
-                seen_links.add(link)
-                title = self._post_title(post)
-                if not title:
-                    continue
-                posts.append((link, title))
-                if len(posts) >= buffer_limit:
-                    return posts
-        return posts
+
+        return posts[:buffer_limit]
 
     async def _collect_html_posts(self) -> list[tuple[str, str]]:
         posts: list[tuple[str, str]] = []
@@ -4011,7 +4052,7 @@ class FreebiesGlobalScraper(Scraper):
     LISTING_ENDPOINT = "https://freebiesglobal.com/tag/udemy-100-off"
     MAX_COURSES = 500
     MAX_PAGES = 50
-    CANDIDATE_BUFFER = 750
+    CANDIDATE_BUFFER = 700
     DETAIL_BATCH_SIZE = 10
 
     @property
@@ -4029,84 +4070,102 @@ class FreebiesGlobalScraper(Scraper):
             seen_udemy: set[str] = set()
             candidates: list[str] = []
             candidate_limit = min(
-                getattr(self, "CANDIDATE_BUFFER", 750),
+                getattr(self, "CANDIDATE_BUFFER", 700),
                 max(self.MAX_COURSES * 3, 20),
             )
+            batch_size = getattr(self, "BATCH_SIZE", 6)
+            stop_pagination = False
 
-            for page_num in range(1, self.MAX_PAGES + 1):
+            for start_page in range(1, self.MAX_PAGES + 1, batch_size):
                 if (
                     len(self.data) >= self.MAX_COURSES
                     or len(candidates) >= candidate_limit
                     or len(self.data) + len(candidates) >= candidate_limit
                 ):
                     break
-                url = (
-                    f"{self.LISTING_ENDPOINT}/"
-                    if page_num == 1
-                    else f"{self.LISTING_ENDPOINT}/page/{page_num}/"
-                )
-                resp = await self._http_get(
-                    url, use_cloudscraper=True, timeout=15
-                )
-                if not resp or resp.status_code != 200 or not resp.text:
-                    if page_num == 1 and not self.data and not candidates:
-                        self.error = "Failed to fetch listing page 1"
-                    break
-
-                soup = self.parse_html(resp.text)
-                articles = soup.find_all("article")
-                if not articles:
-                    break
-
-                page_found = 0
-                for art in articles:
-                    # Check 0-hop card direct link
-                    btn = art.select_one(
-                        "a.re_track_btn[href*='udemy.com'], a[href*='udemy.com']"
+                end_page = min(start_page + batch_size, self.MAX_PAGES + 1)
+                page_tasks = [
+                    self._http_get(
+                        f"{self.LISTING_ENDPOINT}/"
+                        if p == 1
+                        else f"{self.LISTING_ENDPOINT}/page/{p}/",
+                        use_cloudscraper=True,
+                        timeout=15,
                     )
-                    if btn and btn.get("href"):
-                        raw_href = btn["href"]
-                        normalized = Course.normalize_link(raw_href)
-                        if (
-                            is_udemy_course_url(normalized)
-                            and normalized not in seen_udemy
-                        ):
-                            heading = art.find(["h2", "h3", "h4"])
-                            title = (
-                                heading.get_text(strip=True)
-                                if heading
-                                else (btn.get("title") or "Course")
-                            )
-                            seen_udemy.add(normalized)
-                            self.append_to_list(title[:200], normalized)
-                            page_found += 1
-                            if len(self.data) >= self.MAX_COURSES:
-                                break
-                            continue
+                    for p in range(start_page, end_page)
+                ]
+                responses = await asyncio.gather(*page_tasks, return_exceptions=True)
 
-                    # Collect 1-hop detail post URL
-                    a_tag = art.find("a")
-                    if a_tag and a_tag.get("href"):
-                        post_url = a_tag["href"]
-                        if (
-                            "freebiesglobal.com" in post_url
-                            and post_url not in candidates
-                        ):
-                            candidates.append(post_url)
-                            page_found += 1
+                for page_num, resp in zip(range(start_page, end_page), responses):
+                    self.progress = page_num
+                    if (
+                        isinstance(resp, Exception)
+                        or not resp
+                        or getattr(resp, "status_code", None) != 200
+                        or not getattr(resp, "text", None)
+                    ):
+                        if page_num == 1 and not self.data and not candidates:
+                            self.error = "Failed to fetch listing page 1"
+                        stop_pagination = True
+                        break
+
+                    soup = self.parse_html(resp.text)
+                    articles = soup.find_all("article")
+                    if not articles:
+                        stop_pagination = True
+                        break
+
+                    page_found = 0
+                    for art in articles:
+                        # Check 0-hop card direct link
+                        btn = art.select_one(
+                            "a.re_track_btn[href*='udemy.com'], a[href*='udemy.com']"
+                        )
+                        if btn and btn.get("href"):
+                            raw_href = btn["href"]
+                            normalized = Course.normalize_link(raw_href)
                             if (
-                                len(candidates) >= candidate_limit
-                                or len(self.data) + len(candidates) >= candidate_limit
+                                is_udemy_course_url(normalized)
+                                and normalized not in seen_udemy
                             ):
-                                break
+                                heading = art.find(["h2", "h3", "h4"])
+                                title = (
+                                    heading.get_text(strip=True)
+                                    if heading
+                                    else (btn.get("title") or "Course")
+                                )
+                                seen_udemy.add(normalized)
+                                self.append_to_list(title[:200], normalized)
+                                page_found += 1
+                                if len(self.data) >= self.MAX_COURSES:
+                                    stop_pagination = True
+                                    break
+                                continue
 
-                self.progress = page_num
-                if page_num > 1 and page_found == 0:
-                    break
-                if (
-                    len(candidates) >= candidate_limit
-                    or len(self.data) + len(candidates) >= candidate_limit
-                ):
+                        # Collect 1-hop detail post URL
+                        a_tag = art.find("a")
+                        if a_tag and a_tag.get("href"):
+                            post_url = a_tag["href"]
+                            if (
+                                "freebiesglobal.com" in post_url
+                                and post_url not in candidates
+                            ):
+                                candidates.append(post_url)
+                                page_found += 1
+                                if (
+                                    len(candidates) >= candidate_limit
+                                    or len(self.data) + len(candidates) >= candidate_limit
+                                ):
+                                    stop_pagination = True
+                                    break
+
+                    if stop_pagination:
+                        break
+                    if page_num > 1 and page_found == 0:
+                        stop_pagination = True
+                        break
+
+                if stop_pagination:
                     break
 
             # Process collected detail candidate pages
@@ -4195,7 +4254,7 @@ class GeeksGodScraper(Scraper):
     LISTING_ENDPOINT = "https://geeksgod.com/courses"
     MAX_COURSES = 500
     MAX_PAGES = 50
-    CANDIDATE_BUFFER = 750
+    CANDIDATE_BUFFER = 700
     DETAIL_BATCH_SIZE = 10
 
     @property
@@ -4210,41 +4269,73 @@ class GeeksGodScraper(Scraper):
         try:
             seen_pages: set[str] = set()
             candidates: list[tuple[str, str]] = []
+            batch_size = getattr(self, "BATCH_SIZE", 6)
+            buffer_limit = getattr(self, "CANDIDATE_BUFFER", 700)
+            self.length = self.MAX_PAGES
 
-            for page_num in range(1, self.MAX_PAGES + 1):
-                if len(candidates) >= self.CANDIDATE_BUFFER:
+            stop_pagination = False
+            for start_page in range(1, self.MAX_PAGES + 1, batch_size):
+                if len(candidates) >= buffer_limit:
                     break
-                url = f"{self.LISTING_ENDPOINT}?page={page_num}"
-                resp = await self._http_get(
-                    url, use_cloudscraper=True, timeout=15
-                )
-                if not resp or resp.status_code != 200 or not resp.text:
-                    if page_num == 1:
-                        self.error = "Failed to fetch listing page 1"
-                    break
+                end_page = min(start_page + batch_size, self.MAX_PAGES + 1)
+                page_tasks = [
+                    self._http_get(
+                        f"{self.LISTING_ENDPOINT}?page={p}",
+                        use_cloudscraper=True,
+                        timeout=15,
+                    )
+                    for p in range(start_page, end_page)
+                ]
+                responses = await asyncio.gather(*page_tasks, return_exceptions=True)
 
-                soup = self.parse_html(resp.text)
-                links = soup.select("a[href^='/course/'], a[href*='/course/']")
-                if not links:
-                    break
+                for page_num, resp in zip(range(start_page, end_page), responses):
+                    self.progress = page_num
+                    if (
+                        isinstance(resp, Exception)
+                        or not resp
+                        or getattr(resp, "status_code", None) != 200
+                        or not getattr(resp, "text", None)
+                    ):
+                        if page_num == 1 and not candidates and not self.data:
+                            self.error = "Failed to fetch listing page 1"
+                        elif page_num > 1 and (candidates or self.data):
+                            self.circuit_open = False
+                            self.error = None
+                            self.consecutive_failures = 0
+                        stop_pagination = True
+                        break
 
-                new_count = 0
-                for a in links:
-                    href = a.get("href")
-                    if not href:
-                        continue
-                    abs_url = urllib.parse.urljoin(self.BASE_URL, href)
-                    if abs_url not in seen_pages:
-                        seen_pages.add(abs_url)
-                        title = a.get_text(strip=True)
-                        candidates.append((abs_url, title))
-                        new_count += 1
-                if new_count == 0:
+                    soup = self.parse_html(resp.text)
+                    links = soup.select("a[href^='/course/'], a[href*='/course/']")
+                    if not links:
+                        stop_pagination = True
+                        break
+
+                    new_count = 0
+                    for a in links:
+                        href = a.get("href")
+                        if not href:
+                            continue
+                        abs_url = urllib.parse.urljoin(self.BASE_URL, href)
+                        if abs_url not in seen_pages:
+                            seen_pages.add(abs_url)
+                            title = a.get_text(strip=True)
+                            candidates.append((abs_url, title))
+                            new_count += 1
+                            if len(candidates) >= buffer_limit:
+                                stop_pagination = True
+                                break
+                    if stop_pagination or new_count == 0:
+                        stop_pagination = True
+                        break
+
+                if stop_pagination:
                     break
 
             if not candidates:
                 return
 
+            candidates = candidates[:buffer_limit]
             self.length = len(candidates)
             self.progress = 0
             seen_udemy: set[str] = set()

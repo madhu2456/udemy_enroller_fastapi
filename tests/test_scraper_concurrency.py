@@ -195,7 +195,7 @@ async def test_scraper_service_worker_sem_scaling():
 
     # 2. Default max_workers=None -> uses settings.MAX_SCRAPER_WORKERS (was previously hardcapped at 2)
     captured_sem_values.clear()
-    service_default = ScraperService(sites_to_scrape=["FreeCourseSites"])
+    service_default = ScraperService(sites_to_scrape=["FreeCourseSites", "E-next"])
     assert service_default.max_workers is None
 
     for s in service_default.scrapers:
