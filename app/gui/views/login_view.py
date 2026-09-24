@@ -6,6 +6,8 @@ from typing import Any, Callable, Dict, Optional
 import customtkinter
 
 from app.gui.theme import (
+    COLOR_CAPTION_DARK,
+    COLOR_CAPTION_LIGHT,
     COLOR_DANGER,
     COLOR_DARK_CARD,
     COLOR_LIGHT_CARD,
@@ -55,7 +57,7 @@ class LoginView(customtkinter.CTkFrame):
             card,
             text="Automatically extract active Udemy session cookies from your installed browser without typing passwords.",
             font=customtkinter.CTkFont(size=11),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         sub.pack(anchor="w", pady=(0, 10))
 
@@ -100,7 +102,7 @@ class LoginView(customtkinter.CTkFrame):
             card,
             text="Paste your tokens manually or export them from the Udemy Enroller Chrome Extension.",
             font=customtkinter.CTkFont(size=11),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         sub.pack(anchor="w", pady=(0, 10))
 
@@ -186,7 +188,7 @@ class LoginView(customtkinter.CTkFrame):
             self.status_card,
             text="Click 'Extract & Test Cookies' or enter tokens above.",
             font=customtkinter.CTkFont(size=11),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
             justify="left",
         )
         self.status_details.pack(anchor="w", padx=16, pady=(0, 12))
@@ -217,7 +219,7 @@ class LoginView(customtkinter.CTkFrame):
         self.token_entry.delete(0, "end")
         self.cid_entry.delete(0, "end")
         self.csrf_entry.delete(0, "end")
-        self.status_title.configure(text="Session Cleared", text_color=("gray50", "gray60"))
+        self.status_title.configure(text="Session Cleared", text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK))
         self.status_details.configure(text="Saved session credentials have been deleted. Enter new tokens above.")
         if self.on_clear_session:
             self.on_clear_session()

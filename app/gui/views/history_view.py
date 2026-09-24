@@ -7,6 +7,8 @@ import customtkinter
 from tkinter import filedialog
 
 from app.gui.theme import (
+    COLOR_CAPTION_DARK,
+    COLOR_CAPTION_LIGHT,
     COLOR_DARK_CARD,
     COLOR_LIGHT_CARD,
     COLOR_PRIMARY,
@@ -102,7 +104,7 @@ class HistoryView(customtkinter.CTkFrame):
             self.rows_frame,
             text="No past runs found in database. Click 'Refresh' to load.",
             font=customtkinter.CTkFont(size=12),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         self.empty_lbl.pack(pady=30)
 
@@ -116,7 +118,7 @@ class HistoryView(customtkinter.CTkFrame):
                 self.rows_frame,
                 text="No past runs found in database.",
                 font=customtkinter.CTkFont(size=12),
-                text_color=("gray50", "gray60"),
+                text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
             )
             self.empty_lbl.pack(pady=30)
             return

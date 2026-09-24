@@ -9,12 +9,15 @@ from app.gui.components.kpi_card import KPICard
 from app.gui.components.log_box import LogBox
 from app.gui.components.progress_bar import DualProgressBar
 from app.gui.theme import (
+    COLOR_CAPTION_DARK,
+    COLOR_CAPTION_LIGHT,
     COLOR_DANGER,
     COLOR_DARK_CARD,
     COLOR_INFO,
     COLOR_LIGHT_CARD,
     COLOR_PRIMARY,
     COLOR_PRIMARY_HOVER,
+    COLOR_PRIMARY_ON_DARK,
     COLOR_SUCCESS,
     COLOR_WARNING,
 )
@@ -62,7 +65,7 @@ class DashboardView(customtkinter.CTkFrame):
             self.header_left,
             text="Extract cookies from browser or enter token in Login tab",
             font=customtkinter.CTkFont(size=12),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         self.user_subtitle.pack(anchor="w")
 
@@ -125,7 +128,8 @@ class DashboardView(customtkinter.CTkFrame):
             fg_color="transparent",
             border_width=1,
             border_color=COLOR_PRIMARY,
-            text_color=(COLOR_PRIMARY, COLOR_PRIMARY),
+            # F018: #A435F0 label measured 3.49:1 on the dark workspace #1C1D1F.
+            text_color=(COLOR_PRIMARY, COLOR_PRIMARY_ON_DARK),
             height=36,
             command=self.on_scrape_only,
         )
@@ -166,7 +170,7 @@ class DashboardView(customtkinter.CTkFrame):
         self.empty_results_lbl = customtkinter.CTkLabel(
             self.results_list,
             text="No courses processed yet. Click 'Start Auto-Enroll' to begin.",
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
             font=customtkinter.CTkFont(size=13),
         )
         self.empty_results_lbl.pack(pady=40)
@@ -273,7 +277,7 @@ class DashboardView(customtkinter.CTkFrame):
             left_col,
             text=f"Instructor: {instructor} • Source: {source} • Value: ${price:.2f}",
             font=customtkinter.CTkFont(size=11),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
             anchor="w",
         )
         sub_lbl.pack(fill="x")

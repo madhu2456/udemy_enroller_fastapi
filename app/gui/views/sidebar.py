@@ -6,10 +6,13 @@ from typing import Callable, Dict
 import customtkinter
 
 from app.gui.theme import (
+    COLOR_CAPTION_DARK,
+    COLOR_CAPTION_LIGHT,
     COLOR_DARK_SURFACE,
     COLOR_LIGHT_SURFACE,
     COLOR_PRIMARY,
     COLOR_PRIMARY_HOVER,
+    COLOR_PRIMARY_ON_DARK,
 )
 
 
@@ -49,7 +52,8 @@ class SidebarView(customtkinter.CTkFrame):
             self.brand_frame,
             text="🎓 UDEMY ENROLLER",
             font=customtkinter.CTkFont(size=14, weight="bold"),
-            text_color=COLOR_PRIMARY,
+            # F018: #A435F0 measured 2.78:1 on the dark sidebar #2D2F31.
+            text_color=(COLOR_PRIMARY, COLOR_PRIMARY_ON_DARK),
         )
         self.logo_lbl.pack(anchor="w")
 
@@ -57,7 +61,7 @@ class SidebarView(customtkinter.CTkFrame):
             self.brand_frame,
             text="Desktop Pro Edition",
             font=customtkinter.CTkFont(size=11),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         self.sub_lbl.pack(anchor="w")
 
@@ -96,7 +100,7 @@ class SidebarView(customtkinter.CTkFrame):
             self.bottom_frame,
             text="Appearance Mode",
             font=customtkinter.CTkFont(size=11),
-            text_color=("gray50", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         self.theme_lbl.pack(anchor="w", pady=(0, 4))
 

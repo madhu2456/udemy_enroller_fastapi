@@ -6,6 +6,8 @@ from typing import Any, Dict
 import customtkinter
 
 from app.gui.theme import (
+    COLOR_CAPTION_DARK,
+    COLOR_CAPTION_LIGHT,
     COLOR_DARK_CARD,
     COLOR_LIGHT_CARD,
     COLOR_PRIMARY,
@@ -129,7 +131,7 @@ class FiltersView(customtkinter.CTkFrame):
         lbl = customtkinter.CTkLabel(frame, text="📚 CATEGORY FILTERS (Optional)", font=customtkinter.CTkFont(size=14, weight="bold"))
         lbl.pack(anchor="w", pady=(0, 8))
 
-        sub = customtkinter.CTkLabel(frame, text="Select specific categories or leave empty for all categories.", text_color=("gray50", "gray60"), font=customtkinter.CTkFont(size=11))
+        sub = customtkinter.CTkLabel(frame, text="Select specific categories or leave empty for all categories.", text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK), font=customtkinter.CTkFont(size=11))
         sub.pack(anchor="w", pady=(0, 8))
 
         grid = customtkinter.CTkFrame(frame, fg_color="transparent")

@@ -8,6 +8,8 @@ import tkinter
 import customtkinter
 
 from app.gui.theme import (
+    COLOR_CAPTION_DARK,
+    COLOR_CAPTION_LIGHT,
     COLOR_DARK_BG,
     COLOR_DARK_CARD,
     COLOR_LIGHT_BG,
@@ -42,7 +44,7 @@ class LogBox(customtkinter.CTkFrame):
             self.toolbar,
             text="EXECUTION LOGS",
             font=customtkinter.CTkFont(size=11, weight="bold"),
-            text_color=("gray50", "gray70"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         self.title_lbl.pack(side="left", padx=4)
 

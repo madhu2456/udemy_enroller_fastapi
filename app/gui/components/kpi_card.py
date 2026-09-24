@@ -6,6 +6,8 @@ from typing import Optional
 import customtkinter
 
 from app.gui.theme import (
+    COLOR_CAPTION_DARK,
+    COLOR_CAPTION_LIGHT,
     COLOR_DARK_CARD,
     COLOR_LIGHT_CARD,
     COLOR_PRIMARY,
@@ -37,7 +39,7 @@ class KPICard(customtkinter.CTkFrame):
             self,
             text=title.upper(),
             font=customtkinter.CTkFont(size=11, weight="bold"),
-            text_color=("gray50", "gray70"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         self.title_label.pack(anchor="w", padx=16, pady=(12, 4))
 
@@ -55,7 +57,7 @@ class KPICard(customtkinter.CTkFrame):
             self,
             text=subtitle or "",
             font=customtkinter.CTkFont(size=11),
-            text_color=("gray40", "gray60"),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
         )
         if subtitle:
             self.subtitle_label.pack(anchor="w", padx=16, pady=(0, 12))

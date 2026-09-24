@@ -8,7 +8,11 @@ from app.gui.theme import (
     COLOR_DARK_CARD,
     COLOR_LIGHT_CARD,
     COLOR_PRIMARY,
+    COLOR_PRIMARY_LABEL_LIGHT,
+    COLOR_PRIMARY_ON_DARK,
     COLOR_SUCCESS,
+    COLOR_SUCCESS_LABEL_DARK,
+    COLOR_SUCCESS_LABEL_LIGHT,
 )
 
 
@@ -39,7 +43,8 @@ class DualProgressBar(customtkinter.CTkFrame):
             self.scraper_header,
             text="0 / 17 (0%)",
             font=customtkinter.CTkFont(size=11),
-            text_color=COLOR_PRIMARY,
+            # F018: #A435F0 measured 4.31:1 light / 2.13:1 dark on this card.
+            text_color=(COLOR_PRIMARY_LABEL_LIGHT, COLOR_PRIMARY_ON_DARK),
         )
         self.scraper_pct.pack(side="right")
 
@@ -67,7 +72,8 @@ class DualProgressBar(customtkinter.CTkFrame):
             self.enroll_header,
             text="0 / 0 (0%)",
             font=customtkinter.CTkFont(size=11),
-            text_color=COLOR_SUCCESS,
+            # F018: #198754 measured 4.04:1 light / 2.27:1 dark on this card.
+            text_color=(COLOR_SUCCESS_LABEL_LIGHT, COLOR_SUCCESS_LABEL_DARK),
         )
         self.enroll_pct.pack(side="right")
 
