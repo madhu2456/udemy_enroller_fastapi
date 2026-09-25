@@ -315,7 +315,27 @@ Pre-compiled executable packages for Windows, Linux, and macOS are automatically
 - **Linux**: `Gui` and `cli`
 - **macOS**: `Gui` and `cli`
 
+👉 **[Download Latest Executables from GitHub Releases](https://github.com/madhu2456/udemy_enroller_fastapi/releases)**
+
 ### Compiling Standalone Executables Locally
+
+#### Prerequisites
+Compiling standalone executables locally requires Python 3.10+ and `pyinstaller`:
+
+```bash
+# Activate your project virtual environment first:
+# Linux/macOS:        source venv/bin/activate
+# Windows PowerShell: .\venv\Scripts\Activate.ps1
+# Windows CMD:        venv\Scripts\activate.bat
+
+# Install compiler dependencies:
+pip install pyinstaller
+```
+
+> [!NOTE]
+> `build_exe.py` incorporates an automatic pre-flight dependency validator. If PyInstaller is missing, compilation aborts safely with clear diagnostics without deleting any existing `build/` or `dist/` artifacts.
+
+#### Compilation Commands
 You can build standalone binaries directly on your machine using the cross-platform compiler:
 
 ```bash
@@ -327,6 +347,9 @@ python build_exe.py --gui
 
 # Build only the Unified CLI:
 python build_exe.py --cli
+
+# Clean previous build and dist artifacts before compiling:
+python build_exe.py --clean --all
 ```
 
 The compiled binaries will be output into the `dist/` directory.

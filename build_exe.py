@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import importlib.util
 import platform
 import shutil
 import subprocess
@@ -20,6 +21,26 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+
+
+def check_prerequisites() -> bool:
+    """Verify build tools and dependencies are available before compilation."""
+    if importlib.util.find_spec("PyInstaller") is None:
+        print("\n" + "=" * 65)
+        print("[ERROR] Missing required build dependency: PyInstaller")
+        print("=" * 65)
+        print(f"Current Python executable:\n  {sys.executable}\n")
+        print("To install PyInstaller in your current environment, run:")
+        print(f"  {sys.executable} -m pip install pyinstaller\n")
+        print("Or activate your project virtual environment first:")
+        print("  Linux/macOS:        source venv/bin/activate (or .venv/bin/activate)")
+        print("  Windows PowerShell: .\\venv\\Scripts\\Activate.ps1")
+        print("  Windows CMD:        venv\\Scripts\\activate.bat\n")
+        print("Pre-compiled standalone binaries can also be downloaded directly from:")
+        print("  https://github.com/madhu2456/udemy_enroller_fastapi/releases")
+        print("=" * 65 + "\n")
+        return False
+    return True
 
 
 def clean_artifacts():
@@ -61,22 +82,29 @@ def build_executable(spec_file: str, name: str) -> bool:
         return False
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Compile standalone executables for Udemy Enroller.")
     parser.add_argument("--all", action="store_true", help="Build both GUI and CLI executables.")
     parser.add_argument("--gui", action="store_true", help="Build only the Desktop GUI (Gui.exe / Gui).")
     parser.add_argument("--cli", action="store_true", help="Build only the Unified CLI (cli.exe / cli).")
     parser.add_argument("--clean", action="store_true", help="Clean build and dist artifacts before building.")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not any([args.all, args.gui, args.cli, args.clean]):
         parser.print_help()
         print("\nDefaulting to building both GUI and CLI executables (--all)...")
         args.all = True
 
+    requires_build = bool(args.all or args.gui or args.cli)
+    if requires_build and not check_prerequisites():
+        return 1
+
     if args.clean:
         clean_artifacts()
+        if not requires_build:
+            print("[*] Clean completed.")
+            return 0
 
     success = True
     if args.gui or args.all:
@@ -92,11 +120,11 @@ def main():
         print("[★] All requested standalone builds completed successfully!")
         print("    Executables are located in the dist/ folder.")
         print("==================================================\n")
-        sys.exit(0)
+        return 0
     else:
         print("\n[!] One or more builds failed. Check logs above.")
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
