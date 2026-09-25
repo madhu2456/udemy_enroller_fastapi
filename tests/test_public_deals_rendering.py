@@ -131,3 +131,47 @@ def test_homepage_hero_disclaimer_spacing_and_contrast(client):
     assert "View Source Code" in response.text
 
 
+def test_footer_adticks_badge_layout_and_contrast(client):
+    """Verify footer Adticks badge layout resilience, contrast compliance, and no overflow tokens."""
+    response = client.get("/")
+    assert response.status_code == 200
+
+    # Adticks marketing link and href verification
+    assert "https://adticks.com" in response.text
+    assert "SEO &amp; GEO improved by" in response.text or "SEO & GEO improved by" in response.text
+    assert "Adticks" in response.text
+
+    # Extract the Adticks badge container / anchor snippet (bounded strictly to </a>)
+    badge_start = response.text.find('id="adticks-badge"')
+    assert badge_start != -1
+    badge_end = response.text.find("</a>", badge_start)
+    assert badge_end != -1
+    badge_snippet = response.text[badge_start : badge_end + 4]
+
+    # Anti-shrink and anti-wrap layout guardrails on the badge
+    assert "inline-flex items-center gap-1.5 whitespace-nowrap" in badge_snippet
+    assert "flex-shrink-0" in badge_snippet
+    assert '<span class="whitespace-nowrap">' in badge_snippet
+
+    # WCAG 2.1 AA Contrast compliance tokens on the badge
+    assert "text-gray-600" in badge_snippet
+    assert "text-blue-700" in badge_snippet
+    assert "text-blue-600" in badge_snippet
+
+    # Negative assertion against regressed low-contrast tokens in the badge
+    assert "text-[#2563EB]" not in badge_snippet
+    assert "text-gray-500" not in badge_snippet
+    assert "text-blue-500" not in badge_snippet
+
+    # Verify Credits container flex-shrink-0
+    credits_container_idx = response.text.rfind("<!-- Credits & Disclaimer -->")
+    assert credits_container_idx != -1
+    credits_snippet = response.text[credits_container_idx:badge_start]
+    assert "flex-shrink-0" in credits_snippet
+
+    # Disclaimer integrity preserved
+    assert "Not affiliated with Udemy, Inc." in response.text
+    assert "Enroller by Madhu Dadi" in response.text
+
+
+
