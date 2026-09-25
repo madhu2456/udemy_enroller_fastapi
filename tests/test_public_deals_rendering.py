@@ -105,3 +105,29 @@ def test_contrast_and_touch_target_classes(client):
     assert response.status_code == 200
     assert 'class="text-gray-600"' in response.text
     assert "min-h-[24px]" in response.text
+
+
+def test_homepage_hero_disclaimer_spacing_and_contrast(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    # Hero vertical spacing assertions
+    assert "mt-6 mb-8 inline-flex" in response.text
+    assert (
+        "animate-fade-in-up delay-300 flex flex-col sm:flex-row items-center justify-center gap-3 mb-8"
+        in response.text
+    )
+    assert "items-center justify-center gap-3 mb-10" not in response.text
+
+    # Touch target assertions
+    assert "min-h-[24px]" in response.text
+    assert response.text.count("min-h-[24px]") >= 2
+
+    # Hyphen contrast & strict count (100% mutation survival)
+    assert response.text.count("text-gray-600 mr-2 mt-px select-none") == 12
+    assert "text-gray-400 mr-2 mt-px select-none" not in response.text
+
+    # Marketing CTAs preserved
+    assert "Start Automating Free" in response.text
+    assert "View Source Code" in response.text
+
+
