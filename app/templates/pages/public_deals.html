@@ -127,7 +127,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
         <div class="mb-8">
             <nav class="text-xs text-gray-500 mb-4" aria-label="Breadcrumb">
                 <ol class="flex flex-wrap items-center gap-1.5">
-                    <li><a href="/" class="text-blue-700 underline underline-offset-2 hover:text-blue-900">Home</a></li>
+                    <li><a href="/" class="text-blue-700 underline underline-offset-2 hover:text-blue-900 inline-flex items-center min-h-[24px] py-1">Home</a></li>
                     <li aria-hidden="true">/</li>
                     <li class="text-gray-700" aria-current="page">Free Coupons</li>
                 </ol>
@@ -152,7 +152,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                     valid listing{% if freshness.valid_count != 1 %}s{% endif %}</span
                 >
                 {% if freshness.last_checked or freshness.last_updated %}
-                <span class="text-gray-400" aria-hidden="true">·</span>
+                <span class="text-gray-600" aria-hidden="true">·</span>
                 <span
                     >List last checked
                     <time datetime="{{ freshness.last_checked or freshness.last_updated }}"
@@ -160,10 +160,10 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                     ></span
                 >
                 {% endif %}
-                <span class="text-gray-400" aria-hidden="true">·</span>
+                <span class="text-gray-600" aria-hidden="true">·</span>
                 <a
                     href="/guides/free-udemy-coupons"
-                    class="text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                    class="text-blue-700 underline underline-offset-2 hover:text-blue-900 inline-flex items-center min-h-[24px] py-1"
                     >How free coupons work</a
                 >
             </p>
@@ -175,7 +175,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                     href="/udemycoupons/category/{{ cat.slug }}"
                     class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:text-blue-700 transition-colors"
                     >{{ cat.name }}
-                    <span class="text-gray-400">({{ cat.count }})</span></a
+                    <span class="text-gray-600">({{ cat.count }})</span></a
                 >
                 {% endfor %}
             </div>
@@ -331,16 +331,16 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                     class="flex items-center gap-2 text-[11px] text-gray-500 mb-4"
                 >
                     <span
-                        class="font-medium flex items-center gap-1"
+                        class="font-medium flex items-center gap-1 whitespace-nowrap flex-shrink-0"
                         title="Status Date"
                         ><i data-lucide="calendar" class="w-3 h-3"></i>
-                        Discovered: {{ course.enrolled_at.split('T')[0] if
+                        Discovered: {{ (course.enrolled_at|string)[:10] if
                         course.enrolled_at else '' }}</span
                     >
                     <div class="ml-auto flex items-center gap-2">
-                        {% if course.price and course.price > 0 %}
+                        {% if course.price and (course.price|float) > 0 %}
                         <span class="line-through text-gray-600"
-                            >₹{{ course.price }}</span
+                            >₹{{ "{:,.0f}".format(course.price|float) }}</span
                         >
                         {% endif %}
                         <span class="text-green-800 font-bold">Free</span>
@@ -695,9 +695,9 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                         </h3>
 
                         <div class="flex items-center gap-2 text-[11px] text-gray-500 mb-4">
-                            <span class="font-medium flex items-center gap-1" title="Status Date"><i data-lucide="calendar" class="w-3 h-3"></i> ${escapeHTML(dateDisplay)}</span>
+                            <span class="font-medium flex items-center gap-1 whitespace-nowrap flex-shrink-0" title="Status Date"><i data-lucide="calendar" class="w-3 h-3"></i> ${escapeHTML(dateDisplay)}</span>
                             <div class="ml-auto flex items-center gap-2">
-                                ${course.price && course.price > 0 ? `<span class="line-through text-gray-600">₹${escapeHTML(String(course.price))}</span> <span class="text-green-800 font-bold">Free</span>` : `<span class="text-green-800 font-bold">Free</span>`}
+                                ${course.price && Number(course.price) > 0 ? `<span class="line-through text-gray-600">₹${escapeHTML(Math.round(course.price).toLocaleString('en-IN'))}</span> <span class="text-green-800 font-bold">Free</span>` : `<span class="text-green-800 font-bold">Free</span>`}
                             </div>
                         </div>
 

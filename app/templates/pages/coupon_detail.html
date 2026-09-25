@@ -116,8 +116,8 @@
       </p>
 
       <div class="flex flex-wrap items-center gap-3 mb-6">
-        {% if course.price and course.price > 0 %}
-        <span class="line-through text-gray-600 text-sm">₹{{ course.price }}</span>
+        {% if course.price and (course.price|float) > 0 %}
+        <span class="line-through text-gray-600 text-sm">₹{{ "{:,.0f}".format(course.price|float) }}</span>
         {% endif %}
         <span class="text-green-700 font-bold text-sm">Listed as free with coupon</span>
         {% if course.rating %}
@@ -129,7 +129,7 @@
       <div class="bg-[#F9FAFB] border border-gray-200 rounded-xl p-4 mb-6">
         <p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Coupon code for {{ course.title }}</p>
         <div class="flex items-center justify-between gap-3">
-          <code class="font-mono text-base text-gray-900 font-semibold break-all" id="coupon-code">{{ course.coupon_code }}</code>
+          <code class="font-mono text-xs sm:text-base text-gray-900 font-semibold tracking-tight select-all truncate" id="coupon-code">{{ course.coupon_code }}</code>
           <button
             type="button"
             class="copy-btn flex-shrink-0 px-3 py-2 text-sm font-medium text-blue-700 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"

@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses date-based notes until formal version tags are published.
 
+## [Unreleased] — 2026-09-25
+
+### Added
+- **Automated Template Rendering Regression Test Suite ([`tests/test_public_deals_rendering.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_public_deals_rendering.py))**: Added 5 comprehensive unit tests validating price and date formatting, mobile code styling, banner suppression on deals routes, category card parity, and WCAG contrast/touch target classes.
+
+### Fixed
+- **Deal Card Date Wrapping & Hyphenation ([`app/templates/pages/public_deals.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/public_deals.html), [`app/templates/pages/coupon_category.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/coupon_category.html))**: Added `whitespace-nowrap flex-shrink-0` and safe string slicing `(course.enrolled_at|string)[:10]` to prevent date strings (`Discovered: 2026-08-12`) from breaking awkwardly across lines at the hyphen on narrow cards.
+- **Currency & Price Float Formatting**: Formatted Indian Rupee (INR) list prices as comma-grouped integers `{:,.0f}` (rendering `₹1,419` instead of raw float `₹1419.0`) across SSR and CSR in [`public_deals.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/public_deals.html), [`coupon_detail.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/coupon_detail.html), and [`coupon_category.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/coupon_category.html). Formatted Dashboard Lifetime Savings with locale thousand separators (`$1,503,028.00`).
+- **Mobile Coupon Code Layout ([`app/templates/pages/coupon_detail.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/coupon_detail.html))**: Added `font-mono text-xs sm:text-base tracking-tight select-all truncate` to eliminate single-character line wraps on 375px mobile viewports while preserving desktop legibility and copy button functionality.
+- **Dashboard Savings History Chart Adaptive Ticks ([`app/templates/pages/dashboard.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/dashboard.html))**: Implemented `precision: 0` and adaptive scale formatting in Chart.js Y-axis ticks callback (`$0`, `$100`, `$1k`, `$1.5M`), completely eliminating the 11 duplicate `$0k` labels caused by integer rounding on sparse or zero-value runs.
+- **Category Hub Cards Visual Parity ([`app/templates/pages/coupon_category.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/coupon_category.html))**: Upgraded category listing cards with discovery date, original price strike-through, and bold "Free" badge to achieve 1:1 visual parity with the main deals grid.
+- **Redundant Announcement Banner Suppression ([`app/templates/components/base.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/components/base.html))**: Wrapped `#announcement-bar` in `{% if not request.url.path.startswith('/udemycoupons') %}` to suppress redundant prompts and reclaim ~120px vertical viewport height when browsing deals.
+- **WCAG 2.2 AA Contrast & Touch Target Compliance**: Elevated `text-gray-400` to `text-gray-600` on category counts and middle dot separators (achieving 7.56:1 contrast ratio against white) and added `min-h-[24px] py-1` to inline links to satisfy WCAG 2.2 SC 2.5.8 touch target requirements.
+
 ## [Unreleased] — 2026-09-24
 
 ### Added

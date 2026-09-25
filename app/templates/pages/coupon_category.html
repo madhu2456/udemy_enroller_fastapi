@@ -91,11 +91,11 @@
       <p class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 inline-flex flex-wrap gap-x-3 gap-y-1" role="status">
         <span><strong class="text-gray-900">{{ deal_count }}</strong> listing{% if deal_count != 1 %}s{% endif %}</span>
         {% if freshness and (freshness.last_checked or freshness.last_updated) %}
-        <span class="text-gray-400" aria-hidden="true">·</span>
+        <span class="text-gray-600" aria-hidden="true">·</span>
         <span>List checked <time>{{ freshness.last_checked or freshness.last_updated }}</time></span>
         {% endif %}
-        <span class="text-gray-400" aria-hidden="true">·</span>
-        <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2">How free coupons work</a>
+        <span class="text-gray-600" aria-hidden="true">·</span>
+        <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1">How free coupons work</a>
       </p>
     </header>
 
@@ -104,11 +104,28 @@
       {% for course in deals %}
       <article class="bg-white rounded-xl border border-gray-200 flex flex-col p-5 shadow-sm hover:border-gray-300 transition-colors">
         <p class="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-2">{{ course.category or category_name }}</p>
-        <h2 class="text-sm font-semibold text-gray-900 mb-3 line-clamp-2">
+        <h2 class="text-sm font-semibold text-gray-900 mb-3 line-clamp-2 leading-snug">
           <a href="/udemycoupons/c/{{ course.slug }}" class="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-sm">{{ course.title }}</a>
         </h2>
-        <p class="text-xs text-gray-500 mb-3 font-mono">Code: {{ course.coupon_code }}</p>
-        <a href="/udemycoupons/c/{{ course.slug }}" class="mt-auto text-sm font-semibold text-blue-700 hover:underline">View details →</a>
+        <div class="flex items-center gap-2 text-[11px] text-gray-500 mb-4">
+          <span class="font-medium flex items-center gap-1 whitespace-nowrap flex-shrink-0" title="Status Date">
+            <i data-lucide="calendar" class="w-3 h-3"></i>
+            Discovered: {{ (course.enrolled_at|string)[:10] if course.enrolled_at else '' }}
+          </span>
+          <div class="ml-auto flex items-center gap-2">
+            {% if course.price and (course.price|float) > 0 %}
+            <span class="line-through text-gray-600">₹{{ "{:,.0f}".format(course.price|float) }}</span>
+            {% endif %}
+            <span class="text-green-800 font-bold">Free</span>
+          </div>
+        </div>
+        <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+          <div class="flex flex-col text-left overflow-hidden">
+            <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Coupon Code</span>
+            <span class="font-mono text-xs text-gray-700 truncate max-w-[120px] font-medium" title="{{ course.coupon_code }}">{{ course.coupon_code }}</span>
+          </div>
+          <a href="/udemycoupons/c/{{ course.slug }}" class="text-sm font-semibold text-blue-700 hover:underline">View details →</a>
+        </div>
       </article>
       {% endfor %}
     </div>
@@ -117,11 +134,11 @@
     {% endif %}
 
     <p class="text-sm text-gray-600">
-      <a href="/udemycoupons" class="text-blue-700 underline underline-offset-2">← All free coupons</a>
+      <a href="/udemycoupons" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1">← All free coupons</a>
       ·
-      <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2">Coupon guide</a>
+      <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1">Coupon guide</a>
       ·
-      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" class="text-blue-700 underline underline-offset-2" rel="noopener noreferrer" target="_blank">Source on GitHub</a>
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1" rel="noopener noreferrer" target="_blank">Source on GitHub</a>
     </p>
   </div>
 </div>

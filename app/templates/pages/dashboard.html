@@ -1111,7 +1111,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             document.getElementById("stat-enrolled").textContent =
                 data.total_enrolled.toLocaleString();
             document.getElementById("stat-saved").textContent =
-                `${currencySym}${data.total_amount_saved.toFixed(2)}`;
+                `${currencySym}${Number(data.total_amount_saved || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             document.getElementById("stat-already").textContent =
                 data.total_already_enrolled.toLocaleString();
             document.getElementById("stat-runs").textContent =
@@ -1777,8 +1777,11 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         ticks: {
                             color: "#9ca3af",
                             font: { size: 10, family: "Inter" },
+                            precision: 0,
                             callback: function (value) {
-                                return "$" + (value / 1000).toFixed(0) + "k";
+                                if (value >= 1000000) return "$" + (value / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+                                if (value >= 1000) return "$" + (value / 1000).toFixed(0) + "k";
+                                return "$" + value;
                             },
                         },
                         border: { display: false },
