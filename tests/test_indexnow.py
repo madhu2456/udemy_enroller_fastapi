@@ -374,7 +374,7 @@ _STATIC_PAGE_TEMPLATES = {  # page path → template file (mirrors seo.py routes
 _STATIC_PAGE_TEMPLATE_HASHES = {
     "/faq": "44b952ec08f24046b420103f2014a180fc25204c38e6838e0868da346a9c5d10",
     "/about": "4823e7c777c26713ada428c47bae3f77957dd6f0a9de52683c728faf39c36a52",
-    "/guides": "01763d3004f889eea1945c063f0091dd56162bde4322f83693e28f41bbb131a0",
+    "/guides": "fd7a9bf0513c54a2c2fab14e3a63e360b9e99473317bac0c0fbcf43a507ecb6a",
     "/privacy": "406fb4d36167c903fa9bcd5d5d9dfd57663578b6f8f80612e54722663d751f0c",
     "/contact": "22f78d96c9c73e0ae430428d0f6e76252b4a540d3ab410f5e40eeb84e4d25acc",
     "/terms": "b5ff50d200eea1086081778205cbe1bc3c09ad5e8af4bbd7a9c24434f0d2c2e2",

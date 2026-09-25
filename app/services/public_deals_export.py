@@ -47,7 +47,7 @@ SITE_URL_DEFAULT = "https://udemyenroller.madhudadi.in"
 STATIC_PAGE_LASTMOD: dict[str, str] = {
     "/faq": "2026-08-27",
     "/about": "2026-07-28",
-    "/guides": "2026-08-27",
+    "/guides": "2026-09-25",
     "/privacy": "2026-09-20",
     "/contact": "2026-08-03",
     "/terms": "2026-08-03",

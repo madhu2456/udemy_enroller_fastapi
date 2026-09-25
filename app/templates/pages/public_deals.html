@@ -120,6 +120,21 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
 {% if current_page is defined and total_pages is defined and current_page < total_pages %}
 <link rel="next" href="https://udemyenroller.madhudadi.in/udemycoupons?page={{ current_page + 1 }}" />
 {% endif %}
+<style nonce="{{ request.state.nonce }}">
+    @keyframes pulse-light {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .5; }
+    }
+    .animate-pulse-light {
+        animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
 {% endblock %} {% block content %}
 <div class="py-10 text-gray-900">
     <div class="max-w-6xl mx-auto px-6">
@@ -547,25 +562,6 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                 els.searchInput.value = state.search;
             }
         }
-
-        // Custom Skeleton Animation
-        const skeletonStyle = document.createElement('style');
-        skeletonStyle.innerHTML = `
-            @keyframes pulse-light {
-                0%, 100% { opacity: 1; }
-                50% { opacity: .5; }
-            }
-            .animate-pulse-light {
-                animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            }
-            .line-clamp-2 {
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
-        `;
-        document.head.appendChild(skeletonStyle);
 
         // Setup skeletons
         els.loading.innerHTML = Array(8).fill().map(() => `

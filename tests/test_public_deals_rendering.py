@@ -174,4 +174,28 @@ def test_footer_adticks_badge_layout_and_contrast(client):
     assert "Enroller by Madhu Dadi" in response.text
 
 
+def test_public_deals_csp_nonce_on_style_tag(client):
+    """Verify static skeleton styles use request nonce and no dynamic style element is created."""
+    response = client.get("/udemycoupons")
+    assert response.status_code == 200
+    assert '<style nonce="' in response.text
+    assert "pulse-light" in response.text
+    assert "document.createElement('style')" not in response.text
+    assert 'document.createElement("style")' not in response.text
+
+
+def test_guides_escaped_cli_placeholders(client):
+    """Verify CLI placeholders on /guides are HTML entity escaped to prevent DOM tag corruption."""
+    response = client.get("/guides")
+    assert response.status_code == 200
+    assert (
+        "python cli.py login --token &lt;TOKEN&gt; --client-id &lt;ID&gt; --csrf &lt;CSRF&gt;"
+        in response.text
+    )
+    assert "<TOKEN>" not in response.text
+    assert "<ID>" not in response.text
+    assert "<CSRF>" not in response.text
+
+
+
 
