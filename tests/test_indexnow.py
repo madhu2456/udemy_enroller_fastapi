@@ -372,11 +372,11 @@ _STATIC_PAGE_TEMPLATES = {  # page path → template file (mirrors seo.py routes
 # sha256 of each template's raw bytes with CRLF normalized to LF, pinned at the
 # same time as STATIC_PAGE_LASTMOD (see procedure above).
 _STATIC_PAGE_TEMPLATE_HASHES = {
-    "/faq": "44b952ec08f24046b420103f2014a180fc25204c38e6838e0868da346a9c5d10",
-    "/about": "4823e7c777c26713ada428c47bae3f77957dd6f0a9de52683c728faf39c36a52",
-    "/guides": "fd7a9bf0513c54a2c2fab14e3a63e360b9e99473317bac0c0fbcf43a507ecb6a",
-    "/privacy": "406fb4d36167c903fa9bcd5d5d9dfd57663578b6f8f80612e54722663d751f0c",
-    "/contact": "22f78d96c9c73e0ae430428d0f6e76252b4a540d3ab410f5e40eeb84e4d25acc",
+    "/faq": "2bfa3b7d462bddc1a882ee86ac8ccb724c1e0074c8735336111973a38c062d51",
+    "/about": "7a8cfb6059dc250a6313c47ba3595f319af8697ce7efb390180a023f992d7032",
+    "/guides": "8b4527e3d8351d0275d567275923c01f259968ab1a223f1d8491238d77bc26bc",
+    "/privacy": "12c0e2397f44735676983be0b7cfcf391caafb58fd343207ebbf183199114e96",
+    "/contact": "356993bba017ffa1526d7d50243a4021aaee9b5c5850e8e4c6f4f957b7370d07",
     "/terms": "b5ff50d200eea1086081778205cbe1bc3c09ad5e8af4bbd7a9c24434f0d2c2e2",
     "/accessibility": "a699a6842111af1bf0a0d974b7a72b7ecd8b15cca43f5b1db524b336ae9bcf1d",
 }

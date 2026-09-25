@@ -1,8 +1,8 @@
-{% extends "components/base.html" %} {% block title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block meta_title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block
+{% extends "components/base.html" %} {% block title %}100% Free Udemy Coupons, Promo Codes & Deals | Enroller{% endblock %} {% block meta_title %}100% Free Udemy Coupons, Promo Codes & Deals | Enroller{% endblock %} {% block
 meta_description %}Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design.{% endblock %} {% block og_type
 %}website{% endblock %} {% block
-og_title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block
-og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design.{% endblock %} {% block twitter_title %}100% Free Udemy Coupons & Promo Codes | Enroller{% endblock %} {% block twitter_description
+og_title %}100% Free Udemy Coupons, Promo Codes & Deals | Enroller{% endblock %} {% block
+og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design.{% endblock %} {% block twitter_title %}100% Free Udemy Coupons, Promo Codes & Deals | Enroller{% endblock %} {% block twitter_description
 %}Browse 100% free Udemy coupons, promo codes, and verified deals. Automate enrollment and claim free courses in coding, AI, business, and design.{% endblock %} {% block canonical %}<link rel="canonical" href="https://udemyenroller.madhudadi.in{{ canonical_url | default(request.url.path) }}" />{% endblock %} {% block extra_head %}
 <script type="application/ld+json">
     {
@@ -379,7 +379,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                         </div>
                         <button
                             data-coupon="{{ course.coupon_code or 'N/A' }}"
-                            class="copy-btn flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                            class="copy-btn flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                             title="Copy Coupon"
                             aria-label="Copy coupon code"
                         >
@@ -389,7 +389,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                     <div class="flex flex-col gap-2">
                         <a
                             href="/udemycoupons/c/{{ course.slug }}"
-                            class="w-full inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-800 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition-colors duration-150"
+                            class="w-full inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-800 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset"
                         >
                             Details
                         </a>
@@ -397,7 +397,7 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                             href="{{ course.url }}"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="w-full inline-flex items-center justify-center gap-1.5 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150"
+                            class="w-full inline-flex items-center justify-center gap-1.5 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset"
                         >
                             Enroll on Udemy
                             <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
@@ -703,13 +703,13 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
                                     <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Coupon Code</span>
                                     <span class="font-mono text-xs text-gray-700 truncate max-w-[120px] font-medium" title="${escapeAttr(couponCode)}">${escapeHTML(couponCode)}</span>
                                 </div>
-                                <button data-coupon="${escapeAttr(couponCode)}" class="copy-btn flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" title="Copy Coupon" aria-label="Copy coupon code">
+                                <button data-coupon="${escapeAttr(couponCode)}" class="copy-btn flex-shrink-0 w-7 h-7 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" title="Copy Coupon" aria-label="Copy coupon code">
                                     <i data-lucide="copy" class="w-4 h-4"></i>
                                 </button>
                             </div>
                             <div class="flex flex-col gap-2">
-                                ${(course.slug || course.id) ? `<a href="/udemycoupons/c/${escapeAttr(String(course.slug || course.id))}" class="w-full inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-800 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition-colors duration-150">Details</a>` : ''}
-                                <a href="${escapeAttr(sanitizeURL(course.url))}" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center gap-1.5 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150">
+                                ${(course.slug || course.id) ? `<a href="/udemycoupons/c/${escapeAttr(String(course.slug || course.id))}" class="w-full inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-800 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset">Details</a>` : ''}
+                                <a href="${escapeAttr(sanitizeURL(course.url))}" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center gap-1.5 bg-[#2563EB] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset">
                                     Enroll on Udemy <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                                 </a>
                             </div>

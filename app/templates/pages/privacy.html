@@ -430,7 +430,7 @@ endblock %} {% block content %}
                             role="region"
                             aria-label="Browser cookies table (scroll horizontally if needed)"
                         >
-                            <table class="min-w-full text-sm text-left">
+                            <table class="min-w-[480px] w-full text-sm text-left">
                                 <thead>
                                     <tr class="border-b border-gray-200">
                                         <th
@@ -452,25 +452,25 @@ endblock %} {% block content %}
                                 </thead>
                                 <tbody class="text-gray-500">
                                     <tr class="border-b border-gray-100">
-                                        <td class="py-2 pr-4 font-mono text-xs">
+                                        <td class="py-2 pr-4 font-mono text-xs whitespace-nowrap">
                                             __Host-session_id
                                         </td>
                                         <td class="py-2 pr-4">
                                             Authentication session token
                                         </td>
-                                        <td class="py-2 text-xs">
+                                        <td class="py-2 text-xs whitespace-nowrap">
                                             HttpOnly, SameSite=Strict, Secure
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="py-2 pr-4 font-mono text-xs">
+                                        <td class="py-2 pr-4 font-mono text-xs whitespace-nowrap">
                                             csrf_token
                                         </td>
                                         <td class="py-2 pr-4">
                                             Cross-site request forgery
                                             protection
                                         </td>
-                                        <td class="py-2 text-xs">
+                                        <td class="py-2 text-xs whitespace-nowrap">
                                             SameSite=Strict
                                         </td>
                                     </tr>

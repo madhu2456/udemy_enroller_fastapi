@@ -2,8 +2,9 @@
 
 from unittest import mock
 
-import pytest
+from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
+import pytest
 
 from main import app
 
@@ -197,5 +198,90 @@ def test_guides_escaped_cli_placeholders(client):
     assert "<CSRF>" not in response.text
 
 
+def test_coupon_category_touch_targets_and_stacking(client):
+    """Verify category hub cards use responsive column stacking and min-h-[44px] touch targets."""
+    fake_category_data = (
+        "Development",
+        [
+            {
+                "id": 1,
+                "title": "Python Bootcamp",
+                "slug": "python-bootcamp",
+                "category": "Development",
+                "coupon_code": "PYFREE2026",
+                "price": 1419.0,
+                "enrolled_at": "2026-08-12T14:00:00Z",
+                "is_coupon_valid": True,
+                "url": "https://www.udemy.com/course/python-bootcamp/",
+            }
+        ],
+    )
+    with mock.patch(
+        "app.routers.public_deals.get_deals_for_category_slug",
+        return_value=fake_category_data,
+    ):
+        response = client.get("/udemycoupons/category/development")
+
+    assert response.status_code == 200
+    assert "flex flex-col sm:flex-row" in response.text
+    assert "min-h-[44px]" in response.text
+    assert 'aria-label="Related links"' in response.text
+    assert "← All free coupons" in response.text
 
 
+def test_faq_scraper_fleet_and_certificate_policy(client):
+    """Verify /faq mirrors the 17-source scraper fleet and certificate completion policy."""
+    response = client.get("/faq")
+    assert response.status_code == 200
+    assert "17-source" in response.text
+    assert "12-source" not in response.text
+    assert "Real Discount" in response.text
+    assert "OnlineCourses.ooo" in response.text
+    assert "certificates of completion" in response.text
+    assert "April 2020" in response.text
+
+
+def test_invalid_tailwind_classes_absence(client):
+    """Verify bg-gray-55 and bg-yellow-55 are absent across all rendered public templates."""
+    public_routes = [
+        "/",
+        "/udemycoupons",
+        "/faq",
+        "/about",
+        "/guides",
+        "/privacy",
+        "/contact",
+    ]
+    for route in public_routes:
+        response = client.get(route)
+        assert response.status_code == 200, f"Route {route} failed with status {response.status_code}"
+        assert "bg-gray-55" not in response.text, f"bg-gray-55 leaked into {route}"
+        assert "bg-yellow-55" not in response.text, f"bg-yellow-55 leaked into {route}"
+
+
+def test_login_heading_sequence_hierarchy(client):
+    """Verify / renders How It Works as H2 and has no H3 How It Works sequence inversion."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert '<h2 class="text-base font-semibold text-gray-900">How It Works</h2>' in response.text
+    assert "<h3>How It Works</h3>" not in response.text
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    h2_elements = soup.find_all("h2")
+    how_it_works_h2 = [h for h in h2_elements if "How It Works" in h.get_text()]
+    assert len(how_it_works_h2) == 1, "Expected exactly one <h2>How It Works</h2>"
+    assert "text-base" in how_it_works_h2[0].get("class", [])
+    assert "font-semibold" in how_it_works_h2[0].get("class", [])
+    assert "text-gray-900" in how_it_works_h2[0].get("class", [])
+
+    h3_elements = soup.find_all("h3")
+    how_it_works_h3 = [h for h in h3_elements if "How It Works" in h.get_text()]
+    assert len(how_it_works_h3) == 0, "Did not expect any <h3>How It Works</h3>"
+
+
+def test_base_schema_graph_integrity(client):
+    """Verify base schema graph eliminates dangling organization refs and declares All OS."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "https://madhudadi.in/#organization" not in response.text
+    assert '"operatingSystem": "All"' in response.text

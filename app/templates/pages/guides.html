@@ -33,36 +33,36 @@ endblock %} {% block content %}
                         "@type": "ListItem",
                         "position": 1,
                         "name": "Quick Start Guide",
-                        "url": "https://udemyenroller.madhudadi.in/guides#quickstart",
+                        "url": "https://udemyenroller.madhudadi.in/guides#get-started",
                         "description": "Set up the Udemy Enroller in minutes (cookie login on the hosted demo)."
                     },
                     {
                         "@type": "ListItem",
                         "position": 2,
                         "name": "Extract Cookies Guide",
-                        "url": "https://udemyenroller.madhudadi.in/guides#cookies",
+                        "url": "https://udemyenroller.madhudadi.in/guides#cookie-login",
                         "description": "Learn how to extract your Udemy session cookies for secure login."
                     },
                     {
                         "@type": "ListItem",
                         "position": 3,
                         "name": "Configure Filters Guide",
-                        "url": "https://udemyenroller.madhudadi.in/guides#filters",
+                        "url": "https://udemyenroller.madhudadi.in/guides#smart-filters",
                         "description": "Set up smart course filters by category, language, rating, and instructor exclusions."
                     },
                     {
                         "@type": "ListItem",
                         "position": 4,
                         "name": "Server Deployment Guide",
-                        "url": "https://udemyenroller.madhudadi.in/guides#deploy",
+                        "url": "https://udemyenroller.madhudadi.in/guides#run-on-server",
                         "description": "Deploy the Udemy Enroller on a server using Docker so enrollment runs can continue without your local computer."
                     },
                     {
                         "@type": "ListItem",
                         "position": 5,
-                        "name": "Browsing Manual Coupons Guide",
-                        "url": "https://udemyenroller.madhudadi.in/guides#manual",
-                        "description": "Browse public free Udemy coupon listings (validity can change) and claim manually on Udemy."
+                        "name": "Troubleshooting & FAQ Guide",
+                        "url": "https://udemyenroller.madhudadi.in/guides#troubleshooting",
+                        "description": "Common questions, error solutions, and best practices for running Udemy Enroller."
                     },
                     {
                         "@type": "ListItem",
@@ -70,6 +70,38 @@ endblock %} {% block content %}
                         "name": "Desktop GUI & Terminal CLI Guide",
                         "url": "https://udemyenroller.madhudadi.in/guides#desktop-gui-cli",
                         "description": "Run the native CustomTkinter desktop interface or unified Rich CLI for automated local scraping and enrollment."
+                    }
+                ]
+            },
+            {
+                "@type": "HowTo",
+                "name": "How to Get Started with Udemy Enroller",
+                "description": "Connect your Udemy account and start a run to attempt your first batch of free-course enrollments.",
+                "url": "https://udemyenroller.madhudadi.in/guides#get-started",
+                "step": [
+                    {
+                        "@type": "HowToStep",
+                        "position": 1,
+                        "name": "Open the Connect section",
+                        "text": "Scroll to the \"Connect Your Account\" section on the homepage, or click \"Get Started\" in the top nav."
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 2,
+                        "name": "Choose Cookie Login",
+                        "text": "On the Connect form, switch to the Cookie Login tab (on the hosted demo it is shown by default). Log in to udemy.com in your browser, then copy your three session cookies (access_token, client_id, csrftoken) into the form — see the Cookie Login guide below for the full extraction steps. Email Login is available only when you self-host — and may hit CAPTCHA or CSRF errors from server IPs."
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 3,
+                        "name": "Click Connect Account",
+                        "text": "The engine will authenticate with the Udemy API and begin monitoring coupon sites immediately. No further action is required."
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 4,
+                        "name": "Wait for the first enrollments",
+                        "text": "Within minutes, the engine will start finding and applying 100% off coupons. Check your Udemy dashboard to see new courses appearing in \"My Learning\"."
                     }
                 ]
             }

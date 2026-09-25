@@ -1,12 +1,12 @@
 {% extends "components/base.html" %}
-{% block title %}Free {{ category_name }} Udemy Coupons | Enroller{% endblock %}
-{% block meta_title %}Free {{ category_name }} Udemy Coupons | Enroller{% endblock %}
+{% block title %}Free {{ category_name }} Udemy Coupons & Promo Codes | Enroller{% endblock %}
+{% block meta_title %}Free {{ category_name }} Udemy Coupons & Promo Codes | Enroller{% endblock %}
 {% block meta_description %}Browse {{ deal_count }} free Udemy coupon listing{% if deal_count != 1 %}s{% endif %} in {{ category_name }}. Validity can change. Not affiliated with Udemy. Open-source Udemy Enroller by Madhu Dadi.{% endblock %}
 {# Thin category hubs (<5 listings) are noindex to avoid near-duplicate SERP noise #}
 {% block robots %}{% if deal_count is defined and deal_count < 5 %}noindex, follow{% else %}index, follow{% endif %}{% endblock %}
-{% block og_title %}Free {{ category_name }} Udemy Coupons | Enroller{% endblock %}
+{% block og_title %}Free {{ category_name }} Udemy Coupons & Promo Codes | Enroller{% endblock %}
 {% block og_description %}{{ deal_count }} free coupon listings in {{ category_name }}. Validity can change. Not affiliated with Udemy.{% endblock %}
-{% block twitter_title %}Free {{ category_name }} Udemy Coupons | Enroller{% endblock %}
+{% block twitter_title %}Free {{ category_name }} Udemy Coupons & Promo Codes | Enroller{% endblock %}
 {% block twitter_description %}{{ deal_count }} free coupon listings. Validity can change. Not affiliated with Udemy.{% endblock %}
 {% block extra_head %}
 <script type="application/ld+json">
@@ -119,12 +119,15 @@
             <span class="text-green-800 font-bold">Free</span>
           </div>
         </div>
-        <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+        <div class="mt-auto pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div class="flex flex-col text-left overflow-hidden">
             <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Coupon Code</span>
             <span class="font-mono text-xs text-gray-700 truncate max-w-[120px] font-medium" title="{{ course.coupon_code }}">{{ course.coupon_code }}</span>
           </div>
-          <a href="/udemycoupons/c/{{ course.slug }}" class="text-sm font-semibold text-blue-700 hover:underline">View details →</a>
+          <div class="flex items-center gap-2">
+            <a href="/udemycoupons/c/{{ course.slug }}" class="inline-flex items-center justify-center min-h-[44px] px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset transition-colors">Details</a>
+            <a href="{{ course.url }}" target="_blank" rel="noopener noreferrer nofollow" class="inline-flex items-center justify-center min-h-[44px] px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset transition-colors">Claim →</a>
+          </div>
         </div>
       </article>
       {% endfor %}
@@ -133,13 +136,13 @@
     <p class="text-sm text-gray-600">No valid listings in this category right now.</p>
     {% endif %}
 
-    <p class="text-sm text-gray-600">
-      <a href="/udemycoupons" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1">← All free coupons</a>
-      ·
-      <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1">Coupon guide</a>
-      ·
-      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1" rel="noopener noreferrer" target="_blank">Source on GitHub</a>
-    </p>
+    <nav class="flex flex-wrap items-center gap-2 text-sm text-gray-600 mt-6" aria-label="Related links">
+      <a href="/udemycoupons" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1 whitespace-nowrap">← All free coupons</a>
+      <span class="text-gray-400" aria-hidden="true">·</span>
+      <a href="/guides/free-udemy-coupons" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1 whitespace-nowrap">Coupon guide</a>
+      <span class="text-gray-400" aria-hidden="true">·</span>
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi" class="text-blue-700 underline underline-offset-2 inline-flex items-center min-h-[24px] py-1 whitespace-nowrap" rel="noopener noreferrer" target="_blank">Source on GitHub</a>
+    </nav>
   </div>
 </div>
 {% endblock %}

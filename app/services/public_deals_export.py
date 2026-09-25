@@ -45,11 +45,11 @@ SITE_URL_DEFAULT = "https://udemyenroller.madhudadi.in"
 # documented here and in docs/ops/indexnow.md. Bump the value (and only the
 # value) when a page's template content actually changes.
 STATIC_PAGE_LASTMOD: dict[str, str] = {
-    "/faq": "2026-08-27",
-    "/about": "2026-07-28",
+    "/faq": "2026-09-25",
+    "/about": "2026-09-25",
     "/guides": "2026-09-25",
-    "/privacy": "2026-09-20",
-    "/contact": "2026-08-03",
+    "/privacy": "2026-09-25",
+    "/contact": "2026-09-25",
     "/terms": "2026-08-03",
     "/accessibility": "2026-09-04",
 }

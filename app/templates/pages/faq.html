@@ -39,7 +39,7 @@
                 "name": "How does the automated Udemy course enroller work?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "When you start an enrollment run on a running app instance, the tool monitors configured coupon aggregator websites (for example Courson, CouponScorpion, FreeCourseSites, and others in the 12-source app registry). It validates matching 100% off listings against your filters and attempts enrollment via session-based Udemy endpoints. You must start a run; there is no always-on scheduler independent of the app. Enrollment is not guaranteed."
+                    "text": "When you start an enrollment run on a running app instance, the tool monitors configured coupon aggregator websites (for example Courson, CouponScorpion, FreeCourseSites, and others in the 17-source app registry). It validates matching 100% off listings against your filters and attempts enrollment via session-based Udemy endpoints. You must start a run; there is no always-on scheduler independent of the app. Enrollment is not guaranteed."
                 }
             },
             {
@@ -47,7 +47,7 @@
                 "name": "Which coupon aggregator sites does it monitor?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "The open-source project ships with 12 aggregator scrapers, including Courson, CouponScorpion, FreeCourseSites, E-next, Interview Gig, UdemyXpert, Coursesity, Course Folder, Couponami, Korshub, UdemyFreebies, and iDownloadCoupon. New scrapers are contributed by the community. Check the GitHub repository for the current list."
+                    "text": "The open-source project ships with 17 aggregator scrapers, including Courson, CouponScorpion, FreeCourseSites, E-next, Interview Gig, UdemyXpert, Coursesity, Course Folder, Couponami, Korshub, UdemyFreebies, iDownloadCoupon, Real Discount, OnlineCourses.ooo, FreebiesGlobal, GeeksGod, and TutorialBar. New scrapers are contributed by the community. Check the GitHub repository for the current list."
                 }
             },
             {
@@ -72,6 +72,14 @@
                 "acceptedAnswer": {
                     "@type": "Answer",
                     "text": "Yes. Browse the public free-coupon listings at /udemycoupons and claim manually on Udemy. Listings refresh when enrollment runs or the coupon checker finish. Validity can change; always confirm the price on Udemy."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Do courses claimed with 100% off coupons include official certificates of completion?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes. Paid courses enrolled with a 100% off promotional coupon code include full lifetime access, direct instructor Q&A, and official Udemy certificates of completion upon finishing all lessons. In contrast, courses published as permanently free by instructors on Udemy do not provide certificates (per Udemy's April 2020 platform policy)."
                 }
             },
             {
@@ -280,7 +288,7 @@
                                     configured coupon aggregator websites (for
                                     example Courson, CouponScorpion,
                                     FreeCourseSites, and others in the
-                                    12-source app registry). It validates
+                                    17-source app registry). It validates
                                     matching 100% off listings against your
                                     filters and attempts enrollment via
                                     session-based Udemy endpoints. You must
@@ -302,15 +310,16 @@
                                 <p
                                     class="text-sm text-gray-500 leading-relaxed"
                                 >
-                                    The open-source project ships with 12
+                                    The open-source project ships with 17
                                     aggregator scrapers, including Courson,
                                     CouponScorpion, FreeCourseSites, E-next,
                                     Interview Gig, UdemyXpert, Coursesity,
                                     Course Folder, Couponami, Korshub,
-                                    UdemyFreebies, and iDownloadCoupon. New
-                                    scrapers are contributed by the community.
-                                    Check the GitHub repository for the current
-                                    list.
+                                    UdemyFreebies, iDownloadCoupon, Real
+                                    Discount, OnlineCourses.ooo, FreebiesGlobal,
+                                    GeeksGod, and TutorialBar. New scrapers are
+                                    contributed by the community. Check the
+                                    GitHub repository for the current list.
                                 </p>
                             </div>
                         </div>
@@ -383,6 +392,22 @@
                                     refresh when enrollment runs or the coupon
                                     checker finish. Validity can change — always
                                     confirm the price on Udemy.
+                                </p>
+                            </div>
+                        </div>
+                        <div
+                            class="px-6 py-5"
+                        >
+                            <h3
+                                class="text-sm font-semibold text-gray-900 mb-2"
+                            >
+                                Do courses claimed with 100% off coupons include official certificates of completion?
+                            </h3>
+                            <div>
+                                <p
+                                    class="text-sm text-gray-500 leading-relaxed"
+                                >
+                                    Yes. Paid courses enrolled with a 100% off promotional coupon code include full lifetime access, direct instructor Q&amp;A, and official Udemy certificates of completion upon finishing all lessons. In contrast, courses published as permanently free by instructors on Udemy do not provide certificates (per Udemy's April 2020 platform policy).
                                 </p>
                             </div>
                         </div>

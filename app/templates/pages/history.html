@@ -200,7 +200,7 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
                 feed.innerHTML = `
                 <div class="bg-white border border-gray-200 rounded-xl p-20 text-center shadow-sm">
                     <p class="text-gray-600 italic mb-6 font-light">Your history log is currently empty.</p>
-                    <a href="/dashboard" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full text-sm font-semibold transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Start Automated Enrollment</a>
+                    <a href="/dashboard" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-sm font-semibold transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Start Automated Enrollment</a>
                 </div>
             `;
                 return;
@@ -212,7 +212,7 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
                     const isError = run.status === "failed";
 
                     let badgeClass =
-                        "bg-yellow-55 text-yellow-700 border-yellow-200";
+                        "bg-yellow-50 text-yellow-700 border-yellow-200";
                     if (isSuccess)
                         badgeClass =
                             "bg-green-50 text-green-700 border-green-200";

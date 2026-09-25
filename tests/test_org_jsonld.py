@@ -62,8 +62,8 @@ def test_organization_jsonld_on_home():
     # founder -> madhudadi.in/#person (person identity anchor hub)
     assert org["founder"]["@id"] == "https://madhudadi.in/#person"
     assert org["founder"]["name"] == "Madhu Dadi"
-    # parentOrganization -> portfolio hub
-    assert org["parentOrganization"]["@id"] == "https://madhudadi.in/#organization"
+    # dangling parentOrganization removed to preserve schema graph integrity
+    assert "parentOrganization" not in org
 
 
 @pytest.mark.parametrize("path", PUBLIC_PAGES[1:])

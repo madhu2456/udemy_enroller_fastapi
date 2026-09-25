@@ -127,12 +127,12 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 <div class="inline-flex items-center gap-2 bg-gray-900 text-gray-100 font-mono text-xs px-3 py-1.5 rounded-lg border border-gray-800 shadow-xs">
                     <span class="text-gray-500 select-none">$</span>
                     <code class="text-emerald-400 font-semibold">python gui.py</code>
-                    <span class="text-gray-400 text-[11px] ml-1"># Desktop GUI</span>
+                    <span class="text-gray-500 text-[11px] ml-1"># Desktop GUI</span>
                 </div>
                 <div class="inline-flex items-center gap-2 bg-gray-900 text-gray-100 font-mono text-xs px-3 py-1.5 rounded-lg border border-gray-800 shadow-xs">
                     <span class="text-gray-500 select-none">$</span>
                     <code class="text-sky-400 font-semibold">python cli.py enroll</code>
-                    <span class="text-gray-400 text-[11px] ml-1"># Terminal CLI</span>
+                    <span class="text-gray-500 text-[11px] ml-1"># Terminal CLI</span>
                 </div>
             </div>
         </div>
@@ -358,8 +358,13 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         </p>
                     </div>
                 </div>
-                <div class="p-6 h-72">
+                <div class="p-6 h-72 relative">
                     <canvas id="savings-chart"></canvas>
+                    <div id="savings-chart-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-white/95">
+                        <i data-lucide="bar-chart-2" class="w-10 h-10 text-gray-300 mb-2"></i>
+                        <p class="text-sm font-medium text-gray-600">No enrollment savings recorded yet</p>
+                        <p class="text-xs text-gray-500 mt-1 max-w-xs">Run your first automated coupon collection to track your lifetime savings over time.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -479,7 +484,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                     class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 hidden"
                 >
                     <p
-                        class="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider"
+                        class="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider"
                     >
                         Currently Processing
                     </p>
@@ -636,7 +641,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                                 <tr id="no-courses-row">
                                     <td
                                         colspan="3"
-                                        class="px-6 py-8 text-center text-gray-400 italic font-light"
+                                        class="px-6 py-8 text-center text-gray-500 italic font-light"
                                     >
                                         No courses processed in this run yet.
                                     </td>
@@ -709,7 +714,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         <tr>
                             <td
                                 colspan="6"
-                                class="px-6 py-8 text-center text-gray-400 italic font-light"
+                                class="px-6 py-8 text-center text-gray-500 italic font-light"
                             >
                                 No enrollment runs yet. Click "Start Enrollment"
                                 to begin!
@@ -728,7 +733,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             class="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col shadow-sm"
         >
             <div
-                class="px-4 py-3 border-b border-gray-200 bg-gray-55 flex items-center justify-between"
+                class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between"
             >
                 <div class="flex items-center gap-3">
                     <div class="flex gap-1.5">
@@ -853,7 +858,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         class="bg-gray-50 border border-gray-100 rounded-lg p-3"
                     >
                         <p
-                            class="text-gray-400 text-[10px] uppercase font-semibold"
+                            class="text-gray-500 text-[10px] uppercase font-semibold"
                         >
                             Enrolled
                         </p>
@@ -868,7 +873,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         class="bg-gray-50 border border-gray-100 rounded-lg p-3"
                     >
                         <p
-                            class="text-gray-400 text-[10px] uppercase font-semibold"
+                            class="text-gray-500 text-[10px] uppercase font-semibold"
                         >
                             Checked
                         </p>
@@ -883,7 +888,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         class="bg-gray-50 border border-gray-100 rounded-lg p-3"
                     >
                         <p
-                            class="text-gray-400 text-[10px] uppercase font-semibold"
+                            class="text-gray-500 text-[10px] uppercase font-semibold"
                         >
                             Already Owned
                         </p>
@@ -898,7 +903,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         class="bg-gray-50 border border-gray-100 rounded-lg p-3"
                     >
                         <p
-                            class="text-gray-400 text-[10px] uppercase font-semibold"
+                            class="text-gray-500 text-[10px] uppercase font-semibold"
                         >
                             Expired Coupons
                         </p>
@@ -913,7 +918,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                         class="bg-gray-50 border border-gray-100 rounded-lg p-3 col-span-2 text-center"
                     >
                         <p
-                            class="text-gray-400 text-[10px] uppercase font-semibold"
+                            class="text-gray-500 text-[10px] uppercase font-semibold"
                         >
                             Excluded by Filters
                         </p>
@@ -1391,7 +1396,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         filtered = [...filtered].reverse();
 
         if (filtered.length === 0) {
-            body.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-gray-400 italic font-light">No courses found matching the filter.</td></tr>`;
+            body.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-gray-500 italic font-light">No courses found matching the filter.</td></tr>`;
             paginationControls.classList.add("hidden");
             return;
         }
@@ -1679,7 +1684,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                     </div>
                     ${errText}
                     <div class="flex justify-between items-center mt-1">
-                        <span class="text-[9px] text-gray-400 font-medium">Courses</span>
+                        <span class="text-[9px] text-gray-500 font-medium">Courses</span>
                         <span class="text-[9px] text-gray-500 font-bold">${s.courses_found}</span>
                     </div>
                 </div>
@@ -1797,6 +1802,10 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 },
             },
         });
+        const emptyEl = document.getElementById("savings-chart-empty");
+        if (emptyEl && (!savingsChart.data.labels || savingsChart.data.labels.length === 0)) {
+            emptyEl.classList.remove("hidden");
+        }
         updateAnalytics();
     }
 
@@ -1805,8 +1814,22 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             const resp = await fetch("/api/dashboard/analytics");
             const data = await resp.json();
 
-            savingsChart.data.labels = data.map((d) => d.date);
-            savingsChart.data.datasets[0].data = data.map((d) => d.savings);
+            const labels = Array.isArray(data) ? data.map((d) => d.date) : [];
+            const savings = Array.isArray(data) ? data.map((d) => Number(d.savings) || 0) : [];
+
+            const emptyEl = document.getElementById("savings-chart-empty");
+            if (emptyEl) {
+                const totalSavings = savings.reduce((acc, val) => acc + val, 0);
+                if (labels.length === 0 || totalSavings === 0) {
+                    emptyEl.classList.remove("hidden");
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    emptyEl.classList.add("hidden");
+                }
+            }
+
+            savingsChart.data.labels = labels;
+            savingsChart.data.datasets[0].data = savings;
             savingsChart.update();
         } catch (e) {
             console.error("Failed to update analytics:", e);
