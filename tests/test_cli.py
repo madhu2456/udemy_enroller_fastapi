@@ -1,7 +1,12 @@
 """Unit tests for Unified Rich CLI application."""
 
 import json
+import os
+import sqlite3
+import subprocess
+import sys
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
@@ -331,4 +336,37 @@ def test_logout_command():
         assert result.exit_code == 0
         assert "cleared" in result.output.lower()
         assert mock_clear.called
+
+
+def test_cli_auto_creates_schema_on_fresh_system(tmp_path):
+    """Verify CLI auto-creates SQLite database and schema on fresh installations."""
+    db_path = tmp_path / "fresh.db"
+    env = dict(os.environ)
+    env["DATABASE_URL"] = f"sqlite:///{db_path}"
+
+    result = subprocess.run(
+        [sys.executable, "-m", "app.cli.main", "stats"],
+        cwd=str(Path(__file__).resolve().parent.parent),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, f"CLI stats failed with output:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+    assert "no such table" not in result.stderr.lower()
+    assert "OperationalError" not in result.stderr
+    assert db_path.exists(), f"Expected database file at {db_path} was not created"
+
+    # Verify expected tables were created in SQLite
+    conn = sqlite3.connect(str(db_path))
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = {row[0] for row in cursor.fetchall()}
+        expected_tables = {"users", "enrollment_runs", "enrolled_courses"}
+        assert expected_tables.issubset(tables), f"Expected tables {expected_tables} to be subset of {tables}"
+    finally:
+        conn.close()
+
 

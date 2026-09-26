@@ -126,3 +126,26 @@ def test_main_build_failure_returns_exit_code_one():
     ):
         exit_code = main(["--gui"])
         assert exit_code == 1
+
+
+def test_cli_spec_hiddenimports_includes_main():
+    """Verify that cli.spec includes root module 'main' in hiddenimports for server command."""
+    from build_exe import PROJECT_ROOT
+    spec_path = PROJECT_ROOT / "cli.spec"
+    assert spec_path.is_file(), f"Spec file not found at {spec_path}"
+    content = spec_path.read_text(encoding="utf-8")
+    assert '"main"' in content or "'main'" in content, (
+        "cli.spec must include 'main' in hiddenimports"
+    )
+
+
+def test_cli_and_gui_specs_disable_upx():
+    """Verify both cli.spec and gui.spec disable UPX to prevent AV false-positive flags."""
+    from build_exe import PROJECT_ROOT
+    for spec_name in ["cli.spec", "gui.spec"]:
+        spec_path = PROJECT_ROOT / spec_name
+        assert spec_path.is_file(), f"Spec file not found at {spec_path}"
+        content = spec_path.read_text(encoding="utf-8")
+        assert "upx=False" in content, f"{spec_name} must explicitly specify upx=False"
+        assert "upx=True" not in content, f"{spec_name} must not contain upx=True"
+

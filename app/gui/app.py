@@ -37,6 +37,14 @@ class UdemyEnrollerApp(customtkinter.CTk):
         super().__init__(**kwargs)
         apply_theme("dark")
 
+        # Ensure SQLite tables exist on fresh installations
+        try:
+            from app.models.database import create_tables
+
+            create_tables()
+        except Exception:
+            pass
+
         self.title("Udemy Course Enroller — Desktop Pro")
         self.geometry("1100x720")
         self.minsize(900, 600)
@@ -185,8 +193,11 @@ class UdemyEnrollerApp(customtkinter.CTk):
                 except Exception:
                     pass
         finally:
-            # Reschedule next poll
-            self.after(50, self._poll_bridge_events)
+            # Reschedule next poll, absorbing teardown errors if window is destroyed
+            try:
+                self.after(50, self._poll_bridge_events)
+            except Exception:
+                pass
 
     def _handle_start_enroll(self) -> None:
         creds = self.login_view.get_credentials()

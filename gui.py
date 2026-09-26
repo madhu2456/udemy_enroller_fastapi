@@ -21,6 +21,13 @@ def run_gui():
         sys.exit(1)
 
     try:
+        from app.models.database import create_tables
+
+        create_tables()
+    except Exception:
+        pass
+
+    try:
         from app.gui.app import UdemyEnrollerApp
 
         app = UdemyEnrollerApp()

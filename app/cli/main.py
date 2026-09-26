@@ -91,6 +91,16 @@ def main(
 
     setup_logging(level=resolved, log_file=log_file)
 
+    if ctx.invoked_subcommand is not None:
+        try:
+            from app.models.database import create_tables
+
+            create_tables()
+        except Exception as exc:
+            from loguru import logger
+
+            logger.debug(f"SQLite auto-initialization non-fatal notice: {exc}")
+
 
 if __name__ == "__main__":
     app()

@@ -3,12 +3,14 @@
 import collections
 import os
 import time
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.gui.bridge import AsyncioBridge
+from app.models.database import EnrollmentRun
 from app.services.browser_cookies import UdemyBrowserCookies
 from app.services.course import Course
 
@@ -317,3 +319,76 @@ async def test_bridge_false_none_checkout_increments_unknown_c():
     processed = [e for e in events if e.get("event") == "COURSE_PROCESSED"]
     assert len(processed) == 2
     assert [e["data"]["status"] for e in processed] == ["FAILED", "FAILED"]
+
+
+@pytest.mark.asyncio
+async def test_bridge_fetch_stats_uses_successfully_enrolled():
+    """Verify _handle_fetch_stats uses successfully_enrolled attribute without raising AttributeError."""
+    bridge = AsyncioBridge()
+    run = EnrollmentRun(
+        id=1,
+        status="completed",
+        successfully_enrolled=5,
+        amount_saved=29.99,
+        started_at=datetime(2026, 9, 26, 12, 0),
+    )
+
+    mock_db = MagicMock()
+    mock_db.__enter__.return_value = mock_db
+    mock_db.__exit__.return_value = None
+    mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = [run]
+
+    with patch("app.gui.bridge.SessionLocal", return_value=mock_db):
+        await bridge._handle_fetch_stats()
+
+    events = bridge.poll_events()
+    error_logs = [e for e in events if e.get("event") == "LOG" and e.get("data", {}).get("level") == "ERROR"]
+    assert len(error_logs) == 0, f"Encountered unexpected error log: {error_logs}"
+
+    stats_event = next((e for e in events if e.get("event") == "STATS_LOADED"), None)
+    assert stats_event is not None
+    data = stats_event["data"]
+    assert data["total_runs"] == 1
+    assert data["total_enrolled"] == 5
+    assert data["total_saved"] == pytest.approx(29.99)
+    assert len(data["runs"]) == 1
+    assert data["runs"][0]["enrolled"] == 5
+    assert data["runs"][0]["saved"] == pytest.approx(29.99)
+
+
+@pytest.mark.asyncio
+async def test_bridge_fetch_stats_empty_runs():
+    """Verify _handle_fetch_stats handles empty run list cleanly."""
+    bridge = AsyncioBridge()
+    mock_db = MagicMock()
+    mock_db.__enter__.return_value = mock_db
+    mock_db.__exit__.return_value = None
+    mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = []
+
+    with patch("app.gui.bridge.SessionLocal", return_value=mock_db):
+        await bridge._handle_fetch_stats()
+
+    events = bridge.poll_events()
+    stats_event = next((e for e in events if e.get("event") == "STATS_LOADED"), None)
+    assert stats_event is not None
+    data = stats_event["data"]
+    assert data["total_runs"] == 0
+    assert data["total_enrolled"] == 0
+    assert data["total_saved"] == 0.0
+    assert data["runs"] == []
+
+
+def test_gui_poll_teardown_error_absorbed():
+    """Verify that when self.after raises during window destruction, _poll_bridge_events absorbs it cleanly."""
+    from app.gui.app import UdemyEnrollerApp
+
+    mock_app = MagicMock()
+    mock_app.bridge = MagicMock()
+    mock_app.bridge.poll_events.return_value = []
+    # Simulate TclError when after is invoked on destroyed window
+    mock_app.after.side_effect = Exception("application has been destroyed")
+
+    # Should not raise exception
+    UdemyEnrollerApp._poll_bridge_events(mock_app)
+    assert mock_app.after.called
+

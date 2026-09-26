@@ -407,7 +407,7 @@ class AsyncioBridge:
         try:
             with SessionLocal() as db:
                 runs = db.query(EnrollmentRun).order_by(EnrollmentRun.started_at.desc()).limit(20).all()
-                total_enrolled = sum(r.enrolled_count or 0 for r in runs)
+                total_enrolled = sum(r.successfully_enrolled or 0 for r in runs)
                 total_saved = sum(float(r.amount_saved or 0.0) for r in runs)
 
                 runs_data = [
@@ -415,7 +415,7 @@ class AsyncioBridge:
                         "id": r.id,
                         "started_at": r.started_at.strftime("%Y-%m-%d %H:%M") if r.started_at else "",
                         "status": r.status,
-                        "enrolled": r.enrolled_count or 0,
+                        "enrolled": r.successfully_enrolled or 0,
                         "saved": float(r.amount_saved or 0.0),
                     }
                     for r in runs
