@@ -75,6 +75,7 @@ jobs:
         run: python scripts/alembic_upgrade_pinned.py "$CI_DB" head
 
       - name: Run unit tests
+        timeout-minutes: 5
         run: python -m pytest
 
       # Per-module coverage annotations (F-ENRL-P01): the documented target is

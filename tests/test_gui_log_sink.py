@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from loguru import logger
@@ -154,24 +154,10 @@ def test_sanitize_boundary_redacts_secrets(bridge):
     assert "REDACTED" in msg
 
 
-class _MockWidget:
-    def __init__(self, *a, **k):
-        pass
-
-    def __getattr__(self, name):
-        return MagicMock()
-
-
 def _make_logbox():
-    with patch("customtkinter.CTkFrame", _MockWidget), \
-         patch("customtkinter.CTkFont", MagicMock()), \
-         patch("customtkinter.CTkLabel", MagicMock()), \
-         patch("customtkinter.CTkButton", MagicMock()), \
-         patch("customtkinter.CTkCheckBox", MagicMock()), \
-         patch("customtkinter.CTkTextbox", MagicMock()):
-        from app.gui.components.log_box import LogBox
+    from app.gui.components.log_box import LogBox
 
-        box = LogBox(MagicMock())  # mock master -> dropdown skipped, no Tk
+    box = LogBox(MagicMock())
     assert box.level_menu is None
     box.textbox = MagicMock()
     box.textbox.index.return_value = "1.0"

@@ -155,3 +155,99 @@ def block_external_network(request, monkeypatch):
     monkeypatch.setattr(socket.socket, "connect", guarded_connect)
     monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex)
     monkeypatch.setattr(socket.socket, "sendto", guarded_sendto)
+
+
+def _apply_customtkinter_defenses() -> None:
+    """Defensive monkeypatches for CustomTkinter tracker upward traversal loops and DPI polling."""
+    try:
+        import tkinter
+        import unittest.mock
+        from customtkinter.windows.widgets.appearance_mode.appearance_mode_tracker import (
+            AppearanceModeTracker,
+        )
+        from customtkinter.windows.widgets.scaling.scaling_tracker import (
+            ScalingTracker,
+        )
+
+        # Layer 3: Deactivate automatic DPI awareness polling loop
+        ScalingTracker.deactivate_automatic_dpi_awareness = True
+
+        # Layer 2: Safe bounded widget tree traversal with variadic unpacking
+        def _safe_get_tk_root(*args, **kwargs):
+            widget = args[-1] if args else kwargs.get("widget")
+            current = widget
+            visited = set()
+            depth = 0
+            while current is not None and depth < 50:
+                if id(current) in visited:
+                    break
+                visited.add(id(current))
+                if isinstance(current, (tkinter.Tk, tkinter.Toplevel)):
+                    return current
+                if isinstance(current, (unittest.mock.NonCallableMock, unittest.mock.Mock)):
+                    return current
+                current = getattr(current, "master", None)
+                depth += 1
+            return None
+
+        AppearanceModeTracker.get_tk_root_of_widget = staticmethod(_safe_get_tk_root)
+        ScalingTracker.get_window_root_of_widget = staticmethod(_safe_get_tk_root)
+    except ImportError:
+        pass
+
+
+_apply_customtkinter_defenses()
+
+
+@pytest.fixture(autouse=True)
+def clean_customtkinter_state():
+    """Reset CustomTkinter tracker registries before and after each test to prevent state pollution."""
+    def _reset_ctk():
+        try:
+            from customtkinter.windows.widgets.appearance_mode.appearance_mode_tracker import (
+                AppearanceModeTracker,
+            )
+            from customtkinter.windows.widgets.scaling.scaling_tracker import (
+                ScalingTracker,
+            )
+
+            AppearanceModeTracker.callback_list.clear()
+            AppearanceModeTracker.app_list.clear()
+            AppearanceModeTracker.update_loop_running = False
+
+            ScalingTracker.window_widgets_dict.clear()
+            ScalingTracker.window_dpi_scaling_dict.clear()
+            ScalingTracker.update_loop_running = False
+        except ImportError:
+            pass
+
+    _reset_ctk()
+    try:
+        yield
+    finally:
+        _reset_ctk()
+
+
+@pytest.fixture(autouse=True)
+def guard_memory_ceiling():
+    """Verify peak RSS memory usage remains strictly below 2048 MB."""
+    yield
+    try:
+        import resource
+        import sys
+
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        # Darwin (macOS) reports ru_maxrss in bytes; Linux and BSD report in kilobytes.
+        if sys.platform == "darwin":
+            peak_rss_mb = usage.ru_maxrss / (1024 * 1024)
+        else:
+            peak_rss_mb = usage.ru_maxrss / 1024
+
+        if peak_rss_mb > 2048:
+            pytest.fail(
+                f"Test process exceeded 2048 MB memory ceiling: peak RSS was {peak_rss_mb:.1f} MB",
+                pytrace=False,
+            )
+    except ImportError:
+        # resource module is unavailable on Windows environments
+        pass

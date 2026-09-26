@@ -157,41 +157,34 @@ def test_logbox_ring_buffer_flood_5000_lines():
 
 def test_logbox_component_mocked_gui():
     """Test LogBox append_log, textbox pruning, clear_logs, and autoscroll in mocked environment."""
+    from app.gui.components.log_box import LogBox
+
     mock_master = MagicMock()
-    with patch("customtkinter.CTkFrame", MockCTkFrame), \
-         patch("customtkinter.CTkFont", MagicMock()), \
-         patch("customtkinter.CTkLabel", MagicMock()), \
-         patch("customtkinter.CTkButton", MagicMock()), \
-         patch("customtkinter.CTkCheckBox", MagicMock()), \
-         patch("customtkinter.CTkTextbox", MagicMock()):
+    log_box = LogBox(mock_master, max_lines=1000)
+    log_box.textbox = MagicMock()
+    log_box.textbox.index.return_value = "1050.0"
+    log_box.autoscroll_cb = MagicMock()
+    log_box.autoscroll_cb.get.return_value = 1
+    # T5-T2 WARNING-default: opt in to INFO display to exercise display path.
+    log_box.set_min_level("INFO")
 
-        from app.gui.components.log_box import LogBox
+    # Append 10 logs
+    for i in range(10):
+        log_box.append_log(f"Test message {i}", level="INFO")
 
-        log_box = LogBox(mock_master, max_lines=1000)
-        # T5-T2 WARNING-default: opt in to INFO display to exercise display path.
-        log_box.set_min_level("INFO")
-        log_box.textbox = MagicMock()
-        log_box.textbox.index.return_value = "1050.0"
-        log_box.autoscroll_cb = MagicMock()
-        log_box.autoscroll_cb.get.return_value = 1
+    assert len(log_box.log_buffer) == 10
+    assert log_box.textbox.insert.call_count == 10
+    assert log_box.textbox.delete.called
 
-        # Append 10 logs
-        for i in range(10):
-            log_box.append_log(f"Test message {i}", level="INFO")
+    # Test toggle autoscroll
+    log_box.autoscroll_cb.get.return_value = 0
+    log_box._toggle_autoscroll()
+    assert log_box.auto_scroll_enabled is False
 
-        assert len(log_box.log_buffer) == 10
-        assert log_box.textbox.insert.call_count == 10
-        assert log_box.textbox.delete.called
-
-        # Test toggle autoscroll
-        log_box.autoscroll_cb.get.return_value = 0
-        log_box._toggle_autoscroll()
-        assert log_box.auto_scroll_enabled is False
-
-        # Test clear logs
-        log_box.clear_logs()
-        assert len(log_box.log_buffer) == 0
-        log_box.textbox.delete.assert_called_with("1.0", "end")
+    # Test clear logs
+    log_box.clear_logs()
+    assert len(log_box.log_buffer) == 0
+    log_box.textbox.delete.assert_called_with("1.0", "end")
 
 
 # =====================================================================
@@ -303,72 +296,87 @@ def test_browser_cookies_dataclass_methods():
 
 def test_customtkinter_views_headless_instantiation():
     """Test instantiation and event dispatching across all CustomTkinter GUI views in headless mock."""
-    with patch("customtkinter.CTkFrame", MockCTkFrame), \
-         patch("customtkinter.CTkScrollableFrame", MockCTkFrame), \
-         patch("customtkinter.CTkTabview", MockCTkFrame), \
-         patch("customtkinter.CTkSlider", MockCTkFrame), \
-         patch("customtkinter.CTkSegmentedButton", MockCTkFrame), \
-         patch("customtkinter.CTkFont", MagicMock()), \
-         patch("customtkinter.CTkLabel", MagicMock()), \
-         patch("customtkinter.CTkButton", MagicMock()), \
-         patch("customtkinter.CTkCheckBox", MagicMock()), \
-         patch("customtkinter.CTkEntry", MagicMock()), \
-         patch("customtkinter.CTkOptionMenu", MagicMock()), \
-         patch("customtkinter.CTkProgressBar", MagicMock()), \
-         patch("customtkinter.CTkTextbox", MagicMock()):
+    import sys
+    import tkinter
 
-        from app.gui.views.dashboard import DashboardView
-        from app.gui.views.filters_view import FiltersView
-        from app.gui.views.history_view import HistoryView
-        from app.gui.views.login_view import LoginView
-        from app.gui.views.scrapers_view import ScrapersView
-        from app.gui.views.sidebar import SidebarView
+    gui_mods = [m for m in sys.modules if m.startswith("app.gui.")]
+    saved_mods = {m: sys.modules.get(m) for m in gui_mods}
+    for m in gui_mods:
+        sys.modules.pop(m, None)
 
-        parent_mock = MagicMock()
+    try:
+        with patch("customtkinter.CTkFrame", MockCTkFrame), \
+             patch("customtkinter.CTkScrollableFrame", MockCTkFrame), \
+             patch("customtkinter.CTkTabview", MockCTkFrame), \
+             patch("customtkinter.CTkSlider", MockCTkFrame), \
+             patch("customtkinter.CTkSegmentedButton", MockCTkFrame), \
+             patch("customtkinter.CTkFont", MagicMock()), \
+             patch("customtkinter.CTkLabel", MagicMock()), \
+             patch("customtkinter.CTkButton", MagicMock()), \
+             patch("customtkinter.CTkCheckBox", MagicMock()), \
+             patch("customtkinter.CTkEntry", MagicMock()), \
+             patch("customtkinter.CTkOptionMenu", MagicMock()), \
+             patch("customtkinter.CTkProgressBar", MagicMock()), \
+             patch("customtkinter.CTkTextbox", MagicMock()):
 
-        # 1. Dashboard View
-        dash = DashboardView(
-            parent_mock,
-            on_start_enroll=MagicMock(),
-            on_pause=MagicMock(),
-            on_resume=MagicMock(),
-            on_stop=MagicMock(),
-            on_scrape_only=MagicMock(),
-        )
-        assert dash is not None
-        dash.update_status_badge("RUNNING")
-        dash.update_user_header("Jane Tester", "USD", 42)
+            from app.gui.views.dashboard import DashboardView
+            from app.gui.views.filters_view import FiltersView
+            from app.gui.views.history_view import HistoryView
+            from app.gui.views.login_view import LoginView
+            from app.gui.views.scrapers_view import ScrapersView
+            from app.gui.views.sidebar import SidebarView
 
-        # 2. Filters View
-        filters = FiltersView(parent_mock)
-        assert filters is not None
-        filter_settings = filters.get_filter_settings()
-        assert "min_rating" in filter_settings
-        assert "limit" in filter_settings
+            parent_mock = MagicMock(spec=tkinter.Tk)
 
-        # 3. History View
-        history = HistoryView(parent_mock, on_refresh_stats=MagicMock(), on_export=MagicMock())
-        assert history is not None
-        history.populate_runs([{"id": 1, "status": "completed", "enrolled": 5, "processed": 10, "saved": "$100"}])
+            # 1. Dashboard View
+            dash = DashboardView(
+                parent_mock,
+                on_start_enroll=MagicMock(),
+                on_pause=MagicMock(),
+                on_resume=MagicMock(),
+                on_stop=MagicMock(),
+                on_scrape_only=MagicMock(),
+            )
+            assert dash is not None
+            dash.update_status_badge("RUNNING")
+            dash.update_user_header("Jane Tester", "USD", 42)
 
-        # 4. Login View
-        login = LoginView(parent_mock, on_auto_extract=MagicMock(), on_test_login=MagicMock())
-        assert login is not None
-        login.set_auth_success({"display_name": "Test User", "currency": "USD", "library_count": 10})
-        login.set_auth_failed("Invalid token")
+            # 2. Filters View
+            filters = FiltersView(parent_mock)
+            assert filters is not None
+            filter_settings = filters.get_filter_settings()
+            assert "min_rating" in filter_settings
+            assert "limit" in filter_settings
 
-        # 5. Scrapers View
-        scrapers = ScrapersView(parent_mock)
-        assert scrapers is not None
-        scrapers.select_all()
-        scrapers.deselect_all()
-        selected = scrapers.get_selected_scrapers()
-        assert isinstance(selected, list)
+            # 3. History View
+            history = HistoryView(parent_mock, on_refresh_stats=MagicMock(), on_export=MagicMock())
+            assert history is not None
+            history.populate_runs([{"id": 1, "status": "completed", "enrolled": 5, "processed": 10, "saved": "$100"}])
 
-        # 6. Sidebar View
-        sidebar = SidebarView(parent_mock, on_navigate=MagicMock())
-        assert sidebar is not None
-        sidebar.set_active("scrapers")
+            # 4. Login View
+            login = LoginView(parent_mock, on_auto_extract=MagicMock(), on_test_login=MagicMock())
+            assert login is not None
+            login.set_auth_success({"display_name": "Test User", "currency": "USD", "library_count": 10})
+            login.set_auth_failed("Invalid token")
+
+            # 5. Scrapers View
+            scrapers = ScrapersView(parent_mock)
+            assert scrapers is not None
+            scrapers.select_all()
+            scrapers.deselect_all()
+            selected = scrapers.get_selected_scrapers()
+            assert isinstance(selected, list)
+
+            # 6. Sidebar View
+            sidebar = SidebarView(parent_mock, on_navigate=MagicMock())
+            assert sidebar is not None
+            sidebar.set_active("scrapers")
+    finally:
+        for m, mod in saved_mods.items():
+            if mod is not None:
+                sys.modules[m] = mod
+            else:
+                sys.modules.pop(m, None)
 
 
 def test_is_course_excluded_with_list_and_dict_filters():

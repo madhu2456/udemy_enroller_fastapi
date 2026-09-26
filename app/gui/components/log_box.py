@@ -25,6 +25,23 @@ class LogBox(customtkinter.CTkFrame):
     LEVEL_OPTIONS = ("DEBUG", "INFO", "WARNING", "ERROR")
 
     def __init__(self, master, max_lines: int = 1000, **kwargs):
+        if not isinstance(master, tkinter.Misc):
+            # Headless / mock mode: bypass CTkFrame.__init__ to prevent
+            # AppearanceModeTracker / ScalingTracker infinite while loops
+            # traversing MagicMock.master hierarchies.
+            self.master = master
+            self.max_lines = max_lines
+            self.log_buffer: collections.deque = collections.deque(maxlen=max_lines)
+            self.auto_scroll_enabled = True
+            self.min_level = "WARNING"
+            self.level_menu = None
+            self.textbox = None
+            self.toolbar = None
+            self.title_lbl = None
+            self.clear_btn = None
+            self.autoscroll_cb = None
+            return
+
         super().__init__(
             master,
             corner_radius=10,
@@ -99,7 +116,8 @@ class LogBox(customtkinter.CTkFrame):
         self.textbox.configure(state="disabled")
 
     def _toggle_autoscroll(self) -> None:
-        self.auto_scroll_enabled = bool(self.autoscroll_cb.get())
+        if self.autoscroll_cb is not None:
+            self.auto_scroll_enabled = bool(self.autoscroll_cb.get())
 
     def set_min_level(self, level: str) -> None:
         """Set display filter; buffer retains all, display filters only."""
@@ -116,6 +134,8 @@ class LogBox(customtkinter.CTkFrame):
         return self.LEVEL_ORDER.get(str(level or "").upper(), 0) >= self.LEVEL_ORDER.get(self.min_level, 30)
 
     def _refresh_display(self) -> None:
+        if self.textbox is None:
+            return
         self.textbox.configure(state="normal")
         self.textbox.delete("1.0", "end")
         shown = [t for lv, t in self.log_buffer if self._level_visible(lv)][-self.max_lines :]
@@ -134,21 +154,63 @@ class LogBox(customtkinter.CTkFrame):
         if not self._level_visible(norm):
             return
 
-        self.textbox.configure(state="normal")
-        self.textbox.insert("end", line + "\n")
+        if self.textbox is not None:
+            self.textbox.configure(state="normal")
+            self.textbox.insert("end", line + "\n")
 
-        # Trim text in textbox if lines exceed buffer capacity
-        line_count = int(float(self.textbox.index("end-1c").split(".")[0]))
-        if line_count > self.max_lines:
-            self.textbox.delete("1.0", f"{line_count - self.max_lines}.0")
+            # Trim text in textbox if lines exceed buffer capacity
+            line_count = int(float(self.textbox.index("end-1c").split(".")[0]))
+            if line_count > self.max_lines:
+                self.textbox.delete("1.0", f"{line_count - self.max_lines}.0")
 
-        if self.auto_scroll_enabled:
-            self.textbox.see("end")
-        self.textbox.configure(state="disabled")
+            if self.auto_scroll_enabled:
+                self.textbox.see("end")
+            self.textbox.configure(state="disabled")
 
     def clear_logs(self) -> None:
         """Clear all logs in buffer and textbox."""
         self.log_buffer.clear()
-        self.textbox.configure(state="normal")
-        self.textbox.delete("1.0", "end")
-        self.textbox.configure(state="disabled")
+        if self.textbox is not None:
+            self.textbox.configure(state="normal")
+            self.textbox.delete("1.0", "end")
+            self.textbox.configure(state="disabled")
+
+    def pack(self, *args, **kwargs):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().pack(*args, **kwargs)
+
+    def pack_forget(self, *args, **kwargs):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().pack_forget(*args, **kwargs)
+
+    def grid(self, *args, **kwargs):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().grid(*args, **kwargs)
+
+    def grid_forget(self, *args, **kwargs):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().grid_forget(*args, **kwargs)
+
+    def place(self, *args, **kwargs):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().place(*args, **kwargs)
+
+    def place_forget(self, *args, **kwargs):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().place_forget(*args, **kwargs)
+
+    def destroy(self):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().destroy()
+
+    def configure(self, *args, **kwargs):
+        if not isinstance(self.master, tkinter.Misc):
+            return None
+        return super().configure(*args, **kwargs)

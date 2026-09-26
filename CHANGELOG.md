@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses date-based notes until formal version tags are published.
 
+## [Unreleased] — 2026-09-26
+
+### Added
+- **Global CustomTkinter Test Defenses & Memory Ceiling Guard ([`tests/conftest.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/conftest.py))**:
+  - Implemented [`_apply_customtkinter_defenses()`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/conftest.py#L160-L197) to monkeypatch `AppearanceModeTracker.get_tk_root_of_widget` and `ScalingTracker.get_window_root_of_widget` with safe bounded upward root traversal (`depth < 50`), cycle detection (`visited` set), and mock detection (`unittest.mock.NonCallableMock`, `unittest.mock.Mock`), alongside deactivating automatic DPI awareness polling (`ScalingTracker.deactivate_automatic_dpi_awareness = True`).
+  - Added [`clean_customtkinter_state`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/conftest.py#L202-L229) autouse fixture resetting `AppearanceModeTracker` and `ScalingTracker` callback lists, application/window widget registries, and ensuring `update_loop_running = False` before and after each test to prevent cross-test state pollution.
+  - Added [`guard_memory_ceiling`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/conftest.py#L231-L253) autouse fixture enforcing that peak RSS memory usage remains strictly below 2048 MB across test execution with cross-platform normalization between Darwin (macOS bytes) and Linux/BSD (kilobytes).
+- **CI Unit Test Timeout Guard ([`.github/workflows/ci.yml`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/.github/workflows/ci.yml))**: Added native `timeout-minutes: 5` guard to the `Run unit tests` step in `.github/workflows/ci.yml`, preventing hung test executions from consuming runner quotas indefinitely.
+
+### Fixed
+- **CustomTkinter Tracker Upward Traversal Infinite Loop & Headless Short-Circuit ([`tests/test_gui_stress_and_cookies.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_gui_stress_and_cookies.py), [`app/gui/components/log_box.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/gui/components/log_box.py))**:
+  - Resolved an infinite `while` loop hang during headless CustomTkinter view instantiation tests by setting `parent_mock = MagicMock(spec=tkinter.Tk)` in [`test_customtkinter_views_headless_instantiation`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_gui_stress_and_cookies.py#L297-L380), preventing `AppearanceModeTracker` and `ScalingTracker` from looping endlessly across unconstrained `MagicMock.master` hierarchies.
+  - Implemented headless short-circuit in [`LogBox.__init__`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/gui/components/log_box.py#L27-L43) when `master` is not an instance of `tkinter.Misc`, bypassing `CTkFrame.__init__` tracker registration and safely guarding geometry methods (`pack`, `grid`, `place`, `destroy`, `configure`) and log display methods in headless or mocked environments.
+  - Fixed CI test hang and `/bin/fish` terminal crash caused by unconstrained tracker recursion and runaway thread updates during headless GUI testing.
+
 ## [Unreleased] — 2026-09-25
 
 ### Added
