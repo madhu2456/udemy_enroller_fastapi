@@ -39,6 +39,7 @@ Thumbs.db
 node_modules/
 
 # Application data
+data/cache/
 Courses/*.txt
 *.bak
 public_deals.json.bak
