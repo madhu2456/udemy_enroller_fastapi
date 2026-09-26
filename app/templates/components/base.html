@@ -453,6 +453,11 @@
                         class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/privacy' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
                         >Privacy</a
                     >
+                    <a
+                        href="/login"
+                        class="unauth-only {% if nav_auth %}hidden{% endif %} px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path.rstrip('/') == '/login' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-500 hover:text-gray-800 hover:bg-gray-100{% endif %}"
+                        >Login</a
+                    >
                 </div>
 
                 <!-- Right actions -->
@@ -476,6 +481,14 @@
                             />
                         </svg>
                         <span class="hidden sm:inline">★ Star</span>
+                    </a>
+
+                    <a
+                        id="login-nav-btn"
+                        href="/login"
+                        class="{% if nav_auth %}hidden{% else %}hidden sm:inline-flex{% endif %} items-center border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-150 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                    >
+                        Login
                     </a>
 
                     <a
@@ -602,6 +615,12 @@
                         href="/privacy"
                         class="min-h-[44px] px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path == '/privacy' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-gray-700 hover:text-gray-900 hover:bg-gray-100{% endif %}"
                         >Privacy</a
+                    >
+                    <a
+                        href="/login"
+                        id="mobile-drawer-login-link"
+                        class="unauth-only {% if nav_auth %}hidden{% endif %} min-h-[44px] px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 {% if request.url.path.rstrip('/') == '/login' %}bg-[#EFF6FF] text-[#2563EB]{% else %}text-blue-600 hover:bg-blue-50{% endif %}"
+                        >Login / Connect Account</a
                     >
                 </nav>
             </div>
@@ -852,8 +871,12 @@
                             document.getElementById("github-link");
                         const getStartedBtn =
                             document.getElementById("get-started-btn");
+                        const loginNavBtn =
+                            document.getElementById("login-nav-btn");
 
                         if (data.authenticated) {
+                            if (loginNavBtn) loginNavBtn.style.display = "none";
+                            document.querySelectorAll(".unauth-only").forEach(el => el.classList.add("hidden"));
                             document
                                 .getElementById("status-badge")
                                 ?.classList.remove("hidden");
@@ -873,6 +896,8 @@
                                     el.classList.remove("hidden");
                                 });
                         } else {
+                            if (loginNavBtn) loginNavBtn.style.display = "";
+                            document.querySelectorAll(".unauth-only").forEach(el => el.classList.remove("hidden"));
                             hideEl(profileBadge);
                             hideEl(logoutBtn);
                             showInlineFlex(githubLink);

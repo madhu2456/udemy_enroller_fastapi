@@ -16,9 +16,7 @@ if sys.platform == "win32":
         # This is a known issue on Windows with ProactorEventLoop
         from asyncio import proactor_events
 
-        _original_call_connection_lost = (
-            proactor_events._ProactorBasePipeTransport._call_connection_lost
-        )
+        _original_call_connection_lost = proactor_events._ProactorBasePipeTransport._call_connection_lost
 
         def _patched_call_connection_lost(self, exc=None):
             try:
@@ -26,9 +24,7 @@ if sys.platform == "win32":
             except (ConnectionResetError, ConnectionAbortedError):
                 pass
 
-        proactor_events._ProactorBasePipeTransport._call_connection_lost = (
-            _patched_call_connection_lost
-        )
+        proactor_events._ProactorBasePipeTransport._call_connection_lost = _patched_call_connection_lost
     except ImportError:
         pass  # Fallback for older python versions if any
 
@@ -127,9 +123,7 @@ async def lifespan(app: FastAPI):
         orphaned_tasks = len(EnrollmentManager.active_tasks)
         if orphaned_tasks:
             EnrollmentManager.active_tasks.clear()
-            logger.info(
-                f"Cleared {orphaned_tasks} in-memory enrollment task(s) on boot reclaim."
-            )
+            logger.info(f"Cleared {orphaned_tasks} in-memory enrollment task(s) on boot reclaim.")
 
         with SessionLocal() as db:
             inspector = inspect(db.bind)
@@ -144,9 +138,7 @@ async def lifespan(app: FastAPI):
                 db.commit()
                 reclaimed = getattr(result, "rowcount", None)
                 if reclaimed is not None and reclaimed >= 0:
-                    logger.info(
-                        f"Cleaned up stale enrollment runs (reclaimed={reclaimed})."
-                    )
+                    logger.info(f"Cleaned up stale enrollment runs (reclaimed={reclaimed}).")
                 else:
                     logger.info("Cleaned up stale enrollment runs.")
     except Exception as exc:
@@ -175,9 +167,7 @@ async def lifespan(app: FastAPI):
     async def _stale_run_sweeper() -> None:
         from app.services.enrollment_manager import EnrollmentManager
 
-        sweep_interval = max(
-            1, int(getattr(get_settings(), "STALE_RUN_SWEEP_SECONDS", 60) or 60)
-        )
+        sweep_interval = max(1, int(getattr(get_settings(), "STALE_RUN_SWEEP_SECONDS", 60) or 60))
         try:
             while True:
                 await asyncio.sleep(sweep_interval)
@@ -209,9 +199,7 @@ async def lifespan(app: FastAPI):
     except asyncio.TimeoutError:
         logger.warning("Timed out waiting for the stale-run sweeper to stop.")
     except Exception as exc:
-        logger.warning(
-            f"Stale-run sweeper shutdown failed ({type(exc).__name__})"
-        )
+        logger.warning(f"Stale-run sweeper shutdown failed ({type(exc).__name__})")
 
     logger.info("Server shutting down, cancelling active tasks...")
     try:
@@ -225,17 +213,12 @@ async def lifespan(app: FastAPI):
 
             try:
                 # Wait for tasks to handle cancellation (includes DB updates)
-                await asyncio.wait_for(
-                    asyncio.gather(*tasks, return_exceptions=True), timeout=5.0
-                )
+                await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=5.0)
                 logger.info("All enrollment tasks cancelled successfully.")
             except asyncio.TimeoutError:
                 logger.warning("Timed out waiting for enrollment tasks to cancel.")
             except Exception as exc:
-                logger.error(
-                    "Enrollment-task cancellation failed "
-                    f"({type(exc).__name__})"
-                )
+                logger.error(f"Enrollment-task cancellation failed ({type(exc).__name__})")
 
     except Exception as exc:
         logger.error(f"Unexpected error during shutdown ({type(exc).__name__})")
@@ -252,19 +235,13 @@ async def lifespan(app: FastAPI):
                             try:
                                 await client.close()
                             except Exception as exc:
-                                logger.error(
-                                    "Failed to close Udemy client session "
-                                    f"({type(exc).__name__})"
-                                )
+                                logger.error(f"Failed to close Udemy client session ({type(exc).__name__})")
                         logger.info("Finished Udemy client session shutdown.")
                 finally:
                     try:
                         await session_cache.stop_cleanup_task()
                     except Exception as exc:
-                        logger.error(
-                            "Failed to stop session-cache cleanup task "
-                            f"({type(exc).__name__})"
-                        )
+                        logger.error(f"Failed to stop session-cache cleanup task ({type(exc).__name__})")
         except Exception as exc:
             logger.error(f"Unexpected error during shutdown ({type(exc).__name__})")
 
@@ -297,19 +274,18 @@ app.add_middleware(
     max_age=3600,  # Cache preflight for 1 hour
 )
 
+
 # Middleware to rewrite redirect Location headers to HTTPS in production
 @app.middleware("http")
 async def https_redirect_fix(request: Request, call_next):
     """Ensure redirect responses use HTTPS scheme in server mode."""
     response = await call_next(request)
-    if (
-        app_settings.DEPLOYMENT_ENV == "server"
-        and response.status_code in (301, 302, 307, 308)
-    ):
+    if app_settings.DEPLOYMENT_ENV == "server" and response.status_code in (301, 302, 307, 308):
         location = response.headers.get("location", "")
         if location.startswith("http://"):
             response.headers["location"] = location.replace("http://", "https://", 1)
     return response
+
 
 # GZip middleware to compress responses and lower TTFB / bandwidth
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -331,30 +307,14 @@ async def attach_nav_auth(request: Request, call_next):
     request.state.nav_display_name = ""
     path = request.url.path
     try:
-        if (
-            not path.startswith("/static/")
-            and not path.startswith("/api/")
-        ):
-            token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
-                SESSION_COOKIE_PLAIN
-            )
+        if not path.startswith("/static/") and not path.startswith("/api/"):
+            token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(SESSION_COOKIE_PLAIN)
             if token:
                 db = SessionLocal()
                 try:
-                    session = (
-                        db.query(UserSession)
-                        .filter(UserSession.token == token)
-                        .first()
-                    )
-                    if session and (
-                        not session.expires_at
-                        or session.expires_at >= _utcnow_naive()
-                    ):
-                        user = (
-                            db.query(User)
-                            .filter(User.id == session.user_id)
-                            .first()
-                        )
+                    session = db.query(UserSession).filter(UserSession.token == token).first()
+                    if session and (not session.expires_at or session.expires_at >= _utcnow_naive()):
+                        user = db.query(User).filter(User.id == session.user_id).first()
                         # Only personalize nav when the user row still exists
                         if user:
                             request.state.nav_authenticated = True
@@ -395,25 +355,17 @@ async def add_cache_headers(request: Request, call_next):
     elif path == "/sitemap.xml":
         # Longer TTL for crawlers (align with seo.py intent)
         if response.status_code == 200:
-            response.headers["Cache-Control"] = (
-                "public, max-age=21600, s-maxage=21600"
-            )
+            response.headers["Cache-Control"] = "public, max-age=21600, s-maxage=21600"
         else:
-            response.headers["Cache-Control"] = (
-                "no-cache, no-store, must-revalidate"
-            )
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
     elif path in {"/feed.xml", "/rss.xml"}:
         # RSS coupon feed — 15 min (align with seo.py intent)
         if response.status_code == 200:
-            response.headers["Cache-Control"] = (
-                "public, max-age=900, s-maxage=900, stale-while-revalidate=3600"
-            )
+            response.headers["Cache-Control"] = "public, max-age=900, s-maxage=900, stale-while-revalidate=3600"
         else:
-            response.headers["Cache-Control"] = (
-                "no-cache, no-store, must-revalidate"
-            )
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
     elif (
@@ -443,13 +395,9 @@ async def add_cache_headers(request: Request, call_next):
     ):
         # Public marketing / listing HTML — short CDN + browser cache on 200 only
         if response.status_code == 200:
-            response.headers["Cache-Control"] = (
-                "public, max-age=120, s-maxage=300, stale-while-revalidate=600"
-            )
+            response.headers["Cache-Control"] = "public, max-age=120, s-maxage=300, stale-while-revalidate=600"
         else:
-            response.headers["Cache-Control"] = (
-                "no-cache, no-store, must-revalidate"
-            )
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
         if path == "/":
@@ -460,7 +408,7 @@ async def add_cache_headers(request: Request, call_next):
                 parts.append("Cookie")
             response.headers["Vary"] = ", ".join(parts)
     elif (
-        path in {"/dashboard", "/settings", "/history", "/login"}
+        path.rstrip("/") in {"/dashboard", "/settings", "/history", "/login"}
         or path.startswith("/api/")
         or path.startswith("/udemycoupons/api/")
     ):
@@ -470,12 +418,8 @@ async def add_cache_headers(request: Request, call_next):
 
     # Personalized nav chrome (display name / logout) must never be shared at CDN
     if getattr(request.state, "nav_authenticated", False):
-        if response.status_code == 200 and "text/html" in response.headers.get(
-            "content-type", ""
-        ):
-            response.headers["Cache-Control"] = (
-                "private, no-cache, no-store, must-revalidate"
-            )
+        if response.status_code == 200 and "text/html" in response.headers.get("content-type", ""):
+            response.headers["Cache-Control"] = "private, no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
             # Keep/merge Vary Cookie
@@ -503,9 +447,7 @@ async def add_security_headers(request: Request, call_next):
 
     settings = get_settings()
     if settings.DEPLOYMENT_ENV == "server":
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=63072000; includeSubDomains; preload"
-        )
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     response.headers["Cross-Origin-Embedder-Policy"] = "unsafe-none"
     response.headers["Cross-Origin-Resource-Policy"] = "same-site"
@@ -717,9 +659,7 @@ async def not_found_handler(request: Request, exc):
     Meta robots noindex is set in pages/404.html; also emit X-Robots-Tag so
     crawlers that prefer headers still skip soft-404 indexing (F046).
     """
-    response = templates.TemplateResponse(
-        request, "pages/404.html", status_code=404
-    )
+    response = templates.TemplateResponse(request, "pages/404.html", status_code=404)
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
@@ -746,9 +686,7 @@ async def internal_error_handler(request: Request, exc: Exception):
             content={"detail": "Internal server error."},
         )
     else:
-        response = templates.TemplateResponse(
-            request, "pages/500.html", status_code=500
-        )
+        response = templates.TemplateResponse(request, "pages/500.html", status_code=500)
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"

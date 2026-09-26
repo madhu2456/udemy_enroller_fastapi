@@ -30,9 +30,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Dashboard"])
 templates = Jinja2Templates(directory="app/templates")
 
+
 def _redirect_to_connect() -> RedirectResponse:
     """Fresh redirect each time (do not reuse a shared Response instance)."""
-    return RedirectResponse(url="/#connect", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 
 def _session_user_id_for_html(request: Request, db: Session) -> int | RedirectResponse:
@@ -40,9 +41,7 @@ def _session_user_id_for_html(request: Request, db: Session) -> int | RedirectRe
 
     HTML routes should not return raw JSON 401; API routes keep Depends(get_current_user_id).
     """
-    token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
-        SESSION_COOKIE_PLAIN
-    )
+    token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(SESSION_COOKIE_PLAIN)
     if not token:
         return _redirect_to_connect()
 
@@ -66,10 +65,67 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(request, "pages/dashboard.html")
 
 
-@router.get("/login", include_in_schema=False)
-def login_alias():
-    """Compatibility redirect: connect UI lives on the homepage."""
-    return RedirectResponse(url="/#connect", status_code=303)
+@router.get("/login", response_class=HTMLResponse)
+@router.get("/login/", response_class=HTMLResponse, include_in_schema=False)
+def login_page_dedicated(request: Request):
+    """Dedicated login page rendering credentials/cookie form above the fold.
+
+    Redirects authenticated users server-side to /dashboard.
+    Issues anonymous double-submit CSRF cookie for POST /api/auth/login/cookies.
+    """
+    from app.models.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        try:
+            token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(SESSION_COOKIE_PLAIN)
+            if token:
+                session = db.query(UserSession).filter(UserSession.token == token).first()
+                if session:
+                    if session.expires_at and session.expires_at < _utcnow_naive():
+                        cleanup_expired_session(db, session, getattr(request.app, "state", None))
+                    else:
+                        return RedirectResponse(url="/dashboard", status_code=303)
+        except Exception as exc:
+            logger.warning(f"Session lookup failed during /login render: {exc}")
+
+        response = templates.TemplateResponse(
+            request,
+            "pages/login_page.html",
+        )
+
+        from app.security import (
+            csrf_cookie_name,
+            csrf_cookie_names,
+            generate_login_csrf_token,
+        )
+        from config.settings import get_settings
+
+        settings = get_settings()
+        active_csrf = csrf_cookie_name(settings.COOKIE_SECURE)
+        if not request.cookies.get(active_csrf):
+            response.set_cookie(
+                active_csrf,
+                generate_login_csrf_token(),
+                httponly=False,
+                samesite="strict",
+                secure=settings.COOKIE_SECURE,
+                max_age=24 * 60 * 60,
+                path="/",
+            )
+        for _stale in csrf_cookie_names():
+            if _stale != active_csrf and request.cookies.get(_stale):
+                response.delete_cookie(
+                    _stale,
+                    path="/",
+                    domain=None,
+                    httponly=False,
+                    samesite="strict",
+                    secure=settings.COOKIE_SECURE,
+                )
+        return response
+    finally:
+        db.close()
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -83,16 +139,12 @@ def login_page(request: Request):
 
     db = SessionLocal()
     try:
-        token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(
-            SESSION_COOKIE_PLAIN
-        )
+        token = request.cookies.get(SESSION_COOKIE_PREFIXED) or request.cookies.get(SESSION_COOKIE_PLAIN)
         if token:
             session = db.query(UserSession).filter(UserSession.token == token).first()
             if session:
                 if session.expires_at and session.expires_at < _utcnow_naive():
-                    cleanup_expired_session(
-                        db, session, getattr(request.app, "state", None)
-                    )
+                    cleanup_expired_session(db, session, getattr(request.app, "state", None))
                 else:
                     return RedirectResponse(url="/dashboard", status_code=303)
 
@@ -169,9 +221,7 @@ def history_page(request: Request, db: Session = Depends(get_db)):
     user_id = _session_user_id_for_html(request, db)
     if isinstance(user_id, RedirectResponse):
         return user_id
-    return templates.TemplateResponse(
-        request, "pages/history.html", {"user_id": user_id}
-    )
+    return templates.TemplateResponse(request, "pages/history.html", {"user_id": user_id})
 
 
 @router.get("/api/dashboard/stats")
@@ -210,9 +260,7 @@ def dashboard_stats(
         total_already_enrolled = user.total_already_enrolled or 0
         total_expired = user.total_expired or 0
         total_excluded = user.total_excluded or 0
-        total_processed = (
-            total_enrolled + total_already_enrolled + total_expired + total_excluded
-        )
+        total_processed = total_enrolled + total_already_enrolled + total_expired + total_excluded
 
         return {
             "total_runs": total_runs,
@@ -261,9 +309,7 @@ def dashboard_analytics(
             for s in stats
         ]
 
-    return get_cached_or_compute(
-        _analytics_cache, user_id, compute_analytics, ttl_seconds=300
-    )
+    return get_cached_or_compute(_analytics_cache, user_id, compute_analytics, ttl_seconds=300)
 
 
 @router.get("/api/dashboard/logs/stream")
@@ -329,6 +375,4 @@ async def stream_logs(
         "Connection": "keep-alive",
         "X-Accel-Buffering": "no",
     }
-    return StreamingResponse(
-        log_generator(), media_type="text/event-stream", headers=headers
-    )
+    return StreamingResponse(log_generator(), media_type="text/event-stream", headers=headers)

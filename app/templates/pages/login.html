@@ -1186,6 +1186,8 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
                         {% if request.app.state.deployment_env != 'server' %}
                         <form
                             id="email-form"
+                            method="POST"
+                            action="/api/auth/login"
                             data-action="login-email"
                             class="space-y-4"
                         >
@@ -1239,6 +1241,8 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
 
                         <form
                             id="cookie-form"
+                            method="POST"
+                            action="/api/auth/login/cookies"
                             data-action="login-cookies"
                             autocomplete="off"
                             class="{% if request.app.state.deployment_env == 'server' %}space-y-4{% else %}hidden space-y-4{% endif %}"
@@ -1398,9 +1402,10 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
     function getLoginCsrfToken() {
         // Anonymous double-submit token set by the login page (F-ENRL-C03).
         // F228: secure deployments name the cookie __Host-csrf_token; local
-        // dev keeps the plain csrf_token name — match both.
-        const match = document.cookie.match(/(^| )(?:__Host-)?csrf_token=([^;]+)/);
-        return match ? decodeURIComponent(match[2]) : "";
+        // dev keeps the plain csrf_token name — match both with __Host- prioritized.
+        const match = document.cookie.match(/(?:^|; )__Host-csrf_token=([^;]+)/) ||
+                      document.cookie.match(/(?:^|; )csrf_token=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : "";
     }
 
     function switchTab(tab) {
