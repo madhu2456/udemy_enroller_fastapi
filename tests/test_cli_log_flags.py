@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 
 from app.cli.main import app
 from app.services.course import Course
+from config.settings import get_settings
 
 runner = CliRunner()
 
@@ -55,12 +56,13 @@ async def _stream_quiet(self):
 
 
 def test_version_short_flag_still_version():
+    expected_ver = f"v{get_settings().APP_VERSION}"
     res = runner.invoke(app, ["-v"])
     assert res.exit_code == 0
-    assert "v1.0.0" in res.output
+    assert expected_ver in res.output
     res2 = runner.invoke(app, ["--version"])
     assert res2.exit_code == 0
-    assert "v1.0.0" in res2.output
+    assert expected_ver in res2.output
 
 
 # ANSI CSI stripper. typer renders --help through rich; when the runner exports
@@ -100,7 +102,9 @@ def test_short_V_is_verbose_not_version():
     ):
         res = runner.invoke(app, ["-V", "scrape", "--format", "json"])
     assert res.exit_code == 0
-    assert "v1.0.0" not in res.stdout
+    expected_ver = f"v{get_settings().APP_VERSION}"
+    assert expected_ver not in res.stdout
+    assert "Udemy Enroller" not in res.stdout
     # -V enables INFO (same as --verbose)
     assert INFO_MARKER not in (res.stderr or "")  # quiet stream emits nothing
     data = json.loads(res.stdout)

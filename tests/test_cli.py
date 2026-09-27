@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 from app.cli.main import app
 from app.services.browser_cookies import UdemyBrowserCookies
 from app.services.course import Course
+from config.settings import get_settings
 
 runner = CliRunner()
 
@@ -23,7 +24,7 @@ def test_cli_version():
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert "Udemy Enroller" in result.output
-    assert "v1.0.0" in result.output
+    assert f"v{get_settings().APP_VERSION}" in result.output
 
 
 def test_cli_help():

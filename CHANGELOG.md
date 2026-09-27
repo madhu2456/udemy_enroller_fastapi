@@ -7,6 +7,8 @@ and this project uses date-based notes until formal version tags are published.
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-09-27
+
 ### Added
 - **Modern Mobile Web App Capability Meta Tag ([`app/templates/components/base.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/components/base.html))**: Added standard `<meta name="mobile-web-app-capable" content="yes" />` alongside `<meta name="apple-mobile-web-app-capable" content="yes" />` in `base.html`, eliminating Chromium console deprecation warnings while maintaining 100% backward compatibility for iOS Safari Home Screen launches.
 - **HTTP Security Headers & Meta Tag Regression Test Suite ([`tests/test_security_headers.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_security_headers.py))**: Added automated regression suite testing W3C `Permissions-Policy` standard directives (`camera=()`, `microphone=()`, `geolocation=()`) and strictly asserting absence of experimental Google Privacy Sandbox tokens, baseline headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, CSP nonce and strict-dynamic directives), server environment HSTS preload injection, and base template mobile capability meta tags on public endpoints.
@@ -629,5 +631,6 @@ Last published commit on `main` at the start of the forensic audit / implementat
 
 ---
 
-[Unreleased]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/madhu2456/udemy_enroller_fastapi/releases/tag/v1.0.0
