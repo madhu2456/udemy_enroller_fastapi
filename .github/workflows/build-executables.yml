@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: build-executables-${{ github.ref }}
   cancel-in-progress: true
@@ -22,14 +25,20 @@ jobs:
             artifact_name: windows-binaries
             gui_name: Gui.exe
             cli_name: cli.exe
+            release_gui_name: Gui.exe
+            release_cli_name: cli.exe
           - os: ubuntu-latest
             artifact_name: linux-binaries
             gui_name: Gui
             cli_name: cli
+            release_gui_name: Gui-linux
+            release_cli_name: cli-linux
           - os: macos-latest
             artifact_name: macos-binaries
             gui_name: Gui
             cli_name: cli
+            release_gui_name: Gui-macos
+            release_cli_name: cli-macos
 
     steps:
       - name: Checkout repository
@@ -59,3 +68,19 @@ jobs:
             dist/${{ matrix.gui_name }}
             dist/${{ matrix.cli_name }}
           if-no-files-found: error
+
+      - name: Prepare Release Asset Names
+        if: startsWith(github.ref, 'refs/tags/') && runner.os != 'Windows'
+        run: |
+          mv dist/${{ matrix.gui_name }} dist/${{ matrix.release_gui_name }}
+          mv dist/${{ matrix.cli_name }} dist/${{ matrix.release_cli_name }}
+
+      - name: Attach Binaries to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
+        with:
+          files: |
+            dist/${{ matrix.release_gui_name }}
+            dist/${{ matrix.release_cli_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

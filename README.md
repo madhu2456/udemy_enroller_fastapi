@@ -14,7 +14,48 @@
 Premium online education on platforms like Udemy can be expensive. Instructors frequently distribute 100% off coupons on aggregator platforms to build reviews and initial student traction, but coupons typically expire within hours or minutes. Udemy Course Enroller bridges this gap by continuously monitoring aggregators and queueing legitimate enrollments before coupons lapse.
 
 **Quick Navigation**:
-[Architecture](#2-architecture--capabilities) • [Key Features](#key-features-matrix) • [Quick Start](#3-quick-start) • [UI Overview](#user-interface-overview) • [Authentication](#4-authentication--setup) • [CLI Cheatsheet](#5-unified-rich-cli-reference) • [Configuration](#configuration--environment-variables) • [Migrations](#pinned-database-migrations) • [Operations](#7-operations--administration) • [Responsible Use](#8-responsible-use--legal-compliance)
+[Downloads](#downloads) • [Architecture](#2-architecture--capabilities) • [Key Features](#key-features-matrix) • [Quick Start](#3-quick-start) • [UI Overview](#user-interface-overview) • [Authentication](#4-authentication--setup) • [CLI Cheatsheet](#5-unified-rich-cli-reference) • [Configuration](#configuration--environment-variables) • [Migrations](#pinned-database-migrations) • [Operations](#7-operations--administration) • [Responsible Use](#8-responsible-use--legal-compliance)
+
+---
+
+# Downloads
+
+<table>
+<thead>
+  <tr>
+    <th align="center">GUI (Desktop Application)</th>
+    <th align="center">CLI (Command-Line Tool)</th>
+  </tr>
+</thead>
+<tbody>
+  <tr align="center">
+    <td>
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi/releases/latest/download/Gui.exe">
+        <img alt="Download GUI Windows exe" src="https://img.shields.io/static/v1?message=Download%20Gui.exe&logo=windows&labelColor=5c5c5c&color=1182c3&label=%20&style=for-the-badge">
+      </a>
+      <br/>
+      <sub><b>Gui.exe</b> — Standalone Windows Desktop GUI</sub>
+    </td>
+    <td>
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi/releases/latest/download/cli.exe">
+        <img alt="Download CLI Windows exe" src="https://img.shields.io/static/v1?message=Download%20cli.exe&logo=windows&labelColor=5c5c5c&color=1182c3&label=%20&style=for-the-badge">
+      </a>
+      <br/>
+      <sub><b>cli.exe</b> — Standalone Windows Terminal CLI</sub>
+    </td>
+  </tr>
+  <tr align="center">
+    <td colspan="2">
+      <a href="https://github.com/madhu2456/udemy_enroller_fastapi/releases/latest">
+        <img alt="All Releases & Linux/macOS Binaries" src="https://img.shields.io/badge/All%20Releases-Linux%20%7C%20macOS%20%7C%20Source-blueviolet?style=for-the-badge">
+      </a>
+    </td>
+  </tr>
+</tbody>
+</table>
+
+> **Quick Run:** No Python installation required. Simply download `Gui.exe` and double-click to launch the native interface, or run `cli.exe --help` in Command Prompt / PowerShell.<br/>
+> *(If Windows SmartScreen appears: click "More info" → "Run anyway". All binaries are open-source and built transparently via GitHub Actions).*
 
 ---
 

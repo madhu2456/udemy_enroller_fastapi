@@ -5,7 +5,9 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses date-based notes until formal version tags are published.
 
-## [Unreleased] — 2026-09-26
+## [Unreleased]
+
+## [1.0.0] — 2026-09-27
 
 ### Added
 - **Dedicated Above-the-Fold `/login` Page & Navigation Links ([`app/routers/dashboard.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/routers/dashboard.py), [`app/templates/pages/login_page.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/login_page.html), [`app/templates/components/base.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/components/base.html))**:
@@ -617,4 +619,5 @@ Last published commit on `main` at the start of the forensic audit / implementat
 
 ---
 
-[Unreleased]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/e6bc1c2...HEAD
+[Unreleased]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/madhu2456/udemy_enroller_fastapi/releases/tag/v1.0.0

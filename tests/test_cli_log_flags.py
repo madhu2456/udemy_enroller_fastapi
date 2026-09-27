@@ -57,10 +57,10 @@ async def _stream_quiet(self):
 def test_version_short_flag_still_version():
     res = runner.invoke(app, ["-v"])
     assert res.exit_code == 0
-    assert "v2.2.0" in res.output
+    assert "v1.0.0" in res.output
     res2 = runner.invoke(app, ["--version"])
     assert res2.exit_code == 0
-    assert "v2.2.0" in res2.output
+    assert "v1.0.0" in res2.output
 
 
 # ANSI CSI stripper. typer renders --help through rich; when the runner exports
@@ -100,7 +100,7 @@ def test_short_V_is_verbose_not_version():
     ):
         res = runner.invoke(app, ["-V", "scrape", "--format", "json"])
     assert res.exit_code == 0
-    assert "v2.2.0" not in res.stdout
+    assert "v1.0.0" not in res.stdout
     # -V enables INFO (same as --verbose)
     assert INFO_MARKER not in (res.stderr or "")  # quiet stream emits nothing
     data = json.loads(res.stdout)

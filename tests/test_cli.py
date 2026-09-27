@@ -23,7 +23,7 @@ def test_cli_version():
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert "Udemy Enroller" in result.output
-    assert "v2.2.0" in result.output
+    assert "v1.0.0" in result.output
 
 
 def test_cli_help():

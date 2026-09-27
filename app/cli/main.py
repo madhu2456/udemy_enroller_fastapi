@@ -13,11 +13,13 @@ from app.cli.commands.scrape import scrape_command
 from app.cli.commands.server import server_command
 from app.cli.commands.stats import stats_command
 from app.cli.ui import console
+from config.settings import get_settings
 
 
 def version_callback(value: bool) -> None:
     if value:
-        console.print("[bold #A435F0]Udemy Enroller[/bold #A435F0] [bold white]v2.2.0[/bold white]")
+        settings = get_settings()
+        console.print(f"[bold #A435F0]Udemy Enroller[/bold #A435F0] [bold white]v{settings.APP_VERSION}[/bold white]")
         raise typer.Exit()
 
 
