@@ -117,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if success:
         print("\n==================================================")
-        print("[★] All requested standalone builds completed successfully!")
+        print("[*] All requested standalone builds completed successfully!")
         print("    Executables are located in the dist/ folder.")
         print("==================================================\n")
         return 0
