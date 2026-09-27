@@ -97,7 +97,7 @@ async def _run_login_pipeline(
         table.add_row("Long-Term Storage", "[bold green]SAVED (Encrypted)[/bold green]")
 
         console.print(table)
-        print_success("✓ Session authenticated and saved for long-term reuse!")
+        print_success("Session authenticated and saved for long-term reuse!")
         console.print("\n[dim]You can now run 'python cli.py enroll' or 'python gui.py' without re-entering tokens.[/dim]\n")
         return 0
     finally:

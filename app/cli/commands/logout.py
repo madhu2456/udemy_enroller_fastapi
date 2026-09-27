@@ -12,5 +12,5 @@ def logout_command() -> None:
     print_header("Udemy Session Disconnect")
 
     clear_persistent_session()
-    print_success("✓ Persistent Udemy credentials and saved sessions have been cleared.")
+    print_success("Persistent Udemy credentials and saved sessions have been cleared.")
     console.print("\n[dim]To reconnect your account, run 'python cli.py login' or use the Desktop GUI.[/dim]\n")

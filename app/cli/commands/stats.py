@@ -42,7 +42,7 @@ def stats_command(
 
     saved = load_persistent_session()
     if saved and saved.get("access_token"):
-        console.print(f"[bold cyan]Connected Account:[/bold cyan] [bold white]{saved.get('display_name', 'Udemy User')}[/bold white] [dim]({saved.get('currency', 'USD')})[/dim] • [bold green]Active Session Saved[/bold green]\n")
+        console.print(f"[bold cyan]Connected Account:[/bold cyan] [bold white]{saved.get('display_name', 'Udemy User')}[/bold white] [dim]({saved.get('currency', 'USD')})[/dim] | [bold green]Active Session Saved[/bold green]\n")
 
     try:
         with SessionLocal() as db:

@@ -73,7 +73,7 @@ async def _run_scrape_pipeline(
                 status_color = "green" if state == "completed" else "yellow" if state == "timed_out" else "red"
                 course_cnt = len(scraper.courses)
                 progress.console.print(
-                    f"  [{status_color}]●[/{status_color}] {scraper.site_name:<20} "
+                    f"  [{status_color}]*[/{status_color}] {scraper.site_name:<20} "
                     f"[{status_color}]{state.upper():<10}[/{status_color}] "
                     f"Found: [bold]{course_cnt}[/bold] courses"
                 )

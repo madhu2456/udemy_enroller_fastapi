@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Optional
+
 import typer
 
 from app.cli.commands.check import check_command
@@ -12,8 +13,10 @@ from app.cli.commands.logout import logout_command
 from app.cli.commands.scrape import scrape_command
 from app.cli.commands.server import server_command
 from app.cli.commands.stats import stats_command
-from app.cli.ui import console
+from app.cli.ui import configure_stream_encoding, console
 from config.settings import get_settings
+
+configure_stream_encoding()
 
 
 def version_callback(value: bool) -> None:
@@ -25,7 +28,7 @@ def version_callback(value: bool) -> None:
 
 app = typer.Typer(
     name="udemy-enroller",
-    help="🎓 Udemy Course Enroller — Fast, modern CLI for scraping coupons and auto-enrolling in free Udemy courses.",
+    help="Udemy Course Enroller - Fast, modern CLI for scraping coupons and auto-enrolling in free Udemy courses.",
     add_completion=False,
     no_args_is_help=True,
 )

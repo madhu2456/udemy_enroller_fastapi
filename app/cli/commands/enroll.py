@@ -162,7 +162,7 @@ async def _run_enrollment_pipeline(
                 status_color = "green" if state == "completed" else "yellow" if state == "timed_out" else "red"
                 course_cnt = len(scraper.courses)
                 progress.console.print(
-                    f"  [{status_color}]●[/{status_color}] {scraper.site_name:<20} "
+                    f"  [{status_color}]*[/{status_color}] {scraper.site_name:<20} "
                     f"[{status_color}]{state.upper():<10}[/{status_color}] "
                     f"Found: [bold]{course_cnt}[/bold] courses"
                 )
@@ -219,7 +219,7 @@ async def _run_enrollment_pipeline(
                     if is_enrolled:
                         course.is_already_enrolled = True
                         udemy_client.already_enrolled_c += 1
-                        progress.console.print(f"  [yellow]●[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
+                        progress.console.print(f"  [yellow]*[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
                         inst_list = getattr(course, "instructors", None)
                         inst_str = ", ".join(inst_list) if inst_list else getattr(course, "instructor", "Unknown")
                         enrolled_results.append(
@@ -247,7 +247,7 @@ async def _run_enrollment_pipeline(
 
                     is_already = getattr(course, "status", "") == "Already Enrolled" or getattr(course, "is_already_enrolled", False)
                     is_exp = (course.error and "expired" in str(course.error).lower()) or getattr(course, "is_expired", False)
-                    # FM-036 / W3-02: price-gated free eligibility — fail-closed: price None => not free (FM036_PRICE_UNKNOWN=9999.0)
+                    # FM-036 / W3-02: price-gated free eligibility - fail-closed: price None => not free (FM036_PRICE_UNKNOWN=9999.0)
                     try:
                         _price_tmp = float(course.price) if course.price is not None else FM036_PRICE_UNKNOWN
                     except (ValueError, TypeError):
@@ -263,29 +263,29 @@ async def _run_enrollment_pipeline(
                     if is_already:
                         udemy_client.already_enrolled_c += 1
                         status_str = "ALREADY ENROLLED"
-                        progress.console.print(f"  [yellow]●[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
+                        progress.console.print(f"  [yellow]*[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
                     elif is_exp:
                         udemy_client.expired_c += 1
                         status_str = "EXPIRED"
                     elif is_definitely_paid:
                         status_str = "PAID / NOT 100% OFF"
-                        progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
+                        progress.console.print(f"  [magenta]*[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
                     elif not course.is_valid or not course.course_id:
                         if "403" in str(course.error or ""):
                             status_str = "BLOCKED (403)"
                             udemy_client.unknown_c += 1
-                            progress.console.print(f"  [red]⚠[/red] [dim]{course.title[:45]:<45} [BLOCKED (403 WAF)][/dim]")
+                            progress.console.print(f"  [red][!][/red] [dim]{course.title[:45]:<45} [BLOCKED (403 WAF)][/dim]")
                         else:
                             status_str = "EXTRACTION FAILED"
                             udemy_client.unknown_c += 1
-                            progress.console.print(f"  [red]✗[/red] [dim]{course.title[:45]:<45} [EXTRACTION FAILED][/dim]")
+                            progress.console.print(f"  [red][x][/red] [dim]{course.title[:45]:<45} [EXTRACTION FAILED][/dim]")
                     elif is_valid_free:
                         status_str = "VALID FREE"
                         saved_val = float(course.list_price) if course.list_price else 0.0
 
                         if dry_run:
                             progress.console.print(
-                                f"  [green]✓[/green] [DRY RUN] [bold white]{course.title[:45]:<45}[/bold white] "
+                                f"  [green][+][/green] [DRY RUN] [bold white]{course.title[:45]:<45}[/bold white] "
                                 f"[green]FREE[/green] (${saved_val:.2f}) [dim]({course.coupon_code or 'Direct'})[/dim]"
                             )
                             udemy_client.successfully_enrolled_c += 1
@@ -309,18 +309,18 @@ async def _run_enrollment_pipeline(
                                     if course.list_price and saved_val > 0:
                                         udemy_client.amount_saved_c += Decimal(str(saved_val))
                                     progress.console.print(
-                                        f"  [bold green]★ ENROLLED[/bold green] [bold white]{course.title[:45]:<45}[/bold white] "
+                                        f"  [bold green][*] ENROLLED[/bold green] [bold white]{course.title[:45]:<45}[/bold white] "
                                         f"[green]Saved ${saved_val:.2f}[/green]"
                                     )
                                 elif getattr(course, "is_already_enrolled", False):
                                     udemy_client.already_enrolled_c += 1
                                     status_str = "ALREADY ENROLLED"
-                                    progress.console.print(f"  [yellow]●[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
+                                    progress.console.print(f"  [yellow]*[/yellow] [dim]{course.title[:45]:<45} [ALREADY OWNED][/dim]")
                                 elif getattr(course, "error", "") == "checkout_circuit_open":
                                     udemy_client.unknown_c += 1
                                     status_str = "CIRCUIT OPEN"
                                     progress.console.print(
-                                        f"  [yellow]⏸ CIRCUIT OPEN[/yellow]  {course.title[:45]:<45} [yellow]Cloudflare challenge cooldown active[/yellow]"
+                                        f"  [yellow][PAUSED] CIRCUIT OPEN[/yellow]  {course.title[:45]:<45} [yellow]Cloudflare challenge cooldown active[/yellow]"
                                     )
                                 else:
                                     udemy_client.unknown_c += 1
@@ -329,14 +329,14 @@ async def _run_enrollment_pipeline(
                                         progress.console.print(f"  [yellow]?[/yellow] [dim]{course.title[:45]:<45} [INDETERMINATE / TIMEOUT][/dim]")
                                     else:
                                         progress.console.print(
-                                            f"  [red]✗ FAILED[/red]   {course.title[:45]:<45} [red]Checkout failed[/red]"
+                                            f"  [red][x] FAILED[/red]   {course.title[:45]:<45} [red]Checkout failed[/red]"
                                         )
 
                                 if not dry_run and getattr(course, "error", "") != "checkout_circuit_open":
                                     await asyncio.sleep(random.uniform(1.5, 2.5))
                     else:
                         status_str = "PAID / NOT 100% OFF"
-                        progress.console.print(f"  [magenta]●[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
+                        progress.console.print(f"  [magenta]*[/magenta] [dim]{course.title[:45]:<45} [PAID / NOT 100% FREE][/dim]")
 
                     enrolled_results.append(
                         {

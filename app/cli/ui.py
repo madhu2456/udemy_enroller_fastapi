@@ -24,6 +24,84 @@ from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
 
+
+# Configure standard I/O stream encoding before Rich Console instances bind to them
+def configure_stream_encoding() -> None:
+    """Configure standard I/O streams with UTF-8 encoding and error replacement."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is not None and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
+
+configure_stream_encoding()
+
+
+def _supports_unicode() -> bool:
+    """Return True if stdout can reliably encode UTF-8 / modern Unicode glyphs."""
+    try:
+        encoding = (getattr(sys.stdout, "encoding", None) or "").lower()
+        if "utf" in encoding:
+            return True
+        "✓⚠✗ℹ❯⭐●*".encode(encoding)
+        return True
+    except Exception:
+        return False
+
+
+def get_glyph(char: str, fallback: str) -> str:
+    """Return char if current console stream can reliably encode it, otherwise return fallback."""
+    try:
+        stream = getattr(console, "file", None) or getattr(sys, "stdout", None)
+        encoding = (getattr(stream, "encoding", None) or "").lower()
+        if "utf" in encoding:
+            return char
+        char.encode(encoding)
+        return char
+    except Exception:
+        return fallback
+
+
+def get_glyph_success() -> str:
+    return get_glyph("✓", "[+]")
+
+
+def get_glyph_warning() -> str:
+    return get_glyph("⚠", "[!]")
+
+
+def get_glyph_error() -> str:
+    return get_glyph("✗", "[x]")
+
+
+def get_glyph_info() -> str:
+    return get_glyph("ℹ", "[i]")
+
+
+def get_glyph_arrow() -> str:
+    return get_glyph("❯", ">")
+
+
+def get_glyph_star() -> str:
+    return get_glyph("⭐", "*")
+
+
+def get_glyph_bullet() -> str:
+    return get_glyph("●", "*")
+
+
+UNICODE_SUPPORTED = _supports_unicode()
+GLYPH_SUCCESS = "✓" if UNICODE_SUPPORTED else "[+]"
+GLYPH_WARNING = "⚠" if UNICODE_SUPPORTED else "[!]"
+GLYPH_ERROR = "✗" if UNICODE_SUPPORTED else "[x]"
+GLYPH_INFO = "ℹ" if UNICODE_SUPPORTED else "[i]"
+GLYPH_ARROW = "❯" if UNICODE_SUPPORTED else ">"
+GLYPH_STAR = "⭐" if UNICODE_SUPPORTED else "*"
+GLYPH_BULLET = "●" if UNICODE_SUPPORTED else "*"
+
 # Udemy brand custom theme
 UDEMY_THEME = Theme(
     {
@@ -71,9 +149,9 @@ def setup_signal_handlers(cleanup_callback: Optional[Callable[[], None]] = None)
 def print_banner() -> None:
     """Print the Udemy Enroller ASCII / Rich banner."""
     banner_text = Text()
-    banner_text.append("🎓 Udemy Course Enroller", style="bold #A435F0")
-    banner_text.append(" — Next-Gen Auto Enrollment & Scraper CLI\n", style="bold white")
-    banner_text.append("Universal Browser Cookies • 17 Coupon Scrapers • Zero-Freeze Engine", style="dim white")
+    banner_text.append("Udemy Course Enroller", style="bold #A435F0")
+    banner_text.append(" - Next-Gen Auto Enrollment & Scraper CLI\n", style="bold white")
+    banner_text.append("Universal Browser Cookies | 17 Coupon Scrapers | Zero-Freeze Engine", style="dim white")
 
     panel = Panel(
         Align.center(banner_text),
@@ -87,7 +165,7 @@ def print_banner() -> None:
 def print_header(title: str, subtitle: Optional[str] = None) -> None:
     """Print a section header."""
     header_text = Text()
-    header_text.append(f"❯ {title}", style="bold #A435F0")
+    header_text.append(f"{get_glyph_arrow()} {title}", style="bold #A435F0")
     if subtitle:
         header_text.append(f"  ({subtitle})", style="dim white")
     console.print(header_text)
@@ -95,22 +173,22 @@ def print_header(title: str, subtitle: Optional[str] = None) -> None:
 
 def print_success(message: str) -> None:
     """Print a green success message."""
-    console.print(f"[success]✓[/success] {message}")
+    console.print(f"[success]{get_glyph_success()}[/success] {message}")
 
 
 def print_warning(message: str) -> None:
     """Print a yellow warning message."""
-    console.print(f"[warning]⚠[/warning] {message}")
+    console.print(f"[warning]{get_glyph_warning()}[/warning] {message}")
 
 
 def print_error(message: str) -> None:
     """Print a red error message."""
-    err_console.print(f"[danger]✗[/danger] {message}")
+    err_console.print(f"[danger]{get_glyph_error()}[/danger] {message}")
 
 
 def print_info(message: str) -> None:
     """Print a cyan info message."""
-    console.print(f"[info]ℹ[/info] {message}")
+    console.print(f"[info]{get_glyph_info()}[/info] {message}")
 
 
 def create_progress_bar() -> Progress:
@@ -200,7 +278,7 @@ def print_courses_table(courses: List[Any], title: str = "Discovered Courses", m
 
     displayed_courses = courses[:max_rows]
     for idx, c in enumerate(displayed_courses, 1):
-        rating_str = f"⭐ {c.rating:.1f}" if getattr(c, "rating", None) else "N/A"
+        rating_str = f"{get_glyph_star()} {c.rating:.1f}" if getattr(c, "rating", None) else "N/A"
         instructors = getattr(c, "instructors", None)
         inst_str = ", ".join(instructors) if instructors else (getattr(c, "instructor", "") or "Unknown")
         lang_str = getattr(c, "language", "") or "All"

@@ -85,13 +85,13 @@ async def _run_check_pipeline(
             table.add_row("Title", course.title or "Unknown")
             table.add_row("Course ID", str(course.course_id) if course.course_id else "N/A")
             table.add_row("Instructor", inst_str)
-            table.add_row("Rating", f"⭐ {course.rating:.1f}" if course.rating else "N/A")
+            table.add_row("Rating", f"* {course.rating:.1f}" if course.rating else "N/A")
             table.add_row("Category", course.category or "N/A")
             table.add_row("Language", course.language or "N/A")
             table.add_row("Coupon Code", course.coupon_code or "None (Direct Free or Full Price)")
             is_already = getattr(course, "status", "") == "Already Enrolled" or getattr(course, "is_already_enrolled", False)
             is_exp = (course.error and "expired" in str(course.error).lower()) or getattr(course, "is_expired", False)
-            # FM-036 / W3-02: price-gated free eligibility — fail-closed: price None => not free (FM036_PRICE_UNKNOWN=9999.0)
+            # FM-036 / W3-02: price-gated free eligibility - fail-closed: price None => not free (FM036_PRICE_UNKNOWN=9999.0)
             try:
                 _price_tmp = float(course.price) if course.price is not None else FM036_PRICE_UNKNOWN
             except (ValueError, TypeError):
