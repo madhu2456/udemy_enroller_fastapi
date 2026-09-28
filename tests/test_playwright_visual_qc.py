@@ -5,28 +5,77 @@ Verifies geometry of #smart-paste-box, #access_token, #client_id, #csrftoken, an
 on /login and / (connect section).
 """
 
+import glob
 import os
 import socket
+import tempfile
 import threading
 import time
 import pytest
 import uvicorn
 from playwright.sync_api import sync_playwright
 
-SCREENSHOT_DIR = "/home/madhud/.gemini/antigravity-cli/brain/2d3e8c83-83c3-4217-8f50-19c736cedb35/screenshots"
+_uid = getattr(os, "getuid", lambda: "local")()
+DEFAULT_SCREENSHOT_DIR = os.getenv(
+    "SCREENSHOT_DIR",
+    os.path.join(tempfile.gettempdir(), f"udemy_enroller_visual_qc_{_uid}"),
+)
+SCREENSHOT_DIR = DEFAULT_SCREENSHOT_DIR
+
+
+def _is_ci_environment() -> bool:
+    return (
+        os.getenv("CI", "").strip().lower() in ("true", "1")
+        or os.getenv("GITHUB_ACTIONS", "").strip().lower() in ("true", "1")
+    )
 
 
 def get_chromium_executable():
-    import glob
-    candidates = [
-        "/home/madhud/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome",
-        "/home/madhud/.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell",
-    ] + glob.glob("/home/madhud/.cache/ms-playwright/chromium*/chrome-linux64/chrome") \
-      + glob.glob("/home/madhud/.cache/ms-playwright/chromium_headless_shell*/chrome-headless-shell-linux64/chrome-headless-shell")
-    for c in candidates:
-        if os.path.isfile(c) and os.access(c, os.X_OK):
-            return c
+    base_dirs = []
+    env_path = os.getenv("PLAYWRIGHT_BROWSERS_PATH")
+    if env_path:
+        base_dirs.append(env_path)
+
+    # Linux
+    base_dirs.append(os.path.expanduser("~/.cache/ms-playwright"))
+    # macOS
+    base_dirs.append(os.path.expanduser("~/Library/Caches/ms-playwright"))
+    # Windows
+    local_app_data = os.getenv("LOCALAPPDATA")
+    if local_app_data:
+        base_dirs.append(os.path.join(local_app_data, "ms-playwright"))
+    base_dirs.append(os.path.expanduser("~/AppData/Local/ms-playwright"))
+
+    patterns = [
+        # Linux
+        "chromium-*/chrome-linux*/chrome",
+        "chromium_headless_shell-*/chrome-headless-shell-linux*/chrome-headless-shell",
+        # macOS
+        "chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
+        "chromium_headless_shell-*/chrome-headless-shell-mac*/chrome-headless-shell",
+        # Windows
+        "chromium-*/chrome-win*/chrome.exe",
+        "chromium_headless_shell-*/chrome-headless-shell-win*/chrome-headless-shell.exe",
+    ]
+
+    for base in base_dirs:
+        if not os.path.isdir(base):
+            continue
+        for pat in patterns:
+            for match in glob.glob(os.path.join(base, pat)):
+                if os.path.isfile(match) and (os.access(match, os.X_OK) or os.name == "nt"):
+                    return match
     return None
+
+
+CHROMIUM_PATH = get_chromium_executable()
+SKIP_REASON = None
+if _is_ci_environment():
+    SKIP_REASON = "Playwright visual QC requires local browser environment (skipped in CI unit test step)"
+elif not CHROMIUM_PATH:
+    SKIP_REASON = "No local Playwright Chromium executable found"
+
+pytestmark = pytest.mark.skipif(SKIP_REASON is not None, reason=SKIP_REASON or "")
 
 
 def is_server_listening(host="127.0.0.1", port=8888):
@@ -39,6 +88,10 @@ def is_server_listening(host="127.0.0.1", port=8888):
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_server():
+    if SKIP_REASON:
+        yield
+        return
+
     server_started = False
     server = None
     if not is_server_listening("127.0.0.1", 8888):
@@ -61,7 +114,7 @@ def ensure_server():
 
 def test_visual_qc_login_page():
     """Visual QC for /login on 1366x768 with simulated cookie banner."""
-    exec_path = get_chromium_executable()
+    exec_path = CHROMIUM_PATH
     launch_kwargs = {"headless": True}
     if exec_path:
         launch_kwargs["executable_path"] = exec_path
@@ -137,7 +190,7 @@ def test_visual_qc_login_page():
 
 def test_visual_qc_home_connect():
     """Visual QC for / (homepage connect section) on 1366x768 with simulated cookie banner."""
-    exec_path = get_chromium_executable()
+    exec_path = CHROMIUM_PATH
     launch_kwargs = {"headless": True}
     if exec_path:
         launch_kwargs["executable_path"] = exec_path
