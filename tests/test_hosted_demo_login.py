@@ -21,6 +21,8 @@ class TestHostedDemoLoginRestrictions:
             assert 'id="tab-cookie"' in response.text
             assert 'id="cookie-form"' in response.text
             assert 'id="email-form"' in response.text
+            assert 'id="smart-paste-box"' in response.text
+            assert "<details" in response.text
             assert "Disabled on hosted demo" in response.text
             assert "Hosted Demo" in response.text
         finally:

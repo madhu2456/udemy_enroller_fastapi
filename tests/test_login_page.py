@@ -49,6 +49,8 @@ def test_dedicated_login_page_renders_above_the_fold():
 
     assert "Connect Your Account" in html
     assert 'id="cookie-form"' in html
+    assert 'id="smart-paste-box"' in html
+    assert "<details" in html
     assert 'method="POST"' in html
     assert 'action="/api/auth/login/cookies"' in html
     assert 'name="robots" content="noindex, nofollow' in html or "noindex" in html
