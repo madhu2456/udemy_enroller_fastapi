@@ -7,6 +7,18 @@ and this project uses date-based notes until formal version tags are published.
 
 ## [Unreleased]
 
+### Fixed
+- **Login Tab Visibility & Hosted Demo Authentication Guidance ([`app/templates/pages/login.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/login.html), [`app/templates/pages/login_page.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/login_page.html))**:
+  - Unconditionally rendered Email and Cookie login tabs across both homepage (`/`) and dedicated login page (`/login`), eliminating confusion where users could not see the standard login tabs on hosted demo instances (`DEPLOYMENT_ENV=server`).
+  - Active tab defaults to Cookie Login in server mode; switching to Email Login displays an educational amber notice explaining Cloudflare datacenter IP blocking and password protection, with disabled inputs (`placeholder="Disabled on hosted demo"`) and an actionable `Switch to Cookie Login` button.
+  - Implemented client-side preventative submission guard with user guidance in `#email-error`, executing zero network requests when email login is attempted on hosted demo mode.
+  - Added ReDoS-free linear $O(N)$ smart cookie auto-paste parser supporting JSON (Cookie-Editor format), HTTP cookie headers, and URL query strings with a 16KB payload guard and multi-token threshold ($\ge 2$).
+  - Guarded client-side analytics calls and fortified error/success handlers with defensive null checks.
+- **Defensive Rate Limiter Precedence ([`app/routers/auth.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/routers/auth.py))**:
+  - Reordered authentication middleware checks in `login_with_credentials` to evaluate `login_rate_limiter.is_allowed_redis` prior to checking `DEPLOYMENT_ENV == "server"`, eliminating CWE-770 rate limiter bypass.
+- **Hosted Demo Test Suite Parity ([`tests/test_hosted_demo_login.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_hosted_demo_login.py))**:
+  - Parametrized tests across `/` and `/login` under both server and local modes, verifying tab visibility, disabled input states, and rate-limiter precedence.
+
 ## [1.0.1] — 2026-09-27
 
 ### Added

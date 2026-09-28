@@ -154,6 +154,12 @@ async def login_with_credentials(
     _login_csrf: None = Depends(verify_login_csrf),
 ):
     """Login with Udemy email and password."""
+    if not await login_rate_limiter.is_allowed_redis(_client_key(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests. Please try again later.",
+        )
+
     if settings.DEPLOYMENT_ENV == "server":
         return LoginResponse(
             success=False,
@@ -162,12 +168,6 @@ async def login_with_credentials(
                 "Email login is disabled on the hosted demo. "
                 "Use Cookie Login with session tokens from your browser."
             ),
-        )
-
-    if not await login_rate_limiter.is_allowed_redis(_client_key(request)):
-        raise HTTPException(
-            status_code=429,
-            detail="Too many requests. Please try again later.",
         )
     client = UdemyClient()
     client_handed_off = False
