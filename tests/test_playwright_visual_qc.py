@@ -128,7 +128,7 @@ def test_visual_qc_login_page():
 
         # Switch to cookie tab to display cookie form
         page.click("#tab-cookie")
-        page.wait_for_selector("#cookie-form:not(.hidden)", state="visible")
+        page.wait_for_selector("#session-form:not(.hidden)", state="visible")
 
         # Inject simulated 56px cookie banner fixed at bottom (Y = 712 to 768)
         page.evaluate("""() => {
@@ -208,7 +208,7 @@ def test_visual_qc_home_connect():
 
         # Switch to cookie tab
         page.click("#tab-cookie")
-        page.wait_for_selector("#cookie-form:not(.hidden)", state="visible")
+        page.wait_for_selector("#session-form:not(.hidden)", state="visible")
 
         # Inject simulated 56px cookie banner fixed at bottom (Y = 712 to 768)
         page.evaluate("""() => {
@@ -266,3 +266,77 @@ def test_visual_qc_home_connect():
 
         # Assert clearance >= 100px
         assert clearance >= 100, f"Button clearance {clearance:.1f}px is less than 100px"
+
+
+def test_easylist_adblocker_cosmetic_injection():
+    """Verify EasyList cosmetic adblocker rules do not hide login session elements or inputs."""
+    exec_path = CHROMIUM_PATH
+    launch_kwargs = {"headless": True}
+    if exec_path:
+        launch_kwargs["executable_path"] = exec_path
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(**launch_kwargs)
+        context = browser.new_context(viewport={"width": 1366, "height": 768})
+
+        for url, tab_sel in [
+            ("http://127.0.0.1:8888/login", "#tab-cookie"),
+            ("http://127.0.0.1:8888/#connect", "#tab-cookie"),
+        ]:
+            page = context.new_page()
+            page.goto(url, wait_until="networkidle")
+
+            # Inject simulated EasyList cosmetic filter stylesheet (adhering to page CSP nonce)
+            adblock_css = "#cookie-form, #cookie-info, #cookie-error { display: none !important; }"
+            page.evaluate(
+                f"""() => {{
+                const nonce = document.querySelector('script[nonce]')?.nonce;
+                const style = document.createElement('style');
+                style.id = 'simulated-adblocker';
+                if (nonce) style.setAttribute('nonce', nonce);
+                style.textContent = '{adblock_css}';
+                document.head.appendChild(style);
+            }}"""
+            )
+
+            # Switch to cookie / session tab
+            page.click(tab_sel)
+            page.wait_for_selector("#session-form:not(.hidden)", state="visible")
+
+            # Ensure #session-form, #session-info, inputs, and button are visible
+            session_form = page.locator("#session-form")
+            assert session_form.is_visible(), f"session-form should be visible on {url}"
+
+            session_info = page.locator("#session-info")
+            assert session_info.is_visible(), f"session-info should be visible on {url}"
+
+            inputs = ["smart-paste-box", "access_token", "client_id", "csrftoken", "login-btn-cookie"]
+            for el_id in inputs:
+                loc = page.locator(f"#{el_id}")
+                assert loc.is_visible(), f"#{el_id} should be visible under adblocker injection on {url}"
+                display_val = page.evaluate(f"window.getComputedStyle(document.getElementById('{el_id}')).display")
+                assert display_val != "none", f"#{el_id} display should not be none on {url}"
+
+            # Verify showError activates #session-error without collision
+            page.evaluate("showError('cookie', 'Simulated adblocker test error')")
+            error_loc = page.locator("#session-error")
+            assert error_loc.is_visible(), f"#session-error should be visible on {url}"
+            assert "Simulated adblocker test error" in error_loc.inner_text()
+            error_display = page.evaluate("window.getComputedStyle(document.getElementById('session-error')).display")
+            assert error_display != "none", f"#session-error display should not be none on {url}"
+
+            # Falsifiability check: verify that simulated adblocker DOES hide elements with old IDs
+            falsifiable_hidden = page.evaluate(
+                """() => {
+                const dummy = document.createElement('div');
+                dummy.id = 'cookie-form';
+                document.body.appendChild(dummy);
+                const disp = window.getComputedStyle(dummy).display;
+                dummy.remove();
+                return disp === 'none';
+            }"""
+            )
+            assert falsifiable_hidden, "Simulated adblocker rule must actively hide #cookie-form to be falsifiable"
+            page.close()
+
+        browser.close()

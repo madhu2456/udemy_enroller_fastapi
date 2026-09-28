@@ -48,7 +48,7 @@ def test_dedicated_login_page_renders_above_the_fold():
     html = response.text
 
     assert "Connect Your Account" in html
-    assert 'id="cookie-form"' in html
+    assert 'id="session-form"' in html
     assert 'id="smart-paste-box"' in html
     assert "<details" in html
     assert 'method="POST"' in html
@@ -123,3 +123,28 @@ def test_navigation_header_contains_login_links():
     mobile_login = mobile_nav.find(id="mobile-drawer-login-link")
     assert mobile_login is not None
     assert mobile_login.get("href") == "/login"
+
+
+def test_easylist_adblocker_selector_collision_immunity():
+    """Verify templates do not contain EasyList-colliding cookie IDs and use session-* instead."""
+    client = TestClient(app)
+    try:
+        login_resp = client.get("/login")
+        home_resp = client.get("/")
+    finally:
+        client.close()
+
+    assert login_resp.status_code == 200
+    assert home_resp.status_code == 200
+
+    colliding_ids = ["cookie-form", "cookie-info", "cookie-error"]
+    immune_ids = ["session-form", "session-info", "session-error"]
+
+    for name, resp in [("/login", login_resp), ("/", home_resp)]:
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for bad_id in colliding_ids:
+            found = soup.find(id=bad_id)
+            assert found is None, f"Found colliding EasyList adblocker id='{bad_id}' in {name}"
+        for good_id in immune_ids:
+            found = soup.find(id=good_id)
+            assert found is not None, f"Expected immune id='{good_id}' not found in {name}"

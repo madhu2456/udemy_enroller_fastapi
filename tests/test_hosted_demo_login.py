@@ -19,7 +19,7 @@ class TestHostedDemoLoginRestrictions:
             assert response.status_code == 200
             assert 'id="tab-email"' in response.text
             assert 'id="tab-cookie"' in response.text
-            assert 'id="cookie-form"' in response.text
+            assert 'id="session-form"' in response.text
             assert 'id="email-form"' in response.text
             assert 'id="smart-paste-box"' in response.text
             assert "<details" in response.text
@@ -36,7 +36,7 @@ class TestHostedDemoLoginRestrictions:
         assert 'id="tab-email"' in response.text
         assert 'id="tab-cookie"' in response.text
         assert 'id="email-form"' in response.text
-        assert 'id="cookie-form"' in response.text
+        assert 'id="session-form"' in response.text
         assert "Disabled on hosted demo" not in response.text
 
     @patch("app.routers.auth.settings")

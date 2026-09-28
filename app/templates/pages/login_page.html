@@ -83,7 +83,7 @@
             </div>
 
             <div
-                id="cookie-info"
+                id="session-info"
                 class="{% if request.app.state.deployment_env == 'server' %}mb-2{% else %}hidden mb-2{% endif %} px-3 py-1.5 bg-[#F9FAFB] border border-gray-200 rounded-lg"
             >
                 {% if request.app.state.deployment_env == 'server' %}
@@ -184,10 +184,10 @@
             </form>
 
             <form
-                id="cookie-form"
+                id="session-form"
                 method="POST"
                 action="/api/auth/login/cookies"
-                data-action="login-cookies"
+                data-action="login-session"
                 autocomplete="off"
                 class="{% if request.app.state.deployment_env == 'server' %}space-y-2{% else %}hidden space-y-2{% endif %}"
             >
@@ -218,7 +218,7 @@
                         name="udemy_session_access_token"
                         placeholder="Paste your access_token cookie"
                         required
-                        aria-describedby="cookie-error"
+                        aria-describedby="session-error"
                         autocomplete="off"
                         spellcheck="false"
                         autocapitalize="off"
@@ -242,7 +242,7 @@
                         name="udemy_session_client_id"
                         placeholder="Paste your client_id cookie"
                         required
-                        aria-describedby="cookie-error"
+                        aria-describedby="session-error"
                         autocomplete="off"
                         spellcheck="false"
                         autocapitalize="off"
@@ -266,7 +266,7 @@
                         name="udemy_session_csrftoken"
                         placeholder="Paste your csrftoken cookie"
                         required
-                        aria-describedby="cookie-error"
+                        aria-describedby="session-error"
                         autocomplete="off"
                         spellcheck="false"
                         autocapitalize="off"
@@ -283,7 +283,7 @@
                     Show tokens
                 </label>
                 <div
-                    id="cookie-error"
+                    id="session-error"
                     aria-live="polite"
                     class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg"
                 >
@@ -341,13 +341,13 @@
 
     function switchTab(tab) {
         const emailForm = document.getElementById("email-form");
-        const cookiesForm = document.getElementById("cookie-form");
+        const cookiesForm = document.getElementById("session-form") || document.getElementById("cookie-form");
         const tabEmail = document.getElementById("tab-email");
         const tabCookies = document.getElementById("tab-cookie");
         const emailInfo = document.getElementById("email-info");
-        const cookieInfo = document.getElementById("cookie-info");
+        const cookieInfo = document.getElementById("session-info") || document.getElementById("cookie-info");
         const errEmail = document.getElementById("email-error");
-        const errCookie = document.getElementById("cookie-error");
+        const errCookie = document.getElementById("session-error") || document.getElementById("cookie-error");
 
         if (errEmail) errEmail.classList.add("hidden");
         if (errCookie) errCookie.classList.add("hidden");
@@ -395,7 +395,9 @@
     }
 
     function showError(tab, msg) {
-        const el = document.getElementById(tab + "-error");
+        const el = document.getElementById(tab + "-error") ||
+                   (tab === "cookie" ? document.getElementById("session-error") : null) ||
+                   (tab === "session" ? document.getElementById("cookie-error") : null);
         if (el) {
             const p = el.querySelector("p");
             if (p) p.textContent = msg;
@@ -455,7 +457,7 @@
         const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = `<span class="flex items-center justify-center gap-2">${spinnerSvg} Validating...</span>`;
-        const err = document.getElementById("cookie-error");
+        const err = document.getElementById("session-error") || document.getElementById("cookie-error");
         if (err) err.classList.add("hidden");
 
         try {
@@ -582,10 +584,10 @@
         document.querySelectorAll('[data-action="login-email"]').forEach(form => {
             form.addEventListener('submit', (e) => loginWithEmail(e));
         });
-        document.querySelectorAll('[data-action="login-cookies"]').forEach(form => {
+        document.querySelectorAll('[data-action="login-cookies"], [data-action="login-session"]').forEach(form => {
             form.addEventListener('submit', (e) => loginWithCookies(e));
         });
-        const cookieForm = document.getElementById("cookie-form");
+        const cookieForm = document.getElementById("session-form") || document.getElementById("cookie-form");
         if (cookieForm) {
             cookieForm.addEventListener("paste", handleSmartCookiePaste);
         }
