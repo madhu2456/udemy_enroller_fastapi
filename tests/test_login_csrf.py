@@ -238,3 +238,110 @@ def test_login_origin_gate_honors_public_base_url(monkeypatch, path):
         assert cross.json()["detail"] == "Cross-origin request rejected"
     finally:
         client.close()
+
+
+@pytest.mark.parametrize("path", LOGIN_ENDPOINTS)
+def test_login_accepts_www_subdomain_origin(monkeypatch, path):
+    """F-ENRL-C03: Requests from www subdomain must pass CSRF origin gate even
+    when PUBLIC_BASE_URL is set to apex domain."""
+    monkeypatch.setattr(
+        auth.settings, "PUBLIC_BASE_URL", "https://udemyenroller.madhudadi.in"
+    )
+    client = _fresh_client()
+    try:
+        token = _load_csrf_cookie(client)
+        mock_client = _mock_udemy_client()
+        monkeypatch.setattr(auth, "UdemyClient", lambda: mock_client)
+        response = client.post(
+            path,
+            json=_body_for(path),
+            headers={
+                "X-CSRF-Token": token,
+                "Origin": "https://www.udemyenroller.madhudadi.in",
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("path", LOGIN_ENDPOINTS)
+def test_login_accepts_www_subdomain_referer(monkeypatch, path):
+    """When Origin is omitted, Referer with www subdomain must pass."""
+    monkeypatch.setattr(
+        auth.settings, "PUBLIC_BASE_URL", "https://udemyenroller.madhudadi.in"
+    )
+    client = _fresh_client()
+    try:
+        token = _load_csrf_cookie(client)
+        mock_client = _mock_udemy_client()
+        monkeypatch.setattr(auth, "UdemyClient", lambda: mock_client)
+        response = client.post(
+            path,
+            json=_body_for(path),
+            headers={
+                "X-CSRF-Token": token,
+                "Referer": "https://www.udemyenroller.madhudadi.in/login",
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("path", LOGIN_ENDPOINTS)
+def test_login_rejects_prefix_and_suffix_spoofed_origins(monkeypatch, path):
+    """Prefix/suffix lookalikes must fail exact set membership check."""
+    monkeypatch.setattr(
+        auth.settings, "PUBLIC_BASE_URL", "https://udemyenroller.madhudadi.in"
+    )
+    client = _fresh_client()
+    try:
+        token = _load_csrf_cookie(client)
+        for spoofed in [
+            "https://attacker-udemyenroller.madhudadi.in",
+            "https://udemyenroller.madhudadi.in.attacker.com",
+            "https://notudemyenroller.madhudadi.in",
+        ]:
+            response = client.post(
+                path,
+                json=_body_for(path),
+                headers={"X-CSRF-Token": token, "Origin": spoofed},
+            )
+            assert response.status_code == 403
+            assert response.json()["detail"] == "Cross-origin request rejected"
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("path", LOGIN_ENDPOINTS)
+def test_login_wildcard_allowed_hosts_does_not_open_csrf_origin(monkeypatch, path):
+    """ALLOWED_HOSTS='*' in local dev must NEVER open the CSRF gate to arbitrary external origins."""
+    monkeypatch.setattr(auth.settings, "ALLOWED_HOSTS", "*")
+    client = _fresh_client()
+    try:
+        token = _load_csrf_cookie(client)
+        mock_client = _mock_udemy_client()
+        monkeypatch.setattr(auth, "UdemyClient", lambda: mock_client)
+
+        # External evil origin must still be rejected
+        evil_resp = client.post(
+            path,
+            json=_body_for(path),
+            headers={"X-CSRF-Token": token, "Origin": "https://evil.com"},
+        )
+        assert evil_resp.status_code == 403
+        assert evil_resp.json()["detail"] == "Cross-origin request rejected"
+
+        # Local testserver must be accepted
+        good_resp = client.post(
+            path,
+            json=_body_for(path),
+            headers={"X-CSRF-Token": token, "Origin": "http://testserver"},
+        )
+        assert good_resp.status_code == 200
+        assert good_resp.json()["success"] is True
+    finally:
+        client.close()

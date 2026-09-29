@@ -55,7 +55,12 @@ class Settings(BaseSettings):
     # Used for direct GA4 gtag.js tracking (works independently of GTM)
     GA4_MEASUREMENT_ID: str = ""
     # CORS origins - in production, set specific domains
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://udemyenroller.madhudadi.in",
+        "https://www.udemyenroller.madhudadi.in",
+    ]
 
     # Server
     HOST: str = "0.0.0.0"

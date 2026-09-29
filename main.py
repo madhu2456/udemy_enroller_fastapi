@@ -269,7 +269,7 @@ app.add_middleware(
     allow_origins=app_settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "x-csrf-token"],
     expose_headers=["Content-Disposition"],  # For file downloads
     max_age=3600,  # Cache preflight for 1 hour
 )

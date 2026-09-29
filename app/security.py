@@ -582,44 +582,67 @@ def generate_login_csrf_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def _same_netloc(left: str, right: str) -> bool:
-    """Case-insensitive host[:port] equality; scheme and path are ignored."""
-    left_netloc = urlparse(left).netloc.lower()
-    right_netloc = urlparse(right).netloc.lower()
-    return bool(left_netloc) and left_netloc == right_netloc
+def _allowed_origin_hosts(request: Request) -> set[str]:
+    """Gather lowercase hostnames permitted to make login POST requests.
 
+    Aggregates hosts from:
+    1. request.base_url.hostname
+    2. urlparse(settings.PUBLIC_BASE_URL).hostname
+    3. Entries in allowed_hosts_list(settings)
 
-def _expected_origin(request: Request) -> str:
-    """Origin the server identifies as itself; PUBLIC_BASE_URL overrides it.
-
-    Behind Cloudflare Flexible SSL, nginx forwards X-Forwarded-Proto: http
-    ($scheme) while browsers send https Origins, so request.base_url's scheme
-    must not participate in the comparison.
+    Security invariants:
+    - Uses .split(":")[0].strip().lower() to avoid urlparse bare-domain trap.
+    - Strictly filters out "*" to prevent local dev wildcard from opening CSRF.
     """
-    from config.settings import get_settings
+    from config.settings import allowed_hosts_list, get_settings
 
-    public_base = get_settings().PUBLIC_BASE_URL
+    settings = get_settings()
+    allowed: set[str] = set()
+
+    req_host = request.base_url.hostname
+    if req_host:
+        allowed.add(req_host.lower())
+
+    public_base = settings.PUBLIC_BASE_URL
     if public_base:
-        return public_base.rstrip("/")
-    return str(request.base_url).rstrip("/")
+        parsed_pub = urlparse(public_base)
+        if parsed_pub.hostname:
+            allowed.add(parsed_pub.hostname.lower())
+
+    for entry in allowed_hosts_list(settings):
+        clean_entry = entry.strip()
+        if not clean_entry or clean_entry == "*":
+            continue
+        host = clean_entry.split(":")[0].strip().lower()
+        if host and host != "*":
+            allowed.add(host)
+
+    # Always include loopback hosts for local testing and healthchecks
+    allowed.add("localhost")
+    allowed.add("127.0.0.1")
+
+    return allowed
 
 
 def _is_same_origin(request: Request) -> bool:
-    """Reject browser requests whose Origin/Referer is not this server's origin.
+    """Reject browser requests whose Origin/Referer is not an allowed origin host.
 
-    Comparison is netloc-only (host[:port], case-insensitive) and scheme-
-    agnostic; the samesite=strict double-submit cookie remains the primary
-    CSRF control. Clients that send neither header (curl, API tests) are not
-    browser-based and cannot be CSRF targets, so they are allowed.
+    Comparison is hostname-based and scheme-agnostic. Clients sending neither
+    header (curl, API clients) are not browser-based and are allowed.
     """
     origin = request.headers.get("origin")
     if origin:
-        return _same_netloc(origin, _expected_origin(request))
+        parsed_origin = urlparse(origin)
+        return (
+            parsed_origin.hostname is not None
+            and parsed_origin.hostname.lower() in _allowed_origin_hosts(request)
+        )
     referer = request.headers.get("referer")
     if referer:
-        parsed = urlparse(referer)
-        return parsed.hostname is not None and _same_netloc(
-            f"{parsed.scheme}://{parsed.netloc}", _expected_origin(request)
+        parsed_referer = urlparse(referer)
+        return (
+            parsed_referer.hostname is not None
+            and parsed_referer.hostname.lower() in _allowed_origin_hosts(request)
         )
     return True
 
