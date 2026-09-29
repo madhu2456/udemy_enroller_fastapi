@@ -7,7 +7,17 @@ and this project uses date-based notes until formal version tags are published.
 
 ## [Unreleased]
 
+### Added
+- **Verified Public Deals Pipeline Seeding ([`app/services/course.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/course.py), [`app/services/enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_manager.py), [`tests/test_enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_enrollment_manager.py))**:
+  - Implemented `Course.from_deal` factory method enabling direct ingestion of verified public deals with robust URL validation (`is_udemy_url`) and coupon code extraction.
+  - Added Phase 1 Catalog Seeding in `EnrollmentManager.run_pipeline`, populating the candidate queue with up to `MAX_CATALOG_SEED = 25` verified public deals from `load_public_deals()` before streaming live scraper results.
+  - Implemented zero-delay in-memory pre-filtering against `seen_slugs`, `enrolled_slugs`, and `previously_attempted` courses, preventing duplicate enrollments and pacing delays.
+  - Tracked seeding metrics under `source_stats["Verified Deals"]` and recorded saved deals in `EnrolledCourse` with `site_source = "Verified Deals"`.
+
 ### Fixed
+- **Positive Allowlisting for Coupon Error Classification ([`app/services/enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_manager.py), [`tests/test_enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_enrollment_manager.py))**:
+  - Replaced flawed negative check (`if "403" in error: failed else: expired`) with positive allowlisting (`COUPON_EXPIRY_SIGNATURES`), ensuring HTTP 5xx errors, Cloudflare challenges, network resets, and rate limits are accurately classified as `failed` instead of falsely inflating `expired` telemetry and misleading users.
+  - Patched `load_public_deals` in `tests/test_enrollment_manager.py` fixture to prevent ambient `public_deals.json` on disk from breaking `test_pipeline_with_no_courses`, ensuring deterministic test suite isolation.
 - **Multi-Origin Login CSRF Validation & CORS Preflight Hardening ([`app/security.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/security.py), [`config/settings.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/config/settings.py), [`main.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/main.py), [`tests/test_login_csrf.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_login_csrf.py))**:
   - Resolved an issue where users accessing the site via `https://www.udemyenroller.madhudadi.in` were rejected with HTTP 403 `{"detail": "Cross-origin request rejected"}` upon form submission, caused by `_is_same_origin` checking only the singular apex `PUBLIC_BASE_URL` string instead of the server's configured allowed hostnames.
   - Implemented `_allowed_origin_hosts` in [`app/security.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/security.py) aggregating valid origin hostnames from `request.base_url`, `PUBLIC_BASE_URL`, and `allowed_hosts_list(settings)`.

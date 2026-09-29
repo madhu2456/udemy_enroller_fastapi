@@ -21,6 +21,19 @@ from app.services.scraper import ScraperService
 from app.services.udemy_client import UdemyClient
 from config.settings import resolve_user_proxy
 
+MAX_CATALOG_SEED: int = 25
+COUPON_EXPIRY_SIGNATURES: tuple[str, ...] = (
+    "expired",
+    "price mismatch",
+    "not 100%",
+    "not free",
+    "discount",
+    "already_redeemed",
+    "maximum_redemptions",
+    "no longer valid",
+    "claim code",
+)
+
 
 class EnrollmentManager:
     """Manages the background enrollment process for a specific run."""
@@ -345,7 +358,7 @@ class EnrollmentManager:
                     logger.info(f"ℹ️ Already Enrolled: {course.title} ({duration:.1f}s)")
                 else:
                     err = (course.error or "").lower()
-                    if "price mismatch" in err or "expired" in err:
+                    if any(sig in err for sig in COUPON_EXPIRY_SIGNATURES):
                         status = "expired"
                         self.udemy.expired_c += 1
                         logger.warning(f"⏰ Coupon Expired (checkout): {course.title} — {course.error}")
@@ -354,6 +367,95 @@ class EnrollmentManager:
                         logger.warning(f"❌ Enrollment Failed: {course.title} ({duration:.1f}s)")
 
                 return success, status
+
+            # Phase 1: Seed candidate queue with verified public deals
+            try:
+                from app.services.public_deals_export import load_public_deals
+
+                all_deals = load_public_deals() or []
+            except Exception as e:
+                logger.warning(f"Could not load public deals for seeding: {e}")
+                all_deals = []
+
+            seed_candidates: list[Course] = []
+            for d in all_deals:
+                if not isinstance(d, dict) or not d.get("is_coupon_valid"):
+                    continue
+                c = Course.from_deal(d, site="Verified Deals")
+                if not c or not c.url:
+                    continue
+                if c.url in seen_slugs:
+                    continue
+                if c.slug and c.slug in enrolled_slugs:
+                    continue
+                coupon_str = c.coupon_code or ""
+                if c.slug and (c.slug, coupon_str) in previously_attempted:
+                    continue
+                seen_slugs.add(c.url)
+                seed_candidates.append(c)
+                if len(seed_candidates) >= MAX_CATALOG_SEED:
+                    break
+
+            if seed_candidates:
+                logger.info(f"Seeding enrollment pipeline with {len(seed_candidates)} verified public deals.")
+                self.total_courses += len(seed_candidates)
+                run.total_courses_found = self.total_courses
+                db.commit()
+
+                for course in seed_candidates:
+                    self.processed = index + 1
+                    self.current_course_title = course.title
+                    self.current_course_url = course.url or ""
+
+                    saved_already = False
+                    course_status = "failed"
+                    error_msg = None
+
+                    try:
+                        self.udemy.is_course_excluded(course, self.settings)
+                        if course.is_excluded:
+                            self.udemy.excluded_c += 1
+                            course_status = "excluded"
+                            error_msg = course.error or "Filter match"
+                        elif callable(getattr(self.udemy, "is_checkout_circuit_open", None)) and self.udemy.is_checkout_circuit_open() is True:
+                            course_status = "failed"
+                            error_msg = "checkout_circuit_open"
+                        else:
+                            if not course.course_id:
+                                await self.udemy.get_course_id(course)
+                            await self.udemy.check_course(course)
+                            if not course.is_coupon_valid:
+                                err_lower = (course.error or "").lower()
+                                if any(sig in err_lower for sig in COUPON_EXPIRY_SIGNATURES):
+                                    self.udemy.expired_c += 1
+                                    course_status = "expired"
+                                else:
+                                    course_status = "failed"
+                                error_msg = course.error
+                            else:
+                                if self.settings.get("discounted_only") and course.is_free:
+                                    self.udemy.excluded_c += 1
+                                    course_status = "excluded"
+                                    error_msg = "Course is free by default"
+                                    course.is_excluded = True
+                                    course.error = error_msg
+                                else:
+                                    success, course_status = await process_single_course(course)
+                    except Exception as e:
+                        logger.exception(f"[PIPELINE ERROR] Unexpected error processing seed course {course.title}: {e}")
+                        course_status = "failed"
+                        error_msg = str(e)
+
+                    source_stats["Verified Deals"][course_status] += 1
+                    if not saved_already:
+                        await self._save_course(db, run, course, course_status, error_msg)
+                    await self._update_run_stats(db, run)
+                    index += 1
+
+                    if self._is_server:
+                        await asyncio.sleep(random.uniform(1.5, 3.5))
+                    else:
+                        await asyncio.sleep(random.uniform(0.5, 1.5))
 
             async for scraper, state in self.scraper_service.stream_results():
                 pd = dict(run.progress_data or {})
@@ -436,13 +538,13 @@ class EnrollmentManager:
                                     logger.info(f"[PIPELINE] Checking coupon for {course.title}")
                                     await self.udemy.check_course(course)
                                     if not course.is_coupon_valid:
-                                        if "403" in (course.error or ""):
-                                            course_status = "failed"
-                                            error_msg = course.error
-                                        else:
+                                        err_lower = (course.error or "").lower()
+                                        if any(sig in err_lower for sig in COUPON_EXPIRY_SIGNATURES):
                                             self.udemy.expired_c += 1
                                             course_status = "expired"
-                                            error_msg = course.error
+                                        else:
+                                            course_status = "failed"
+                                        error_msg = course.error
                                     else:
                                         if self.settings.get("discounted_only") and course.is_free:
                                             self.udemy.excluded_c += 1

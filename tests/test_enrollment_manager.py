@@ -48,6 +48,10 @@ def isolate_side_effects_and_cleanup_db(monkeypatch):
         "app.services.public_deals_export.export_public_deals_json",
         lambda *args, **kwargs: 0,
     )
+    monkeypatch.setattr(
+        "app.services.public_deals_export.load_public_deals",
+        lambda *args, **kwargs: [],
+    )
     yield
     with engine.begin() as connection:
         for table in reversed(Base.metadata.sorted_tables):
@@ -100,6 +104,7 @@ def mock_udemy_client():
     client.check_course = AsyncMock()
     client.checkout_single = AsyncMock(return_value=True)
     client.is_course_excluded = MagicMock()
+    client.is_checkout_circuit_open = MagicMock(return_value=False)
     return client
 
 
@@ -526,6 +531,112 @@ class TestEnrollmentManagerPipeline:
                 await manager.run_pipeline()
 
         assert MockScraper.call_args.kwargs["proxy"] is None
+
+    @pytest.mark.asyncio
+    async def test_pipeline_seeds_from_public_deals(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """Pipeline seeds from verified public deals before streaming scraper results."""
+        user = User(email="seeduser@example.com", udemy_display_name="Seeder")
+        db_session.add(user)
+        db_session.commit()
+
+        run = EnrollmentRun(user_id=user.id, status="pending", currency="USD")
+        db_session.add(run)
+        db_session.commit()
+
+        manager = EnrollmentManager(
+            user.id, run.id, mock_udemy_client, default_settings
+        )
+
+        deals = [
+            {
+                "title": "Seed Deal 1",
+                "url": "https://www.udemy.com/course/seed-deal-1/?couponCode=FREE1",
+                "coupon_code": "FREE1",
+                "is_coupon_valid": True,
+                "price": 29.99,
+            },
+            {
+                "title": "Seed Deal Free",
+                "url": "https://www.udemy.com/course/seed-deal-free/",
+                "is_free": True,
+                "is_coupon_valid": True,
+                "price": 0.0,
+            },
+        ]
+
+        captured_courses = []
+
+        async def _mock_checkout(c):
+            c.status = "success"
+            captured_courses.append(c)
+            return True
+
+        mock_udemy_client.checkout_single.side_effect = _mock_checkout
+
+        with patch(
+            "app.services.public_deals_export.load_public_deals",
+            return_value=deals,
+        ):
+            with patch("app.services.enrollment_manager.ScraperService") as MockScraper:
+                MockScraper.return_value = _make_mock_scraper_service([])
+                await manager.run_pipeline()
+
+        db_session.refresh(run)
+        assert run.status == "completed"
+        assert run.total_courses_found == 2
+        assert run.successfully_enrolled == 2
+
+        # Assert that get_course_id is called when course_id is not present in deal
+        assert mock_udemy_client.get_course_id.await_count == 2
+
+        # Assert that when deal has is_free: True, the generated course has c.is_free is True
+        free_course = next((c for c in captured_courses if c.title == "Seed Deal Free"), None)
+        assert free_course is not None
+        assert free_course.is_free is True
+
+        from app.models.database import EnrolledCourse
+
+        saved = (
+            db_session.query(EnrolledCourse)
+            .filter_by(enrollment_run_id=run.id)
+            .all()
+        )
+        assert len(saved) == 2
+        for s in saved:
+            assert s.site_source == "Verified Deals"
+            assert s.status == "enrolled"
+
+    @pytest.mark.parametrize(
+        "error_str,expected_status,increments_expired",
+        [
+            ("Coupon expired", "expired", True),
+            ("Price mismatch: 19.99 is not free", "expired", True),
+            ("Discount no longer valid", "expired", True),
+            ("HTTP 503: Service Unavailable", "failed", False),
+            ("Cloudflare challenge encountered", "failed", False),
+            ("Connection reset by peer", "failed", False),
+            ("HTTP 429: Too Many Requests", "failed", False),
+            ("HTTP 403 Forbidden", "failed", False),
+        ],
+    )
+    def test_error_classification_positive_allowlist(
+        self, error_str, expected_status, increments_expired
+    ):
+        """Positive allowlisting correctly categorizes coupon expiration vs infrastructure failures."""
+        from app.services.enrollment_manager import COUPON_EXPIRY_SIGNATURES
+
+        err_lower = error_str.lower()
+        is_expired = any(sig in err_lower for sig in COUPON_EXPIRY_SIGNATURES)
+
+        if is_expired:
+            status = "expired"
+        else:
+            status = "failed"
+
+        assert status == expected_status
+        assert is_expired == increments_expired
 
 
 if __name__ == "__main__":

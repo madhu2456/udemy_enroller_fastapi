@@ -67,6 +67,10 @@ async def test_idownloadcoupon_semaphore_enforcement():
 @pytest.mark.asyncio
 async def test_telemetry_status_assignment(monkeypatch):
     """Test that EnrollmentManager correctly maps and passes status telemetry."""
+    monkeypatch.setattr(
+        "app.services.public_deals_export.load_public_deals",
+        lambda *args, **kwargs: [],
+    )
     udemy_mock = MagicMock()
     udemy_mock.currency = "usd"
     udemy_mock.is_authenticated = True

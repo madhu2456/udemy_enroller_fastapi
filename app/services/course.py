@@ -1,5 +1,6 @@
 """Course model for the enrollment system."""
 
+from typing import Optional
 from urllib.parse import parse_qs, urlparse, urlsplit, urlunparse, unquote
 import logging
 import html
@@ -67,6 +68,44 @@ class Course:
     def set_url(self, url: str):
         self.url = self.normalize_link(url)
         self.set_slug()
+
+    @classmethod
+    def from_deal(cls, deal: dict, site: str = "Verified Deals") -> Optional["Course"]:
+        """Instantiate a Course model from a verified public deal dict."""
+        if not isinstance(deal, dict):
+            return None
+        raw_url = str(deal.get("url") or "").strip()
+        if not raw_url or not is_udemy_url(raw_url):
+            return None
+
+        raw_coupon = str(deal.get("coupon_code") or "").strip()
+        is_free = bool(deal.get("is_free", False))
+        if not raw_coupon and not is_free:
+            # Check URL for coupon code
+            parsed = urlparse(raw_url)
+            qs = parse_qs(parsed.query)
+            raw_coupon = (qs.get("couponCode") or [None])[0] or ""
+            if not raw_coupon:
+                return None
+
+        title = str(deal.get("title") or "Untitled Course").strip()
+        course = cls(title=title, url=raw_url, site=site)
+        if is_free:
+            course.is_free = True
+        if raw_coupon:
+            course.coupon_code = raw_coupon
+        if deal.get("course_id"):
+            course.course_id = str(deal["course_id"])
+        course.category = deal.get("category")
+        course.language = deal.get("language")
+        course.rating = deal.get("rating")
+        if deal.get("price") is not None:
+            try:
+                course.list_price = float(deal["price"])
+            except (ValueError, TypeError):
+                pass
+        course.is_coupon_valid = bool(deal.get("is_coupon_valid", True))
+        return course
 
     @staticmethod
     def normalize_link(url: str) -> str:
