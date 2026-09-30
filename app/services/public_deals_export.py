@@ -46,7 +46,9 @@ SITE_URL_DEFAULT = "https://udemyenroller.madhudadi.in"
 # value) when a page's template content actually changes.
 STATIC_PAGE_LASTMOD: dict[str, str] = {
     "/faq": "2026-09-25",
-    "/about": "2026-09-25",
+    # 2026-09-30: /about gained the SoftwareApplication `publisher` @id ref
+    # (F064) — template content change bumps its honest lastmod.
+    "/about": "2026-09-30",
     "/guides": "2026-09-25",
     "/privacy": "2026-09-25",
     "/contact": "2026-09-25",
