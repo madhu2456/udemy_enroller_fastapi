@@ -35,6 +35,7 @@ class LogBox(customtkinter.CTkFrame):
             self.auto_scroll_enabled = True
             self.min_level = "WARNING"
             self.level_menu = None
+            self.level_label = None
             self.textbox = None
             self.toolbar = None
             self.title_lbl = None
@@ -89,8 +90,22 @@ class LogBox(customtkinter.CTkFrame):
                 )
                 self.level_menu.set(self.min_level)
                 self.level_menu.pack(side="right", padx=4)
+
+                # F052: visible label for the log-level OptionMenu. TkOptionMenu
+                # has no HTML-style `label for=` link, so the Tk/ATK association
+                # is a non-empty label widget sharing the menu's parent and
+                # stacked immediately beside it (packed after -> rendered to
+                # its left with `side="right"`).
+                self.level_label = customtkinter.CTkLabel(
+                    self.toolbar,
+                    text="Log level:",
+                    font=customtkinter.CTkFont(size=11),
+                    text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
+                )
+                self.level_label.pack(side="right", padx=(0, 4))
             except Exception:
                 self.level_menu = None
+                self.level_label = None
 
         # Auto-scroll checkbox
         self.autoscroll_cb = customtkinter.CTkCheckBox(

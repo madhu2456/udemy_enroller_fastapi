@@ -70,6 +70,19 @@ class LoginView(customtkinter.CTkFrame):
         if not installed:
             browser_choices = ["Auto-Detect", "Firefox", "Chrome", "Edge", "Brave", "Opera", "Chromium"]
 
+        # F052: the browser dropdown (CTkOptionMenu) needs a visible, adjacent
+        # label. Tk/TkOptionMenu has no HTML `label for=` link, so the Tk/ATK
+        # association is "a non-empty label widget sharing the same parent and
+        # stacked immediately before the menu". The label therefore carries the
+        # accessible name for the menu (AT-SPI reports the nearest preceding
+        # label in the same container).
+        self.browser_label = customtkinter.CTkLabel(
+            row,
+            text="Browser:",
+            font=customtkinter.CTkFont(size=12),
+        )
+        self.browser_label.pack(side="left", padx=(0, 6))
+
         self.browser_select = customtkinter.CTkOptionMenu(
             row,
             values=browser_choices,
