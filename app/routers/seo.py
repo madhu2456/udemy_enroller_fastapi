@@ -139,6 +139,9 @@ Disallow: /dashboard
 
 # Model-training crawlers — DISALLOW (opt out of training use)
 # Does NOT block Google-Extended (moved to allow as Gemini/Vertex training/grounding-token, not citation).
+# Meta-ExternalAgent (Meta's training crawler) is named explicitly so its group
+# carries the same Disallow as the other training agents (RFC 9309 groups do
+# not inherit User-agent: * directives).
 User-agent: GPTBot
 User-agent: ClaudeBot
 User-agent: anthropic-ai
@@ -146,6 +149,7 @@ User-agent: CCBot
 User-agent: Applebot-Extended
 User-agent: FacebookBot
 User-agent: Bytespider
+User-agent: Meta-ExternalAgent
 Disallow: /
 
 # Sitemaps
