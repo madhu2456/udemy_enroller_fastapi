@@ -57,6 +57,22 @@ PERSON_SAME_AS = [
 
 
 # ---------------------------------------------------------------------------
+# Discovery-body determinism (F021)
+# ---------------------------------------------------------------------------
+# /llms.txt, /llms-full.txt, /ai-profile.json and /humans.txt must serve
+# byte-identical bodies across fetches. A request-time clock stamp restamps the
+# body on every request, which defeats CDN caching and makes md5-based
+# regression checks flap (two fetches seconds apart already differed). No
+# ``datetime.now()`` may appear in any discovery body below.
+#
+# A static constant beats a generation-time clock: the discovery files must
+# never report "modified just now". It changes only when a human ships new
+# discovery content — bump it in the same commit. Mirrors the Discounts estate
+# ``SITE_STATIC_LAST_MODIFIED``.
+DISCOVERY_STATIC_LAST_MODIFIED = "2026-09-29"
+
+
+# ---------------------------------------------------------------------------
 # Plain-text / machine-readable endpoints
 # ---------------------------------------------------------------------------
 
@@ -261,7 +277,7 @@ Case Study: {CASE_STUDY_URL}
 /* SITE */
 Application: Udemy Course Enroller
 Domain: {SITE_URL}
-Last update: {datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}
+Last update: {DISCOVERY_STATIC_LAST_MODIFIED}
 Language: English (en-IN)
 Standards: HTML5, CSS3, JSON-LD, Schema.org, WAI-ARIA; accessibility target WCAG 2.2 AA (not a formal conformance claim)
 
@@ -370,8 +386,6 @@ async def pricing_md():
 
 async def _llms_txt_body(db: Session) -> str:
     """Build the llms.txt profile body (shared by /llms.txt and /llms-full.txt)."""
-    now = datetime.datetime.now(datetime.UTC)
-
     impact = get_platform_impact_display(db)
     enrolled_str = impact["enrolled_display"]
     saved_str = impact["saved_display_full"]
@@ -436,8 +450,6 @@ async def _llms_txt_body(db: Session) -> str:
     content = f"""# Udemy Course Enroller — AI Profile
 
 > Authoritative, machine-readable profile for AI systems, search engines, and generative engines.
-> Last generated: {now.isoformat()}Z
-> Last content update: {now.strftime("%Y-%m-%d")}
 
 ## Key facts (quotable)
 
@@ -763,8 +775,9 @@ async def ai_profile_json(db: Session = Depends(get_db)):
                 "@type": "WebPage",
                 "@id": f"{CASE_STUDY_URL}",
             },
-            "lastUpdated": now.isoformat() + "Z",
-            "dateModified": now.isoformat() + "Z",
+            # F021: static content-version stamp — never a request-time clock.
+            "lastUpdated": DISCOVERY_STATIC_LAST_MODIFIED,
+            "dateModified": DISCOVERY_STATIC_LAST_MODIFIED,
         },
         {
             "@type": "Person",
