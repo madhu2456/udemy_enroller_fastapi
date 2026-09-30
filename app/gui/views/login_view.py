@@ -186,6 +186,17 @@ class LoginView(customtkinter.CTkFrame):
         self.clear_btn.pack(side="left")
 
     def _build_status_card(self) -> None:
+        """Build the connection status card (F053 announcement region).
+
+        Tk/CTk has no ARIA ``aria-live`` region. The Tk/ATK analog used here is
+        an accessible-name + accessible-description update on a dedicated,
+        always-present status widget: AT-SPI emits ``accessible-name-changed``
+        whenever the label's text is rewritten, and Orca/NVDA speak the new
+        value immediately (the same role a ``role="status"``/``aria-live="polite"``
+        region plays on the web). Every async result from the AsyncioBridge
+        therefore routes through :meth:`announce_status` so screen-reader users
+        hear the transition instead of seeing a silent repaint.
+        """
         self.status_card = customtkinter.CTkFrame(self.scroll, corner_radius=10, fg_color=("gray90", "gray25"))
         self.status_card.pack(fill="x", padx=16, pady=(0, 16))
 
@@ -206,6 +217,21 @@ class LoginView(customtkinter.CTkFrame):
         )
         self.status_details.pack(anchor="w", padx=16, pady=(0, 12))
 
+    def announce_status(self, title: str, details: str = "") -> None:
+        """Announce an authentication status change to assistive technology.
+
+        Rewrites both the accessible name (``status_title``) and description
+        (``status_details``) of the status region — the Tk/ATK live-region
+        analog. Callers must pass complete sentences, never a bare token, so
+        the spoken announcement is self-describing.
+        """
+        title = str(title or "").strip() or "Connection Status: Not tested"
+        details = str(details or "").strip()
+        if self.status_title is not None:
+            self.status_title.configure(text=title)
+        if self.status_details is not None:
+            self.status_details.configure(text=details)
+
     def _toggle_token_visibility(self) -> None:
         if self.token_entry.cget("show") == "*":
             self.token_entry.configure(show="")
@@ -218,22 +244,33 @@ class LoginView(customtkinter.CTkFrame):
         chosen = self.browser_select.get().lower()
         if chosen == "auto-detect":
             chosen = "auto"
-        self.status_title.configure(text="Extracting cookies...", text_color=COLOR_PRIMARY)
+        self.status_title.configure(text_color=COLOR_PRIMARY)
+        self.announce_status(
+            "Extracting cookies...",
+            "Reading the selected browser for an active Udemy session cookie.",
+        )
         self.on_auto_extract(chosen)
 
     def _on_test_click(self) -> None:
         tok = self.token_entry.get().strip()
         cid = self.cid_entry.get().strip()
         csrf = self.csrf_entry.get().strip()
-        self.status_title.configure(text="Testing session credentials...", text_color=COLOR_PRIMARY)
+        self.status_title.configure(text_color=COLOR_PRIMARY)
+        self.announce_status(
+            "Testing session credentials...",
+            "Validating the entered tokens against Udemy. Enrollment runs stay disabled until this finishes.",
+        )
         self.on_test_login({"access_token": tok, "client_id": cid, "csrf_token": csrf})
 
     def _on_clear_click(self) -> None:
         self.token_entry.delete(0, "end")
         self.cid_entry.delete(0, "end")
         self.csrf_entry.delete(0, "end")
-        self.status_title.configure(text="Session Cleared", text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK))
-        self.status_details.configure(text="Saved session credentials have been deleted. Enter new tokens above.")
+        self.status_title.configure(text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK))
+        self.announce_status(
+            "Session Cleared",
+            "Saved session credentials have been deleted. Enter new tokens above.",
+        )
         if self.on_clear_session:
             self.on_clear_session()
 
@@ -243,8 +280,11 @@ class LoginView(customtkinter.CTkFrame):
         name = data.get("display_name") or data.get("browser_name") or "Udemy User"
         lib = data.get("library_count", 0)
         curr = data.get("currency", "USD")
-        self.status_title.configure(text=f"✓ Connected as {name} (Session Saved)", text_color=COLOR_SUCCESS)
-        self.status_details.configure(text=f"Library: {lib} courses • Currency: {curr} • Saved for long-term reuse")
+        self.status_title.configure(text_color=COLOR_SUCCESS)
+        self.announce_status(
+            f"✓ Connected as {name} (Session Saved)",
+            f"Library: {lib} courses • Currency: {curr} • Saved for long-term reuse",
+        )
 
         # T6-2 shape-tolerant: AUTH_SUCCESS {full} vs COOKIES {display + auth FULL}.
         tokens = data.get("auth", data) or data
@@ -263,11 +303,11 @@ class LoginView(customtkinter.CTkFrame):
 
     def set_auth_failed(self, error: str, notes: Optional[str] = None) -> None:
         """Update view with failed connection status."""
-        self.status_title.configure(text="✗ Connection Failed / Expired", text_color=COLOR_DANGER)
+        self.status_title.configure(text_color=COLOR_DANGER)
         msg = error or "Authentication failed"
         if notes:
             msg += f"\n\nNote: {notes}"
-        self.status_details.configure(text=msg)
+        self.announce_status("✗ Connection Failed / Expired", msg)
 
     def get_credentials(self) -> Dict[str, str]:
         """Return currently entered tokens."""

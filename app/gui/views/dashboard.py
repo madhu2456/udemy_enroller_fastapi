@@ -26,6 +26,19 @@ from app.gui.theme import (
 class DashboardView(customtkinter.CTkFrame):
     """Main dashboard view combining status header, controls, KPIs, and results/logs."""
 
+    # F053: spoken phrasing for each asynchronous run-state transition. The
+    # badge stays a terse token for sighted scanning; this phrasing is what the
+    # status live line announces to assistive technology.
+    STATUS_PHRASES = {
+        "IDLE": "idle — ready to start a run",
+        "RUNNING": "running — an enrollment run is in progress",
+        "ENROLLING": "enrolling — attempting free-course enrollment",
+        "SCRAPING": "scraping — reading coupon sources",
+        "AUTHENTICATING": "authenticating — validating the Udemy session",
+        "PAUSED": "paused — the run is on hold",
+        "STOPPED": "stopped — the run was halted",
+    }
+
     def __init__(
         self,
         master,
@@ -80,6 +93,20 @@ class DashboardView(customtkinter.CTkFrame):
             pady=4,
         )
         self.status_badge.pack(side="right", padx=16)
+
+        # F053: async-status announcement line (Tk/ATK live-region analog).
+        # Tk has no ARIA ``aria-live`` region, so assistive technology is
+        # notified through an accessible-name update on this always-present
+        # label: AT-SPI emits ``accessible-name-changed`` when its text is
+        # rewritten, which Orca/NVDA speak immediately — the desktop equivalent
+        # of the web ``role="status"`` pattern used by the televault UI.
+        self.status_live_lbl = customtkinter.CTkLabel(
+            self.header_left,
+            text="Enrollment status: idle — ready to start a run",
+            font=customtkinter.CTkFont(size=11),
+            text_color=(COLOR_CAPTION_LIGHT, COLOR_CAPTION_DARK),
+        )
+        self.status_live_lbl.pack(anchor="w")
 
         # 2. Action Toolbar
         self.toolbar = customtkinter.CTkFrame(self, fg_color="transparent")
@@ -223,7 +250,14 @@ class DashboardView(customtkinter.CTkFrame):
         self.status_badge.configure(text="CONNECTED", fg_color=COLOR_SUCCESS, text_color="#FFFFFF")
 
     def update_status_badge(self, status: str) -> None:
-        """Update the status pill badge."""
+        """Update the status pill badge and announce the transition.
+
+        Runs for every asynchronous ``STATUS_CHANGE`` event polled from the
+        AsyncioBridge (``UdemyEnrollerApp._poll_bridge_events`` → here). Besides
+        the visual badge, the accessible name of ``status_live_lbl`` is
+        rewritten so screen readers announce the new state — the Tk/ATK
+        live-region analog documented on that widget.
+        """
         st_upper = status.upper()
         if st_upper in ("RUNNING", "ENROLLING", "SCRAPING"):
             self.status_badge.configure(text=st_upper, fg_color=COLOR_PRIMARY, text_color="#FFFFFF")
@@ -233,6 +267,9 @@ class DashboardView(customtkinter.CTkFrame):
             self.status_badge.configure(text="STOPPED", fg_color=COLOR_DANGER, text_color="#FFFFFF")
         else:
             self.status_badge.configure(text="IDLE", fg_color=("gray85", "gray30"), text_color=("gray30", "gray80"))
+        if self.status_live_lbl is not None:
+            phrase = self.STATUS_PHRASES.get(st_upper, st_upper.lower())
+            self.status_live_lbl.configure(text=f"Enrollment status: {phrase}")
 
     def add_course_result_row(self, course_data: Dict[str, Any]) -> None:
         """Add a course item row into the live results list."""
