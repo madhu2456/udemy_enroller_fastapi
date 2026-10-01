@@ -1405,8 +1405,10 @@ class UdemyClient:
                     },
                 }
 
-            # Simplified headers matching the old working Playwright/HTTPX fallback style.
-            # Avoid mobile-app emulation headers that can confuse Udemy with CloudScraper.
+            # Browser session headers for web checkout endpoint.
+            # Authentication relies strictly on session cookies (dj_session_id, access_token, csrftoken).
+            # Do NOT send Authorization: Bearer on /payment/checkout-submit/ because presenting an
+            # API Bearer token on web checkout triggers Cloudflare Turnstile 403 WAF bot challenges.
             csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
             headers = {
                 "Content-Type": "application/json",
@@ -1415,8 +1417,6 @@ class UdemyClient:
                 "Origin": "https://www.udemy.com",
                 "X-CSRF-Token": csrf_token,
             }
-            if self.cookie_dict.get("access_token"):
-                headers["Authorization"] = f"Bearer {self.cookie_dict['access_token']}"
 
             max_attempts = 5
             # Rate-limit retries are iterative, never recursive (F-ENRL-C14):

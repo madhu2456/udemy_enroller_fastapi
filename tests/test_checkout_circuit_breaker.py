@@ -307,3 +307,47 @@ class TestCheckoutCircuitBreaker:
         assert course.error == "checkout_circuit_exhausted"
         assert client._cs_post.await_count == 0
         assert client._cs_get.await_count == 0
+
+    @pytest.mark.asyncio
+    async def test_du_checkout_omits_authorization_header_when_access_token_present(self):
+        """_du_checkout dispatches to _cs_post WITHOUT an Authorization header,
+
+        even when access_token is present in cookie_dict, preventing Cloudflare
+        Turnstile 403 WAF challenges on /payment/checkout-submit/.
+        """
+        client = UdemyClient()
+        client.cs = MagicMock()
+        client.cookie_dict["csrftoken"] = "valid_csrf_token"
+        client.cookie_dict["access_token"] = "fake_access_token_123"
+
+        course = Course(title="No Bearer Course", url="https://www.udemy.com/course/no-bearer/")
+        course.course_id = "54321"
+        course.price = 0.0
+
+        resp = MagicMock(
+            status_code=200,
+            text='{"status": "succeeded"}',
+            headers={"content-type": "application/json"},
+        )
+        resp.json = MagicMock(return_value={"status": "succeeded"})
+
+        client._cs_post = AsyncMock(return_value=resp)
+        client._cs_get = AsyncMock(return_value=MagicMock(status_code=200, text=""))
+
+        await client._du_checkout(course)
+
+        assert course.status is True
+        assert client._cs_post.await_count == 1
+        _call_args, call_kwargs = client._cs_post.call_args
+        headers = call_kwargs.get("headers", {})
+
+        # Assert Authorization header is strictly absent
+        assert "Authorization" not in headers
+        assert "authorization" not in {k.lower() for k in headers.keys()}
+
+        # Assert required browser session headers remain present
+        assert headers.get("X-CSRF-Token") == "valid_csrf_token"
+        assert headers.get("X-Requested-With") == "XMLHttpRequest"
+        assert headers.get("Referer") == "https://www.udemy.com/payment/checkout/"
+        assert headers.get("Origin") == "https://www.udemy.com"
+        assert headers.get("Content-Type") == "application/json"
