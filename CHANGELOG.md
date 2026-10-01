@@ -7,6 +7,15 @@ and this project uses date-based notes until formal version tags are published.
 
 ## [Unreleased]
 
+### Security
+- **Urllib3 Security Vulnerability Patch ([requirements.lock](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/requirements.lock))**:
+  - Upgraded pinned `urllib3` dependency from `2.7.0` to `2.8.0` with verified PyPI universal wheel and sdist sha256 cryptographic hashes.
+  - Mitigated three upstream security vulnerabilities identified during automated CI dependency audit:
+    - CVE-2026-97687 (decompression bomb / memory exhaustion defense)
+    - CVE-2026-97688 (header parsing / request smuggling boundary hardening)
+    - CVE-2026-97689 (proxy connection tunnel credential handling)
+  - Preserved full backward compatibility with `requests==2.34.2` (`urllib3<3,>=1.26`).
+
 ### Added
 - **Verified Public Deals Pipeline Seeding ([`app/services/course.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/course.py), [`app/services/enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_manager.py), [`tests/test_enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_enrollment_manager.py))**:
   - Implemented `Course.from_deal` factory method enabling direct ingestion of verified public deals with robust URL validation (`is_udemy_url`) and coupon code extraction.
