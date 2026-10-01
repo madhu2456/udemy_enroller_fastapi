@@ -222,10 +222,21 @@ class AsyncHTTPClient:
         elif pin_key in self._ua_pins:
             ua = self._ua_pins[pin_key]
         else:
-            ua = random.choice(self._USER_AGENTS_LOCAL)
-            client_ua = self.client.headers.get("User-Agent", "")
-            if client_ua and "python-httpx" not in client_ua:
-                ua = client_ua
+            if req_type == "mobile":
+                mobile_pool = [
+                    u for u in self._USER_AGENTS_LOCAL
+                    if "UdemyAndroid" in u or "okhttp" in u
+                ] or ["okhttp/4.10.0 UdemyAndroid 9.7.0(515) (phone)"]
+                ua = random.choice(mobile_pool)
+            else:
+                desktop_pool = [
+                    u for u in self._USER_AGENTS_LOCAL
+                    if "UdemyAndroid" not in u and "okhttp" not in u and "Mobile" not in u
+                ] or self._USER_AGENTS_LOCAL
+                ua = random.choice(desktop_pool)
+                client_ua = self.client.headers.get("User-Agent", "")
+                if client_ua and "python-httpx" not in client_ua:
+                    ua = client_ua
             self._ua_pins[pin_key] = ua
 
         headers = {
@@ -233,19 +244,26 @@ class AsyncHTTPClient:
             "Connection": "keep-alive",
         }
 
-        is_mobile = "UdemyAndroid" in ua or "okhttp" in ua or req_type == "mobile"
-        if req_type == "mobile" and not is_mobile:
-            ua = "okhttp/4.10.0 UdemyAndroid 9.7.0(515) (phone)"
-            is_mobile = True
+        is_okhttp = "UdemyAndroid" in ua or "okhttp" in ua
+        is_mobile = is_okhttp or "Mobile" in ua or req_type == "mobile"
 
-        headers.update(
-            {
-                "sec-ch-ua-mobile": "?1" if is_mobile else "?0",
-                "sec-ch-ua-platform": '"Android"' if is_mobile else '"Windows"',
-            }
-        )
-        if not is_mobile:
+        if is_okhttp:
+            pass
+        elif is_mobile:
+            headers.update(
+                {
+                    "sec-ch-ua-mobile": "?1",
+                    "sec-ch-ua-platform": '"Android"',
+                }
+            )
+        else:
             major = self._extract_chrome_major(ua) or "133"
+            headers.update(
+                {
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": '"Windows"',
+                }
+            )
             headers["sec-ch-ua"] = (
                 f'"Not_A Brand";v="8", "Chromium";v="{major}", "Google Chrome";v="{major}"'
             )
@@ -264,26 +282,17 @@ class AsyncHTTPClient:
                     "Accept-Language": "en-US,en;q=0.9",
                 }
             )
-        elif req_type in ["api", "xhr", "mobile"]:
+        elif req_type == "mobile" or is_okhttp:
             headers.update(
                 {
                     "User-Agent": ua,
                     "Accept": "application/json, text/plain, */*",
-                    "Sec-Fetch-Site": "same-origin",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Dest": "empty",
                     "Accept-Encoding": "gzip, deflate, br",
-                    "Accept-Language": "en-US,en;q=0.9",
+                    "Accept-Language": "en-US",
+                    "X-Requested-With": "com.udemy.android",
+                    "x-checkout-is-mobile-app": "false",
                 }
             )
-
-            if is_mobile:
-                headers["x-checkout-is-mobile-app"] = "false"
-                headers["X-Requested-With"] = "com.udemy.android"
-                headers["Accept-Language"] = "en-US"
-            else:
-                headers["X-Requested-With"] = "XMLHttpRequest"
-
             referer = None
             if custom_headers:
                 referer = custom_headers.get("Referer") or custom_headers.get("referer")
@@ -296,7 +305,32 @@ class AsyncHTTPClient:
                     headers["Origin"] = ref_origin
                 except Exception:
                     pass
-            elif not is_mobile:
+        elif req_type in ["api", "xhr"]:
+            headers.update(
+                {
+                    "User-Agent": ua,
+                    "Accept": "application/json, text/plain, */*",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Dest": "empty",
+                    "Accept-Encoding": "gzip, deflate, br",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "X-Requested-With": "XMLHttpRequest",
+                }
+            )
+            referer = None
+            if custom_headers:
+                referer = custom_headers.get("Referer") or custom_headers.get("referer")
+
+            if referer:
+                try:
+                    ref_origin = (
+                        f"{urlparse(referer).scheme}://{urlparse(referer).netloc}"
+                    )
+                    headers["Origin"] = ref_origin
+                except Exception:
+                    pass
+            else:
                 headers["Origin"] = "https://www.udemy.com"
 
         if custom_headers:
@@ -314,27 +348,22 @@ class AsyncHTTPClient:
         elif pin_key in self._ua_pins:
             ua = self._ua_pins[pin_key]
         else:
-            ua = random.choice(self._USER_AGENTS_SERVER)
+            if req_type == "mobile":
+                mobile_pool = [
+                    u for u in self._USER_AGENTS_SERVER
+                    if "UdemyAndroid" in u or "okhttp" in u
+                ] or ["okhttp/4.12.0 UdemyAndroid 9.116.0(2078) (phone)"]
+                ua = random.choice(mobile_pool)
+            else:
+                desktop_pool = [
+                    u for u in self._USER_AGENTS_SERVER
+                    if "UdemyAndroid" not in u and "okhttp" not in u and "Mobile" not in u
+                ] or self._USER_AGENTS_SERVER
+                ua = random.choice(desktop_pool)
             self._ua_pins[pin_key] = ua
 
-        is_mobile = (
-            "UdemyAndroid" in ua
-            or "okhttp" in ua
-            or "Mobile" in ua
-            or req_type == "mobile"
-        )
-        if req_type == "mobile" and not is_mobile:
-            ua = (
-                random.choice(
-                    [
-                        u
-                        for u in self._USER_AGENTS_SERVER
-                        if "UdemyAndroid" in u or "okhttp" in u
-                    ]
-                )
-                or "okhttp/4.12.0 UdemyAndroid 9.116.0(2078) (phone)"
-            )
-            is_mobile = True
+        is_okhttp = "UdemyAndroid" in ua or "okhttp" in ua
+        is_mobile = is_okhttp or "Mobile" in ua or req_type == "mobile"
 
         accept_lang = random.choice(self._ACCEPT_LANGUAGES_SERVER)
 
@@ -343,7 +372,14 @@ class AsyncHTTPClient:
             "Connection": "keep-alive",
         }
 
-        if not is_mobile:
+        if is_okhttp:
+            pass
+        elif is_mobile:
+            headers["sec-ch-ua-mobile"] = "?1"
+            headers["sec-ch-ua-platform"] = '"Android"'
+            if "iPhone" in ua or "iPad" in ua:
+                headers["sec-ch-ua-platform"] = '"iOS"'
+        else:
             chrome_major = self._extract_chrome_major(ua)
             if chrome_major:
                 headers["sec-ch-ua"] = (
@@ -362,11 +398,6 @@ class AsyncHTTPClient:
                 headers.pop("sec-ch-ua", None)
                 headers.pop("sec-ch-ua-mobile", None)
                 headers.pop("sec-ch-ua-platform", None)
-        else:
-            headers["sec-ch-ua-mobile"] = "?1"
-            headers["sec-ch-ua-platform"] = '"Android"'
-            if "iPhone" in ua or "iPad" in ua:
-                headers["sec-ch-ua-platform"] = '"iOS"'
 
         if req_type == "document":
             headers.update(
@@ -385,30 +416,22 @@ class AsyncHTTPClient:
             )
             if not is_mobile and "Firefox" not in ua:
                 headers["sec-fetch-priority"] = "high"
-        elif req_type in ["api", "xhr", "mobile"]:
+        elif req_type == "mobile" or is_okhttp:
             headers.update(
                 {
                     "User-Agent": ua,
                     "Accept": "application/json, text/plain, */*",
-                    "Sec-Fetch-Site": "same-origin",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Dest": "empty",
                     "Accept-Encoding": "gzip, deflate, br",
-                    "Accept-Language": accept_lang,
+                    "Accept-Language": "en-US",
+                    "X-Requested-With": "com.udemy.android",
+                    "x-checkout-is-mobile-app": "false",
+                    "x-udemy-client-language": "en",
                 }
             )
-
-            if is_mobile:
-                headers["x-checkout-is-mobile-app"] = "false"
-                headers["X-Requested-With"] = "com.udemy.android"
-                headers["Accept-Language"] = "en-US"
-                headers["x-udemy-client-language"] = "en"
-                if "UdemyAndroid" in ua:
-                    version = self._extract_udemy_version(ua)
-                    if version:
-                        headers["x-udemy-android-version"] = version
-            else:
-                headers["X-Requested-With"] = "XMLHttpRequest"
+            if "UdemyAndroid" in ua:
+                version = self._extract_udemy_version(ua)
+                if version:
+                    headers["x-udemy-android-version"] = version
 
             referer = None
             if custom_headers:
@@ -422,7 +445,32 @@ class AsyncHTTPClient:
                     headers["Origin"] = ref_origin
                 except Exception:
                     pass
-            elif not is_mobile:
+        elif req_type in ["api", "xhr"]:
+            headers.update(
+                {
+                    "User-Agent": ua,
+                    "Accept": "application/json, text/plain, */*",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Dest": "empty",
+                    "Accept-Encoding": "gzip, deflate, br",
+                    "Accept-Language": accept_lang,
+                    "X-Requested-With": "XMLHttpRequest",
+                }
+            )
+            referer = None
+            if custom_headers:
+                referer = custom_headers.get("Referer") or custom_headers.get("referer")
+
+            if referer:
+                try:
+                    ref_origin = (
+                        f"{urlparse(referer).scheme}://{urlparse(referer).netloc}"
+                    )
+                    headers["Origin"] = ref_origin
+                except Exception:
+                    pass
+            else:
                 headers["Origin"] = "https://www.udemy.com"
 
         if custom_headers:
@@ -599,8 +647,10 @@ class AsyncHTTPClient:
             else:
                 headers = kwargs.get("headers")
 
+            ua_str = str((headers or {}).get("User-Agent", ""))
             is_mobile_request = (
-                "UdemyAndroid" in str((headers or {}).get("User-Agent", ""))
+                "UdemyAndroid" in ua_str
+                or "okhttp" in ua_str
                 or req_type == "mobile"
             )
 
@@ -796,10 +846,15 @@ class AsyncHTTPClient:
                 "accept",
                 "origin",
                 "content-type",
-                "sec-ch-ua",
-                "sec-ch-ua-mobile",
-                "sec-ch-ua-platform",
             }
+            if not is_mobile_request:
+                allowed_exact.update(
+                    {
+                        "sec-ch-ua",
+                        "sec-ch-ua-mobile",
+                        "sec-ch-ua-platform",
+                    }
+                )
             for k, v in headers.items():
                 k_lower = k.lower()
                 if (k_lower in allowed_exact or k_lower.startswith("x-")) and v is not None:
@@ -811,7 +866,39 @@ class AsyncHTTPClient:
         self, headers, kwargs, is_mobile_request, req_type
     ):
         """Full header pass-through for CloudScraper (server)."""
-        if is_mobile_request or req_type in ("api", "xhr", "mobile"):
+        is_okhttp = False
+        if headers:
+            ua_val = headers.get("User-Agent") or headers.get("user-agent") or ""
+            is_okhttp = "UdemyAndroid" in ua_val or "okhttp" in ua_val
+
+        if is_mobile_request or req_type == "mobile" or is_okhttp:
+            scraper_headers = dict(headers) if headers else {}
+            # Purge Chromium Client Hints and W3C Fetch Metadata for native mobile
+            for hint in (
+                "sec-ch-ua",
+                "sec-ch-ua-mobile",
+                "sec-ch-ua-platform",
+                "sec-fetch-site",
+                "sec-fetch-mode",
+                "sec-fetch-dest",
+                "sec-fetch-user",
+            ):
+                scraper_headers.pop(hint, None)
+                scraper_headers.pop(hint.title(), None)
+                scraper_headers.pop(hint.upper(), None)
+            for k in list(scraper_headers.keys()):
+                if k.lower() in (
+                    "sec-ch-ua",
+                    "sec-ch-ua-mobile",
+                    "sec-ch-ua-platform",
+                    "sec-fetch-site",
+                    "sec-fetch-mode",
+                    "sec-fetch-dest",
+                    "sec-fetch-user",
+                ):
+                    scraper_headers.pop(k, None)
+            scraper_headers["Accept-Encoding"] = "identity"
+        elif req_type in ("api", "xhr"):
             scraper_headers = dict(headers) if headers else {}
             scraper_headers["Accept-Encoding"] = "identity"
         else:
@@ -863,8 +950,10 @@ class AsyncHTTPClient:
             else:
                 headers = custom_headers
 
+            ua_str = str(headers.get("User-Agent", ""))
             is_mobile_request = (
-                "UdemyAndroid" in str(headers.get("User-Agent", ""))
+                "UdemyAndroid" in ua_str
+                or "okhttp" in ua_str
                 or req_type == "mobile"
             )
 

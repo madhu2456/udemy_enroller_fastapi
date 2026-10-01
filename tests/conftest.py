@@ -236,12 +236,25 @@ def guard_memory_ceiling():
         import resource
         import sys
 
-        usage = resource.getrusage(resource.RUSAGE_SELF)
         # Darwin (macOS) reports ru_maxrss in bytes; Linux and BSD report in kilobytes.
-        if sys.platform == "darwin":
-            peak_rss_mb = usage.ru_maxrss / (1024 * 1024)
-        else:
-            peak_rss_mb = usage.ru_maxrss / 1024
+        # On Linux, ru_maxrss in getrusage() can be inherited across execve() from a parent runner.
+        # Check /proc/self/status VmHWM first for the true process-level peak RSS.
+        peak_rss_mb = 0.0
+        if sys.platform.startswith("linux"):
+            try:
+                with open("/proc/self/status") as f:
+                    for line in f:
+                        if line.startswith("VmHWM:"):
+                            peak_rss_mb = int(line.split()[1]) / 1024
+                            break
+            except Exception:
+                pass
+        if peak_rss_mb == 0.0:
+            usage = resource.getrusage(resource.RUSAGE_SELF)
+            if sys.platform == "darwin":
+                peak_rss_mb = usage.ru_maxrss / (1024 * 1024)
+            else:
+                peak_rss_mb = usage.ru_maxrss / 1024
 
         if peak_rss_mb > 2048:
             pytest.fail(

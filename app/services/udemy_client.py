@@ -1657,7 +1657,7 @@ class UdemyClient:
         headers = {
             "User-Agent": "okhttp/4.9.2 UdemyAndroid 8.9.2(499) (phone)",
             "Referer": course.url or f"{constants.UDEMY_BASE_URL}/course/{course.slug}/",
-            "X-Requested-With": "XMLHttpRequest",
+            "X-Requested-With": "com.udemy.android",
         }
         access_token = self.cookie_dict.get("access_token")
         if access_token:
