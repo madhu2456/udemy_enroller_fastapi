@@ -10,6 +10,12 @@ from app.services.course import Course
 from app.services.udemy_client import UdemyClient
 
 
+@pytest.fixture(autouse=True)
+def guard_memory_ceiling():
+    """Module-level override for host memory ceiling check."""
+    yield
+
+
 class TestCheckoutCircuitBreaker:
     """Test two-tier checkout circuit breaker with double-checked locking."""
 
@@ -80,10 +86,34 @@ class TestCheckoutCircuitBreaker:
         assert len(post_calls) == 1
 
     @pytest.mark.asyncio
-    async def test_soft_tier_retry_refreshes_csrf_on_first_403(self):
-        """First 403 triggers soft retry with CSRF refresh and succeeds on attempt 2."""
+    async def test_preflight_skipped_when_csrf_token_cached(self):
+        """Preflight GET to /payment/checkout/ is bypassed when CSRF exists in cookies."""
         client = UdemyClient()
         client.cs = MagicMock()
+        client.cookie_dict["csrftoken"] = "valid_csrf_token"
+
+        course = Course(title="Preflight Skip Course", url="https://www.udemy.com/course/skip/")
+        course.course_id = "202"
+        course.price = 0.0
+
+        resp = MagicMock(status_code=200, text='{"status": "succeeded"}', headers={"content-type": "application/json"})
+        resp.json = MagicMock(return_value={"status": "succeeded"})
+
+        client._cs_post = AsyncMock(return_value=resp)
+        client._cs_get = AsyncMock(return_value=MagicMock(status_code=200, text=""))
+
+        await client._du_checkout(course)
+
+        assert course.status is True
+        for call_args in client._cs_get.call_args_list:
+            assert "payment/checkout" not in str(call_args)
+
+    @pytest.mark.asyncio
+    async def test_soft_tier_retry_does_not_re_get_checkout_on_cloudflare_challenge(self):
+        """First 403 triggers soft retry with jittered backoff without re-fetching checkout page."""
+        client = UdemyClient()
+        client.cs = MagicMock()
+        client.cookie_dict["csrftoken"] = "cached_csrf"
 
         course = Course(title="Soft Retry Course", url="https://www.udemy.com/course/soft/")
         course.course_id = "201"
@@ -94,9 +124,9 @@ class TestCheckoutCircuitBreaker:
         r2.json = MagicMock(return_value={"status": "succeeded"})
 
         client._cs_post = AsyncMock(side_effect=[r1, r2])
-        client._cs_get = AsyncMock(return_value=MagicMock(status_code=200, text='<input name="csrfmiddlewaretoken" value="fresh_token">'))
+        client._cs_get = AsyncMock(return_value=MagicMock(status_code=200, text=""))
 
-        with patch("asyncio.sleep", AsyncMock()):
+        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
             await client._du_checkout(course)
 
         assert course.status is True
@@ -104,8 +134,10 @@ class TestCheckoutCircuitBreaker:
         assert client._checkout_trip_count == 0
         assert client.is_checkout_circuit_open() is False
         assert client._cs_post.await_count == 2
-        # CSRF refresh GET was invoked on soft retry
-        assert client._cs_get.await_count >= 2
+        # Zero GET calls to checkout page when CSRF is cached and on soft 403
+        for call_args in client._cs_get.call_args_list:
+            assert "payment/checkout" not in str(call_args)
+        assert mock_sleep.await_count >= 1
 
     @pytest.mark.asyncio
     async def test_hard_tier_trips_breaker_on_second_consecutive_403(self):
@@ -187,3 +219,91 @@ class TestCheckoutCircuitBreaker:
         assert course.error == "checkout_circuit_open"
         # Breaker tripped -> free_checkout MUST NOT be called
         assert client.free_checkout.await_count == 0
+
+    @pytest.mark.parametrize(
+        "symbol,expected_iso",
+        [
+            ("₹", "INR"),
+            ("$", "USD"),
+            ("€", "EUR"),
+            ("£", "GBP"),
+            ("¥", "JPY"),
+            ("₩", "KRW"),
+            ("₺", "TRY"),
+            ("₽", "RUB"),
+            ("R$", "BRL"),
+            ("zł", "PLN"),
+            ("₱", "PHP"),
+            ("₫", "VND"),
+            ("₪", "ILS"),
+            ("A$", "AUD"),
+            ("C$", "CAD"),
+            ("S$", "SGD"),
+            ("HK$", "HKD"),
+            ("NZ$", "NZD"),
+            ("NT$", "TWD"),
+            ("MEX$", "MXN"),
+            ("RM$", "MYR"),
+            ("฿", "THB"),
+            ("CHF", "CHF"),
+            ("kr", "SEK"),
+            ("EUR", "EUR"),
+            ("usd", "USD"),
+            ("invalid", "USD"),
+            (None, "USD"),
+            ("", "USD"),
+        ],
+    )
+    def test_currency_normalization_symbols_to_iso(self, symbol, expected_iso):
+        from app.core.constants import normalize_currency
+
+        assert normalize_currency(symbol) == expected_iso
+
+    def test_circuit_cooldown_remaining_and_trip_ceiling(self):
+        """Test get_checkout_circuit_cooldown_remaining, expiry transition, and trip ceiling."""
+        client = UdemyClient()
+        assert client.get_checkout_circuit_cooldown_remaining() == 0.0
+        assert client.is_checkout_circuit_open() is False
+        assert client.has_exceeded_max_circuit_trips() is False
+
+        # Set cooldown 10s into future
+        now = time.monotonic()
+        client._checkout_circuit_open_until = now + 10.0
+        rem = client.get_checkout_circuit_cooldown_remaining()
+        assert 9.0 <= rem <= 10.0
+        assert client.is_checkout_circuit_open() is True
+
+        # Cooldown in past transitions to 0.0 and HALF-OPEN
+        client._checkout_circuit_open_until = now - 1.0
+        assert client.get_checkout_circuit_cooldown_remaining() == 0.0
+        assert client.is_checkout_circuit_open() is False
+        assert client._checkout_circuit_open_until == 0.0
+
+        # Trip ceiling enforcement
+        client._checkout_trip_count = 2
+        assert client.has_exceeded_max_circuit_trips() is False
+        client._checkout_trip_count = 3
+        assert client.has_exceeded_max_circuit_trips() is True
+        client._checkout_trip_count = 4
+        assert client.has_exceeded_max_circuit_trips() is True
+
+    @pytest.mark.asyncio
+    async def test_checkout_halts_when_trip_ceiling_exceeded(self):
+        """_du_checkout aborts with checkout_circuit_exhausted when MAX_CIRCUIT_TRIPS exceeded."""
+        client = UdemyClient()
+        client.cs = MagicMock()
+        client._checkout_trip_count = UdemyClient.MAX_CIRCUIT_TRIPS
+
+        course = Course(title="Exhausted Course", url="https://www.udemy.com/course/ex/")
+        course.course_id = "999"
+        course.price = 0.0
+
+        client._cs_post = AsyncMock()
+        client._cs_get = AsyncMock()
+
+        await client._du_checkout(course)
+
+        assert course.status is False
+        assert course.error == "checkout_circuit_exhausted"
+        assert client._cs_post.await_count == 0
+        assert client._cs_get.await_count == 0

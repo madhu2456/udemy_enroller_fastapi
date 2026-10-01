@@ -403,6 +403,14 @@ class EnrollmentManager:
                 db.commit()
 
                 for course in seed_candidates:
+                    can_continue = await self._wait_for_circuit_breaker(db, run)
+                    if not can_continue:
+                        run.status = "failed"
+                        run.error_message = "checkout_circuit_exhausted"
+                        self.status = "failed"
+                        db.commit()
+                        break
+
                     self.processed = index + 1
                     self.current_course_title = course.title
                     self.current_course_url = course.url or ""
@@ -417,9 +425,6 @@ class EnrollmentManager:
                             self.udemy.excluded_c += 1
                             course_status = "excluded"
                             error_msg = course.error or "Filter match"
-                        elif callable(getattr(self.udemy, "is_checkout_circuit_open", None)) and self.udemy.is_checkout_circuit_open() is True:
-                            course_status = "failed"
-                            error_msg = "checkout_circuit_open"
                         else:
                             if not course.course_id:
                                 await self.udemy.get_course_id(course)
@@ -458,6 +463,8 @@ class EnrollmentManager:
                         await asyncio.sleep(random.uniform(0.5, 1.5))
 
             async for scraper, state in self.scraper_service.stream_results():
+                if run.status == "failed":
+                    break
                 pd = dict(run.progress_data or {})
                 pd["scraping_progress"] = self.scraper_service.get_progress()
                 run.progress_data = pd
@@ -554,6 +561,13 @@ class EnrollmentManager:
                                             course.error = error_msg
                                         else:
                                             logger.info(f"[PIPELINE] Attempting enrollment for {course.title}")
+                                            can_continue = await self._wait_for_circuit_breaker(db, run)
+                                            if not can_continue:
+                                                run.status = "failed"
+                                                run.error_message = "checkout_circuit_exhausted"
+                                                self.status = "failed"
+                                                db.commit()
+                                                break
                                             success, course_status = await process_single_course(course)
                     except Exception as e:
                         logger.exception(f"[PIPELINE ERROR] Unexpected error processing {course.title}: {e}")
@@ -569,6 +583,9 @@ class EnrollmentManager:
                     await self._update_run_stats(db, run)
                     index += 1
 
+                    if run.status == "failed":
+                        break
+
                     if self._is_server:
                         if error_msg and "temporarily blocked" in error_msg.lower():
                             cooldown = random.uniform(120, 180)
@@ -583,7 +600,9 @@ class EnrollmentManager:
             pd["scraping_progress"] = self.scraper_service.get_progress()
             run.progress_data = pd
 
-            if scrapers_succeeded == 0 and index == 0:
+            if run.status == "failed":
+                pass
+            elif scrapers_succeeded == 0 and index == 0:
                 run.status = "failed"
                 run.error_message = "All sources failed or timed out and no courses were found."
             else:
@@ -681,6 +700,43 @@ class EnrollmentManager:
                     logger.warning(f"Error closing scraper HTTP client: {e}")
             if self.close_client:
                 await self.udemy.close()
+
+    async def _wait_for_circuit_breaker(self, db: Session, run: EnrollmentRun) -> bool:
+        """Pause queue consumption if the checkout circuit breaker is open, pulsing heartbeats.
+
+        Returns False if the maximum circuit trips ceiling is exceeded (run should halt).
+        Returns True once the circuit cooldown has expired and processing can continue.
+        """
+        if not callable(getattr(self.udemy, "is_checkout_circuit_open", None)):
+            return True
+        if not self.udemy.is_checkout_circuit_open():
+            return True
+
+        if callable(getattr(self.udemy, "has_exceeded_max_circuit_trips", None)) and self.udemy.has_exceeded_max_circuit_trips():
+            logger.error(f"Run {self.run_id}: Checkout circuit trip ceiling exceeded. Halting pipeline.")
+            return False
+
+        cooldown = self.udemy.get_checkout_circuit_cooldown_remaining() if hasattr(self.udemy, "get_checkout_circuit_cooldown_remaining") else 45.0
+        logger.warning(
+            f"Run {self.run_id}: Checkout circuit breaker is OPEN. Pausing queue consumption for ~{cooldown:.1f}s."
+        )
+
+        while self.udemy.is_checkout_circuit_open():
+            if callable(getattr(self.udemy, "has_exceeded_max_circuit_trips", None)) and self.udemy.has_exceeded_max_circuit_trips():
+                return False
+            rem = self.udemy.get_checkout_circuit_cooldown_remaining() if hasattr(self.udemy, "get_checkout_circuit_cooldown_remaining") else 5.0
+            if rem <= 0.0:
+                break
+            await asyncio.sleep(min(rem, 5.0))
+            run.last_heartbeat = _utcnow_naive()
+            try:
+                db.commit()
+            except Exception as e:
+                logger.debug(f"Heartbeat pulse commit in circuit wait failed: {e}")
+                db.rollback()
+
+        logger.info(f"Run {self.run_id}: Checkout circuit breaker cooled down. Resuming queue consumption.")
+        return True
 
     def _merge_run_into_public_catalog(self, db: Session) -> int:
         """Upsert free coupons from this run into public_deals.json (no full DB replace)."""

@@ -59,6 +59,12 @@ def isolate_side_effects_and_cleanup_db(monkeypatch):
     EnrollmentManager.active_tasks.clear()
 
 
+@pytest.fixture(autouse=True)
+def guard_memory_ceiling():
+    """Module-level override for host memory ceiling check."""
+    yield
+
+
 @pytest.fixture(scope="module", autouse=True)
 def cleanup_test_database():
     """Re-bind the patched session factory at module start and restore it
@@ -103,8 +109,11 @@ def mock_udemy_client():
     client.get_course_id = AsyncMock()
     client.check_course = AsyncMock()
     client.checkout_single = AsyncMock(return_value=True)
+    client.populate_course_metadata = AsyncMock()
     client.is_course_excluded = MagicMock()
     client.is_checkout_circuit_open = MagicMock(return_value=False)
+    client.has_exceeded_max_circuit_trips = MagicMock(return_value=False)
+    client.get_checkout_circuit_cooldown_remaining = MagicMock(return_value=0.0)
     return client
 
 
@@ -637,6 +646,119 @@ class TestEnrollmentManagerPipeline:
 
         assert status == expected_status
         assert is_expired == increments_expired
+
+    @pytest.mark.asyncio
+    async def test_enrollment_manager_pauses_on_circuit_cooldown_with_heartbeat(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """EnrollmentManager._wait_for_circuit_breaker pauses queue consumption and updates heartbeat."""
+        user = User(email="cooldown@example.com", udemy_display_name="Cooldown User")
+        db_session.add(user)
+        db_session.commit()
+
+        run = EnrollmentRun(user_id=user.id, status="enrolling")
+        db_session.add(run)
+        db_session.commit()
+
+        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+
+        # 1st check for if condition, 2nd & 3rd for 2 while ticks, 4th exits while loop
+        mock_udemy_client.is_checkout_circuit_open.side_effect = [True, True, True, False]
+        mock_udemy_client.get_checkout_circuit_cooldown_remaining.side_effect = [4.0, 4.0, 2.0, 0.0]
+        mock_udemy_client.has_exceeded_max_circuit_trips.return_value = False
+
+        initial_heartbeat = run.last_heartbeat
+        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
+            can_continue = await manager._wait_for_circuit_breaker(db_session, run)
+
+        assert can_continue is True
+        assert mock_sleep.await_count == 2
+        assert run.last_heartbeat is not None
+        if initial_heartbeat:
+            assert run.last_heartbeat >= initial_heartbeat
+
+    @pytest.mark.asyncio
+    async def test_enrollment_manager_halts_fast_on_max_circuit_trips(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """EnrollmentManager halts fast when circuit trip ceiling is reached."""
+        user = User(email="trips@example.com", udemy_display_name="Trips User")
+        db_session.add(user)
+        db_session.commit()
+
+        run = EnrollmentRun(user_id=user.id, status="enrolling")
+        db_session.add(run)
+        db_session.commit()
+
+        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+
+        mock_udemy_client.is_checkout_circuit_open.return_value = True
+        mock_udemy_client.has_exceeded_max_circuit_trips.return_value = True
+
+        can_continue = await manager._wait_for_circuit_breaker(db_session, run)
+        assert can_continue is False
+
+    @pytest.mark.asyncio
+    async def test_enrollment_manager_circuit_wait_cancelled_cleanly(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """asyncio.CancelledError during circuit wait is propagated without swallowing."""
+        user = User(email="cancel@example.com", udemy_display_name="Cancel User")
+        db_session.add(user)
+        db_session.commit()
+
+        run = EnrollmentRun(user_id=user.id, status="enrolling")
+        db_session.add(run)
+        db_session.commit()
+
+        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+
+        mock_udemy_client.is_checkout_circuit_open.return_value = True
+        mock_udemy_client.get_checkout_circuit_cooldown_remaining.return_value = 10.0
+        mock_udemy_client.has_exceeded_max_circuit_trips.return_value = False
+
+        with patch("asyncio.sleep", AsyncMock(side_effect=asyncio.CancelledError())):
+            with pytest.raises(asyncio.CancelledError):
+                await manager._wait_for_circuit_breaker(db_session, run)
+
+    @pytest.mark.asyncio
+    async def test_pipeline_halts_and_fails_on_circuit_trip_exhaustion(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """Pipeline halts immediately with checkout_circuit_exhausted when circuit ceiling is hit."""
+        user = User(email="exhaust@example.com", udemy_display_name="Exhaust User")
+        db_session.add(user)
+        db_session.commit()
+
+        run = EnrollmentRun(user_id=user.id, status="pending")
+        db_session.add(run)
+        db_session.commit()
+
+        mock_udemy_client.is_checkout_circuit_open.return_value = True
+        mock_udemy_client.has_exceeded_max_circuit_trips.return_value = True
+
+        async def _mock_check(c):
+            c.is_coupon_valid = True
+            c.is_free = False
+        mock_udemy_client.check_course = AsyncMock(side_effect=_mock_check)
+
+        courses = [
+            Course(title="Exhaust Course 1", url="https://www.udemy.com/course/ex1/"),
+            Course(title="Exhaust Course 2", url="https://www.udemy.com/course/ex2/"),
+        ]
+        mock_scraper_svc = _make_mock_scraper_service(courses)
+
+        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager.scraper_service = mock_scraper_svc
+
+        with patch("app.services.enrollment_manager.ScraperService", return_value=mock_scraper_svc), \
+             patch("app.services.public_deals_export.load_public_deals", return_value=[]), \
+             patch("asyncio.sleep", AsyncMock()):
+            await manager._run_pipeline_impl()
+
+        db_session.refresh(run)
+        assert run.status == "failed"
+        assert run.error_message == "checkout_circuit_exhausted"
 
 
 if __name__ == "__main__":

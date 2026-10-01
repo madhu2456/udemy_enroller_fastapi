@@ -85,6 +85,8 @@ async def test_telemetry_status_assignment(monkeypatch):
     udemy_mock.populate_course_metadata = AsyncMock()
     udemy_mock.check_course = AsyncMock()
     udemy_mock.is_course_excluded = MagicMock()
+    udemy_mock.is_checkout_circuit_open = MagicMock(return_value=False)
+    udemy_mock.has_exceeded_max_circuit_trips = MagicMock(return_value=False)
 
     manager = EnrollmentManager(user_id=1, run_id=1, udemy_client=udemy_mock, settings={"sites": {"FreeCourseSites": True}})
 

@@ -1,6 +1,8 @@
 """Application constants and URLs."""
 
 import asyncio
+import re
+from typing import Optional
 
 UDEMY_BASE_URL = "https://www.udemy.com"
 UDEMY_API_BASE = f"{UDEMY_BASE_URL}/api-2.0"
@@ -81,3 +83,49 @@ BLACKLIST_IDS = {"562413829"}
 # courses with price=None are never treated as free (is_valid_free requires
 # price is not None AND price == 0). Shared constant for bridge, enroll, check.
 FM036_PRICE_UNKNOWN: float = 9999.0
+
+SYMBOL_TO_ISO: dict[str, str] = {
+    "₹": "INR",
+    "$": "USD",
+    "€": "EUR",
+    "£": "GBP",
+    "¥": "JPY",
+    "₩": "KRW",
+    "₺": "TRY",
+    "₽": "RUB",
+    "R$": "BRL",
+    "zł": "PLN",
+    "₱": "PHP",
+    "₫": "VND",
+    "₪": "ILS",
+    "A$": "AUD",
+    "C$": "CAD",
+    "S$": "SGD",
+    "HK$": "HKD",
+    "NZ$": "NZD",
+    "NT$": "TWD",
+    "MEX$": "MXN",
+    "RM": "MYR",
+    "RM$": "MYR",
+    "฿": "THB",
+    "CHF": "CHF",
+    "kr": "SEK",
+}
+
+ISO_CURRENCY_REGEX: re.Pattern = re.compile(r"^[A-Z]{3}$")
+
+
+def normalize_currency(raw: Optional[str], default: str = "USD") -> str:
+    """Normalize raw currency string (symbol or ISO) to a valid 3-letter ISO code."""
+    fallback = (default or "USD").upper()
+    if not raw or not isinstance(raw, str):
+        return fallback
+    cleaned = raw.strip()
+    if not cleaned:
+        return fallback
+    if cleaned in SYMBOL_TO_ISO:
+        return SYMBOL_TO_ISO[cleaned]
+    cleaned_upper = cleaned.upper()
+    if ISO_CURRENCY_REGEX.match(cleaned_upper):
+        return cleaned_upper
+    return fallback

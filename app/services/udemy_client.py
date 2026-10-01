@@ -21,7 +21,7 @@ from app.services.udemy_validation import is_udemy_url
 from app.core import constants
 from app.logging_config import sanitize_log_message
 
-from app.core.constants import BLACKLIST_IDS
+from app.core.constants import BLACKLIST_IDS, SYMBOL_TO_ISO as SYMBOL_TO_ISO, normalize_currency
 
 
 def _is_valid_course_id(cid: Any) -> bool:
@@ -45,6 +45,7 @@ class LoginException(Exception):
 class UdemyClient:
     """Handles asynchronous authentication and enrollment using standard client emulation."""
 
+    MAX_CIRCUIT_TRIPS: int = 3
     _checkout_consecutive_403s: int = 0
     _checkout_circuit_open_until: float = 0.0
     _checkout_trip_count: int = 0
@@ -113,15 +114,24 @@ class UdemyClient:
         self._account_block_active = False
         self._account_block_cooldown_until = None
 
-    def is_checkout_circuit_open(self) -> bool:
+    def get_checkout_circuit_cooldown_remaining(self) -> float:
+        """Return remaining seconds on the checkout circuit cooldown, or 0.0 if closed/half-open."""
         until = getattr(self, "_checkout_circuit_open_until", 0.0)
         if until <= 0.0:
-            return False
-        if time.monotonic() >= until:
+            return 0.0
+        now = time.monotonic()
+        if now >= until:
             logger.info("[CIRCUIT BREAKER] Checkout cooldown expired; transitioning to HALF-OPEN")
             self._checkout_circuit_open_until = 0.0
-            return False
-        return True
+            return 0.0
+        return max(0.0, until - now)
+
+    def has_exceeded_max_circuit_trips(self) -> bool:
+        """Check if checkout circuit breaker has exceeded the maximum trip ceiling."""
+        return getattr(self, "_checkout_trip_count", 0) >= self.MAX_CIRCUIT_TRIPS
+
+    def is_checkout_circuit_open(self) -> bool:
+        return self.get_checkout_circuit_cooldown_remaining() > 0.0
 
     def _init_cloudscraper(self):
         """Create a persistent CloudScraper session for enrollment (DUCE-style)."""
@@ -1039,9 +1049,25 @@ class UdemyClient:
 
         # A course is free if final_price is 0 or it's explicitly marked as free
         is_free_result = pricing_result.get("is_free", False) or final_price == 0
-        # Prefer ISO currency code over symbol; Udemy checkout requires valid ISO codes.
-        currency = pricing_result.get("price", {}).get("currency") or pricing_result.get("price", {}).get("currency_symbol") or ""
-        course.currency = currency
+        # Multi-tier currency resolution:
+        # Tier 1: pricing_result.price.currency
+        # Tier 2: pricing_result.list_price.currency
+        # Tier 3: purchase_data.list_price.currency
+        # Tier 4: pricing_result.currency
+        # Tier 5: Symbol fallback from currency_symbol
+        raw_currency = (
+            pricing_result.get("price", {}).get("currency")
+            or pricing_result.get("list_price", {}).get("currency")
+            or purchase_data.get("list_price", {}).get("currency")
+            or pricing_result.get("currency")
+            or pricing_result.get("price", {}).get("currency_symbol")
+            or ""
+        )
+        resolved_currency = normalize_currency(raw_currency, default=self.currency or "USD")
+        course.currency = resolved_currency
+        currency = resolved_currency
+        if resolved_currency and resolved_currency != "USD":
+            self.currency = resolved_currency.lower()
 
         log_msg = (
             f"[CHECK_COURSE PRICE] {course.title} | list_price={lp} | final_price={final_price} | "
@@ -1290,6 +1316,11 @@ class UdemyClient:
             course.status = False
             return
 
+        if self.has_exceeded_max_circuit_trips():
+            course.status = False
+            course.error = "checkout_circuit_exhausted"
+            return
+
         if self.is_checkout_circuit_open():
             course.status = False
             course.error = "checkout_circuit_open"
@@ -1301,6 +1332,11 @@ class UdemyClient:
             self._checkout_semaphore = sem
 
         async with sem:
+            if self.has_exceeded_max_circuit_trips():
+                course.status = False
+                course.error = "checkout_circuit_exhausted"
+                return
+
             if self.is_checkout_circuit_open():
                 course.status = False
                 course.error = "checkout_circuit_open"
@@ -1315,26 +1351,35 @@ class UdemyClient:
             )
             logger.info(sanitize_log_message(log_msg))
 
-            # Step 1: Preflight GET to checkout page to warm up the session
+            # Step 1: Preflight GET to checkout page (bypassed if CSRF token is present)
             checkout_page_url = "https://www.udemy.com/payment/checkout/"
-            checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
-            if checkout_resp is not None:
-                try:
-                    fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
-                    if fresh_csrf:
-                        self.cookie_dict["csrftoken"] = fresh_csrf
-                        self.cookie_dict["csrf_token"] = fresh_csrf
-                except Exception:
-                    pass
+            csrf_token = self.cookie_dict.get("csrftoken") or self.cookie_dict.get("csrf_token") or ""
+            if not csrf_token:
+                checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
+                if checkout_resp is not None:
+                    try:
+                        fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
+                        if fresh_csrf:
+                            csrf_token = fresh_csrf
+                            self.cookie_dict["csrftoken"] = fresh_csrf
+                            self.cookie_dict["csrf_token"] = fresh_csrf
+                    except Exception:
+                        pass
 
             # Step 2: GET the course landing page to set checkout context cookies
             course_page_url = f"https://www.udemy.com/course/{course.slug}/"
-            await self._cs_get(course_page_url, timeout=25)
+            landing_resp = await self._cs_get(course_page_url, timeout=25)
+            if not csrf_token and landing_resp:
+                fresh_csrf = await self._extract_csrf_from_html(getattr(landing_resp, "text", "") or "")
+                if fresh_csrf:
+                    csrf_token = fresh_csrf
+                    self.cookie_dict["csrftoken"] = fresh_csrf
+                    self.cookie_dict["csrf_token"] = fresh_csrf
 
             # Step 3: Build payload.
             # Udemy checkout expects the FINAL price the user pays. For 100% off coupons
             # and free courses, this is always 0. check_course already validates the coupon.
-            checkout_currency = (course.currency or self.currency or "USD").upper()
+            checkout_currency = normalize_currency(course.currency, default=self.currency or "USD")
 
             def _build_payload(amount: float):
                 return {
@@ -1382,18 +1427,20 @@ class UdemyClient:
             for attempt in range(max_attempts):
                 logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
 
-                # On retry, refresh checkout page and apply backoff
+                # On retry, refresh checkout page only if CSRF is missing and apply backoff
                 if attempt > 0:
-                    checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
-                    if checkout_resp is not None:
-                        try:
-                            fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
-                            if fresh_csrf:
-                                headers["X-CSRF-Token"] = fresh_csrf
-                                self.cookie_dict["csrftoken"] = fresh_csrf
-                                self.cookie_dict["csrf_token"] = fresh_csrf
-                        except Exception:
-                            pass
+                    cached_csrf = self.cookie_dict.get("csrftoken") or self.cookie_dict.get("csrf_token") or ""
+                    if not cached_csrf:
+                        checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
+                        if checkout_resp is not None:
+                            try:
+                                fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
+                                if fresh_csrf:
+                                    headers["X-CSRF-Token"] = fresh_csrf
+                                    self.cookie_dict["csrftoken"] = fresh_csrf
+                                    self.cookie_dict["csrf_token"] = fresh_csrf
+                            except Exception:
+                                pass
                     await asyncio.sleep(min(2 + attempt, 8))
 
                 # Always send amount=0 — check_course already validated the coupon.
@@ -1481,6 +1528,13 @@ class UdemyClient:
                     self._checkout_consecutive_403s += 1
                     if self._checkout_consecutive_403s >= 2:
                         self._checkout_trip_count += 1
+                        if self._checkout_trip_count >= self.MAX_CIRCUIT_TRIPS:
+                            course.status = False
+                            course.error = "checkout_circuit_exhausted"
+                            logger.error(
+                                f"[CHECKOUT_CIRCUIT_BREAKER] Trip ceiling reached ({self.MAX_CIRCUIT_TRIPS}). Halting checkout."
+                            )
+                            return
                         backoff = min(45 * (2 ** (self._checkout_trip_count - 1)), 180)
                         self._checkout_circuit_open_until = time.monotonic() + backoff
                         logger.warning(
@@ -1491,19 +1545,9 @@ class UdemyClient:
                         course.error = "checkout_circuit_open"
                         return
 
-                    # 1st 403: Soft retry with CSRF refresh
-                    logger.info(f"[DU_CHECKOUT] Soft 403 challenge encountered for {course.title}. Refreshing CSRF...")
-                    try:
-                        checkout_resp = await self._cs_get("https://www.udemy.com/payment/checkout/", timeout=25)
-                        if checkout_resp is not None:
-                            fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
-                            if fresh_csrf:
-                                headers["X-CSRF-Token"] = fresh_csrf
-                                self.cookie_dict["csrftoken"] = fresh_csrf
-                                self.cookie_dict["csrf_token"] = fresh_csrf
-                    except Exception as e:
-                        logger.debug(f"CSRF refresh failed on soft retry: {e}")
-                    await asyncio.sleep(random.uniform(2.5, 4.0))
+                    # 1st 403: Soft retry with backoff, retaining CSRF without hitting checkout HTML
+                    logger.info(f"[DU_CHECKOUT] Soft 403 challenge encountered for {course.title}. Applying backoff...")
+                    await asyncio.sleep(random.uniform(3.0, 5.0))
                     continue
 
                 # Any non-403 application response resets consecutive 403 streak
