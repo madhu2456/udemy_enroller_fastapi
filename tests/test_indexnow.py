@@ -373,7 +373,9 @@ _STATIC_PAGE_TEMPLATES = {  # page path → template file (mirrors seo.py routes
 # same time as STATIC_PAGE_LASTMOD (see procedure above).
 _STATIC_PAGE_TEMPLATE_HASHES = {
     "/faq": "2bfa3b7d462bddc1a882ee86ac8ccb724c1e0074c8735336111973a38c062d51",
-    "/about": "7a8cfb6059dc250a6313c47ba3595f319af8697ce7efb390180a023f992d7032",
+    # F064 added the SoftwareApplication `publisher` @id ref → template content
+    # changed, so both the hash pin and the lastmod were re-pinned.
+    "/about": "8b02a654cac05d405beebf7eefb0007608b2d9944982590a1d9553be004f8db9",
     "/guides": "8b4527e3d8351d0275d567275923c01f259968ab1a223f1d8491238d77bc26bc",
     "/privacy": "12c0e2397f44735676983be0b7cfcf391caafb58fd343207ebbf183199114e96",
     "/contact": "356993bba017ffa1526d7d50243a4021aaee9b5c5850e8e4c6f4f957b7370d07",
