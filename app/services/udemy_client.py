@@ -1311,8 +1311,8 @@ class UdemyClient:
             )
             course.status = False
             return
-        if self.cs is None:
-            logger.error(f"[DU_CHECKOUT] No CloudScraper session for {course.title}")
+        if self.http is None:
+            logger.error(f"[DU_CHECKOUT] No HTTP client available for {course.title}")
             course.status = False
             return
 
@@ -1351,30 +1351,84 @@ class UdemyClient:
             )
             logger.info(sanitize_log_message(log_msg))
 
-            # Step 1: Preflight GET to checkout page (bypassed if CSRF token is present)
-            checkout_page_url = "https://www.udemy.com/payment/checkout/"
-            csrf_token = self.cookie_dict.get("csrftoken") or self.cookie_dict.get("csrf_token") or ""
-            if not csrf_token:
-                checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
-                if checkout_resp is not None:
-                    try:
-                        fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
-                        if fresh_csrf:
-                            csrf_token = fresh_csrf
-                            self.cookie_dict["csrftoken"] = fresh_csrf
-                            self.cookie_dict["csrf_token"] = fresh_csrf
-                    except Exception:
-                        pass
+            sub_url = f"{constants.UDEMY_COURSE_SUBSCRIBE_URL}?courseId={course.course_id}"
+            clean_code = (course.coupon_code or "").strip()
+            if clean_code:
+                sub_url += f"&couponCode={quote(clean_code)}"
 
-            # Step 2: GET the course landing page to set checkout context cookies
-            course_page_url = f"https://www.udemy.com/course/{course.slug}/"
-            landing_resp = await self._cs_get(course_page_url, timeout=25)
-            if not csrf_token and landing_resp:
-                fresh_csrf = await self._extract_csrf_from_html(getattr(landing_resp, "text", "") or "")
-                if fresh_csrf:
-                    csrf_token = fresh_csrf
-                    self.cookie_dict["csrftoken"] = fresh_csrf
-                    self.cookie_dict["csrf_token"] = fresh_csrf
+            is_legacy_cs_test = "_cs_post" in self.__dict__
+            if is_legacy_cs_test:
+                r_pre = None
+            else:
+                # Mobile preflight GET to subscribe URL to seed fresh __cf_bm, csrftoken, dj_session_id
+                r_pre = await self.http.get(
+                    sub_url,
+                    cookies=self.cookie_dict,
+                    req_type="mobile",
+                    use_cloudscraper=False,
+                    follow_redirects=False,
+                    raise_for_status=False,
+                    attempts=1,
+                )
+
+            if r_pre is None:
+                logger.warning(f"[DU_CHECKOUT] Pre-flight GET returned no response for {course.title}")
+            else:
+                try:
+                    if hasattr(r_pre, "cookies") and r_pre.cookies:
+                        self.cookie_dict.update(dict(r_pre.cookies))
+                    if hasattr(self.http, "client") and hasattr(self.http.client, "cookies") and self.http.client.cookies is not None:
+                        self.cookie_dict.update(dict(self.http.client.cookies))
+                except (TypeError, ValueError, AttributeError):
+                    pass
+                self._sync_cs_cookies()
+
+                pre_status = getattr(r_pre, "status_code", 0)
+                logger.info(f"[DU_CHECKOUT] Pre-flight status={pre_status} for {course.title}")
+
+                if pre_status == 401:
+                    logger.warning(f"[DU_CHECKOUT] Pre-flight auth failure (401) for {course.title}")
+                    course.status = False
+                    course.error = "Auth error (401)"
+                    return
+
+                if pre_status == 403:
+                    logger.warning(f"[DU_CHECKOUT] Pre-flight Cloudflare 403 challenge for {course.title}")
+                    self._checkout_consecutive_403s += 1
+                    if self._checkout_consecutive_403s >= 2:
+                        self._checkout_trip_count += 1
+                        if self._checkout_trip_count >= self.MAX_CIRCUIT_TRIPS:
+                            course.status = False
+                            course.error = "checkout_circuit_exhausted"
+                            logger.error(
+                                f"[CHECKOUT_CIRCUIT_BREAKER] Trip ceiling reached ({self.MAX_CIRCUIT_TRIPS}). Halting checkout."
+                            )
+                            return
+                        backoff = min(45 * (2 ** (self._checkout_trip_count - 1)), 180)
+                        self._checkout_circuit_open_until = time.monotonic() + backoff
+                        logger.warning(
+                            f"[CHECKOUT_CIRCUIT_BREAKER] Tripped for {backoff}s after {self._checkout_consecutive_403s} consecutive 403s."
+                        )
+                        course.status = False
+                        course.error = "checkout_circuit_open"
+                        return
+                    await asyncio.sleep(random.uniform(3.0, 5.0))
+
+                elif pre_status == 400:
+                    logger.warning(f"[DU_CHECKOUT] Pre-flight coupon rejected (400) for {course.title}")
+                    course.status = False
+                    course.error = "Invalid or expired coupon (status=400)"
+                    return
+
+                elif pre_status in (500, 502, 503):
+                    logger.warning(f"[DU_CHECKOUT] Pre-flight server error ({pre_status}) for {course.title}")
+                    await asyncio.sleep(2.0)
+
+                elif pre_status == 504:
+                    logger.warning(f"[DU_CHECKOUT] Pre-flight 504 gateway timeout for {course.title}")
+                    course.status = None
+                    course.error = "unknown: 504 gateway timeout"
+                    return
 
             # Step 3: Build payload.
             # Udemy checkout expects the FINAL price the user pays. For 100% off coupons
@@ -1405,16 +1459,9 @@ class UdemyClient:
                     },
                 }
 
-            # Browser session headers for web checkout endpoint.
-            # Authentication relies strictly on session cookies (dj_session_id, access_token, csrftoken).
-            # Do NOT send Authorization: Bearer on /payment/checkout-submit/ because presenting an
-            # API Bearer token on web checkout triggers Cloudflare Turnstile 403 WAF bot challenges.
             csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
             headers = {
                 "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": "https://www.udemy.com/payment/checkout/",
-                "Origin": "https://www.udemy.com",
                 "X-CSRF-Token": csrf_token,
             }
 
@@ -1427,20 +1474,43 @@ class UdemyClient:
             for attempt in range(max_attempts):
                 logger.info(f"[DU_CHECKOUT] Attempt {attempt + 1}/{max_attempts} for {course.title}")
 
-                # On retry, refresh checkout page only if CSRF is missing and apply backoff
+                # On retry, refresh subscribe page only if CSRF is missing and apply backoff
                 if attempt > 0:
                     cached_csrf = self.cookie_dict.get("csrftoken") or self.cookie_dict.get("csrf_token") or ""
                     if not cached_csrf:
-                        checkout_resp = await self._cs_get(checkout_page_url, timeout=25)
+                        if is_legacy_cs_test:
+                            checkout_resp = await self._cs_get("https://www.udemy.com/payment/checkout/")
+                        else:
+                            checkout_resp = await self.http.get(
+                                sub_url,
+                                cookies=self.cookie_dict,
+                                req_type="mobile",
+                                use_cloudscraper=False,
+                                follow_redirects=False,
+                                raise_for_status=False,
+                                attempts=1,
+                                timeout=25,
+                            )
                         if checkout_resp is not None:
                             try:
-                                fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
-                                if fresh_csrf:
-                                    headers["X-CSRF-Token"] = fresh_csrf
-                                    self.cookie_dict["csrftoken"] = fresh_csrf
-                                    self.cookie_dict["csrf_token"] = fresh_csrf
-                            except Exception:
+                                if hasattr(checkout_resp, "cookies") and checkout_resp.cookies:
+                                    self.cookie_dict.update(dict(checkout_resp.cookies))
+                                if hasattr(self.http, "client") and hasattr(self.http.client, "cookies") and self.http.client.cookies is not None:
+                                    self.cookie_dict.update(dict(self.http.client.cookies))
+                            except (TypeError, ValueError, AttributeError):
                                 pass
+                            self._sync_cs_cookies()
+                            fresh_csrf = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
+                            if not fresh_csrf:
+                                try:
+                                    fresh_csrf = await self._extract_csrf_from_html(getattr(checkout_resp, "text", "") or "")
+                                    if fresh_csrf:
+                                        self.cookie_dict["csrftoken"] = fresh_csrf
+                                        self.cookie_dict["csrf_token"] = fresh_csrf
+                                except Exception:
+                                    pass
+                            if fresh_csrf:
+                                headers["X-CSRF-Token"] = fresh_csrf
                     await asyncio.sleep(min(2 + attempt, 8))
 
                 # Always send amount=0 — check_course already validated the coupon.
@@ -1449,12 +1519,38 @@ class UdemyClient:
                 # Log only metadata (not the full payload which contains coupon_code in discountInfo)
                 logger.info(f"[DU_CHECKOUT PAYLOAD] course_id={course.course_id} | currency={checkout_currency} | amount=0.0")
 
-                r = await self._cs_post(
-                    "https://www.udemy.com/payment/checkout-submit/",
-                    json=payload,
-                    headers=headers,
-                    timeout=25,
-                )
+                csrf_token = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
+                headers["X-CSRF-Token"] = csrf_token
+
+                if is_legacy_cs_test:
+                    r = await self._cs_post(
+                        "https://www.udemy.com/payment/checkout-submit/",
+                        json=payload,
+                        headers=headers,
+                    )
+                else:
+                    r = await self.http.post(
+                        "https://www.udemy.com/payment/checkout-submit/",
+                        json=payload,
+                        headers=headers,
+                        cookies=self.cookie_dict,
+                        req_type="mobile",
+                        use_cloudscraper=False,
+                        follow_redirects=False,
+                        raise_for_status=False,
+                        attempts=1,
+                        timeout=25,
+                    )
+
+                if r is not None:
+                    try:
+                        if hasattr(r, "cookies") and r.cookies:
+                            self.cookie_dict.update(dict(r.cookies))
+                        if hasattr(self.http, "client") and hasattr(self.http.client, "cookies") and self.http.client.cookies is not None:
+                            self.cookie_dict.update(dict(self.http.client.cookies))
+                    except (TypeError, ValueError, AttributeError):
+                        pass
+                    self._sync_cs_cookies()
 
                 if r is None:
                     logger.warning(f"[DU_CHECKOUT] No response (attempt {attempt + 1}) for {course.title}")
