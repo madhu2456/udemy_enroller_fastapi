@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup as bs
 from loguru import logger
 
 from app.services.course import Course
-from app.services.http_client import AsyncHTTPClient
+from app.services.http_client import AsyncHTTPClient, extract_cookie_dict
 from app.services.udemy_validation import is_udemy_url
 from app.core import constants
 from app.logging_config import sanitize_log_message
@@ -163,7 +163,7 @@ class UdemyClient:
         """Sync CloudScraper session cookies back into cookie_dict."""
         if self.cs is None:
             return
-        self.cookie_dict.update(self.cs.cookies.get_dict())
+        self.cookie_dict.update(extract_cookie_dict(self.cs.cookies))
 
     async def _cs_get(self, url: str, **kwargs) -> Optional[object]:
         """Async wrapper for CloudScraper GET."""
@@ -331,10 +331,11 @@ class UdemyClient:
                 raise LoginException("Could not connect to Udemy.")
 
             # Extract CSRF and update cookies
-            csrf_token = resp.cookies.get(
+            resp_cookies = extract_cookie_dict(resp.cookies)
+            csrf_token = resp_cookies.get(
                 "csrftoken"
             ) or await self._extract_csrf_from_html(resp.text)
-            self.cookie_dict.update(dict(resp.cookies))
+            self.cookie_dict.update(resp_cookies)
 
             if not csrf_token:
                 raise LoginException("CSRF token missing. Login restricted.")
@@ -370,7 +371,7 @@ class UdemyClient:
             if resp and (
                 "returnUrl" in resp.text or "dj_session_id" in str(resp.cookies)
             ):
-                self.cookie_dict.update(dict(resp.cookies))
+                self.cookie_dict.update(extract_cookie_dict(resp.cookies))
                 self.cookie_dict["csrf_token"] = csrf_token
                 self.is_authenticated = True
                 logger.info("  Login successful!")
@@ -1376,11 +1377,11 @@ class UdemyClient:
             else:
                 try:
                     if hasattr(r_pre, "cookies") and r_pre.cookies:
-                        self.cookie_dict.update(dict(r_pre.cookies))
+                        self.cookie_dict.update(extract_cookie_dict(r_pre.cookies))
                     if hasattr(self.http, "client") and hasattr(self.http.client, "cookies") and self.http.client.cookies is not None:
-                        self.cookie_dict.update(dict(self.http.client.cookies))
-                except (TypeError, ValueError, AttributeError):
-                    pass
+                        self.cookie_dict.update(extract_cookie_dict(self.http.client.cookies))
+                except Exception as exc:
+                    logger.debug(f"[DU_CHECKOUT] Pre-flight cookie extraction notice: {type(exc).__name__}: {exc}")
                 self._sync_cs_cookies()
 
                 pre_status = getattr(r_pre, "status_code", 0)
@@ -1494,11 +1495,11 @@ class UdemyClient:
                         if checkout_resp is not None:
                             try:
                                 if hasattr(checkout_resp, "cookies") and checkout_resp.cookies:
-                                    self.cookie_dict.update(dict(checkout_resp.cookies))
+                                    self.cookie_dict.update(extract_cookie_dict(checkout_resp.cookies))
                                 if hasattr(self.http, "client") and hasattr(self.http.client, "cookies") and self.http.client.cookies is not None:
-                                    self.cookie_dict.update(dict(self.http.client.cookies))
-                            except (TypeError, ValueError, AttributeError):
-                                pass
+                                    self.cookie_dict.update(extract_cookie_dict(self.http.client.cookies))
+                            except Exception as exc:
+                                logger.debug(f"[DU_CHECKOUT] Retry pre-flight cookie extraction notice: {type(exc).__name__}: {exc}")
                             self._sync_cs_cookies()
                             fresh_csrf = self.cookie_dict.get("csrftoken", "") or self.cookie_dict.get("csrf_token", "")
                             if not fresh_csrf:
@@ -1545,11 +1546,11 @@ class UdemyClient:
                 if r is not None:
                     try:
                         if hasattr(r, "cookies") and r.cookies:
-                            self.cookie_dict.update(dict(r.cookies))
+                            self.cookie_dict.update(extract_cookie_dict(r.cookies))
                         if hasattr(self.http, "client") and hasattr(self.http.client, "cookies") and self.http.client.cookies is not None:
-                            self.cookie_dict.update(dict(self.http.client.cookies))
-                    except (TypeError, ValueError, AttributeError):
-                        pass
+                            self.cookie_dict.update(extract_cookie_dict(self.http.client.cookies))
+                    except Exception as exc:
+                        logger.debug(f"[DU_CHECKOUT] Checkout response cookie extraction notice: {type(exc).__name__}: {exc}")
                     self._sync_cs_cookies()
 
                 if r is None:

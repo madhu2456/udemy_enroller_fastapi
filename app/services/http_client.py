@@ -1,17 +1,21 @@
 import asyncio
 import functools
+import http.cookiejar
 import ipaddress
 import random
 import socket
 import threading
 import time
-from typing import Dict, Optional, Union
+from collections.abc import Mapping
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
 import httpx
 from loguru import logger
 
 from app.logging_config import sanitize_log_message
+
+__all__ = ["AsyncHTTPClient", "extract_cookie_dict"]
 
 
 def _log_safe_url(url: str) -> str:
@@ -47,6 +51,102 @@ def _resolve_host_ips(host: str) -> tuple[str, ...]:
     """Resolve hostname to a tuple of IP address strings with LRU caching."""
     infos = socket.getaddrinfo(host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
     return tuple(sockaddr[0] for _family, _type, _proto, _canon, sockaddr in infos)
+
+
+def extract_cookie_dict(cookie_source: Any) -> dict[str, str]:
+    """Extract a flattened name-to-value dictionary of cookies resolving conflicts deterministically.
+
+    Bypasses httpx.Cookies and requests.cookies.RequestsCookieJar __getitem__ calls that
+    raise CookieConflict or CookieConflictError when multiple cookies exist with the same name
+    across distinct domains or paths.
+
+    Priority is evaluated via the tuple:
+      (1 if not is_expired else 0, val_score, domain_score, path_score, expires_score)
+    """
+    if cookie_source is None:
+        return {}
+
+    # Unwrap response object if passed directly
+    if hasattr(cookie_source, "cookies"):
+        cookie_source = getattr(cookie_source, "cookies", None)
+        if cookie_source is None:
+            return {}
+
+    # Fast-path for exact dict / plain mapping test mocks (without .jar)
+    if isinstance(cookie_source, dict):
+        return {str(k): str(v) if v is not None else "" for k, v in cookie_source.items()}
+
+    jar = None
+    if hasattr(cookie_source, "jar"):
+        jar = cookie_source.jar
+    elif isinstance(cookie_source, http.cookiejar.CookieJar):
+        jar = cookie_source
+    elif hasattr(cookie_source, "get_dict") and callable(cookie_source.get_dict):
+        try:
+            res = cookie_source.get_dict()
+            if isinstance(res, Mapping):
+                return {str(k): str(v) if v is not None else "" for k, v in res.items()}
+        except Exception:
+            pass
+        jar = getattr(cookie_source, "jar", None)
+    elif isinstance(cookie_source, Mapping):
+        return {str(k): str(v) if v is not None else "" for k, v in cookie_source.items()}
+
+    if jar is not None and hasattr(jar, "__iter__"):
+        candidates: dict[str, tuple[tuple[int, int, int, int, float], str]] = {}
+        now = time.time()
+        for cookie in jar:
+            name = getattr(cookie, "name", None)
+            if not name:
+                continue
+            name_str = str(name)
+            val = getattr(cookie, "value", None)
+            val_str = str(val) if val is not None else ""
+
+            raw_domain = getattr(cookie, "domain", None) or ""
+            domain = raw_domain.strip().lower()
+            if domain in (".udemy.com", "udemy.com"):
+                domain_score = 3
+            elif domain.endswith(".udemy.com"):
+                domain_score = 2
+            elif domain:
+                domain_score = 1
+            else:
+                domain_score = 0
+
+            val_score = 1 if len(val_str) > 0 else 0
+            path = getattr(cookie, "path", None) or "/"
+            path_score = len(path)
+
+            expires = getattr(cookie, "expires", None)
+            try:
+                expires_score = float(expires or 0)
+            except (ValueError, TypeError):
+                expires_score = 0.0
+
+            is_expired = False
+            if hasattr(cookie, "is_expired") and callable(cookie.is_expired):
+                try:
+                    is_expired = bool(cookie.is_expired())
+                except Exception:
+                    is_expired = False
+            elif expires_score > 0:
+                try:
+                    is_expired = expires_score < now
+                except Exception:
+                    is_expired = False
+
+            priority = (1 if not is_expired else 0, val_score, domain_score, path_score, expires_score)
+            if name_str not in candidates or priority > candidates[name_str][0]:
+                candidates[name_str] = (priority, val_str)
+
+        return {k: v for k, (_, v) in candidates.items()}
+
+    # Fallback generic iteration if object is some other iterable
+    try:
+        return {str(k): str(v) if v is not None else "" for k, v in dict(cookie_source).items()}
+    except Exception:
+        return {}
 
 
 class AsyncHTTPClient:
@@ -677,7 +777,7 @@ class AsyncHTTPClient:
                             allow_redirects=redirect_policy,
                         )
                         if custom_cookies is not None:
-                            custom_cookies.update(resp.cookies.get_dict())
+                            custom_cookies.update(extract_cookie_dict(resp.cookies))
                         return resp
 
                     async with self._cloudscraper_semaphore:
@@ -703,7 +803,7 @@ class AsyncHTTPClient:
                         )
 
                     if custom_cookies is not None:
-                        custom_cookies.update(dict(response.cookies))
+                        custom_cookies.update(extract_cookie_dict(response.cookies))
 
                 if response.status_code == 403 and log_failures:
                     ua_preview = str(((scraper_headers if use_cloudscraper else headers) or {}).get("User-Agent", "unknown"))[:60]
@@ -991,7 +1091,7 @@ class AsyncHTTPClient:
                             )
 
                         if custom_cookies is not None:
-                            custom_cookies.update(resp.cookies.get_dict())
+                            custom_cookies.update(extract_cookie_dict(resp.cookies))
                         return resp
 
                     async with self._cloudscraper_semaphore:
@@ -1022,7 +1122,7 @@ class AsyncHTTPClient:
                             )
 
                     if custom_cookies is not None:
-                        custom_cookies.update(dict(response.cookies))
+                        custom_cookies.update(extract_cookie_dict(response.cookies))
 
                 if response.status_code == 403 and log_failures:
                     ua_preview = str(((scraper_headers if use_cloudscraper else headers) or {}).get("User-Agent", "unknown"))[:60]
