@@ -2,6 +2,10 @@
 
 Both routes share the same content builder; bodies must be identical except
 for the dynamic "Last generated" timestamp.
+
+Both routes serve ``text/markdown`` per llmstxt.org: llms.txt is a Markdown
+document, and the spec's own discovery hint is ``rel="alternate"
+type="text/markdown"``. It is NOT text/plain.
 """
 
 import re
@@ -18,7 +22,9 @@ def _fetch(path: str) -> str:
     finally:
         client.close()
     assert response.status_code == 200, f"{path} returned {response.status_code}"
-    assert "text/plain" in response.headers.get("content-type", "")
+    content_type = response.headers.get("content-type", "")
+    assert "text/markdown" in content_type, f"{path} served {content_type!r}"
+    assert "text/plain" not in content_type, f"{path} served {content_type!r}"
     return response.text
 
 
@@ -38,11 +44,13 @@ def test_llms_full_txt_mirrors_llms_txt():
     assert _normalize_timestamp(full) == _normalize_timestamp(canonical)
 
 
-def test_llms_full_txt_is_plain_text_utf8():
+def test_llms_full_txt_is_markdown_utf8():
     client = TestClient(app)
     try:
         response = client.get("/llms-full.txt")
     finally:
         client.close()
     assert response.status_code == 200
-    assert response.headers.get("content-type", "").startswith("text/plain")
+    # llmstxt.org declares llms.txt a Markdown document, so the route serves
+    # text/markdown (charset utf-8) — not text/plain.
+    assert response.headers.get("content-type", "").startswith("text/markdown")

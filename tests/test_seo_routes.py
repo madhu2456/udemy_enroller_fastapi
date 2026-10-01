@@ -123,5 +123,7 @@ def test_machine_discovery_tags_in_base_template():
 
     assert response.status_code == 200
     assert '<link rel="ai-profile" type="application/json" href="/ai-profile.json">' in response.text
-    assert '<link rel="llms" type="text/plain" href="/llms.txt">' in response.text
+    # llmstxt.org: the discovery hint for a Markdown llms.txt is
+    # rel="alternate" type="text/markdown" — never text/plain.
+    assert '<link rel="llms" type="text/markdown" href="/llms.txt">' in response.text
 
