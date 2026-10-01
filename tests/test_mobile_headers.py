@@ -79,12 +79,16 @@ class TestMobileHeaders:
         assert h_server.get("Accept-Language") == "en-US"
 
     def test_desktop_api_preserves_client_hints_and_fetch_metadata(self):
-        """Assert req_type='api' with desktop UA preserves Client Hints, Sec-Fetch, and XMLHttpRequest."""
+        """Assert req_type='api' with desktop Chrome preserves Client Hints, Sec-Fetch, and XMLHttpRequest, while Firefox omits Client Hints."""
         client = AsyncHTTPClient()
         client._is_server = True
         parsed = urlparse("https://www.udemy.com/api-2.0/contexts/me/")
+        desktop_chrome = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+        )
 
-        h = client._get_headers_server(parsed, None, "api")
+        h = client._get_headers_server(parsed, {"User-Agent": desktop_chrome}, "api")
         assert "sec-ch-ua" in h
         assert h.get("sec-ch-ua-mobile") == "?0"
         assert h.get("Sec-Fetch-Site") == "same-origin"
@@ -92,6 +96,13 @@ class TestMobileHeaders:
         assert h.get("Sec-Fetch-Dest") == "empty"
         assert h.get("X-Requested-With") == "XMLHttpRequest"
         assert h.get("Origin") == "https://www.udemy.com"
+
+        # Also verify Firefox explicitly omits Client Hints while preserving API headers
+        desktop_firefox = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0"
+        h_ff = client._get_headers_server(parsed, {"User-Agent": desktop_firefox}, "api")
+        assert "sec-ch-ua" not in h_ff
+        assert h_ff.get("X-Requested-With") == "XMLHttpRequest"
+        assert h_ff.get("Origin") == "https://www.udemy.com"
 
     def test_custom_ua_sovereignty(self):
         """Assert custom UA is passed verbatim, triggers is_okhttp when applicable, and is not pinned."""
