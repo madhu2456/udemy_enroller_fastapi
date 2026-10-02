@@ -7,6 +7,14 @@ and this project uses date-based notes until formal version tags are published.
 
 ## [Unreleased]
 
+### Changed
+- **Scraper Throughput Acceleration & Timeout Elimination ([`app/services/http_client.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/http_client.py), [`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`config/settings.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/config/settings.py), [`.env.example`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/.env.example))**:
+  - Decoupled domain pacing lock from sleep in `_apply_human_like_delay`: calculates virtual monotonic dispatch schedule under lock and executes `asyncio.sleep` outside lock, completely eliminating serialization bottlenecks.
+  - Domain-partitioned delay policies: applied polite 0.15–0.35s jitter for third-party coupon aggregator domains while preserving strict 5.0–12.0s server / 1.0–4.0s local delays strictly for `udemy.com`.
+  - Dynamic CloudScraper timeout propagation: bound CloudScraper calls to `min(float(kwargs.get("timeout", 15.0)), 15.0)` instead of hardcoded 25s, unblocking worker threads.
+  - Right-sized two-tier coupon scrapers (`CouponScorpion`, `Korshub`, `FreebiesGlobal`, `UdemyFreebies`, `IDownloadCoupon`, `UdemyXpert`, `Couponami`, `CourseFolder`): capped candidate buffers from 700 to 120 and pagination depth to 3–5 pages to eliminate queue rot and focus on fresh coupons within the 24–48h validity window.
+  - Reduced `SCRAPER_SITE_TIMEOUT_SECONDS` default from 900s to 300s.
+
 ## [1.1.0] — 2026-10-02
 
 ### Security

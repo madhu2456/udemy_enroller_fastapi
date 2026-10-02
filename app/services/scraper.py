@@ -160,8 +160,9 @@ class Scraper(ABC):
 
     @staticmethod
     def _is_cf_challenge(resp) -> bool:
-        if resp is None or getattr(resp, "status_code", None) not in (403, 429, 503):
+        if resp is None:
             return False
+        status = getattr(resp, "status_code", None)
         text = (getattr(resp, "text", "") or "")[:4096].lower()
         cf_signatures = (
             "just a moment",
@@ -172,23 +173,32 @@ class Scraper(ABC):
             "cf-turnstile",
             "challenges.cloudflare.com",
         )
-        return any(sig in text for sig in cf_signatures)
+        if status in (403, 429, 503):
+            return any(sig in text for sig in cf_signatures)
+        if status == 200 and any(
+            sig in text for sig in ("challenges.cloudflare.com", "cf-turnstile", "cf-challenge")
+        ):
+            return True
+        return False
 
     async def _http_get_resilient(
         self, url: str, timeout: float = 10.0, use_robots_circuit: bool = False, **kwargs
     ) -> Optional[object]:
         """Optimistic fast-path via async HTTPX with automated CloudScraper fallback."""
-        kwargs.pop("use_cloudscraper", None)
+        call_kwargs = dict(kwargs)
+        call_kwargs.pop("use_cloudscraper", None)
         getter = self._http_get if use_robots_circuit else self.http.get
         resp = await getter(
-            url, use_cloudscraper=False, timeout=timeout, raise_for_status=False, **kwargs
+            url, use_cloudscraper=False, timeout=timeout, raise_for_status=False, **call_kwargs
         )
         if (
             resp is None
             or getattr(resp, "status_code", None) in (403, 503)
             or self._is_cf_challenge(resp)
         ):
-            resp = await getter(url, use_cloudscraper=True, timeout=timeout, **kwargs)
+            resp = await getter(
+                url, use_cloudscraper=True, timeout=timeout, raise_for_status=False, **call_kwargs
+            )
         return resp
 
     def parse_html(self, content: Union[str, bytes]) -> BeautifulSoup:
@@ -1000,7 +1010,7 @@ class UdemyXpertScraper(Scraper):
     """
 
     MAX_COURSES: int = 500
-    CANDIDATE_BUFFER: int = 300
+    CANDIDATE_BUFFER: int = 120
     DETAIL_BATCH_SIZE: int = 10
 
     @property
@@ -1476,8 +1486,8 @@ class CourseFolderScraper(Scraper):
     """
 
     MAX_COURSES: int = 500
-    MAX_PAGES: int = 18
-    CANDIDATE_BUFFER: int = 750
+    MAX_PAGES: int = 5
+    CANDIDATE_BUFFER: int = 120
     DETAIL_BATCH_SIZE: int = 10
 
     @property
@@ -1629,7 +1639,7 @@ class CouponamiScraper(Scraper):
     """
 
     MAX_COURSES: int = 500
-    CANDIDATE_BUFFER: int = 300
+    CANDIDATE_BUFFER: int = 120
     DETAIL_BATCH_SIZE: int = 10
 
     @property
@@ -1796,8 +1806,8 @@ class KorshubScraper(Scraper):
     """
 
     MAX_COURSES: int = 500
-    MAX_PAGES: int = 80
-    CANDIDATE_BUFFER: int = 700
+    MAX_PAGES: int = 5
+    CANDIDATE_BUFFER: int = 120
     DETAIL_BATCH_SIZE: int = 10
     LISTING_ENDPOINT: str = "https://korshub.com/free-courses"
 
@@ -2117,9 +2127,9 @@ class UdemyFreebiesScraper(Scraper):
     with an embedded coupon code.
     """
 
-    MAX_COURSES: int = 500
+    MAX_COURSES: int = 120
     COURSES_PER_PAGE: int = 12
-    MAX_LISTING_PAGES: int = 85
+    MAX_LISTING_PAGES: int = 5
     LISTING_CONCURRENCY: int = 2
     LISTING_ENDPOINT: str = "https://www.udemyfreebies.com/free-udemy-courses"
     DETAIL_BATCH_SIZE: int = 10
@@ -2298,9 +2308,9 @@ class IDownloadCouponScraper(Scraper):
     Detail hop resolves /udemy/{id}/ redirects to Udemy course links.
     """
 
-    MAX_COURSES: int = 500
+    MAX_COURSES: int = 120
     PER_PAGE: int = 50
-    MAX_PAGES: int = 15
+    MAX_PAGES: int = 4
     LISTING_CONCURRENCY: int = 2
     BASE_URL: str = "https://idownloadcoupon.com"
     STORE_API_ENDPOINT: str = "https://idownloadcoupon.com/wp-json/wc/store/v1/products"
@@ -3563,8 +3573,8 @@ class CouponScorpionScraper(Scraper):
     )
     HTML_LISTING = "https://couponscorpion.com/category/100-off-coupons/"
     MAX_COURSES = 500
-    MAX_REST_PAGES = 8
-    CANDIDATE_BUFFER = 700
+    MAX_REST_PAGES = 3
+    CANDIDATE_BUFFER = 120
     DETAIL_BATCH_SIZE = 10
     SKIP_PATH_PREFIXES = ("/category/", "/page/", "/scripts/")
     SKIP_PATH_SUBSTRINGS = (
@@ -4051,8 +4061,8 @@ class FreebiesGlobalScraper(Scraper):
     BASE_URL = "https://freebiesglobal.com"
     LISTING_ENDPOINT = "https://freebiesglobal.com/tag/udemy-100-off"
     MAX_COURSES = 500
-    MAX_PAGES = 50
-    CANDIDATE_BUFFER = 700
+    MAX_PAGES = 5
+    CANDIDATE_BUFFER = 120
     DETAIL_BATCH_SIZE = 10
 
     @property

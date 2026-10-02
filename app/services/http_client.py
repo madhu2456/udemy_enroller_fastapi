@@ -614,8 +614,8 @@ class AsyncHTTPClient:
     async def _apply_human_like_delay(self, url: Optional[str] = None):
         """Apply a polite delay between requests to respect rate limits.
 
-        On server deployments, uses much longer delays to avoid Udemy rate limits.
-        Local runs keep the original fast settings.
+        On server deployments, uses longer delays for Udemy to avoid account rate limits.
+        Third-party aggregators use decoupled, non-blocking polite pacing (0.15-0.35s).
         """
         domain = "default"
         if url:
@@ -630,27 +630,32 @@ class AsyncHTTPClient:
             lock = asyncio.Lock()
             self._domain_locks[domain] = lock
 
+        sleep_duration = 0.0
         async with lock:
             from config.settings import get_settings
+            from app.services.udemy_validation import is_udemy_netloc, is_udemy_url
 
             is_server = getattr(get_settings(), "DEPLOYMENT_ENV", "local") == "server"
-            current_time = time.monotonic()
-            last_time = self._domain_last_request_times.get(domain, 0.0)
-            time_since_last = current_time - last_time
-
-            if is_server:
-                target_delay = random.uniform(5.0, 12.0)
-            else:
-                target_delay = random.uniform(1.0, 4.0)
-
-            if last_time > 0.0 and time_since_last < target_delay:
-                delay = target_delay - time_since_last
-                delay += random.uniform(-0.1, 0.2)
-                await asyncio.sleep(max(0.1, delay))
-
             now = time.monotonic()
-            self._domain_last_request_times[domain] = now
-            self._last_request_time = now
+            last_time = self._domain_last_request_times.get(domain, 0.0)
+
+            is_udemy = is_udemy_netloc(domain) or (is_udemy_url(url) if url else False)
+            if is_udemy:
+                if is_server:
+                    target_delay = random.uniform(5.0, 12.0)
+                else:
+                    target_delay = random.uniform(1.0, 4.0)
+            else:
+                target_delay = random.uniform(0.15, 0.35)
+
+            scheduled_time = max(now, last_time + target_delay)
+            self._domain_last_request_times[domain] = scheduled_time
+            self._last_request_time = scheduled_time
+            if last_time > 0.0:
+                sleep_duration = max(0.0, scheduled_time - now)
+
+        if sleep_duration > 0.001:
+            await asyncio.sleep(sleep_duration)
 
     async def close(self):
         await self.client.aclose()
@@ -738,6 +743,7 @@ class AsyncHTTPClient:
             logger.warning(f"Blocked unsafe URL (SSRF guard): {_log_safe_url(url)}")
             return None
 
+        kwargs = dict(kwargs)
         attempts = kwargs.pop("attempts", 4)
         raise_for_status = kwargs.pop("raise_for_status", True)
         log_failures = kwargs.pop("log_failures", True)
@@ -790,10 +796,11 @@ class AsyncHTTPClient:
                         if custom_cookies:
                             scraper.cookies.update(custom_cookies)
 
+                        cs_timeout = min(float(kwargs.get("timeout", 15.0)), 15.0)
                         resp = scraper.get(
                             url,
                             headers=scraper_headers,
-                            timeout=25,
+                            timeout=cs_timeout,
                             allow_redirects=redirect_policy,
                         )
                         if custom_cookies is not None:
@@ -1095,12 +1102,13 @@ class AsyncHTTPClient:
                         if custom_cookies:
                             scraper.cookies.update(custom_cookies)
 
+                        cs_timeout = min(float(kwargs.get("timeout", 15.0)), 15.0)
                         if json_payload is not None:
                             resp = scraper.post(
                                 url,
                                 json=json_payload,
                                 headers=scraper_headers,
-                                timeout=25,
+                                timeout=cs_timeout,
                                 allow_redirects=redirect_policy,
                             )
                         else:
@@ -1108,7 +1116,7 @@ class AsyncHTTPClient:
                                 url,
                                 data=kwargs.get("data"),
                                 headers=scraper_headers,
-                                timeout=25,
+                                timeout=cs_timeout,
                                 allow_redirects=redirect_policy,
                             )
 
