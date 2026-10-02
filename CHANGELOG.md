@@ -7,6 +7,8 @@ and this project uses date-based notes until formal version tags are published.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-10-02
+
 ### Security
 - **Urllib3 Security Vulnerability Patch ([requirements.lock](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/requirements.lock))**:
   - Upgraded pinned `urllib3` dependency from `2.7.0` to `2.8.0` with verified PyPI universal wheel and sdist sha256 cryptographic hashes.
@@ -737,6 +739,7 @@ Last published commit on `main` at the start of the forensic audit / implementat
 
 ---
 
-[Unreleased]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/madhu2456/udemy_enroller_fastapi/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/madhu2456/udemy_enroller_fastapi/releases/tag/v1.0.0

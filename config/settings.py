@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # App
     APP_NAME: str = "Udemy Course Enroller"
-    APP_VERSION: str = "1.0.1"
+    APP_VERSION: str = "1.1.0"
     DEBUG: bool = False
     SECRET_KEY: str = "change-me-in-production-use-a-strong-secret-key"
     COOKIE_SECURE: bool = False
