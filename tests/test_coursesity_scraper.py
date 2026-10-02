@@ -207,7 +207,7 @@ async def test_safe_pagination_and_bounding(scraper):
     scraper.MAX_COURSES = 500
     await scraper.scrape(asyncio.Semaphore(2))
 
-    assert scraper.length == 205
+    assert scraper.length == 5
     assert len(scraper.data) == 1
 
     # Test MAX_COURSES cap bounding max_pages
@@ -431,7 +431,7 @@ async def test_scraper_contract_and_max_courses_cap(scraper):
     assert scraper.code_name == "cs"
     assert scraper.MAX_COURSES == 500
     assert scraper.COURSES_PER_PAGE == 15
-    assert scraper.MAX_LISTING_PAGES == 205
+    assert scraper.MAX_LISTING_PAGES == 5
     assert scraper.LISTING_CONCURRENCY == 2
     assert scraper.LISTING_ENDPOINT == "https://coursesity.com/provider/free/udemy-courses"
 

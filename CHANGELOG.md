@@ -14,6 +14,10 @@ and this project uses date-based notes until formal version tags are published.
   - Dynamic CloudScraper timeout propagation: bound CloudScraper calls to `min(float(kwargs.get("timeout", 15.0)), 15.0)` instead of hardcoded 25s, unblocking worker threads.
   - Right-sized two-tier coupon scrapers (`CouponScorpion`, `Korshub`, `FreebiesGlobal`, `UdemyFreebies`, `IDownloadCoupon`, `UdemyXpert`, `Couponami`, `CourseFolder`): capped candidate buffers from 700 to 120 and pagination depth to 3–5 pages to eliminate queue rot and focus on fresh coupons within the 24–48h validity window.
   - Reduced `SCRAPER_SITE_TIMEOUT_SECONDS` default from 900s to 300s.
+- **Scraper Fleet Right-Sizing & Tuning ([`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`tests/test_coursesity_scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_coursesity_scraper.py), [`tests/test_geeksgod_scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_geeksgod_scraper.py))**:
+  - `CoursesityScraper`: right-sized `MAX_LISTING_PAGES` to 5 (from 205), preventing 204 concurrent tasks from triggering 300s watchdog timeouts while capturing fresh 24–48h deals.
+  - `GeeksGodScraper`: right-sized `MAX_PAGES` to 5 (from 50) and `CANDIDATE_BUFFER` to 120 (from 700); canonicalized pagination to standard WordPress path routing (`/courses/page/{p}/`) with trailing-slash defense.
+  - `CouponScorpionScraper`: adjusted `MAX_REST_PAGES` to 5 (from 3) and aligned fallback defaults to prevent candidate buffer starvation under API deduplication.
 
 ## [1.1.0] — 2026-10-02
 

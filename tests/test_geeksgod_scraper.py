@@ -44,10 +44,10 @@ async def test_geeksgod_listing_and_detail_with_param_cleaning(scraper):
     async def mock_get(url, *args, **kwargs):
         if "robots.txt" in url:
             return _resp("", status=404)
-        if "page=1" in url:
-            return _resp(listing_html, status=200)
-        if "page=2" in url:
+        if any(p in url for p in ("page=2", "page/2")):
             return _resp("", status=404)
+        if any(p in url for p in ("page=1", "page/1", "/courses")):
+            return _resp(listing_html, status=200)
         if "/course/cyber-security-exam-prep" in url:
             return _resp(detail_html, status=200)
         return _resp("", status=404)

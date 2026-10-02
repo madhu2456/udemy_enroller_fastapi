@@ -1145,7 +1145,7 @@ class CoursesityScraper(Scraper):
 
     MAX_COURSES: int = 500
     COURSES_PER_PAGE: int = 15
-    MAX_LISTING_PAGES: int = 205
+    MAX_LISTING_PAGES: int = 5
     LISTING_CONCURRENCY: int = 2
     LISTING_ENDPOINT: str = "https://coursesity.com/provider/free/udemy-courses"
     DETAIL_BATCH_SIZE: int = 10
@@ -3573,7 +3573,7 @@ class CouponScorpionScraper(Scraper):
     )
     HTML_LISTING = "https://couponscorpion.com/category/100-off-coupons/"
     MAX_COURSES = 500
-    MAX_REST_PAGES = 3
+    MAX_REST_PAGES = 5
     CANDIDATE_BUFFER = 120
     DETAIL_BATCH_SIZE = 10
     SKIP_PATH_PREFIXES = ("/category/", "/page/", "/scripts/")
@@ -3620,10 +3620,10 @@ class CouponScorpionScraper(Scraper):
         posts: list[tuple[str, str]] = []
         seen_links: set[str] = set()
         buffer_limit = min(
-            getattr(self, "CANDIDATE_BUFFER", 700),
+            getattr(self, "CANDIDATE_BUFFER", 120),
             max(self.MAX_COURSES * 3, 50),
         )
-        max_pages = getattr(self, "MAX_REST_PAGES", 8)
+        max_pages = getattr(self, "MAX_REST_PAGES", 5)
         batch_size = getattr(self, "REST_BATCH_SIZE", 4)
         self.length = max_pages
 
@@ -4263,8 +4263,8 @@ class GeeksGodScraper(Scraper):
     BASE_URL = "https://geeksgod.com"
     LISTING_ENDPOINT = "https://geeksgod.com/courses"
     MAX_COURSES = 500
-    MAX_PAGES = 50
-    CANDIDATE_BUFFER = 700
+    MAX_PAGES = 5
+    CANDIDATE_BUFFER = 120
     DETAIL_BATCH_SIZE = 10
 
     @property
@@ -4280,7 +4280,7 @@ class GeeksGodScraper(Scraper):
             seen_pages: set[str] = set()
             candidates: list[tuple[str, str]] = []
             batch_size = getattr(self, "BATCH_SIZE", 6)
-            buffer_limit = getattr(self, "CANDIDATE_BUFFER", 700)
+            buffer_limit = getattr(self, "CANDIDATE_BUFFER", 120)
             self.length = self.MAX_PAGES
 
             stop_pagination = False
@@ -4288,9 +4288,10 @@ class GeeksGodScraper(Scraper):
                 if len(candidates) >= buffer_limit:
                     break
                 end_page = min(start_page + batch_size, self.MAX_PAGES + 1)
+                endpoint = self.LISTING_ENDPOINT.rstrip("/")
                 page_tasks = [
                     self._http_get(
-                        f"{self.LISTING_ENDPOINT}?page={p}",
+                        f"{endpoint}/" if p == 1 else f"{endpoint}/page/{p}/",
                         use_cloudscraper=True,
                         timeout=15,
                     )
