@@ -26,6 +26,7 @@ from app.services.public_deals_export import (
     build_sitemap_xml,
     export_public_deals_json,
     extract_udemy_course_slug,
+    get_default_sitemap_paths,
     get_valid_deal_by_slug,
     is_sitemap_quality_deal,
     list_valid_deals_for_sitemap,
@@ -450,3 +451,126 @@ def test_freshness_falls_back_to_mtime_when_no_check_timestamps(tmp_path):
     assert freshness["last_checked"] is None
     assert freshness["last_updated"] is not None  # mtime fallback
     assert freshness["valid_count"] == 1
+
+
+def test_get_default_sitemap_paths_colocation(tmp_path):
+    deals_dir = tmp_path / "data"
+    deals_dir.mkdir(parents=True, exist_ok=True)
+    deals_file = str(deals_dir / "public_deals.json")
+
+    sm, meta = get_default_sitemap_paths(deals_path=deals_file)
+    assert sm == str(deals_dir / "sitemap.generated.xml")
+    assert meta == str(deals_dir / "sitemap.meta.json")
+
+    # Relative path normalization check (Critic advisory / FM-04)
+    rel_deals = "custom_deals.json"
+    sm_rel, meta_rel = get_default_sitemap_paths(deals_path=rel_deals)
+    assert os.path.isabs(sm_rel)
+    assert os.path.isabs(meta_rel)
+    assert sm_rel.endswith("sitemap.generated.xml")
+    assert meta_rel.endswith("sitemap.meta.json")
+
+
+def test_get_default_sitemap_paths_settings_override(monkeypatch, tmp_path):
+    custom_sm = str(tmp_path / "custom_sitemap.xml")
+    custom_meta = str(tmp_path / "custom_meta.json")
+    mock_settings = SimpleNamespace(
+        SITEMAP_PATH=custom_sm,
+        SITEMAP_META_PATH=custom_meta,
+    )
+    monkeypatch.setattr("config.settings.get_settings", lambda: mock_settings)
+
+    deals_file = str(tmp_path / "deals.json")
+    sm, meta = get_default_sitemap_paths(deals_path=deals_file)
+    assert sm == custom_sm
+    assert meta == custom_meta
+
+
+def test_get_default_sitemap_paths_explicit_precedence(monkeypatch, tmp_path):
+    mock_settings = SimpleNamespace(
+        SITEMAP_PATH=str(tmp_path / "settings_sitemap.xml"),
+        SITEMAP_META_PATH=str(tmp_path / "settings_meta.json"),
+    )
+    monkeypatch.setattr("config.settings.get_settings", lambda: mock_settings)
+
+    explicit_sm = str(tmp_path / "explicit_sitemap.xml")
+    explicit_meta = str(tmp_path / "explicit_meta.json")
+    deals_file = str(tmp_path / "deals.json")
+
+    sm, meta = get_default_sitemap_paths(
+        deals_path=deals_file,
+        sitemap_path=explicit_sm,
+        meta_path=explicit_meta,
+    )
+    assert sm == explicit_sm
+    assert meta == explicit_meta
+
+
+def test_write_sitemap_files_readonly_filesystem_warning(monkeypatch, tmp_path):
+    deals_file = tmp_path / "public_deals.json"
+    deals_file.write_text("[]", encoding="utf-8")
+
+    warnings = []
+    errors = []
+    monkeypatch.setattr(
+        public_deals_export_module.logger,
+        "warning",
+        lambda msg, *args, **kwargs: warnings.append(str(msg)),
+    )
+    monkeypatch.setattr(
+        public_deals_export_module.logger,
+        "error",
+        lambda msg, *args, **kwargs: errors.append(str(msg)),
+    )
+
+    def raise_ro_fs(*args, **kwargs):
+        raise OSError(30, "Read-only file system")
+
+    monkeypatch.setattr(public_deals_export_module, "_atomic_write_text", raise_ro_fs)
+
+    result = write_sitemap_files(deals_path=str(deals_file))
+    assert result == -1
+    assert any("Could not write on-disk sitemap snapshot" in w for w in warnings)
+    assert len(errors) == 0
+
+
+def test_write_sitemap_files_colocates_with_deals_path(tmp_path):
+    sample_deals = [
+        {
+            "id": 1,
+            "title": "Complete Web Development Bootcamp Course",
+            "url": "https://www.udemy.com/course/web-dev-bootcamp/?couponCode=FREE123",
+            "coupon_code": "FREE123",
+            "is_coupon_valid": True,
+            "last_checked_at": "2026-10-01T12:00:00Z",
+            "enrolled_at": "2026-10-01T12:00:00Z",
+        }
+    ]
+    deals_file = tmp_path / "data" / "public_deals.json"
+    deals_file.parent.mkdir(parents=True, exist_ok=True)
+    deals_file.write_text(json.dumps(sample_deals), encoding="utf-8")
+
+    root_sitemap = Path(public_deals_export_module._PROJECT_ROOT) / "sitemap.generated.xml"
+    root_meta = Path(public_deals_export_module._PROJECT_ROOT) / "sitemap.meta.json"
+    root_sitemap_mtime = root_sitemap.stat().st_mtime if root_sitemap.exists() else None
+    root_meta_mtime = root_meta.stat().st_mtime if root_meta.exists() else None
+
+    count = write_sitemap_files(deals_path=str(deals_file))
+    assert count == 1
+
+    expected_sm = tmp_path / "data" / "sitemap.generated.xml"
+    expected_meta = tmp_path / "data" / "sitemap.meta.json"
+
+    assert expected_sm.exists()
+    assert expected_meta.exists()
+    assert "/udemycoupons/c/" in expected_sm.read_text(encoding="utf-8")
+
+    meta_content = json.loads(expected_meta.read_text(encoding="utf-8"))
+    assert meta_content["deal_urls"] == 1
+    assert meta_content["sitemap_path"] == str(expected_sm)
+
+    # Critic advisory: root repo sitemap snapshot must not be touched or modified
+    if root_sitemap_mtime is not None:
+        assert root_sitemap.stat().st_mtime == root_sitemap_mtime
+    if root_meta_mtime is not None:
+        assert root_meta.stat().st_mtime == root_meta_mtime

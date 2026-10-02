@@ -106,6 +106,10 @@ class Settings(BaseSettings):
     #   PUBLIC_DEALS_PATH=/app/data/public_deals.json
     PUBLIC_DEALS_PATH: str = ""
 
+    # On-disk sitemap snapshot paths (empty = dynamically co-located with PUBLIC_DEALS_PATH).
+    SITEMAP_PATH: str = ""
+    SITEMAP_META_PATH: str = ""
+
     # Background coupon checker loop interval (seconds). Used by
     # scripts/coupon_checker_loop.py / docker compose coupon-checker service.
     COUPON_CHECKER_INTERVAL_SECONDS: int = 7200  # 2 hours

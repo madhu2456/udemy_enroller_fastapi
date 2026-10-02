@@ -571,6 +571,38 @@ def build_sitemap_xml(
     return content, deal_count
 
 
+def get_default_sitemap_paths(
+    *,
+    deals_path: Optional[str] = None,
+    sitemap_path: Optional[str] = None,
+    meta_path: Optional[str] = None,
+) -> tuple[str, str]:
+    """Resolve sitemap.generated.xml and sitemap.meta.json paths.
+
+    Precedence:
+    1. Explicit argument if non-empty string.
+    2. Settings override (SITEMAP_PATH / SITEMAP_META_PATH) if non-empty string.
+    3. Dynamic co-location in the parent directory of deals_path (or get_public_deals_path()).
+    """
+    configured_sm = ""
+    configured_meta = ""
+    try:
+        from config.settings import get_settings
+        settings = get_settings()
+        configured_sm = (getattr(settings, "SITEMAP_PATH", None) or "").strip()
+        configured_meta = (getattr(settings, "SITEMAP_META_PATH", None) or "").strip()
+    except Exception:
+        pass
+
+    effective_deals = (deals_path or "").strip() or get_public_deals_path()
+    effective_deals_dir = os.path.dirname(os.path.abspath(effective_deals)) or _PROJECT_ROOT
+
+    final_sm = (sitemap_path or "").strip() or configured_sm or os.path.join(effective_deals_dir, "sitemap.generated.xml")
+    final_meta = (meta_path or "").strip() or configured_meta or os.path.join(effective_deals_dir, "sitemap.meta.json")
+
+    return os.path.abspath(final_sm), os.path.abspath(final_meta)
+
+
 def write_sitemap_files(
     *,
     site_url: str = SITE_URL_DEFAULT,
@@ -583,10 +615,13 @@ def write_sitemap_files(
     ``GET /sitemap.xml`` still builds live from JSON; this writes a mirror for
     debugging and confirms export refreshed SEO listings.
     """
-    xml, deal_count = build_sitemap_xml(site_url=site_url, deals_path=deals_path)
-    out = sitemap_path or DEFAULT_SITEMAP_PATH
-    meta_out = meta_path or DEFAULT_SITEMAP_META_PATH
+    out, meta_out = get_default_sitemap_paths(
+        deals_path=deals_path,
+        sitemap_path=sitemap_path,
+        meta_path=meta_path,
+    )
     try:
+        xml, deal_count = build_sitemap_xml(site_url=site_url, deals_path=deals_path)
         _atomic_write_text(out, xml)
 
         meta = {
@@ -606,8 +641,14 @@ def write_sitemap_files(
             f"({meta['total_urls']} total) → {out}"
         )
         return deal_count
+    except OSError as e:
+        logger.warning(
+            f"Could not write on-disk sitemap snapshot ({out}): {e}. "
+            f"Sitemap continues to be served dynamically from /sitemap.xml."
+        )
+        return -1
     except Exception as e:
-        logger.error(f"Failed to write sitemap files: {e}")
+        logger.warning(f"Failed to write sitemap files: {e}")
         return -1
 
 
