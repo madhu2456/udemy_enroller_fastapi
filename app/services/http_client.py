@@ -227,11 +227,31 @@ class AsyncHTTPClient:
         self.limits = httpx.Limits(
             max_connections=40, max_keepalive_connections=40, keepalive_expiry=120.0
         )
+
+        async def _check_redirect_ssrf(response: httpx.Response):
+            if response.is_redirect and "location" in response.headers:
+                loc = response.headers.get("location")
+                if not loc:
+                    return
+                try:
+                    target_url = str(response.url.join(loc))
+                except Exception:
+                    target_url = loc
+                if not AsyncHTTPClient._is_safe_url(target_url):
+                    logger.warning(
+                        f"Blocked unsafe redirect URL (SSRF guard): {_log_safe_url(target_url)}"
+                    )
+                    raise httpx.RequestError(
+                        f"Redirect blocked by SSRF guard: {target_url}",
+                        request=response.request,
+                    )
+
         self.client = httpx.AsyncClient(
             proxy=self.proxy,
             timeout=httpx.Timeout(15.0, connect=30.0),
             follow_redirects=False,
             limits=self.limits,
+            event_hooks={"response": [_check_redirect_ssrf]},
         )
 
     def _get_scraper(self, is_mobile: bool = False):
@@ -841,6 +861,8 @@ class AsyncHTTPClient:
                     )
 
                 should_retry = attempt < attempts - 1
+                if isinstance(e, httpx.TooManyRedirects) or "Redirect blocked by SSRF guard" in str(e):
+                    should_retry = False
                 is_403 = False
                 if isinstance(e, httpx.HTTPStatusError):
                     status = e.response.status_code

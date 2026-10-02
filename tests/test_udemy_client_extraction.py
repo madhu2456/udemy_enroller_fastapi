@@ -258,3 +258,217 @@ class TestGetEnrolledCoursesPagination:
 
         assert udemy_client.enrolled_courses == {}
         assert mock_get.await_count == 1
+
+
+@pytest.mark.asyncio
+class TestCourseResolutionMobileFallback:
+    """Test multi-tier course HTML resolution, mobile fallback, SSRF and redirect handling."""
+
+    async def test_cloudflare_403_desktop_falls_back_to_okhttp_mobile(self, udemy_client):
+        udemy_client._is_server = False
+        course = Course("Test Course", "https://www.udemy.com/course/test-course/")
+        course.slug = "test-course"
+
+        # Anonymous slug API returns None/empty
+        mock_safe_json = AsyncMock(return_value=None)
+
+        # CloudScraper returns 403, OkHttp mobile fallback returns 200 with course HTML
+        mock_cs_resp = MagicMock(status_code=403, url="https://www.udemy.com/course/test-course/")
+        mock_html = '<body data-course-id="445566"></body>'
+        mock_mobile_resp = MagicMock(status_code=200, text=mock_html, url="https://www.udemy.com/course/test-course/")
+
+        calls = []
+
+        async def mock_get(url, **kwargs):
+            calls.append((url, kwargs))
+            req_type = kwargs.get("req_type")
+            use_cs = kwargs.get("use_cloudscraper")
+            if req_type == "mobile" and "fields[course]" in url:
+                return MagicMock(status_code=404)
+            if use_cs:
+                return mock_cs_resp
+            if req_type == "mobile":
+                return mock_mobile_resp
+            return None
+
+        with patch.object(udemy_client.http, "get", side_effect=mock_get), patch.object(
+            udemy_client.http, "safe_json", mock_safe_json
+        ):
+            await udemy_client.get_course_id(course)
+
+        assert course.course_id == "445566"
+        assert course.is_valid is True
+        # Verify OkHttp mobile was called with req_type="mobile"
+        mobile_calls = [
+            c
+            for c in calls
+            if c[1].get("req_type") == "mobile"
+            and not c[1].get("use_cloudscraper")
+            and "fields[course]" not in c[0]
+        ]
+        assert len(mobile_calls) == 1
+        assert mobile_calls[0][1].get("attempts") == 2
+
+    async def test_course_fetch_report_isolation(self, udemy_client):
+        """Intermediate 403 on CloudScraper is never reported if mobile fallback succeeds."""
+        udemy_client._is_server = False
+        course = Course("Test Course", "https://www.udemy.com/course/test-course/")
+        course.slug = "test-course"
+
+        mock_cs_resp = MagicMock(status_code=403, url="https://www.udemy.com/course/test-course/")
+        mock_html = '<body data-course-id="778899"></body>'
+        mock_mobile_resp = MagicMock(status_code=200, text=mock_html, url="https://www.udemy.com/course/test-course/")
+
+        async def mock_get(url, **kwargs):
+            if kwargs.get("req_type") == "mobile" and "fields[course]" in url:
+                return MagicMock(status_code=404)
+            if kwargs.get("use_cloudscraper"):
+                return mock_cs_resp
+            return mock_mobile_resp
+
+        with patch.object(udemy_client.http, "get", side_effect=mock_get), patch.object(
+            udemy_client.http, "safe_json", AsyncMock(return_value=None)
+        ), patch.object(
+            udemy_client, "_course_fetch_report", wraps=udemy_client._course_fetch_report
+        ) as mock_report:
+            await udemy_client.get_course_id(course)
+
+        assert course.course_id == "778899"
+        # 403 must NEVER be reported to _course_fetch_report
+        assert 403 not in [call.args[0] for call in mock_report.call_args_list]
+        # 200 must be reported upon success
+        assert 200 in [call.args[0] for call in mock_report.call_args_list]
+        assert udemy_client._course_fetch_consecutive_403s == 0
+
+    async def test_affiliate_redirect_updates_slug_and_coupon(self, udemy_client):
+        """Redirect from affiliate/tracking URL updates course URL, slug, and extracts coupon."""
+        course = Course("Redirect Course", "https://www.udemy.com/course/initial-slug/?couponCode=OLD")
+        assert course.slug == "initial-slug"
+        assert course.coupon_code == "OLD"
+
+        final_url = "https://www.udemy.com/course/final-slug/?couponCode=SAVINGS2026"
+        mock_html = '<body data-course-id="123456"></body>'
+        mock_resp = MagicMock(status_code=200, text=mock_html, url=final_url)
+
+        async def mock_get(url, **kwargs):
+            if "fields[course]" in url:
+                return MagicMock(status_code=404)
+            return mock_resp
+
+        with patch.object(udemy_client.http, "get", side_effect=mock_get), patch.object(
+            udemy_client.http, "safe_json", AsyncMock(return_value=None)
+        ):
+            await udemy_client.get_course_id(course)
+
+        assert course.course_id == "123456"
+        assert course.url == final_url
+        assert course.slug == "final-slug"
+        assert course.coupon_code == "SAVINGS2026"
+
+    async def test_redirect_to_non_course_udemy_page_rejected(self, udemy_client):
+        """Redirects to dead/non-course pages (e.g. homepage) are rejected without 403 report."""
+        course = Course("Dead Course", "https://www.udemy.com/course/expired-course/")
+        dead_url = "https://www.udemy.com/"
+        mock_resp = MagicMock(status_code=200, text="<html>Homepage</html>", url=dead_url)
+
+        async def mock_get(url, **kwargs):
+            if "fields[course]" in url:
+                return MagicMock(status_code=404)
+            return mock_resp
+
+        with patch.object(udemy_client.http, "get", side_effect=mock_get), patch.object(
+            udemy_client.http, "safe_json", AsyncMock(return_value=None)
+        ), patch.object(
+            udemy_client, "_course_fetch_report", wraps=udemy_client._course_fetch_report
+        ) as mock_report:
+            await udemy_client.get_course_id(course)
+
+        assert course.is_valid is False
+        assert course.error == "Course page redirected to non-course page"
+        # Must report 200 (not 403 or 0)
+        assert mock_report.call_args[0][0] == 200
+        assert udemy_client._course_fetch_consecutive_403s == 0
+
+    async def test_redirect_to_non_udemy_host_rejected(self, udemy_client):
+        """Hostile open redirect to external domain is rejected per F-ENRL-C07."""
+        course = Course("Phish Course", "https://www.udemy.com/course/test-course/")
+        hostile_url = "https://evil.example.com/phish/course/"
+        mock_resp = MagicMock(status_code=200, text="<html>Phish</html>", url=hostile_url)
+
+        async def mock_get(url, **kwargs):
+            if "fields[course]" in url:
+                return MagicMock(status_code=404)
+            return mock_resp
+
+        with patch.object(udemy_client.http, "get", side_effect=mock_get), patch.object(
+            udemy_client.http, "safe_json", AsyncMock(return_value=None)
+        ), patch.object(
+            udemy_client, "_course_fetch_report", wraps=udemy_client._course_fetch_report
+        ) as mock_report:
+            await udemy_client.get_course_id(course)
+
+        assert course.is_valid is False
+        assert course.error == "Redirected to non-Udemy host"
+        assert mock_report.call_args[0][0] == 0
+
+    async def test_secondary_slug_api_recovery_after_redirect(self, udemy_client):
+        """Redirect discovers a new slug and HTML regex fails, but Secondary Slug API recovers ID."""
+        course = Course("Redirected Dynamic Course", "https://www.udemy.com/course/old-slug/")
+        final_url = "https://www.udemy.com/course/discovered-slug/"
+        # HTML without course ID (e.g. Next.js dynamic render)
+        mock_html = "<html><body><div>No course ID here</div></body></html>"
+        mock_resp = MagicMock(status_code=200, text=mock_html, url=final_url)
+
+        api_payload = {"id": 998877, "title": "Discovered Course"}
+
+        async def mock_get(url, **kwargs):
+            if "courses/old-slug/" in url:
+                # Primary slug API failed for old-slug
+                return MagicMock(status_code=404)
+            if "courses/discovered-slug/" in url:
+                # Secondary slug API succeeds for newly discovered slug!
+                return MagicMock(status_code=200)
+            return mock_resp
+
+        async def mock_safe_json(resp):
+            if resp and resp.status_code == 200:
+                return api_payload
+            return None
+
+        with patch.object(udemy_client.http, "get", side_effect=mock_get), patch.object(
+            udemy_client.http, "safe_json", side_effect=mock_safe_json
+        ), patch.object(
+            udemy_client, "_course_fetch_report", wraps=udemy_client._course_fetch_report
+        ) as mock_report:
+            await udemy_client.get_course_id(course)
+
+        assert course.course_id == "998877"
+        assert course.is_valid is True
+        assert course.slug == "discovered-slug"
+        assert 200 in [call.args[0] for call in mock_report.call_args_list]
+
+    async def test_too_many_redirects_fails_fast_no_retry(self):
+        """httpx.TooManyRedirects aborts immediately with should_retry=False."""
+        import httpx
+        from app.services.http_client import AsyncHTTPClient
+
+        client = AsyncHTTPClient()
+        try:
+            req = httpx.Request("GET", "https://www.udemy.com/course/loop/")
+            mock_httpx = AsyncMock(
+                side_effect=httpx.TooManyRedirects("Exceeded 20 redirects", request=req)
+            )
+
+            with patch.object(client.client, "get", mock_httpx):
+                resp = await client.get(
+                    "https://www.udemy.com/course/loop/",
+                    attempts=4,
+                    follow_redirects=True,
+                    raise_for_status=False,
+                )
+
+            assert resp is None
+            # Must abort after 1 attempt, no retrying on redirect loop
+            assert mock_httpx.await_count == 1
+        finally:
+            await client.close()

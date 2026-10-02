@@ -12,12 +12,13 @@ from pathlib import Path
 from typing import Optional, Dict, Set, Any
 from urllib.parse import urljoin, quote
 
+import httpx
 from bs4 import BeautifulSoup as bs
 from loguru import logger
 
 from app.services.course import Course
 from app.services.http_client import AsyncHTTPClient, extract_cookie_dict
-from app.services.udemy_validation import is_udemy_url
+from app.services.udemy_validation import is_udemy_course_url, is_udemy_url
 from app.core import constants
 from app.logging_config import sanitize_log_message
 
@@ -839,6 +840,117 @@ class UdemyClient:
             logger.debug(f"Error extracting device market attributes: {e}")
         return None
 
+    async def _resolve_course_id_via_slug_api(self, course: Course) -> bool:
+        """Resolve course ID and fallback metadata via Anonymous Slug API."""
+        if not course.slug:
+            return False
+        api_url = (
+            f"{constants.UDEMY_API_BASE}/courses/{course.slug}/?"
+            "fields[course]=id,title,url,last_update_date,locale,primary_category,avg_rating,visible_instructors"
+        )
+        try:
+            resp = await self.http.get(
+                api_url, req_type="mobile", randomize_headers=True
+            )
+            data = await self.http.safe_json(resp)
+            if data and data.get("id"):
+                course.course_id = str(data["id"])
+
+                # Update metadata fallback if present
+                if not course.last_update and data.get("last_update_date"):
+                    course.last_update = data.get("last_update_date")
+
+                if not course.language and data.get("locale"):
+                    loc_data = data.get("locale")
+                    if isinstance(loc_data, dict):
+                        course.language = (
+                            loc_data.get("simple_english_title")
+                            or loc_data.get("english_title")
+                            or loc_data.get("title")
+                            or loc_data.get("locale")
+                        )
+                    else:
+                        course.language = loc_data
+
+                if not course.category and data.get("primary_category"):
+                    course.category = (
+                        data.get("primary_category").get("title")
+                        if isinstance(data.get("primary_category"), dict)
+                        else data.get("primary_category")
+                    )
+
+                if course.rating is None and data.get("avg_rating") is not None:
+                    course.rating = float(data.get("avg_rating"))
+
+                if not course.instructors and data.get("visible_instructors"):
+                    instructors = []
+                    for i in data.get("visible_instructors", []):
+                        i_url = i.get("url")
+                        if i_url:
+                            parts = [p for p in i_url.split("/") if p]
+                            if parts:
+                                instructors.append(parts[-1])
+                    if instructors:
+                        course.instructors = instructors
+
+                return True
+        except Exception:
+            pass
+        return False
+
+    async def _fetch_course_html(self, course: Course) -> Optional[httpx.Response]:
+        """Centralized multi-tier course HTML fetcher with server-aware precedence and mobile fallback."""
+        if self._is_server:
+            # Server: OkHttp Mobile first to bypass Cloudflare 403 on datacenter IPs
+            resp = await self.http.get(
+                course.url,
+                req_type="mobile",
+                use_cloudscraper=False,
+                follow_redirects=True,
+                raise_for_status=False,
+                attempts=2,
+            )
+            if resp and resp.status_code == 200:
+                return resp
+            logger.info(
+                f"  OkHttp mobile fetch returned {resp.status_code if resp else 'None'}; "
+                f"attempting CloudScraper single fallback..."
+            )
+            return await self.http.get(
+                course.url,
+                use_cloudscraper=True,
+                req_type="document",
+                follow_redirects=True,
+                raise_for_status=False,
+                attempts=1,
+                log_failures=False,
+            )
+        else:
+            # Local: CloudScraper first (residential IP), fallback to OkHttp mobile
+            resp = await self.http.get(
+                course.url,
+                use_cloudscraper=True,
+                req_type="document",
+                follow_redirects=True,
+                raise_for_status=False,
+                attempts=1,
+                log_failures=False,
+            )
+            if resp and resp.status_code == 200:
+                return resp
+            logger.info(
+                f"  CloudScraper fetch returned {resp.status_code if resp else 'None'}; "
+                f"falling back to native OkHttp mobile..."
+            )
+            return await self.http.get(
+                course.url,
+                req_type="mobile",
+                use_cloudscraper=False,
+                follow_redirects=True,
+                raise_for_status=False,
+                attempts=2,
+            )
+
     async def populate_course_metadata(self, course: Course):
         """Fetch course HTML page and populate metadata if not already done."""
         if course.language is not None:
@@ -851,25 +963,22 @@ class UdemyClient:
         await self._course_fetch_throttle()
 
         logger.info(f"  Fetching HTML for metadata extraction: {course.title}")
-        resp = await self.http.get(
-            course.url, use_cloudscraper=True, req_type="document"
-        )
+        resp = await self._fetch_course_html(course)
         if resp and resp.status_code == 200:
             final_url = str(resp.url)
+            if not is_udemy_url(final_url):
+                course.is_valid = False
+                course.error = "Redirected to non-Udemy host"
+                self._course_fetch_report(0)
+                return
+            if not is_udemy_course_url(final_url):
+                course.is_valid = False
+                course.error = "Course page redirected to non-course page"
+                self._course_fetch_report(200)
+                return
             if final_url != course.url:
-                if not is_udemy_url(final_url):
-                    # Hostile redirect (e.g. trk.udemy.com open redirect to an
-                    # attacker host) must never feed attacker HTML into
-                    # course-id extraction / API calls (F-ENRL-C07).
-                    logger.warning(
-                        f"  Rejected redirect to non-Udemy host for {course.title}: "
-                        f"{course.url} -> {final_url}"
-                    )
-                    course.is_valid = False
-                    course.error = "Redirected to non-Udemy host"
-                    self._course_fetch_report(0)
-                    return
                 course.url = final_url
+                course.set_slug()
                 course.extract_coupon_code()
 
             dma = self._extract_device_market_attributes(resp.text)
@@ -889,7 +998,7 @@ class UdemyClient:
             logger.warning(f"  Failed to fetch course page for metadata (Status: {status})")
 
     async def get_course_id(self, course: Course):
-        """Slug resolution using Slug API and CloudScraper."""
+        """Slug resolution using Slug API and HTML fetch."""
         if course.course_id:
             return
         if self.is_account_blocked():
@@ -899,78 +1008,38 @@ class UdemyClient:
 
         await self._course_fetch_throttle()
 
-        # 1. Anonymous Slug API (Most efficient)
-        if course.slug:
-            api_url = f"{constants.UDEMY_API_BASE}/courses/{course.slug}/?fields[course]=id,title,url,last_update_date,locale,primary_category,avg_rating,visible_instructors"
-            try:
-                resp = await self.http.get(
-                    api_url, req_type="mobile", randomize_headers=True
-                )
-                data = await self.http.safe_json(resp)
-                if data and data.get("id"):
-                    course.course_id = str(data["id"])
+        # Step 1: Anonymous Slug API (Most efficient)
+        if course.slug and await self._resolve_course_id_via_slug_api(course):
+            self._course_fetch_report(200)
+            return
 
-                    # Update metadata fallback if present
-                    if not course.last_update and data.get("last_update_date"):
-                        course.last_update = data.get("last_update_date")
-
-                    if not course.language and data.get("locale"):
-                        loc_data = data.get("locale")
-                        if isinstance(loc_data, dict):
-                            course.language = (
-                                loc_data.get("simple_english_title")
-                                or loc_data.get("english_title")
-                                or loc_data.get("title")
-                                or loc_data.get("locale")
-                            )
-                        else:
-                            course.language = loc_data
-
-                    if not course.category and data.get("primary_category"):
-                        course.category = data.get("primary_category").get("title") if isinstance(data.get("primary_category"), dict) else data.get("primary_category")
-
-                    if course.rating is None and data.get("avg_rating") is not None:
-                        course.rating = float(data.get("avg_rating"))
-
-                    if not course.instructors and data.get("visible_instructors"):
-                        instructors = []
-                        for i in data.get("visible_instructors", []):
-                            i_url = i.get("url")
-                            if i_url:
-                                parts = [p for p in i_url.split("/") if p]
-                                if parts:
-                                    instructors.append(parts[-1])
-                        if instructors:
-                            course.instructors = instructors
-
-                    self._course_fetch_report(200)
-                    return
-            except Exception:
-                pass
-
-        # 2. CloudScraper HTML Fetch
-        logger.info(f"  Fetching {course.title} via CloudScraper...")
-        resp = await self.http.get(
-            course.url, use_cloudscraper=True, req_type="document"
-        )
+        # Step 2: HTML Fetch
+        logger.info(f"  Fetching {course.title} HTML...")
+        resp = await self._fetch_course_html(course)
         if resp and resp.status_code == 200:
-            # Update URL if redirected (important for tracking links like trk.udemy.com)
             final_url = str(resp.url)
+            if not is_udemy_url(final_url):
+                logger.warning(
+                    f"    Rejected redirect to non-Udemy host for {course.title}: "
+                    f"{course.url} -> {final_url}"
+                )
+                course.is_valid = False
+                course.error = "Redirected to non-Udemy host"
+                self._course_fetch_report(0)
+                return
+            if not is_udemy_course_url(final_url):
+                logger.warning(
+                    f"    Rejected redirect to non-course URL for {course.title}: "
+                    f"{course.url} -> {final_url}"
+                )
+                course.is_valid = False
+                course.error = "Course page redirected to non-course page"
+                self._course_fetch_report(200)
+                return
             if final_url != course.url:
-                if not is_udemy_url(final_url):
-                    # Hostile redirect (e.g. trk.udemy.com open redirect to an
-                    # attacker host) must never feed attacker HTML into
-                    # course-id extraction / API calls (F-ENRL-C07).
-                    logger.warning(
-                        f"    Rejected redirect to non-Udemy host for {course.title}: "
-                        f"{course.url} -> {final_url}"
-                    )
-                    course.is_valid = False
-                    course.error = "Redirected to non-Udemy host"
-                    self._course_fetch_report(0)
-                    return
                 logger.info(f"    Redirected: {course.url} -> {final_url}")
                 course.url = final_url
+                course.set_slug()
                 course.extract_coupon_code()
 
             # Un-gated DMA extraction: always extract DMA and set metadata first
@@ -985,6 +1054,10 @@ class UdemyClient:
 
             if not course.course_id:
                 course.course_id = self._extract_course_id(resp.text)
+
+            # Secondary Slug API Recovery
+            if not course.course_id and course.slug:
+                await self._resolve_course_id_via_slug_api(course)
 
             if course.course_id:
                 self._course_fetch_report(200)
