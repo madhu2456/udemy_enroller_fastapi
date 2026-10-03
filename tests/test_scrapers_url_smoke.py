@@ -38,6 +38,9 @@ LIVE_FLEET = [
     "FreebiesGlobal",
     "GeeksGod",
     "TutorialBar",
+    "Reddit Udemy",
+    "Telegram Deals",
+    "WordPress Feeds",
 ]
 
 CLASS_ATTR_CAPS = {
@@ -58,6 +61,9 @@ CLASS_ATTR_CAPS = {
     "FreebiesGlobal": {"MAX_COURSES": 5, "MAX_PAGES": 1},
     "GeeksGod": {"MAX_COURSES": 5, "MAX_PAGES": 1},
     "TutorialBar": {"MAX_COURSES": 5, "MAX_PAGES": 1},
+    "Reddit Udemy": {"MAX_COURSES": 5},
+    "Telegram Deals": {"MAX_COURSES": 5},
+    "WordPress Feeds": {"MAX_COURSES": 5},
 }
 
 # Local max_courses=500 inside scrape(); listing limiter + StopSmoke after 5 URLs.
@@ -369,7 +375,7 @@ def test_live_fleet_keeps_onlinecourses_and_excludes_discudemy():
     assert "Discudemy" not in LIVE_FLEET
     assert "Discudemy" not in SCRAPER_REGISTRY
     assert list(SCRAPER_REGISTRY) == LIVE_FLEET
-    assert len(LIVE_FLEET) == 17
+    assert len(LIVE_FLEET) == 20
 
 
 @pytest.mark.parametrize(

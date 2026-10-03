@@ -187,10 +187,21 @@ async def lifespan(app: FastAPI):
     # try in the body), which would escape shutdown.
     await asyncio.sleep(0)
 
+    from app.services.scheduler import EnrollmentScheduler
+
+    enrollment_scheduler = EnrollmentScheduler(check_interval_seconds=60)
+    enrollment_scheduler.start()
+
     yield
 
     # Shutdown
     shutdown_event.set()
+
+    # Stop the background scheduler
+    try:
+        await enrollment_scheduler.stop()
+    except Exception as exc:
+        logger.warning(f"EnrollmentScheduler shutdown failed ({type(exc).__name__})")
 
     # Stop the stale-run sweeper first so it cannot race shutdown (F-ENRL-O01)
     try:
@@ -233,7 +244,9 @@ async def lifespan(app: FastAPI):
                         logger.info(f"Closing {len(clients)} Udemy client sessions...")
                         for _token, client in clients:
                             try:
-                                await client.close()
+                                close_res = client.close()
+                                if asyncio.iscoroutine(close_res):
+                                    await close_res
                             except Exception as exc:
                                 logger.error(f"Failed to close Udemy client session ({type(exc).__name__})")
                         logger.info("Finished Udemy client session shutdown.")

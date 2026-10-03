@@ -85,12 +85,15 @@ def test_registry_keeps_frozen_ten_and_appends_seven():
         "FreebiesGlobal",
         "GeeksGod",
         "TutorialBar",
+        "Reddit Udemy",
+        "Telegram Deals",
+        "WordPress Feeds",
     ]
-    assert len(keys) == 17
-    assert len(SCRAPER_REGISTRY) == 17
+    assert len(keys) == 20
+    assert len(SCRAPER_REGISTRY) == 20
     codes = [cls(MagicMock()).code_name for cls in SCRAPER_REGISTRY.values()]
     assert len(codes) == len(set(codes))
-    assert set(codes) >= {"cr", "csc", "rd", "oc", "fg", "gg", "tb"}
+    assert set(codes) >= {"cr", "csc", "rd", "oc", "fg", "gg", "tb", "ru", "td", "wp"}
     assert "Discudemy" not in keys
     assert "FreeWebCart" not in keys
     assert "Course Joiner" not in keys

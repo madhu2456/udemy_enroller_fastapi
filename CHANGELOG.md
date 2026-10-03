@@ -7,6 +7,33 @@ and this project uses date-based notes until formal version tags are published.
 
 ## [Unreleased]
 
+### Added
+- **Decoupled Enrollment Pipeline & Sleep De-Stacking ([`app/services/enrollment_queue.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_queue.py), [`app/services/enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_manager.py), [`tests/test_enrollment_decoupling.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_enrollment_decoupling.py))**:
+  - Implemented `EnrollmentPriorityQueue` with freshness bias (`priority = -discovered_at`), prioritizing newer coupons before they expire.
+  - Decoupled ingestion into Stage 1 Async Validation Pool (concurrent course ID resolution and coupon validation) and Stage 2 Serialized Checkout Consumer under transaction locking.
+  - Added 240s pre-checkout TTL probe to re-validate coupon freshness for queued items before checkout.
+  - Eliminated stacked pre-process sleeps, maintaining anti-bot pacing strictly through domain rate limiting.
+- **Scraper Fleet Expansion to 20 Scrapers ([`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`app/models/database.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/models/database.py), [`tests/test_fleet_expansion.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_fleet_expansion.py))**:
+  - Added `RedditUdemyScraper` (`ru`) ingesting coupon drops from Reddit JSON endpoints.
+  - Added `TelegramDealsScraper` (`td`) extracting coupons from public channel web previews.
+  - Added `WordPressFeedsScraper` (`wp`) parsing RSS/Atom feeds with 45-minute freshness guard.
+  - Updated scraper registry, default settings, and test suites across all 20 scrapers.
+- **Dashboard Real-Time SSE & History Faceted Search ([`app/routers/enrollment.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/routers/enrollment.py), [`app/templates/pages/dashboard.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/dashboard.html), [`app/templates/pages/history.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/history.html), [`tests/test_sse_and_history_filters.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_sse_and_history_filters.py))**:
+  - Implemented Server-Sent Events (SSE) `/api/enrollment/progress/stream` with 15s keepalive ping, anti-buffering headers, and automatic polling fallback.
+  - Added client-side search and faceted status filtering in `history.html`.
+- **User Automation & Multi-Platform Webhook Notifications ([`app/services/notifications.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/notifications.py), [`app/services/scheduler.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scheduler.py), [`app/routers/settings.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/routers/settings.py), [`app/templates/pages/settings.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/settings.html), [`tests/test_automation_notifications.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_automation_notifications.py))**:
+  - Built `NotificationService` supporting Discord Rich Embeds, Telegram Markdown, Ntfy push notifications, and Generic JSON with SSRF safety checks.
+  - Implemented `EnrollmentScheduler` background worker for periodic automated enrollment runs with graceful lifespan shutdown.
+  - Added Settings UI and API endpoints (`POST /api/settings/test-webhook`) for webhook testing and schedule configuration.
+- **Database Performance & Compound Indexing Migration ([`alembic/versions/c01d021a9e04_add_indexes_and_automation_settings.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/alembic/versions/c01d021a9e04_add_indexes_and_automation_settings.py), [`app/models/database.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/models/database.py), [`tests/test_alembic_pinning.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_alembic_pinning.py))**:
+  - Added compound indexes on `enrolled_courses(enrollment_run_id, status)` and `enrolled_courses(slug)`.
+  - Added migration columns for webhook and scheduler settings.
+- **Scraper Engine Velocity & Turnstile Fail-Fast ([`app/services/http_client.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/http_client.py), [`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`tests/test_scraper_velocity_and_turnstile.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_scraper_velocity_and_turnstile.py))**:
+  - Added Turnstile signature detection with instant fail-fast abort on Cloudflare challenges.
+  - Native async HTTPX redirect hop resolution (`resolve_redirect_hop`) eliminating synchronous CloudScraper threads.
+  - Continuous worker pool (`_process_detail_pool`) replacing chunked `asyncio.gather` on 2-tier scrapers.
+  - Parallelized `CourseFolderScraper` listing fetch with `Semaphore(4)`.
+
 ### Changed
 - **Scraper Throughput Acceleration & Timeout Elimination ([`app/services/http_client.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/http_client.py), [`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`config/settings.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/config/settings.py), [`.env.example`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/.env.example))**:
   - Decoupled domain pacing lock from sleep in `_apply_human_like_delay`: calculates virtual monotonic dispatch schedule under lock and executes `asyncio.sleep` outside lock, completely eliminating serialization bottlenecks.

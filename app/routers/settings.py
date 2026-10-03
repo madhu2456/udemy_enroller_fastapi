@@ -16,7 +16,7 @@ from app.models.database import (
     EnrolledCourse,
 )
 from app.deps import get_current_user_id
-from app.schemas.schemas import SettingsUpdate, SettingsResponse
+from app.schemas.schemas import SettingsUpdate, SettingsResponse, TestWebhookRequest
 from app.security import (
     RateLimiter,
     _client_key,
@@ -109,7 +109,27 @@ async def get_settings(
         save_txt=bool(settings.save_txt),
         discounted_only=bool(settings.discounted_only),
         proxy_url=settings.proxy_url,
+        webhook_url=settings.webhook_url,
+        webhook_service=settings.webhook_service or "generic",
+        schedule_interval_hours=int(settings.schedule_interval_hours or 0),
+        last_scheduled_run=settings.last_scheduled_run,
     )
+
+
+@router.post("/test-webhook")
+async def test_webhook(
+    req: TestWebhookRequest,
+    user_id: int = Depends(get_current_user_id),
+    _csrf: None = Depends(verify_csrf_token),
+):
+    """Test dispatching a notification to the specified webhook URL."""
+    from app.services.notifications import NotificationService
+
+    success, message = await NotificationService.send_test_webhook(
+        webhook_url=req.webhook_url,
+        webhook_service=req.webhook_service,
+    )
+    return {"success": success, "message": message}
 
 
 @router.put("/", include_in_schema=True)

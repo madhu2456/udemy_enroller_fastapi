@@ -15,7 +15,12 @@ from loguru import logger
 
 from app.logging_config import sanitize_log_message
 
-__all__ = ["AsyncHTTPClient", "extract_cookie_dict"]
+__all__ = [
+    "AsyncHTTPClient",
+    "extract_cookie_dict",
+    "TURNSTILE_SIGNATURES",
+    "is_turnstile_challenge",
+]
 
 
 def _log_safe_url(url: str) -> str:
@@ -147,6 +152,51 @@ def extract_cookie_dict(cookie_source: Any) -> dict[str, str]:
         return {str(k): str(v) if v is not None else "" for k, v in dict(cookie_source).items()}
     except Exception:
         return {}
+
+
+TURNSTILE_SIGNATURES: tuple[str, ...] = (
+    "challenges.cloudflare.com",
+    "cf-turnstile",
+    "cf_chl_prog",
+    "data-sitekey",
+)
+
+
+def is_turnstile_challenge(response: Any) -> bool:
+    """Check if the HTTP response represents a Cloudflare Turnstile challenge (FM-003)."""
+    if response is None:
+        return False
+    # Check headers
+    headers = getattr(response, "headers", None)
+    if headers:
+        try:
+            for k, v in headers.items():
+                k_lower = str(k).lower()
+                v_lower = str(v).lower()
+                for sig in TURNSTILE_SIGNATURES:
+                    if sig in k_lower or sig in v_lower:
+                        return True
+        except Exception:
+            pass
+
+    # Check text body
+    try:
+        text = getattr(response, "text", None)
+        if text is not None and isinstance(text, str):
+            text_lower = text.lower()
+            for sig in TURNSTILE_SIGNATURES:
+                if sig in text_lower:
+                    return True
+        elif hasattr(response, "content") and response.content:
+            raw = response.content
+            if isinstance(raw, (bytes, bytearray)):
+                for sig in TURNSTILE_SIGNATURES:
+                    if sig.encode("utf-8") in raw.lower():
+                        return True
+    except Exception:
+        pass
+
+    return False
 
 
 class AsyncHTTPClient:
@@ -721,6 +771,60 @@ class AsyncHTTPClient:
             return True
         except Exception:
             return False
+
+    async def resolve_redirect_hop(self, url: str, timeout: float = 8.0) -> Optional[str]:
+        """Resolve a single HTTP redirect hop using native async HTTPX (follow_redirects=False).
+
+        Enforces SSRF safety and aborts fail-fast on Cloudflare Turnstile challenge without retry (FM-003).
+        Returns the Location redirect target string if status is 301, 302, 303, 307, or 308, else None.
+        """
+        if not self._is_safe_url(url):
+            logger.warning(
+                f"Blocked unsafe redirect hop URL (SSRF guard): {_log_safe_url(url)}"
+            )
+            return None
+
+        try:
+            headers = self._get_headers(url, req_type="document")
+            async with self._request_semaphore:
+                response = await self.client.get(
+                    url,
+                    headers=headers,
+                    timeout=timeout,
+                    follow_redirects=False,
+                )
+        except Exception as e:
+            logger.warning(
+                f"Failed redirect hop for {_log_safe_url(url)}: {type(e).__name__} - {e}"
+            )
+            return None
+
+        if is_turnstile_challenge(response):
+            logger.warning(
+                f"Turnstile challenge detected during redirect hop for {_log_safe_url(url)}; aborting hop (FM-003)"
+            )
+            return None
+
+        if response.status_code in (301, 302, 303, 307, 308):
+            loc = response.headers.get("Location") or response.headers.get("location")
+            if not loc:
+                return None
+            loc_str = str(loc)
+            try:
+                if hasattr(response, "url") and hasattr(response.url, "join"):
+                    target_url = str(response.url.join(loc_str))
+                else:
+                    target_url = loc_str
+            except Exception:
+                target_url = loc_str
+            if not self._is_safe_url(target_url):
+                logger.warning(
+                    f"Blocked unsafe redirect target (SSRF guard): {_log_safe_url(target_url)}"
+                )
+                return None
+            return target_url
+
+        return None
 
     async def request(self, method: str, url: str, **kwargs) -> Optional[httpx.Response]:
         """Boundary-level SSRF guarded request dispatcher."""

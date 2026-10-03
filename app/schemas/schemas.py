@@ -56,6 +56,9 @@ class SettingsUpdate(BaseModel):
     save_txt: Optional[bool] = None
     discounted_only: Optional[bool] = None
     proxy_url: Optional[str] = None
+    webhook_url: Optional[str] = None
+    webhook_service: Optional[str] = None
+    schedule_interval_hours: Optional[int] = None
 
     @field_validator("proxy_url")
     @classmethod
@@ -97,8 +100,17 @@ class SettingsResponse(BaseModel):
     save_txt: bool
     discounted_only: bool
     proxy_url: Optional[str]
+    webhook_url: Optional[str] = None
+    webhook_service: Optional[str] = "generic"
+    schedule_interval_hours: Optional[int] = 0
+    last_scheduled_run: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TestWebhookRequest(BaseModel):
+    webhook_url: str
+    webhook_service: str = "generic"
 
 
 # ── Enrollment ────────────────────────────────────────
@@ -181,7 +193,7 @@ class EnrollmentProgress(BaseModel):
     sources_failed: int = 0
     courses_discovered: int = 0
     last_update_at: Optional[datetime] = None
-    
+
     total_courses: int
     processed: int
     successfully_enrolled: int

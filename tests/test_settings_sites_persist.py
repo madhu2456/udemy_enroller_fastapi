@@ -17,7 +17,7 @@ from app.models.database import Base, User, UserSession, UserSettings, get_db
 from app.routers.settings import _merge_sites_for_put
 from app.security import generate_csrf_token
 
-_NEW_SEVEN = (
+_NEW_TEN = (
     "Courson",
     "CouponScorpion",
     "Real Discount",
@@ -25,6 +25,9 @@ _NEW_SEVEN = (
     "FreebiesGlobal",
     "GeeksGod",
     "TutorialBar",
+    "Reddit Udemy",
+    "Telegram Deals",
+    "WordPress Feeds",
 )
 _DROPPED_DECOMMISSIONED = ("Discudemy", "FreeWebCart", "Course Joiner")
 _REPO = Path(__file__).resolve().parents[1]
@@ -50,7 +53,7 @@ def _override_get_db():
 
 def _ten_sites() -> dict:
     return {
-        k: True for k in UserSettings.default_sites() if k not in _NEW_SEVEN
+        k: True for k in UserSettings.default_sites() if k not in _NEW_TEN
     }
 
 
@@ -152,8 +155,8 @@ class TestMergeSitesForPutHelper:
         merged = _merge_sites_for_put(stored, put)
         defaults = UserSettings.default_sites()
         assert set(merged) == set(defaults)
-        assert len(merged) == 17
-        for name in _NEW_SEVEN:
+        assert len(merged) == 20
+        for name in _NEW_TEN:
             assert merged[name] == defaults[name]
         assert merged["FreeCourseSites"] is False
         assert "FreeWebCart" not in merged
@@ -184,7 +187,7 @@ class TestMergeSitesForPutHelper:
         merged = _merge_sites_for_put(stored, put)
         defaults = UserSettings.default_sites()
         assert set(merged) == set(defaults)
-        assert len(merged) == 17
+        assert len(merged) == 20
         assert "Discudemy" not in merged
         assert "FreeWebCart" not in merged
         assert "Course Joiner" not in merged
@@ -205,8 +208,8 @@ class TestSettingsSitesPersistHttp:
         assert response.status_code == 200
         stored = _db_sites(user_id)
         assert set(stored) == set(UserSettings.default_sites())
-        assert len(stored) == 17
-        for name in _NEW_SEVEN:
+        assert len(stored) == 20
+        for name in _NEW_TEN:
             assert stored[name] == UserSettings.default_sites()[name]
         assert stored["FreeCourseSites"] is False
         assert "FreeWebCart" not in stored
@@ -257,7 +260,7 @@ class TestSettingsSitesPersistHttp:
         assert "Discudemy" not in body
         after = _db_sites(user_id)
         assert set(after) == set(_ten_sites())
-        for name in _NEW_SEVEN:
+        for name in _NEW_TEN:
             assert name not in after
 
     def test_get_legacy_sixteen_drops_decommissioned_without_writing_db(self, sites_client):
@@ -272,7 +275,7 @@ class TestSettingsSitesPersistHttp:
         body = response.json()["sites"]
         defaults = UserSettings.default_sites()
         assert set(body) == set(defaults)
-        assert len(body) == 17
+        assert len(body) == 20
         assert "Discudemy" not in body
         assert "FreeWebCart" not in body
         assert "Course Joiner" not in body
@@ -298,7 +301,7 @@ class TestSettingsSitesPersistHttp:
         stored = _db_sites(user_id)
         defaults = UserSettings.default_sites()
         assert set(stored) == set(defaults)
-        assert len(stored) == 17
+        assert len(stored) == 20
         assert "Discudemy" not in stored
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
@@ -316,7 +319,7 @@ class TestSettingsSitesPersistHttp:
         assert response.status_code == 200
         stored = _db_sites(user_id)
         assert stored == UserSettings.default_sites()
-        assert len(stored) == 17
+        assert len(stored) == 20
         assert "Discudemy" not in stored
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
@@ -340,7 +343,7 @@ class TestSettingsSitesPersistHttp:
         assert "FreeWebCart" not in stored
         assert "Discudemy" not in stored
         assert "Course Joiner" not in stored
-        for name in _NEW_SEVEN:
+        for name in _NEW_TEN:
             assert stored[name] == UserSettings.default_sites()[name]
 
     def test_non_dict_put_sites_does_not_500(self, sites_client):

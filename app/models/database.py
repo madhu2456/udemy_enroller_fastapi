@@ -142,6 +142,9 @@ class UserSettings(Base):
             "FreebiesGlobal": True,
             "GeeksGod": True,
             "TutorialBar": True,
+            "Reddit Udemy": True,
+            "Telegram Deals": True,
+            "WordPress Feeds": True,
         }
 
     @staticmethod
@@ -209,6 +212,10 @@ class UserSettings(Base):
 
     # Advanced Features
     proxy_url = Column(String(500), nullable=True)
+    webhook_url = Column(String(500), nullable=True)
+    webhook_service = Column(String(50), default="generic")
+    schedule_interval_hours = Column(Integer, default=0)
+    last_scheduled_run = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=_utcnow_naive)
     updated_at = Column(DateTime, default=_utcnow_naive, onupdate=_utcnow_naive)
@@ -260,6 +267,11 @@ class EnrollmentRun(Base):
 
 class EnrolledCourse(Base):
     __tablename__ = "enrolled_courses"
+
+    __table_args__ = (
+        Index("idx_enrolled_courses_run_status", "enrollment_run_id", "status"),
+        Index("idx_enrolled_courses_slug", "slug"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     enrollment_run_id = Column(
@@ -317,6 +329,53 @@ def create_tables():
             except OperationalError:
                 conn.execute(
                     text("ALTER TABLE enrollment_runs ADD COLUMN last_heartbeat DATETIME")
+                )
+
+            # Safe index creation
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_enrolled_courses_run_status "
+                    "ON enrolled_courses (enrollment_run_id, status)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_enrolled_courses_slug "
+                    "ON enrolled_courses (slug)"
+                )
+            )
+
+            # Safe column additions for user_settings
+            try:
+                conn.execute(text("SELECT webhook_url FROM user_settings LIMIT 1"))
+            except OperationalError:
+                conn.execute(
+                    text("ALTER TABLE user_settings ADD COLUMN webhook_url VARCHAR(500)")
+                )
+
+            try:
+                conn.execute(text("SELECT webhook_service FROM user_settings LIMIT 1"))
+            except OperationalError:
+                conn.execute(
+                    text(
+                        "ALTER TABLE user_settings ADD COLUMN webhook_service VARCHAR(50) DEFAULT 'generic'"
+                    )
+                )
+
+            try:
+                conn.execute(text("SELECT schedule_interval_hours FROM user_settings LIMIT 1"))
+            except OperationalError:
+                conn.execute(
+                    text(
+                        "ALTER TABLE user_settings ADD COLUMN schedule_interval_hours INTEGER DEFAULT 0"
+                    )
+                )
+
+            try:
+                conn.execute(text("SELECT last_scheduled_run FROM user_settings LIMIT 1"))
+            except OperationalError:
+                conn.execute(
+                    text("ALTER TABLE user_settings ADD COLUMN last_scheduled_run DATETIME")
                 )
     except Exception:
         # Just pass if it's Postgres or another DB that handles this via Alembic

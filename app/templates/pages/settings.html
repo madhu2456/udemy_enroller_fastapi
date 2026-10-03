@@ -250,6 +250,69 @@ content %}
 
             <div class="border-t border-gray-100"></div>
 
+            <!-- Automation & Webhook Notifications -->
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900">Automation & Webhook Notifications</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Configure recurring scheduled enrollments and notification webhooks.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label for="schedule-interval" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Recurring Schedule</label>
+                        <select
+                            id="schedule-interval"
+                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        >
+                            <option value="0">Disabled (Manual only)</option>
+                            <option value="1">Every 1 Hour</option>
+                            <option value="2">Every 2 Hours</option>
+                            <option value="4">Every 4 Hours</option>
+                            <option value="6">Every 6 Hours</option>
+                            <option value="12">Every 12 Hours</option>
+                            <option value="24">Every 24 Hours</option>
+                        </select>
+                        <p class="text-[10px] text-gray-500">Automatically launches an enrollment run in the background</p>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="webhook-service" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Webhook Service</label>
+                        <select
+                            id="webhook-service"
+                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        >
+                            <option value="generic">Generic (JSON)</option>
+                            <option value="discord">Discord (Rich Embed)</option>
+                            <option value="telegram">Telegram (Bot / Channel)</option>
+                            <option value="ntfy">Ntfy (Push Notification)</option>
+                        </select>
+                        <p class="text-[10px] text-gray-500">Payload formatting style for your notification target</p>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="webhook-url" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Webhook URL</label>
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="webhook-url"
+                            placeholder="https://discord.com/api/webhooks/... or https://ntfy.sh/..."
+                            class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        />
+                        <button
+                            type="button"
+                            id="test-webhook-btn"
+                            class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-all"
+                        >
+                            Test Webhook
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-gray-500">Receive instant alerts when enrollment runs start and finish</p>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100"></div>
+
             <!-- Toggle switches for save/discount flags -->
             <div class="divide-y divide-gray-100">
                 <div class="flex items-center justify-between py-3 gap-4">
@@ -493,6 +556,39 @@ content %}
         document.querySelectorAll('[data-action="pill-change"]').forEach(input => {
             input.addEventListener('change', () => onPillChange(input));
         });
+
+        const testWebhookBtn = document.getElementById("test-webhook-btn");
+        if (testWebhookBtn) {
+            testWebhookBtn.addEventListener("click", async () => {
+                const url = document.getElementById("webhook-url").value.trim();
+                const service = document.getElementById("webhook-service").value;
+                if (!url) {
+                    showMsg("Please enter a webhook URL first", "red");
+                    return;
+                }
+                const originalText = testWebhookBtn.textContent;
+                testWebhookBtn.disabled = true;
+                testWebhookBtn.textContent = "Testing...";
+                try {
+                    const resp = await apiFetch("/api/settings/test-webhook", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ webhook_url: url, webhook_service: service }),
+                    });
+                    const data = await resp.json();
+                    if (resp.ok && data.success) {
+                        showMsg(data.message || "Test webhook sent successfully!", "green");
+                    } else {
+                        showMsg(data.detail || data.message || "Webhook delivery failed", "red");
+                    }
+                } catch (e) {
+                    showMsg("Failed to test webhook: network error", "red");
+                } finally {
+                    testWebhookBtn.disabled = false;
+                    testWebhookBtn.textContent = originalText;
+                }
+            });
+        }
     });
 
     function formatSessionRemaining(seconds) {
@@ -708,6 +804,9 @@ content %}
 
             document.getElementById("proxy-url").value =
                 currentSettings.proxy_url || "";
+            document.getElementById("schedule-interval").value = String(currentSettings.schedule_interval_hours || 0);
+            document.getElementById("webhook-service").value = currentSettings.webhook_service || "generic";
+            document.getElementById("webhook-url").value = currentSettings.webhook_url || "";
         } catch (e) {
             console.error("Failed to load settings:", e);
             showMsg("Error: Could not retrieve settings from server", "red");
@@ -778,6 +877,9 @@ content %}
             proxy_url: ALLOW_USER_PROXY
                 ? document.getElementById("proxy-url").value.trim() || null
                 : null,
+            schedule_interval_hours: parseInt(document.getElementById("schedule-interval").value, 10) || 0,
+            webhook_service: document.getElementById("webhook-service").value || "generic",
+            webhook_url: document.getElementById("webhook-url").value.trim() || null,
         };
     }
 

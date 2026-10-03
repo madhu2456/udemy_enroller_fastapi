@@ -88,7 +88,7 @@ async def start_enrollment(
     enabled_sites = [k for k, v in settings_dict["sites"].items() if v and k in SCRAPER_REGISTRY]
     # Deduplicate in case of aliases/old data
     enabled_sites = list(dict.fromkeys(enabled_sites))
-    
+
     enabled_langs = [k for k, v in settings_dict["languages"].items() if v]
     enabled_cats = [k for k, v in settings_dict["categories"].items() if v]
     if not all([enabled_sites, enabled_langs, enabled_cats]):
@@ -194,8 +194,10 @@ async def stream_progress(
     """Server-Sent Events stream for real-time progress updates."""
 
     async def event_generator():
+        import time
         from app.core.constants import shutdown_event
 
+        last_ping = time.time()
         while not shutdown_event.is_set():
             if await request.is_disconnected():
                 break
@@ -210,9 +212,20 @@ async def stream_progress(
                     break
                 progress = EnrollmentManager.get_progress_from_run(active)
                 yield f"data: {json.dumps({'active': True, **progress})}\n\n"
+
+            now = time.time()
+            if now - last_ping >= 15.0:
+                yield ": ping\n\n"
+                last_ping = now
+
             await asyncio.sleep(1)
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
 
 
 @router.get("/history", response_model=list[EnrollmentStatus])

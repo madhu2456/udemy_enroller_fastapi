@@ -1127,7 +1127,7 @@ async def test_import_merge_failure_is_tolerated(monkeypatch):
 
 # --- C8: appended-first checker cap + Couponami-preferred frozen fill --------
 
-_NEW_SEVEN = [
+_NEW_TEN = [
     "Courson",
     "CouponScorpion",
     "Real Discount",
@@ -1135,6 +1135,9 @@ _NEW_SEVEN = [
     "FreebiesGlobal",
     "GeeksGod",
     "TutorialBar",
+    "Reddit Udemy",
+    "Telegram Deals",
+    "WordPress Feeds",
 ]
 
 
@@ -1172,22 +1175,22 @@ def test_frozen_registry_prefix_len_lockstep():
 
 def test_select_checker_sites_limit_zero_or_all_reorders_appended_then_couponami():
     keys = list(SCRAPER_REGISTRY)
-    expected = _NEW_SEVEN + _preferred_frozen(FROZEN_10)
-    for limit in (0, 17, 18, 99):
+    expected = _NEW_TEN + _preferred_frozen(FROZEN_10)
+    for limit in (0, 20, 21, 99):
         selected, omitted = checker._select_checker_scrape_sites(keys, limit)
         assert omitted == []
         assert selected == expected
-        assert len(selected) == 17
+        assert len(selected) == 20
         assert set(selected) == set(keys)
     assert list(SCRAPER_REGISTRY) == keys
 
 
-def test_select_checker_sites_limit_seven_is_appended_only():
+def test_select_checker_sites_limit_ten_is_appended_only():
     keys = list(SCRAPER_REGISTRY)
     log, handler, previous_level = _attach_checker_log_handler()
     try:
-        selected, omitted = checker._select_checker_scrape_sites(keys, 7)
-        assert selected == _NEW_SEVEN
+        selected, omitted = checker._select_checker_scrape_sites(keys, 10)
+        assert selected == _NEW_TEN
         assert "Couponami" in omitted
         assert set(omitted) == set(FROZEN_10)
         warn_text = " ".join(
@@ -1202,19 +1205,19 @@ def test_select_checker_sites_limit_seven_is_appended_only():
         log.setLevel(previous_level)
 
 
-def test_select_checker_sites_limit_eight_is_appended_plus_couponami():
+def test_select_checker_sites_limit_eleven_is_appended_plus_couponami():
     keys = list(SCRAPER_REGISTRY)
-    selected, omitted = checker._select_checker_scrape_sites(keys, 8)
-    assert selected == _NEW_SEVEN + ["Couponami"]
+    selected, omitted = checker._select_checker_scrape_sites(keys, 11)
+    assert selected == _NEW_TEN + ["Couponami"]
     assert "Couponami" not in omitted
     assert "iDownloadCoupon" in omitted
 
 
-def test_select_checker_sites_limit_sixteen_omits_idownloadcoupon():
+def test_select_checker_sites_limit_nineteen_omits_idownloadcoupon():
     keys = list(SCRAPER_REGISTRY)
     log, handler, previous_level = _attach_checker_log_handler()
     try:
-        selected, omitted = checker._select_checker_scrape_sites(keys, 16)
+        selected, omitted = checker._select_checker_scrape_sites(keys, 19)
         assert selected == [
             "Courson",
             "CouponScorpion",
@@ -1223,6 +1226,9 @@ def test_select_checker_sites_limit_sixteen_omits_idownloadcoupon():
             "FreebiesGlobal",
             "GeeksGod",
             "TutorialBar",
+            "Reddit Udemy",
+            "Telegram Deals",
+            "WordPress Feeds",
             "Couponami",
             "FreeCourseSites",
             "E-next",
@@ -1234,7 +1240,7 @@ def test_select_checker_sites_limit_sixteen_omits_idownloadcoupon():
             "UdemyFreebies",
         ]
         assert omitted == ["iDownloadCoupon"]
-        assert len(selected) == 16
+        assert len(selected) == 19
         warn_text = " ".join(
             r.getMessage() for r in handler.records if r.levelno >= logging.WARNING
         )
@@ -1244,13 +1250,13 @@ def test_select_checker_sites_limit_sixteen_omits_idownloadcoupon():
         log.setLevel(previous_level)
 
 
-def test_select_checker_sites_limit_seventeen_selects_all():
+def test_select_checker_sites_limit_twenty_selects_all():
     keys = list(SCRAPER_REGISTRY)
-    selected, omitted = checker._select_checker_scrape_sites(keys, 17)
+    selected, omitted = checker._select_checker_scrape_sites(keys, 20)
     assert omitted == []
-    assert len(selected) == 17
+    assert len(selected) == 20
     assert set(selected) == set(keys)
-    assert selected == _NEW_SEVEN + _preferred_frozen(FROZEN_10)
+    assert selected == _NEW_TEN + _preferred_frozen(FROZEN_10)
     assert "iDownloadCoupon" in selected
     assert "Course Joiner" not in selected
     assert "FreeWebCart" not in selected
@@ -1259,7 +1265,7 @@ def test_select_checker_sites_limit_seventeen_selects_all():
 @pytest.mark.asyncio
 async def test_import_passes_appended_first_selection_not_registry_prefix(monkeypatch):
     monkeypatch.setattr(checker, "_scrape_enabled", lambda: True)
-    monkeypatch.setattr(checker, "_scrape_source_limit", lambda: 7)
+    monkeypatch.setattr(checker, "_scrape_source_limit", lambda: 10)
 
     captured = {}
     fake_service = MagicMock()
@@ -1281,5 +1287,5 @@ async def test_import_passes_appended_first_selection_not_registry_prefix(monkey
     sites = captured["kwargs"].get("sites_to_scrape")
     if sites is None and captured["args"]:
         sites = captured["args"][0]
-    assert sites == _NEW_SEVEN
-    assert sites != list(SCRAPER_REGISTRY)[:7]
+    assert sites == _NEW_TEN
+    assert sites != list(SCRAPER_REGISTRY)[:10]

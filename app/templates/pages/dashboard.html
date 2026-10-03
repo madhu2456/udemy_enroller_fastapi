@@ -949,6 +949,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
 {% endblock %} {% block scripts %}
 <script nonce="{{ request.state.nonce }}">
     let progressInterval = null;
+    let progressEventSource = null;
     let savingsChart = null;
     let chartJsPromise = null;
     let currentRunCourses = [];
@@ -1245,7 +1246,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 trackEvent("enrollment_start", {});
                 if (window.ueEvent) window.ueEvent('enroll_result', { outcome: 'start_success' });
                 showProgressPanel();
-                startProgressPolling();
+                startProgressStream();
             } else {
                 if (window.ueEvent) window.ueEvent('enroll_result', { outcome: 'start_fail' });
                 alert(
@@ -1263,6 +1264,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
     }
 
     async function stopEnrollment() {
+        stopProgressStream();
         const btn = document.getElementById("stop-btn");
         const origText = btn.innerHTML;
         btn.disabled = true;
@@ -1304,66 +1306,106 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             if (data.active) {
                 showProgressPanel();
                 updateProgress(data);
-                startProgressPolling();
+                startProgressStream();
             }
         } catch (e) {}
     }
 
-    function startProgressPolling() {
+    function stopProgressStream() {
+        if (progressEventSource) {
+            try {
+                progressEventSource.close();
+            } catch (e) {}
+            progressEventSource = null;
+        }
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+    }
+
+    function handleProgressData(data) {
+        if (!data || !data.active) {
+            stopProgressStream();
+            document
+                .getElementById("running-banner")
+                .classList.add("hidden");
+            document
+                .getElementById("progress-panel")
+                .classList.add("hidden");
+
+            const startBtn = document.getElementById("start-btn");
+            startBtn.classList.remove("hidden");
+            startBtn.disabled = false;
+            startBtn.innerHTML =
+                '<i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Start Enrollment Run';
+
+            const stopBtn = document.getElementById("stop-btn");
+            stopBtn.classList.add("hidden");
+            stopBtn.innerHTML =
+                '<i data-lucide="square" class="w-3.5 h-3.5 fill-current"></i> Stop Enrollment';
+
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            loadDashboardStats();
+            loadRecentRuns();
+            updateAnalytics();
+
+            // Reset page title when run finishes
+            document.title =
+                "Udemy Course Automation Dashboard: Track Your Progress";
+
+            if (
+                lastProgressData &&
+                lastProgressData.processed !== undefined
+            ) {
+                showStatsModal(lastProgressData);
+                lastProgressData = null;
+            }
+            return;
+        }
+        updateProgress(data);
+
+        if (
+            data.status === "enrolling" ||
+            data.status === "completed"
+        ) {
+            loadRunDetails(data.run_id);
+        }
+    }
+
+    function startProgressStream() {
+        stopProgressStream();
+
+        if (window.EventSource) {
+            try {
+                progressEventSource = new EventSource("/api/enrollment/progress/stream");
+                progressEventSource.onmessage = function (event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleProgressData(data);
+                    } catch (e) {}
+                };
+                progressEventSource.onerror = function () {
+                    // Fall back to 5s polling on disconnect (FM-007)
+                    stopProgressStream();
+                    startProgressPollingFallback();
+                };
+                return;
+            } catch (e) {}
+        }
+        startProgressPollingFallback();
+    }
+
+    function startProgressPollingFallback() {
         if (progressInterval) clearInterval(progressInterval);
         progressInterval = setInterval(async () => {
             try {
                 const resp = await fetch("/api/enrollment/progress");
                 const data = await resp.json();
-                if (!data.active) {
-                    clearInterval(progressInterval);
-                    document
-                        .getElementById("running-banner")
-                        .classList.add("hidden");
-                    document
-                        .getElementById("progress-panel")
-                        .classList.add("hidden");
-
-                    const startBtn = document.getElementById("start-btn");
-                    startBtn.classList.remove("hidden");
-                    startBtn.disabled = false;
-                    startBtn.innerHTML =
-                        '<i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Start Enrollment Run';
-
-                    const stopBtn = document.getElementById("stop-btn");
-                    stopBtn.classList.add("hidden");
-                    stopBtn.innerHTML =
-                        '<i data-lucide="square" class="w-3.5 h-3.5 fill-current"></i> Stop Enrollment';
-
-                    if (window.lucide) {
-                        lucide.createIcons();
-                    }
-
-                    loadDashboardStats();
-                    loadRecentRuns();
-                    updateAnalytics();
-
-                    // Reset page title when run finishes
-                    document.title =
-                        "Udemy Course Automation Dashboard: Track Your Progress";
-
-                    if (
-                        lastProgressData &&
-                        lastProgressData.processed !== undefined
-                    ) {
-                        showStatsModal(lastProgressData);
-                        lastProgressData = null;
-                    }
-                    return;
-                }
-                updateProgress(data);
-
-                if (
-                    data.status === "enrolling" ||
-                    data.status === "completed"
-                ) {
-                    loadRunDetails(data.run_id);
-                }
+                handleProgressData(data);
             } catch (e) {}
         }, 5000);
     }

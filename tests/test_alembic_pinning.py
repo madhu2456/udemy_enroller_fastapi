@@ -65,14 +65,23 @@ def test_revision_ids_unchanged():
             "c01d021a9e03",
             "c01d021a9e02",
         ),
+        "c01d021a9e04_add_indexes_and_automation_settings.py": (
+            "c01d021a9e04",
+            "c01d021a9e03",
+        ),
     }
     versions = REPO / "alembic" / "versions"
     for filename, (revision, down_revision) in expected.items():
         text = (versions / filename).read_text(encoding="utf-8")
-        assert f"revision = '{revision}'" in text or f'revision = "{revision}"' in text
+        assert (
+            f"revision = '{revision}'" in text
+            or f'revision = "{revision}"' in text
+            or f'revision: str = "{revision}"' in text
+        )
         assert (
             f"down_revision = '{down_revision}'" in text
             or f'down_revision = "{down_revision}"' in text
+            or f'down_revision: Union[str, None] = "{down_revision}"' in text
         )
 
 
@@ -167,7 +176,7 @@ def test_pinned_upgrade_head_twice_is_idempotent(tmp_path):
     inspected = _inspect(db_path)
     assert inspected.returncode == 0, inspected.stderr
     out = inspected.stdout
-    assert "alembic_version: c01d021a9e03" in out
+    assert "alembic_version: c01d021a9e04" in out
     assert "users.cookies_salt: present" in out
     assert "idx_active_run_per_user" in out
     assert "last_checked_at" in out
@@ -298,7 +307,7 @@ def test_pin_to_ini_default_path_not_overwritten_by_settings(tmp_path, monkeypat
         version = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
     finally:
         conn.close()
-    assert version == "c01d021a9e03"
+    assert version == "c01d021a9e04"
 
     assert settings_db.stat().st_size == 0
     settings_conn = sqlite3.connect(settings_db)
@@ -335,7 +344,7 @@ def test_explicit_pin_kept_when_both_candidate_files_exist(tmp_path, monkeypatch
         }
     finally:
         conn.close()
-    assert version == "c01d021a9e03"
+    assert version == "c01d021a9e04"
     assert "users" in tables
     # Dummy candidates must remain empty files (not migrated).
     assert (tmp_path / "udemy_enroller.db").stat().st_size == 0

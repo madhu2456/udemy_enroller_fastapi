@@ -120,6 +120,34 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
         </div>
     </div>
 
+    <!-- Search & Faceted Filter Controls -->
+    <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div class="relative w-full sm:w-80">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true"></i>
+            <input
+                type="text"
+                id="history-search-input"
+                placeholder="Search Run # or status..."
+                class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                aria-label="Search runs"
+            />
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <label for="history-status-filter" class="text-xs font-medium text-gray-500 whitespace-nowrap">Status:</label>
+            <select
+                id="history-status-filter"
+                class="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                aria-label="Filter runs by status"
+            >
+                <option value="all">All Statuses</option>
+                <option value="completed">Completed</option>
+                <option value="enrolling">Enrolling / Active</option>
+                <option value="failed">Failed</option>
+                <option value="stopped">Stopped</option>
+            </select>
+        </div>
+    </div>
+
     <!-- History Feed -->
     <div id="history-feed" class="space-y-4">
         <div
@@ -184,106 +212,139 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
         } catch (e) {}
     }
 
+    // Data and Search State
+    let allRunsData = [];
+    let searchDebounceTimer = null;
+
+    /**
+     * Render Filtered Feed
+     */
+    function renderHistoryFeed() {
+        const feed = document.getElementById("history-feed");
+        const searchInput = document.getElementById("history-search-input");
+        const statusSelect = document.getElementById("history-status-filter");
+        const searchTerm = (searchInput ? searchInput.value : "").trim().toLowerCase();
+        const statusFilter = (statusSelect ? statusSelect.value : "all").toLowerCase();
+
+        let filtered = allRunsData;
+        if (statusFilter !== "all") {
+            filtered = filtered.filter((r) => (r.status || "").toLowerCase() === statusFilter);
+        }
+        if (searchTerm) {
+            filtered = filtered.filter((r) => {
+                const runIdStr = String(r.run_id || "");
+                const statusStr = (r.status || "").toLowerCase();
+                const currencyStr = (r.currency || "").toLowerCase();
+                return (
+                    runIdStr.includes(searchTerm) ||
+                    statusStr.includes(searchTerm) ||
+                    currencyStr.includes(searchTerm)
+                );
+            });
+        }
+
+        if (filtered.length === 0) {
+            feed.innerHTML = `
+                <div class="bg-white border border-gray-200 rounded-xl p-16 text-center shadow-sm">
+                    <p class="text-gray-600 italic mb-4 font-light">${allRunsData.length === 0 ? "Your history log is currently empty." : "No runs match your search or filter criteria."}</p>
+                    ${allRunsData.length === 0 ? '<a href="/dashboard" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-sm font-semibold transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Start Automated Enrollment</a>' : ''}
+                </div>
+            `;
+            return;
+        }
+
+        feed.innerHTML = filtered
+            .map((run) => {
+                const isSuccess = run.status === "completed";
+                const isError = run.status === "failed";
+
+                let badgeClass =
+                    "bg-yellow-50 text-yellow-700 border-yellow-200";
+                if (isSuccess)
+                    badgeClass =
+                        "bg-green-50 text-green-700 border-green-200";
+                if (isError)
+                    badgeClass = "bg-red-50 text-red-700 border-red-200";
+
+                const currencySym = run.currency === "inr" ? "₹" : "$";
+
+                return `
+            <div class="bg-white border border-gray-200 rounded-xl transition-all duration-300 hover:border-gray-300 overflow-hidden shadow-sm" id="card-${run.run_id}">
+                <!-- Main Header (keyboard-expandable) -->
+                <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <button type="button" class="flex items-center gap-4 text-left flex-1 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" data-action="toggle-card" data-run-id="${run.run_id}" aria-expanded="false" aria-controls="expansion-${run.run_id}" id="toggle-run-${run.run_id}">
+                        <div class="hidden md:flex w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 items-center justify-center text-gray-500 flex-shrink-0" aria-hidden="true">
+                            <i data-lucide="terminal" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-3 mb-1 flex-wrap">
+                                <span class="text-gray-900 font-semibold text-base tracking-tight">Run #${run.run_id}</span>
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase border ${badgeClass}">${escapeHTML(run.status)}</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs text-gray-600 font-light">
+                                <span>${formatTime(run.started_at)}</span>
+                                <span class="opacity-40" aria-hidden="true">|</span>
+                                <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>${getRunTime(run.started_at, run.completed_at)}</span>
+                            </div>
+                        </div>
+                    </button>
+
+                    <div class="flex items-center justify-between md:justify-end gap-8 md:gap-12">
+                        <div class="flex gap-8">
+                            <div class="text-center md:text-left">
+                                <p class="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5">Enrolled</p>
+                                <p class="text-lg font-semibold text-green-700 leading-none">${run.successfully_enrolled}</p>
+                            </div>
+                            <div class="text-center md:text-left">
+                                <p class="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5">Savings</p>
+                                <p class="text-lg font-semibold text-blue-700 leading-none">${currencySym}${(run.amount_saved || 0).toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" data-action="delete-run" data-run-id="${run.run_id}" class="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" aria-label="Delete run ${run.run_id}">
+                                <i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="text-gray-600 transition-all duration-300 transform p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" id="chevron-${run.run_id}" data-action="toggle-card" data-run-id="${run.run_id}" aria-label="Expand or collapse run ${run.run_id}" aria-controls="expansion-${run.run_id}">
+                                <i data-lucide="chevron-down" class="w-5 h-5" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expansion Area -->
+                <div id="expansion-${run.run_id}" class="hidden border-t border-gray-100 bg-gray-50/50" role="region" aria-labelledby="toggle-run-${run.run_id}">
+                    <div class="p-6 md:p-8" id="details-${run.run_id}">
+                        <div class="flex justify-center py-10"><i data-lucide="loader" class="text-blue-500 w-6 h-6 animate-spin" aria-hidden="true"></i></div>
+                    </div>
+                </div>
+            </div>
+        `;
+            })
+            .join("");
+
+        if (window.lucide) {
+            lucide.createIcons({
+                attrs: { class: "w-4 h-4" },
+                nameAttr: "data-lucide",
+            });
+        }
+    }
+
     /**
      * Fetch and Render Feed
      */
     async function fetchHistory() {
-        const feed = document.getElementById("history-feed");
         loadSummaryStats();
 
         try {
             const response = await fetch("/api/enrollment/history?limit=50");
             if (!response.ok) throw new Error("API Connection Failed");
             const data = await response.json();
-
-            if (!data || data.length === 0) {
-                feed.innerHTML = `
-                <div class="bg-white border border-gray-200 rounded-xl p-20 text-center shadow-sm">
-                    <p class="text-gray-600 italic mb-6 font-light">Your history log is currently empty.</p>
-                    <a href="/dashboard" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-sm font-semibold transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Start Automated Enrollment</a>
-                </div>
-            `;
-                return;
-            }
-
-            feed.innerHTML = data
-                .map((run) => {
-                    const isSuccess = run.status === "completed";
-                    const isError = run.status === "failed";
-
-                    let badgeClass =
-                        "bg-yellow-50 text-yellow-700 border-yellow-200";
-                    if (isSuccess)
-                        badgeClass =
-                            "bg-green-50 text-green-700 border-green-200";
-                    if (isError)
-                        badgeClass = "bg-red-50 text-red-700 border-red-200";
-
-                    const currencySym = run.currency === "inr" ? "₹" : "$";
-
-                    return `
-                <div class="bg-white border border-gray-200 rounded-xl transition-all duration-300 hover:border-gray-300 overflow-hidden shadow-sm" id="card-${run.run_id}">
-                    <!-- Main Header (keyboard-expandable) -->
-                    <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <button type="button" class="flex items-center gap-4 text-left flex-1 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" data-action="toggle-card" data-run-id="${run.run_id}" aria-expanded="false" aria-controls="expansion-${run.run_id}" id="toggle-run-${run.run_id}">
-                            <div class="hidden md:flex w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 items-center justify-center text-gray-500 flex-shrink-0" aria-hidden="true">
-                                <i data-lucide="terminal" class="w-5 h-5"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-3 mb-1 flex-wrap">
-                                    <span class="text-gray-900 font-semibold text-base tracking-tight">Run #${run.run_id}</span>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase border ${badgeClass}">${escapeHTML(run.status)}</span>
-                                </div>
-                                <div class="flex items-center gap-3 text-xs text-gray-600 font-light">
-                                    <span>${formatTime(run.started_at)}</span>
-                                    <span class="opacity-40" aria-hidden="true">|</span>
-                                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>${getRunTime(run.started_at, run.completed_at)}</span>
-                                </div>
-                            </div>
-                        </button>
-
-                        <div class="flex items-center justify-between md:justify-end gap-8 md:gap-12">
-                            <div class="flex gap-8">
-                                <div class="text-center md:text-left">
-                                    <p class="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5">Enrolled</p>
-                                    <p class="text-lg font-semibold text-green-700 leading-none">${run.successfully_enrolled}</p>
-                                </div>
-                                <div class="text-center md:text-left">
-                                    <p class="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5">Savings</p>
-                                    <p class="text-lg font-semibold text-blue-700 leading-none">${currencySym}${(run.amount_saved || 0).toFixed(2)}</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <button type="button" data-action="delete-run" data-run-id="${run.run_id}" class="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" aria-label="Delete run ${run.run_id}">
-                                    <i data-lucide="trash-2" class="w-4 h-4" aria-hidden="true"></i>
-                                </button>
-                                <button type="button" class="text-gray-600 transition-all duration-300 transform p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" id="chevron-${run.run_id}" data-action="toggle-card" data-run-id="${run.run_id}" aria-label="Expand or collapse run ${run.run_id}" aria-controls="expansion-${run.run_id}">
-                                    <i data-lucide="chevron-down" class="w-5 h-5" aria-hidden="true"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Expansion Area -->
-                    <div id="expansion-${run.run_id}" class="hidden border-t border-gray-100 bg-gray-50/50" role="region" aria-labelledby="toggle-run-${run.run_id}">
-                        <div class="p-6 md:p-8" id="details-${run.run_id}">
-                            <div class="flex justify-center py-10"><i data-lucide="loader" class="text-blue-500 w-6 h-6 animate-spin" aria-hidden="true"></i></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-                })
-                .join("");
-
-            if (window.lucide) {
-                lucide.createIcons({
-                    attrs: { class: "w-4 h-4" },
-                    nameAttr: "data-lucide",
-                });
-            }
+            allRunsData = Array.isArray(data) ? data : [];
+            renderHistoryFeed();
         } catch (e) {
             console.error(e);
-            feed.innerHTML = `<div class="p-10 bg-red-50 border border-red-200 rounded-xl text-center"><p class="text-red-600 font-semibold text-sm">Network synchronization error. Please check your connection.</p></div>`;
+            document.getElementById("history-feed").innerHTML = `<div class="p-10 bg-red-50 border border-red-200 rounded-xl text-center"><p class="text-red-600 font-semibold text-sm">Network synchronization error. Please check your connection.</p></div>`;
         }
     }
 
@@ -515,15 +576,40 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
         fetchHistory();
 
         // Event listeners for data-action attributes
-        document.querySelectorAll('[data-action="fetch-history"]').forEach(btn => {
-            btn.addEventListener('click', () => fetchHistory());
+        document.querySelectorAll('[data-action="fetch-history"]').forEach((btn) => {
+            btn.addEventListener("click", () => fetchHistory());
         });
-        document.querySelectorAll('[data-action="toggle-card"]').forEach(btn => {
-            btn.addEventListener('click', () => handleCardToggle(btn.dataset.runId));
-        });
-        document.querySelectorAll('[data-action="delete-run"]').forEach(btn => {
-            btn.addEventListener('click', () => requestDelete(btn.dataset.runId));
-        });
+
+        // Search & faceted filtering listeners
+        const searchInput = document.getElementById("history-search-input");
+        if (searchInput) {
+            searchInput.addEventListener("input", () => {
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(renderHistoryFeed, 200);
+            });
+        }
+
+        const statusSelect = document.getElementById("history-status-filter");
+        if (statusSelect) {
+            statusSelect.addEventListener("change", renderHistoryFeed);
+        }
+
+        // Delegated event listener for feed items
+        const feed = document.getElementById("history-feed");
+        if (feed) {
+            feed.addEventListener("click", (e) => {
+                const toggleBtn = e.target.closest('[data-action="toggle-card"]');
+                if (toggleBtn) {
+                    handleCardToggle(toggleBtn.dataset.runId);
+                    return;
+                }
+                const deleteBtn = e.target.closest('[data-action="delete-run"]');
+                if (deleteBtn) {
+                    requestDelete(deleteBtn.dataset.runId);
+                    return;
+                }
+            });
+        }
     }
 
     // Initial Kickoff

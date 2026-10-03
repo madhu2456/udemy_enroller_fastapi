@@ -357,8 +357,13 @@ async def stream_logs(
                 yield f"data: {line}\n\n"
 
             # Live tail
+            if request.query_params.get("tail") == "false":
+                return
+
+            import time
             from app.core.constants import shutdown_event
 
+            last_ping = time.time()
             while not shutdown_event.is_set():
                 if await request.is_disconnected():
                     break
@@ -368,6 +373,10 @@ async def stream_logs(
                     if processed and processed.strip():
                         yield f"data: {processed.strip()}\n\n"
                 else:
+                    now = time.time()
+                    if now - last_ping >= 15.0:
+                        yield ": ping\n\n"
+                        last_ping = now
                     await asyncio.sleep(0.5)
 
     headers = {
