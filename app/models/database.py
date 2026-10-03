@@ -142,7 +142,6 @@ class UserSettings(Base):
             "FreebiesGlobal": True,
             "GeeksGod": True,
             "TutorialBar": True,
-            "Reddit Udemy": True,
             "Telegram Deals": True,
             "WordPress Feeds": True,
         }

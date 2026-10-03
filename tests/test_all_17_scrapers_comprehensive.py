@@ -40,15 +40,14 @@ EXPECTED_17_SCRAPERS: Dict[str, str] = {
     "FreebiesGlobal": "fg",
     "GeeksGod": "gg",
     "TutorialBar": "tb",
-    "Reddit Udemy": "ru",
     "Telegram Deals": "td",
     "WordPress Feeds": "wp",
 }
 
 
 def test_scraper_registry_completeness():
-    """Verify SCRAPER_REGISTRY contains exactly 20 scrapers with correct keys."""
-    assert len(SCRAPER_REGISTRY) == 20
+    """Verify SCRAPER_REGISTRY contains exactly 19 scrapers with correct keys."""
+    assert len(SCRAPER_REGISTRY) == 19
     assert set(SCRAPER_REGISTRY.keys()) == set(EXPECTED_17_SCRAPERS.keys())
 
 
@@ -155,16 +154,16 @@ def test_udemy_course_url_validation(url: str, is_valid: bool):
 async def test_scraper_service_orchestration_all_17():
     """Test ScraperService instantiating and orchestrating all scrapers."""
     service = ScraperService()
-    assert len(service.scrapers) == 20
-    assert len(service.site_to_scraper) == 20
+    assert len(service.scrapers) == 19
+    assert len(service.site_to_scraper) == 19
 
     # Ensure all scrapers are unique instances
     instances = list(service.scrapers)
-    assert len(set(instances)) == 20
+    assert len(set(instances)) == 19
 
     # Verify get_progress reporting for all scrapers
     progress = service.get_progress()
-    assert len(progress) == 20
+    assert len(progress) == 19
     for p in progress:
         assert "site" in p
         assert "progress" in p

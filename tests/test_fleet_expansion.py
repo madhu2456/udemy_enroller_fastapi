@@ -1,13 +1,11 @@
 """Empirical test suite for Wave 4 Scraper Fleet Expansion (Task 4.4).
 
 Tests:
-1. RedditUdemyScraper: direct links, selftext links, coupon parsing, 429 rate limit,
-   non-200 / invalid JSON, deduplication, and MAX_COURSES cap.
-2. TelegramDealsScraper: anchor tags, plain text links, coupon parsing, non-200,
+1. TelegramDealsScraper: anchor tags, plain text links, coupon parsing, non-200,
    empty response, and deduplication.
-3. WordPressFeedsScraper [FM-006]: RSS/Atom feed parsing, 45-min freshness guard,
+2. WordPressFeedsScraper [FM-006]: RSS/Atom feed parsing, 45-min freshness guard,
    and _parse_feed_item_date with RFC 2822 / ISO 8601.
-4. SCRAPER_REGISTRY & UserSettings: registration, instantiation, and default_sites.
+3. SCRAPER_REGISTRY & UserSettings: registration, instantiation, and default_sites.
 """
 
 from __future__ import annotations
@@ -22,89 +20,10 @@ from app.models.database import UserSettings
 from app.services.http_client import AsyncHTTPClient
 from app.services.scraper import (
     SCRAPER_REGISTRY,
-    RedditUdemyScraper,
     TelegramDealsScraper,
     WordPressFeedsScraper,
     _parse_feed_item_date,
 )
-
-
-@pytest.mark.asyncio
-async def test_reddit_udemy_scraper_parsing_and_coupons():
-    """Test RedditUdemyScraper parses direct links, selftext links, and coupons."""
-    mock_http = MagicMock(spec=AsyncHTTPClient)
-    mock_resp = MagicMock(status_code=200)
-    mock_payload = {
-        "data": {
-            "children": [
-                {
-                    "data": {
-                        "title": "Python Bootcamp Coupon: PY_FREE2026",
-                        "url": "https://www.udemy.com/course/python-bootcamp/",
-                        "selftext": "",
-                    }
-                },
-                {
-                    "data": {
-                        "title": "FastAPI Guide",
-                        "url": "https://reddit.com/r/udemy/123",
-                        "selftext": "Get it free: https://www.udemy.com/course/fastapi-guide/ code: FAST_FREE",
-                    }
-                },
-            ]
-        }
-    }
-    mock_http.get = AsyncMock(return_value=mock_resp)
-    mock_http.safe_json = AsyncMock(return_value=mock_payload)
-
-    scraper = RedditUdemyScraper(mock_http)
-    assert scraper.site_name == "Reddit Udemy"
-    assert scraper.code_name == "ru"
-    assert "UdemyEnrollerBot/1.1" in scraper.USER_AGENT
-
-    await scraper.scrape(asyncio.Semaphore(2))
-    assert scraper.done is True
-    urls = [c.url for c in scraper.data]
-    assert any("python-bootcamp" in u and "couponCode=PY_FREE2026" in u for u in urls)
-    assert any("fastapi-guide" in u and "couponCode=FAST_FREE" in u for u in urls)
-
-
-@pytest.mark.asyncio
-async def test_reddit_udemy_scraper_error_handling_and_caps():
-    """Test RedditUdemyScraper handles 429, non-200, invalid JSON, dedup and cap."""
-    mock_http = MagicMock(spec=AsyncHTTPClient)
-    resp_429 = MagicMock(status_code=429)
-    resp_500 = MagicMock(status_code=500)
-    resp_ok = MagicMock(status_code=200)
-    mock_http.get = AsyncMock(side_effect=[resp_429, resp_500, resp_ok])
-
-    dupe_url = "https://www.udemy.com/course/duplicate-course/?couponCode=FREE"
-    children = [
-        {"data": {"title": f"Dupe {i}", "url": dupe_url, "selftext": ""}}
-        for i in range(5)
-    ]
-    children.append({
-        "data": {
-            "title": "Unique",
-            "url": "https://www.udemy.com/course/unique-course/",
-            "selftext": "",
-        }
-    })
-    mock_http.safe_json = AsyncMock(return_value={"data": {"children": children}})
-
-    scraper = RedditUdemyScraper(mock_http)
-    scraper.MAX_COURSES = 1
-    await scraper.scrape(asyncio.Semaphore(2))
-    assert scraper.done is True
-    assert len(scraper.data) == 1
-
-    # Test invalid JSON handling
-    scraper_bad_json = RedditUdemyScraper(mock_http)
-    mock_http.get = AsyncMock(return_value=resp_ok)
-    mock_http.safe_json = AsyncMock(return_value=None)
-    await scraper_bad_json.scrape(asyncio.Semaphore(2))
-    assert scraper_bad_json.done is True
-    assert len(scraper_bad_json.data) == 0
 
 
 @pytest.mark.asyncio
@@ -197,7 +116,6 @@ def test_parse_feed_item_date():
 def test_scraper_registry_and_user_settings_expansion():
     """Verify expanded scrapers exist in SCRAPER_REGISTRY and UserSettings."""
     expected_scrapers = {
-        "Reddit Udemy": (RedditUdemyScraper, "ru"),
         "Telegram Deals": (TelegramDealsScraper, "td"),
         "WordPress Feeds": (WordPressFeedsScraper, "wp"),
     }

@@ -17,7 +17,7 @@ from app.models.database import Base, User, UserSession, UserSettings, get_db
 from app.routers.settings import _merge_sites_for_put
 from app.security import generate_csrf_token
 
-_NEW_TEN = (
+_NEW_NINE = (
     "Courson",
     "CouponScorpion",
     "Real Discount",
@@ -25,11 +25,15 @@ _NEW_TEN = (
     "FreebiesGlobal",
     "GeeksGod",
     "TutorialBar",
-    "Reddit Udemy",
     "Telegram Deals",
     "WordPress Feeds",
 )
-_DROPPED_DECOMMISSIONED = ("Discudemy", "FreeWebCart", "Course Joiner")
+_DROPPED_DECOMMISSIONED = (
+    "Discudemy",
+    "FreeWebCart",
+    "Course Joiner",
+    "Reddit Udemy",
+)
 _REPO = Path(__file__).resolve().parents[1]
 _SETTINGS_HTML = _REPO / "app" / "templates" / "pages" / "settings.html"
 
@@ -53,7 +57,7 @@ def _override_get_db():
 
 def _ten_sites() -> dict:
     return {
-        k: True for k in UserSettings.default_sites() if k not in _NEW_TEN
+        k: True for k in UserSettings.default_sites() if k not in _NEW_NINE
     }
 
 
@@ -155,13 +159,14 @@ class TestMergeSitesForPutHelper:
         merged = _merge_sites_for_put(stored, put)
         defaults = UserSettings.default_sites()
         assert set(merged) == set(defaults)
-        assert len(merged) == 20
-        for name in _NEW_TEN:
+        assert len(merged) == 19
+        for name in _NEW_NINE:
             assert merged[name] == defaults[name]
         assert merged["FreeCourseSites"] is False
         assert "FreeWebCart" not in merged
         assert "Course Joiner" not in merged
         assert "Discudemy" not in merged
+        assert "Reddit Udemy" not in merged
 
     def test_stored_false_survives_put_that_omits_key(self):
         stored = UserSettings.default_sites()
@@ -187,10 +192,11 @@ class TestMergeSitesForPutHelper:
         merged = _merge_sites_for_put(stored, put)
         defaults = UserSettings.default_sites()
         assert set(merged) == set(defaults)
-        assert len(merged) == 20
+        assert len(merged) == 19
         assert "Discudemy" not in merged
         assert "FreeWebCart" not in merged
         assert "Course Joiner" not in merged
+        assert "Reddit Udemy" not in merged
 
 
 class TestSettingsSitesPersistHttp:
@@ -208,13 +214,14 @@ class TestSettingsSitesPersistHttp:
         assert response.status_code == 200
         stored = _db_sites(user_id)
         assert set(stored) == set(UserSettings.default_sites())
-        assert len(stored) == 20
-        for name in _NEW_TEN:
+        assert len(stored) == 19
+        for name in _NEW_NINE:
             assert stored[name] == UserSettings.default_sites()[name]
         assert stored["FreeCourseSites"] is False
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
         assert "Discudemy" not in stored
+        assert "Reddit Udemy" not in stored
 
     def test_put_omitting_courson_keeps_stored_false(self, sites_client):
         client, user_id, token = sites_client
@@ -258,39 +265,46 @@ class TestSettingsSitesPersistHttp:
         assert "FreeWebCart" not in body
         assert "Course Joiner" not in body
         assert "Discudemy" not in body
+        assert "Reddit Udemy" not in body
         after = _db_sites(user_id)
         assert set(after) == set(_ten_sites())
-        for name in _NEW_TEN:
+        for name in _NEW_NINE:
             assert name not in after
 
     def test_get_legacy_sixteen_drops_decommissioned_without_writing_db(self, sites_client):
         client, user_id, _token = sites_client
         legacy = _legacy_sixteen_sites()
+        legacy["Reddit Udemy"] = True
         _set_stored_sites(user_id, legacy)
         before = _db_sites(user_id)
-        assert len(before) == 16
-        assert "Discudemy" in before and "Course Joiner" in before
+        assert len(before) == 17
+        assert "Discudemy" in before and "Course Joiner" in before and "Reddit Udemy" in before
         response = client.get("/api/settings/")
         assert response.status_code == 200
         body = response.json()["sites"]
         defaults = UserSettings.default_sites()
         assert set(body) == set(defaults)
-        assert len(body) == 20
+        assert len(body) == 19
         assert "Discudemy" not in body
         assert "FreeWebCart" not in body
         assert "Course Joiner" not in body
+        assert "Reddit Udemy" not in body
         assert all(body[k] == defaults[k] for k in defaults)
         after = _db_sites(user_id)
         assert after == before
-        assert len(after) == 16
+        assert len(after) == 17
         assert "Discudemy" in after
         assert after["FreeWebCart"] is True
         assert after["Course Joiner"] is True
+        assert after["Reddit Udemy"] is True
 
     def test_put_legacy_sixteen_extras_ignored_writes_seventeen(self, sites_client):
         client, user_id, token = sites_client
-        _set_stored_sites(user_id, _legacy_sixteen_sites())
+        legacy_stored = _legacy_sixteen_sites()
+        legacy_stored["Reddit Udemy"] = True
+        _set_stored_sites(user_id, legacy_stored)
         put = _legacy_sixteen_sites()
+        put["Reddit Udemy"] = True
         put["FreeCourseSites"] = False
         response = client.put(
             "/api/settings/",
@@ -301,10 +315,11 @@ class TestSettingsSitesPersistHttp:
         stored = _db_sites(user_id)
         defaults = UserSettings.default_sites()
         assert set(stored) == set(defaults)
-        assert len(stored) == 20
+        assert len(stored) == 19
         assert "Discudemy" not in stored
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
+        assert "Reddit Udemy" not in stored
         assert stored["FreeCourseSites"] is False
         for name in _DROPPED_DECOMMISSIONED:
             assert name not in stored
@@ -319,10 +334,11 @@ class TestSettingsSitesPersistHttp:
         assert response.status_code == 200
         stored = _db_sites(user_id)
         assert stored == UserSettings.default_sites()
-        assert len(stored) == 20
+        assert len(stored) == 19
         assert "Discudemy" not in stored
         assert "FreeWebCart" not in stored
         assert "Course Joiner" not in stored
+        assert "Reddit Udemy" not in stored
 
     def test_stored_none_put_does_not_500_and_upgrades_via_defaults(
         self, sites_client
@@ -343,7 +359,8 @@ class TestSettingsSitesPersistHttp:
         assert "FreeWebCart" not in stored
         assert "Discudemy" not in stored
         assert "Course Joiner" not in stored
-        for name in _NEW_TEN:
+        assert "Reddit Udemy" not in stored
+        for name in _NEW_NINE:
             assert stored[name] == UserSettings.default_sites()[name]
 
     def test_non_dict_put_sites_does_not_500(self, sites_client):

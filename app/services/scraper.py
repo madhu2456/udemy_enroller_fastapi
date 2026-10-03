@@ -4713,115 +4713,6 @@ def _parse_feed_item_date(date_str: str) -> Optional[datetime]:
     return None
 
 
-class RedditUdemyScraper(Scraper):
-    """Scraper for Reddit coupon communities (FM-005)."""
-
-    SUBREDDITS = ("udemyfreebies", "FreeUdemyCoupons", "Udemy")
-    USER_AGENT = "UdemyEnrollerBot/1.1 (Course Automation Platform)"
-    MAX_COURSES: int = 100
-
-    @property
-    def site_name(self) -> str:
-        return "Reddit Udemy"
-
-    @property
-    def code_name(self) -> str:
-        return "ru"
-
-    async def scrape(self, detail_semaphore: asyncio.Semaphore):
-        self.length = len(self.SUBREDDITS)
-        self.progress = 0
-        seen_urls = set()
-
-        for idx, sub in enumerate(self.SUBREDDITS):
-            if len(self.data) >= self.MAX_COURSES:
-                break
-            url = f"https://www.reddit.com/r/{sub}/new.json?limit=25"
-            headers = {"User-Agent": self.USER_AGENT}
-            try:
-                resp = await self.http.get(
-                    url,
-                    headers=headers,
-                    use_cloudscraper=False,
-                    timeout=10,
-                    raise_for_status=False,
-                )
-                if resp is None:
-                    continue
-
-                status = getattr(resp, "status_code", 0)
-                if status == 429:
-                    logger.warning(
-                        f"[{self.site_name}] Reddit rate limited (429) on r/{sub}; continuing (FM-005)"
-                    )
-                    continue
-                if status != 200:
-                    logger.warning(
-                        f"[{self.site_name}] Reddit fetch failed for r/{sub} (status {status})"
-                    )
-                    continue
-
-                data = await self.http.safe_json(resp, context=f"Reddit r/{sub}")
-                if not data or not isinstance(data, dict):
-                    continue
-
-                children = data.get("data", {}).get("children", [])
-                for child in children:
-                    if len(self.data) >= self.MAX_COURSES:
-                        break
-                    post_data = child.get("data", {})
-                    post_title = post_data.get("title", "") or ""
-                    post_url = post_data.get("url", "") or ""
-                    selftext = post_data.get("selftext", "") or ""
-
-                    candidates = []
-                    if post_url:
-                        candidates.append((post_url, post_title))
-
-                    if selftext:
-                        found_links = re.findall(
-                            r"https?://[^\s\)\]\"'>]+",
-                            selftext,
-                        )
-                        for flink in found_links:
-                            if is_udemy_course_url(flink) or is_udemy_url(flink):
-                                candidates.append((flink, post_title))
-
-                    combined_text = f"{post_title} {selftext}"
-                    coupon_match = re.search(
-                        r"\b(?:coupon(?:_code)?|code)[\s:=]+([A-Za-z0-9_-]{4,30})\b",
-                        combined_text,
-                        re.IGNORECASE,
-                    )
-                    coupon_hint = coupon_match.group(1) if coupon_match else None
-
-                    for raw_link, candidate_title in candidates:
-                        if not raw_link:
-                            continue
-                        normalized = Course.normalize_link(raw_link)
-                        if not is_udemy_course_url(normalized):
-                            continue
-
-                        if coupon_hint and "couponCode=" not in normalized:
-                            sep = "&" if "?" in normalized else "?"
-                            normalized = f"{normalized}{sep}couponCode={coupon_hint}"
-
-                        if normalized not in seen_urls:
-                            seen_urls.add(normalized)
-                            self.append_to_list(candidate_title, normalized)
-                            if len(self.data) >= self.MAX_COURSES:
-                                break
-
-            except Exception as e:
-                logger.warning(
-                    f"[{self.site_name}] Error scraping subreddit r/{sub}: {e}"
-                )
-            finally:
-                self.progress = idx + 1
-
-        self.done = True
-
-
 class TelegramDealsScraper(Scraper):
     """Scraper for public Telegram coupon channels (Task 4.2)."""
 
@@ -5073,7 +4964,6 @@ SCRAPER_REGISTRY = {
     "FreebiesGlobal": FreebiesGlobalScraper,
     "GeeksGod": GeeksGodScraper,
     "TutorialBar": TutorialBarScraper,
-    "Reddit Udemy": RedditUdemyScraper,
     "Telegram Deals": TelegramDealsScraper,
     "WordPress Feeds": WordPressFeedsScraper,
 }

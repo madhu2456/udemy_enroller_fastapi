@@ -13,11 +13,10 @@ and this project uses date-based notes until formal version tags are published.
   - Decoupled ingestion into Stage 1 Async Validation Pool (concurrent course ID resolution and coupon validation) and Stage 2 Serialized Checkout Consumer under transaction locking.
   - Added 240s pre-checkout TTL probe to re-validate coupon freshness for queued items before checkout.
   - Eliminated stacked pre-process sleeps, maintaining anti-bot pacing strictly through domain rate limiting.
-- **Scraper Fleet Expansion to 20 Scrapers ([`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`app/models/database.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/models/database.py), [`tests/test_fleet_expansion.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_fleet_expansion.py))**:
-  - Added `RedditUdemyScraper` (`ru`) ingesting coupon drops from Reddit JSON endpoints.
+- **Scraper Fleet Expansion (`TelegramDealsScraper`, `WordPressFeedsScraper`) ([`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`app/models/database.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/models/database.py), [`tests/test_fleet_expansion.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_fleet_expansion.py))**:
   - Added `TelegramDealsScraper` (`td`) extracting coupons from public channel web previews.
   - Added `WordPressFeedsScraper` (`wp`) parsing RSS/Atom feeds with 45-minute freshness guard.
-  - Updated scraper registry, default settings, and test suites across all 20 scrapers.
+  - Updated scraper registry, default settings, and test suites across all 19 scrapers.
 - **Dashboard Real-Time SSE & History Faceted Search ([`app/routers/enrollment.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/routers/enrollment.py), [`app/templates/pages/dashboard.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/dashboard.html), [`app/templates/pages/history.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/history.html), [`tests/test_sse_and_history_filters.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_sse_and_history_filters.py))**:
   - Implemented Server-Sent Events (SSE) `/api/enrollment/progress/stream` with 15s keepalive ping, anti-buffering headers, and automatic polling fallback.
   - Added client-side search and faceted status filtering in `history.html`.
@@ -45,6 +44,12 @@ and this project uses date-based notes until formal version tags are published.
   - `CoursesityScraper`: right-sized `MAX_LISTING_PAGES` to 5 (from 205), preventing 204 concurrent tasks from triggering 300s watchdog timeouts while capturing fresh 24–48h deals.
   - `GeeksGodScraper`: right-sized `MAX_PAGES` to 5 (from 50) and `CANDIDATE_BUFFER` to 120 (from 700); canonicalized pagination to standard WordPress path routing (`/courses/page/{p}/`) with trailing-slash defense.
   - `CouponScorpionScraper`: adjusted `MAX_REST_PAGES` to 5 (from 3) and aligned fallback defaults to prevent candidate buffer starvation under API deduplication.
+
+### Removed
+- **Decommissioned `RedditUdemyScraper` (`ru`) ([`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`app/models/database.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/models/database.py))**:
+  - Removed Reddit scraper adapter due to upstream IP rate limits/blocking and low coupon yield.
+  - Rebalanced scraper fleet from 20 to 19 scrapers while strictly preserving the `FROZEN_10` prefix.
+  - Seamlessly sanitized legacy settings JSON keys without requiring database migrations.
 
 ## [1.1.0] — 2026-10-02
 
