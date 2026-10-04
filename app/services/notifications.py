@@ -20,6 +20,7 @@ class NotificationService:
         enrolled_count: int,
         saved_amount: float,
         processed_count: int,
+        currency: str = "usd",
     ) -> Tuple[dict, dict, Optional[str]]:
         """Format payload and headers based on target service.
 
@@ -27,6 +28,8 @@ class NotificationService:
         """
         service = (webhook_service or "generic").lower().strip()
         is_success = status.lower() == "completed"
+        curr_str = (str(currency or "").strip().lower()) or "usd"
+        curr_sym = "₹" if curr_str == "inr" else "$"
 
         if service == "discord":
             embed_color = 3066993 if is_success else 15158332  # Green or Red
@@ -36,7 +39,7 @@ class NotificationService:
                         "title": f"Udemy Enroller: Run #{run_id} {status.title()}",
                         "description": (
                             f"Successfully enrolled in **{enrolled_count}** course(s)!\n"
-                            f"Total Saved: **${saved_amount:.2f}**"
+                            f"Total Saved: **{curr_sym}{saved_amount:.2f}**"
                         ),
                         "color": embed_color,
                         "fields": [
@@ -55,7 +58,7 @@ class NotificationService:
                 f"🎓 *Udemy Enroller Run #{run_id}*\n\n"
                 f"Status: *{status.upper()}*\n"
                 f"Enrolled: *{enrolled_count}*\n"
-                f"Total Saved: *${saved_amount:.2f}*\n"
+                f"Total Saved: *{curr_sym}{saved_amount:.2f}*\n"
                 f"Processed: *{processed_count}*"
             )
             return {"text": text, "parse_mode": "Markdown"}, {"Content-Type": "application/json"}, None
@@ -68,7 +71,7 @@ class NotificationService:
             }
             body = (
                 f"Run #{run_id} {status}: {enrolled_count} course(s) enrolled, "
-                f"${saved_amount:.2f} saved ({processed_count} processed)."
+                f"{curr_sym}{saved_amount:.2f} saved ({processed_count} processed)."
             )
             return {}, headers, body
 
@@ -79,6 +82,7 @@ class NotificationService:
             "status": status,
             "enrolled": enrolled_count,
             "saved": round(saved_amount, 2),
+            "currency": curr_str,
             "processed": processed_count,
         }
         return generic_payload, {"Content-Type": "application/json"}, None
@@ -93,6 +97,7 @@ class NotificationService:
         enrolled_count: int,
         saved_amount: float,
         processed_count: int,
+        currency: str = "usd",
     ) -> bool:
         """Send run completion notification to user webhook."""
         if not webhook_url or not webhook_url.strip():
@@ -110,6 +115,7 @@ class NotificationService:
             enrolled_count=enrolled_count,
             saved_amount=saved_amount,
             processed_count=processed_count,
+            currency=currency,
         )
 
         try:
@@ -145,6 +151,7 @@ class NotificationService:
             enrolled_count=5,
             saved_amount=99.99,
             processed_count=25,
+            currency="usd",
         )
         if success:
             return True, "Test notification dispatched successfully."
@@ -160,6 +167,7 @@ class NotificationService:
         enrolled_count: int,
         saved_amount: float,
         processed_count: int,
+        currency: str = "usd",
     ) -> bool:
         """Query user settings and dispatch notification if webhook is configured."""
         try:
@@ -174,6 +182,7 @@ class NotificationService:
                 enrolled_count=enrolled_count,
                 saved_amount=saved_amount,
                 processed_count=processed_count,
+                currency=currency,
             )
         except Exception as e:
             logger.warning(f"Failed to lookup webhook settings for user {user_id}: {e}")

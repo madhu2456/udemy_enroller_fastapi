@@ -4740,14 +4740,15 @@ class TelegramDealsScraper(Scraper):
                 resp = await self.http.get(
                     url,
                     use_cloudscraper=False,
-                    timeout=10,
+                    timeout=15,
+                    follow_redirects=True,
                     raise_for_status=False,
                 )
                 if resp is None:
                     continue
 
                 status = getattr(resp, "status_code", 0)
-                if status != 200 or not getattr(resp, "text", ""):
+                if status not in (200, 301, 302) or not getattr(resp, "text", ""):
                     logger.warning(
                         f"[{self.site_name}] Telegram fetch failed for {channel} (status {status})"
                     )

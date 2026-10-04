@@ -732,14 +732,28 @@ class EnrollmentManager:
                 from app.services.notifications import NotificationService
 
                 total_proc = sum(sum(stats.values()) for stats in source_stats.values())
+                saved_amount = float(
+                    getattr(self.udemy, "amount_saved_c", 0.0)
+                    or getattr(run, "amount_saved", 0.0)
+                    or 0.0
+                )
+                run_currency = (
+                    str(
+                        getattr(run, "currency", None)
+                        or getattr(self.udemy, "currency", "usd")
+                        or "usd"
+                    ).strip().lower()
+                ) or "usd"
+                enrolled_count = int(getattr(self.udemy, "successfully_enrolled_c", 0))
                 await NotificationService.send_run_notification_for_user(
                     db=db,
                     user_id=self.user_id,
                     run_id=self.run_id,
                     status=run.status,
-                    enrolled_count=self.udemy.successfully_enrolled_c,
-                    saved_amount=self.udemy.amount_saved,
+                    enrolled_count=enrolled_count,
+                    saved_amount=saved_amount,
                     processed_count=total_proc,
+                    currency=run_currency,
                 )
             except Exception as notif_err:
                 logger.warning(f"Could not dispatch run notification: {notif_err}")

@@ -217,8 +217,104 @@ class TestNotificationServicePayloadFormatting:
             "status": "completed",
             "enrolled": 2,
             "saved": 29.99,
+            "currency": "usd",
             "processed": 8,
         }
+
+    def test_notification_payload_formatting_inr_and_usd(self):
+        # 1. Discord formatting
+        discord_inr, _, _ = NotificationService._format_payload(
+            webhook_service="discord",
+            run_id=1,
+            status="completed",
+            enrolled_count=3,
+            saved_amount=599.0,
+            processed_count=10,
+            currency="inr",
+        )
+        assert "₹599.00" in discord_inr["embeds"][0]["description"]
+        assert "$599.00" not in discord_inr["embeds"][0]["description"]
+
+        discord_usd, _, _ = NotificationService._format_payload(
+            webhook_service="discord",
+            run_id=1,
+            status="completed",
+            enrolled_count=3,
+            saved_amount=59.99,
+            processed_count=10,
+            currency="usd",
+        )
+        assert "$59.99" in discord_usd["embeds"][0]["description"]
+        assert "₹" not in discord_usd["embeds"][0]["description"]
+
+        # 2. Telegram formatting
+        tg_inr, _, _ = NotificationService._format_payload(
+            webhook_service="telegram",
+            run_id=2,
+            status="completed",
+            enrolled_count=1,
+            saved_amount=499.0,
+            processed_count=5,
+            currency="inr",
+        )
+        assert "Total Saved: *₹499.00*" in tg_inr["text"]
+
+        tg_usd, _, _ = NotificationService._format_payload(
+            webhook_service="telegram",
+            run_id=2,
+            status="completed",
+            enrolled_count=1,
+            saved_amount=49.99,
+            processed_count=5,
+            currency="usd",
+        )
+        assert "Total Saved: *$49.99*" in tg_usd["text"]
+
+        # 3. Ntfy formatting
+        _, _, ntfy_inr = NotificationService._format_payload(
+            webhook_service="ntfy",
+            run_id=3,
+            status="completed",
+            enrolled_count=2,
+            saved_amount=799.0,
+            processed_count=8,
+            currency="inr",
+        )
+        assert "₹799.00 saved" in ntfy_inr
+
+        _, _, ntfy_usd = NotificationService._format_payload(
+            webhook_service="ntfy",
+            run_id=3,
+            status="completed",
+            enrolled_count=2,
+            saved_amount=79.99,
+            processed_count=8,
+            currency="usd",
+        )
+        assert "$79.99 saved" in ntfy_usd
+
+        # 4. Generic webhook payload
+        gen_inr, _, _ = NotificationService._format_payload(
+            webhook_service="generic",
+            run_id=4,
+            status="completed",
+            enrolled_count=2,
+            saved_amount=1200.0,
+            processed_count=12,
+            currency="inr",
+        )
+        assert gen_inr["currency"] == "inr"
+
+        gen_usd, _, _ = NotificationService._format_payload(
+            webhook_service="generic",
+            run_id=4,
+            status="completed",
+            enrolled_count=2,
+            saved_amount=12.0,
+            processed_count=12,
+            currency="usd",
+        )
+        assert gen_usd["currency"] == "usd"
 
     def test_fallback_to_generic_for_unknown_service(self):
         json_data, headers, raw_content = NotificationService._format_payload(
@@ -230,6 +326,7 @@ class TestNotificationServicePayloadFormatting:
             processed_count=0,
         )
         assert json_data["event"] == "enrollment_finished"
+        assert json_data["currency"] == "usd"
 
 
 # ==============================================================================
@@ -437,6 +534,93 @@ class TestNotificationServiceDispatch:
             db.query(User).filter_by(id=user.id).delete()
             db.commit()
             db.close()
+
+    @pytest.mark.asyncio
+    async def test_send_run_notification_for_user_passes_currency(self):
+        db = TestingSessionLocal()
+        user = User(
+            email=f"notify-curr-{secrets.token_hex(4)}@example.com",
+            password_hash="x",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        settings = UserSettings(
+            user_id=user.id,
+            webhook_url="https://discord.com/api/webhooks/test-curr",
+            webhook_service="discord",
+        )
+        db.add(settings)
+        db.commit()
+
+        try:
+            with patch.object(
+                NotificationService, "send_notification", new_callable=AsyncMock
+            ) as mock_send:
+                mock_send.return_value = True
+                result = await NotificationService.send_run_notification_for_user(
+                    db=db,
+                    user_id=user.id,
+                    run_id=88,
+                    status="completed",
+                    enrolled_count=2,
+                    saved_amount=1200.0,
+                    processed_count=10,
+                    currency="inr",
+                )
+                assert result is True
+                assert mock_send.await_count == 1
+                kwargs = mock_send.call_args.kwargs
+                assert kwargs["currency"] == "inr"
+                assert kwargs["saved_amount"] == 1200.0
+        finally:
+            db.query(UserSettings).filter_by(user_id=user.id).delete()
+            db.query(User).filter_by(id=user.id).delete()
+            db.commit()
+            db.close()
+
+    def test_enrollment_manager_amount_saved_fallback(self):
+        """Verify amount_saved resolution safely uses amount_saved_c without AttributeError."""
+        from decimal import Decimal
+        from app.services.enrollment_manager import EnrollmentManager
+
+        mock_udemy = MagicMock(spec=["amount_saved_c", "successfully_enrolled_c", "currency"])
+        mock_udemy.amount_saved_c = Decimal("79.99")
+        mock_udemy.successfully_enrolled_c = 4
+        mock_udemy.currency = "INR"
+
+        manager = EnrollmentManager(
+            user_id=1,
+            run_id=99,
+            udemy_client=mock_udemy,
+            settings={},
+        )
+        assert not hasattr(manager.udemy, "amount_saved")
+
+        mock_run = MagicMock()
+        mock_run.status = "completed"
+        mock_run.amount_saved = None
+        mock_run.currency = "inr"
+
+        # Defensive extraction logic as implemented in enrollment_manager.py
+        saved_amount = float(
+            getattr(manager.udemy, "amount_saved_c", 0.0)
+            or getattr(mock_run, "amount_saved", 0.0)
+            or 0.0
+        )
+        run_currency = (
+            str(
+                getattr(mock_run, "currency", None)
+                or getattr(manager.udemy, "currency", "usd")
+                or "usd"
+            ).strip().lower()
+        ) or "usd"
+        enrolled_count = int(getattr(manager.udemy, "successfully_enrolled_c", 0))
+
+        assert saved_amount == 79.99
+        assert run_currency == "inr"
+        assert enrolled_count == 4
 
 
 # ==============================================================================

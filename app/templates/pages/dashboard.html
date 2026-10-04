@@ -2464,6 +2464,11 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
 
     async function toggleSchedulerState() {
         if (!schedulerCurrentData) return;
+        const toggleBtn = document.getElementById("sched-toggle-btn");
+        if (toggleBtn) {
+            toggleBtn.disabled = true;
+            toggleBtn.classList.add("opacity-50", "cursor-not-allowed");
+        }
         const isEnabled = schedulerCurrentData.is_enabled;
         const nextPreset = isEnabled ? "disabled" : "2h";
 
@@ -2485,6 +2490,11 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         } catch (e) {
             console.error("Toggle scheduler error:", e);
             showToast("Failed to toggle scheduler", "error");
+        } finally {
+            if (toggleBtn) {
+                toggleBtn.disabled = false;
+                toggleBtn.classList.remove("opacity-50", "cursor-not-allowed");
+            }
         }
     }
 
