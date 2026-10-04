@@ -1041,6 +1041,13 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
                         .lf-spinner {
                             animation: spin 0.8s linear infinite;
                         }
+                        /* Reduced motion (WCAG 2.3.3): the login spinner is
+                           decorative motion — hold it still. */
+                        @media (prefers-reduced-motion: reduce) {
+                            .lf-spinner {
+                                animation: none;
+                            }
+                        }
                         /* Forced colors: keep the spinner ring in the system
                            palette so it stays visible on the white card. */
                         @media (forced-colors: active) {

@@ -128,6 +128,13 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
     .animate-pulse-light {
         animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+    /* Reduced motion (WCAG 2.3.3): the skeleton pulse is decorative — hold it
+       at full opacity so the loading state stays visible without animation. */
+    @media (prefers-reduced-motion: reduce) {
+        .animate-pulse-light {
+            animation: none;
+        }
+    }
     /* Forced colors: skeleton placeholders keep a visible track instead of a
        flat block (the forced palette strips their background color). */
     @media (forced-colors: active) {
