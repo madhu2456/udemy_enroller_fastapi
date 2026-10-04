@@ -48,6 +48,7 @@ async def test_telegram_deals_scraper_parsing_and_resilience():
     scraper = TelegramDealsScraper(mock_http)
     assert scraper.site_name == "Telegram Deals"
     assert scraper.code_name == "td"
+    assert scraper.CHANNELS == ("udemy_free_courses", "free_udemy_courses")
 
     await scraper.scrape(asyncio.Semaphore(2))
     assert scraper.done is True
@@ -59,10 +60,10 @@ async def test_telegram_deals_scraper_parsing_and_resilience():
 
 @pytest.mark.asyncio
 async def test_wordpress_feeds_scraper_freshness_guard():
-    """Test WordPressFeedsScraper accepts fresh items (<= 45m) and discards stale (FM-006)."""
+    """Test WordPressFeedsScraper accepts fresh items (<= 180m) and discards stale (FM-006)."""
     now = datetime.now(timezone.utc)
     fresh_date = (now - timedelta(minutes=15)).strftime("%a, %d %b %Y %H:%M:%S +0000")
-    stale_date = (now - timedelta(minutes=60)).strftime("%a, %d %b %Y %H:%M:%S +0000")
+    stale_date = (now - timedelta(minutes=240)).strftime("%a, %d %b %Y %H:%M:%S +0000")
 
     rss_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
     <rss version="2.0">
@@ -87,7 +88,7 @@ async def test_wordpress_feeds_scraper_freshness_guard():
     scraper = WordPressFeedsScraper(mock_http)
     assert scraper.site_name == "WordPress Feeds"
     assert scraper.code_name == "wp"
-    assert scraper.MAX_ITEM_AGE_MINUTES == 45
+    assert scraper.MAX_ITEM_AGE_MINUTES == 180
 
     await scraper.scrape(asyncio.Semaphore(2))
     assert scraper.done is True

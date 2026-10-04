@@ -143,3 +143,29 @@ async def test_coursefolder_parallel_listings():
     scraper._http_get = AsyncMock(side_effect=mock_http_get)
     await scraper.scrape(asyncio.Semaphore(2))
     assert scraper._http_get.call_count == 4
+
+
+@pytest.mark.asyncio
+async def test_process_detail_pool_early_exit_cancellation():
+    """Test _process_detail_pool cancels pending tasks when MAX_COURSES quota is met."""
+    from app.services.scraper import UdemyFreebiesScraper
+
+    mock_http = MagicMock(spec=AsyncHTTPClient)
+    scraper = UdemyFreebiesScraper(mock_http)
+    scraper.MAX_COURSES = 3
+
+    items = [f"item_{i}" for i in range(15)]
+    executed_count = 0
+
+    async def _fetch(item):
+        nonlocal executed_count
+        executed_count += 1
+        await asyncio.sleep(0.01)
+        if item == "item_0":
+            return (None, None)  # Non-viable tuple should NOT increment count
+        return (item, f"https://www.udemy.com/course/{item}/?couponCode=FREE")
+
+    results = await scraper._process_detail_pool(items, _fetch, concurrency=5)
+    # Target is 3 viable courses. item_0 is non-viable.
+    assert len(results) >= 3
+    assert executed_count < len(items)

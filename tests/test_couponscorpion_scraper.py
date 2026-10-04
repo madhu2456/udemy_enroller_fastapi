@@ -336,3 +336,31 @@ async def test_candidate_buffer_diversity_floor(scraper):
     collected = await scraper._collect_rest_posts()
     assert len(collected) == 50
 
+
+@pytest.mark.asyncio
+async def test_resolve_out_fast_redirect_hop_success(scraper):
+    """Test _resolve_out uses fast resolve_redirect_hop when available."""
+    scraper.http.resolve_redirect_hop = AsyncMock(
+        return_value="https://www.udemy.com/course/python-masterclass/?couponCode=FREE100"
+    )
+    scraper.http.get = AsyncMock()
+
+    url = "https://couponscorpion.com/scripts/udemy/out.php?go=123"
+    resolved = await scraper._resolve_out(url)
+    assert resolved == "https://www.udemy.com/course/python-masterclass/?couponCode=FREE100"
+    scraper.http.resolve_redirect_hop.assert_awaited_once_with(url, timeout=10)
+    scraper.http.get.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_resolve_out_fast_hop_none_falls_back_to_cloudscraper(scraper):
+    """Test _resolve_out falls back to CloudScraper when resolve_redirect_hop returns None."""
+    scraper.http.resolve_redirect_hop = AsyncMock(return_value=None)
+    mock_resp = _resp("", status=302, headers={"Location": "https://www.udemy.com/course/fallback-course/?couponCode=FB"})
+    scraper.http.get = AsyncMock(return_value=mock_resp)
+
+    url = "https://couponscorpion.com/scripts/udemy/out.php?go=456"
+    resolved = await scraper._resolve_out(url)
+    assert resolved == "https://www.udemy.com/course/fallback-course/?couponCode=FB"
+    scraper.http.resolve_redirect_hop.assert_awaited_once_with(url, timeout=10)
+    scraper.http.get.assert_awaited_once()

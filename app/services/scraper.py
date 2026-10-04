@@ -575,19 +575,28 @@ class Scraper(ABC):
         results: list[Any] = []
         completed = 0
 
+        def _is_viable(r: Any) -> bool:
+            if r is None:
+                return False
+            if isinstance(r, tuple):
+                return any(r) and (len(r) != 2 or bool(r[1]))
+            return bool(r)
+
         for future in asyncio.as_completed(tasks):
             completed += 1
             self.progress = min(completed, len(items))
             try:
                 res = await future
-                if res is not None:
+                if _is_viable(res):
                     results.append(res)
-            except Exception:
+            except (Exception, asyncio.CancelledError):
                 pass
-            if len(self.data) >= getattr(self, "MAX_COURSES", 500):
+
+            if (len(results) + len(self.data)) >= getattr(self, "MAX_COURSES", 500):
                 for t in tasks:
                     if not t.done():
                         t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
                 break
 
         return results
@@ -807,7 +816,7 @@ class RealDiscountScraper(Scraper):
 
 class ENextScraper(Scraper):
     MAX_COURSES = 500
-    MAX_LISTING_PAGES = 80
+    MAX_LISTING_PAGES = 10
     BATCH_SIZE = 6
     DETAIL_BATCH_SIZE = 10
 
@@ -878,44 +887,38 @@ class ENextScraper(Scraper):
                 if not batch_had_items:
                     break
 
-                detail_chunk_size = getattr(self, "DETAIL_BATCH_SIZE", 10)
-                for i in range(0, len(pending_items), detail_chunk_size):
-                    if len(self.data) >= self.MAX_COURSES:
-                        break
+                detail_concurrency = getattr(self, "DETAIL_BATCH_SIZE", 10)
 
-                    chunk = pending_items[i : i + detail_chunk_size]
-                    detail_tasks = [
-                        self._run_detail_task(detail_semaphore, _fetch_details, item)
-                        for item in chunk
-                    ]
+                async def _fetch_details_wrapper(item):
+                    return await self._run_detail_task(detail_semaphore, _fetch_details, item)
 
-                    results_list = await asyncio.gather(
-                        *detail_tasks, return_exceptions=True
-                    )
-                    for results in results_list:
-                        if isinstance(results, Exception) or not results:
+                results_list = await self._process_detail_pool(
+                    pending_items, _fetch_details_wrapper, concurrency=detail_concurrency
+                )
+                for results in results_list:
+                    if not results or not isinstance(results, tuple):
+                        continue
+
+                    title, link = results
+                    if title and link:
+                        if len(self.data) >= self.MAX_COURSES:
+                            break
+
+                        normalized_link = Course.normalize_link(link)
+                        if (
+                            not normalized_link
+                            or not is_udemy_course_url(normalized_link)
+                        ):
                             continue
 
-                        title, link = results
-                        if title and link:
-                            if len(self.data) >= self.MAX_COURSES:
-                                break
+                        if normalized_link in seen_udemy_urls:
+                            continue
 
-                            normalized_link = Course.normalize_link(link)
-                            if (
-                                not normalized_link
-                                or not is_udemy_course_url(normalized_link)
-                            ):
-                                continue
+                        prev_len = len(self.data)
+                        self.append_to_list(title, normalized_link)
 
-                            if normalized_link in seen_udemy_urls:
-                                continue
-
-                            prev_len = len(self.data)
-                            self.append_to_list(title, normalized_link)
-
-                            if len(self.data) > prev_len:
-                                seen_udemy_urls.add(normalized_link)
+                        if len(self.data) > prev_len:
+                            seen_udemy_urls.add(normalized_link)
 
         except Exception:
             self.error = traceback.format_exc()
@@ -930,7 +933,7 @@ class InterviewGigScraper(Scraper):
     """
 
     MAX_COURSES = 500
-    MAX_API_PAGES = 6
+    MAX_API_PAGES = 8
     MAX_TRK_HTTP = 150
     DETAIL_BATCH_SIZE = 10
 
@@ -1667,28 +1670,24 @@ class CourseFolderScraper(Scraper):
                     return None, None
 
             found = 0
-            for i in range(0, len(detail_urls), getattr(self, "DETAIL_BATCH_SIZE", 10)):
-                if len(self.data) >= self.MAX_COURSES:
-                    break
-                chunk = detail_urls[i : i + getattr(self, "DETAIL_BATCH_SIZE", 10)]
-                chunk_tasks = [
-                    self._run_detail_task(detail_semaphore, _fetch_detail, url)
-                    for url in chunk
-                ]
-                results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
-                for res in results:
-                    if isinstance(res, Exception) or not res:
-                        continue
-                    title, link = res
-                    if title and link:
-                        normalized = Course.normalize_link(link)
-                        if normalized not in seen:
-                            seen.add(normalized)
-                            self.append_to_list(title[:200], link)
-                            found += 1
-                            if len(self.data) >= self.MAX_COURSES:
-                                break
-                self.progress = min(i + len(chunk), len(detail_urls))
+            async def _fetch_detail_wrapper(url):
+                return await self._run_detail_task(detail_semaphore, _fetch_detail, url)
+
+            results = await self._process_detail_pool(
+                detail_urls, _fetch_detail_wrapper, concurrency=getattr(self, "DETAIL_BATCH_SIZE", 10)
+            )
+            for res in results:
+                if not res or not isinstance(res, tuple):
+                    continue
+                title, link = res
+                if title and link:
+                    normalized = Course.normalize_link(link)
+                    if normalized not in seen:
+                        seen.add(normalized)
+                        self.append_to_list(title[:200], link)
+                        found += 1
+                        if len(self.data) >= self.MAX_COURSES:
+                            break
 
             logger.info(f"  Course Folder: Found {found} unique Udemy courses")
         except Exception:
@@ -2189,7 +2188,7 @@ class UdemyFreebiesScraper(Scraper):
 
     MAX_COURSES: int = 120
     COURSES_PER_PAGE: int = 12
-    MAX_LISTING_PAGES: int = 5
+    MAX_LISTING_PAGES: int = 10
     LISTING_CONCURRENCY: int = 2
     LISTING_ENDPOINT: str = "https://www.udemyfreebies.com/free-udemy-courses"
     DETAIL_BATCH_SIZE: int = 10
@@ -3372,7 +3371,7 @@ class CoursonScraper(Scraper):
     API_URL = "https://courson.xyz/load-more-coupons"
     HOSTS = frozenset({"courson.xyz", "www.courson.xyz"})
     MAX_COURSES = 500
-    MAX_COUPON_PAGES = 750
+    MAX_COUPON_PAGES = 150
     DETAIL_BATCH_SIZE = 10
 
     def __init__(self, *args, **kwargs):
@@ -3604,27 +3603,25 @@ class CoursonScraper(Scraper):
                 except Exception:
                     return None, None
 
-            for i in range(0, len(coupon_urls), getattr(self, "DETAIL_BATCH_SIZE", 10)):
-                if len(self.data) >= self.MAX_COURSES:
-                    break
-                chunk = coupon_urls[i : i + getattr(self, "DETAIL_BATCH_SIZE", 10)]
-                chunk_tasks = [
-                    self._run_detail_task(detail_semaphore, _fetch_coupon, url)
-                    for url in chunk
-                ]
-                results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
-                for res in results:
-                    if isinstance(res, Exception) or not res:
-                        continue
-                    title, link = res
-                    if title and link:
-                        normalized = Course.normalize_link(link)
-                        if normalized not in seen_udemy:
-                            seen_udemy.add(normalized)
-                            self.append_to_list(title[:200], link)
-                            if len(self.data) >= self.MAX_COURSES:
-                                break
-                self.progress = min(i + len(chunk), len(coupon_urls))
+            async def _fetch_coupon_wrapper(url):
+                return await self._run_detail_task(detail_semaphore, _fetch_coupon, url)
+
+            results = await self._process_detail_pool(
+                coupon_urls,
+                _fetch_coupon_wrapper,
+                concurrency=getattr(self, "DETAIL_BATCH_SIZE", 10),
+            )
+            for res in results:
+                if not res or not isinstance(res, tuple):
+                    continue
+                title, link = res
+                if title and link:
+                    normalized = Course.normalize_link(link)
+                    if normalized not in seen_udemy:
+                        seen_udemy.add(normalized)
+                        self.append_to_list(title[:200], link)
+                        if len(self.data) >= self.MAX_COURSES:
+                            break
         except Exception:
             self.error = traceback.format_exc()
 
@@ -3811,22 +3808,29 @@ class CouponScorpionScraper(Scraper):
 
     async def _resolve_out(self, out_url: str) -> Optional[str]:
         try:
-            resp = await self.http.get(
-                out_url,
-                use_cloudscraper=True,
-                allow_redirects=False,
-                follow_redirects=False,
-                raise_for_status=False,
-                attempts=1,
-                timeout=8,
-            )
-            if not resp or resp.status_code not in (301, 302, 307, 308):
-                status = getattr(resp, "status_code", None)
-                logger.warning(
-                    f"  CouponScorpion: out.php hop skipped (status={status})"
+            # Fast probe: check redirect hop via async HTTP client first (~30ms)
+            location = None
+            loc_val = await self.http.resolve_redirect_hop(out_url, timeout=10)
+            if isinstance(loc_val, str) and loc_val:
+                location = loc_val
+
+            if not location:
+                resp = await self.http.get(
+                    out_url,
+                    use_cloudscraper=True,
+                    allow_redirects=False,
+                    follow_redirects=False,
+                    raise_for_status=False,
+                    attempts=1,
+                    timeout=8,
                 )
-                return None
-            location = resp.headers.get("location") or resp.headers.get("Location") or ""
+                if not resp or resp.status_code not in (301, 302, 307, 308):
+                    status = getattr(resp, "status_code", None)
+                    logger.warning(
+                        f"  CouponScorpion: out.php hop skipped (status={status})"
+                    )
+                    return None
+                location = resp.headers.get("location") or resp.headers.get("Location") or ""
             if not location:
                 return None
             location = urllib.parse.urljoin(out_url, location)
@@ -3898,29 +3902,27 @@ class CouponScorpionScraper(Scraper):
                 except Exception:
                     return None, None
 
-            for i in range(0, len(listing), getattr(self, "DETAIL_BATCH_SIZE", 10)):
-                if len(self.data) >= self.MAX_COURSES:
-                    break
-                chunk = listing[i : i + getattr(self, "DETAIL_BATCH_SIZE", 10)]
-                chunk_tasks = [
-                    self._run_detail_task(
-                        detail_semaphore, _fetch_post, link, title
-                    )
-                    for link, title in chunk
-                ]
-                results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
-                for res in results:
-                    if isinstance(res, Exception) or not res:
-                        continue
-                    title, link = res
-                    if title and link:
-                        normalized = Course.normalize_link(link)
-                        if normalized not in seen_udemy:
-                            seen_udemy.add(normalized)
-                            self.append_to_list(title[:200], link)
-                            if len(self.data) >= self.MAX_COURSES:
-                                break
-                self.progress = min(i + len(chunk), len(listing))
+            async def _fetch_post_wrapper(post_url: str, post_title: str = ""):
+                return await self._run_detail_task(
+                    detail_semaphore, _fetch_post, post_url, post_title
+                )
+
+            results = await self._process_detail_pool(
+                listing,
+                _fetch_post_wrapper,
+                concurrency=getattr(self, "DETAIL_BATCH_SIZE", 10),
+            )
+            for res in results:
+                if not res or not isinstance(res, tuple):
+                    continue
+                title, link = res
+                if title and link:
+                    normalized = Course.normalize_link(link)
+                    if normalized not in seen_udemy:
+                        seen_udemy.add(normalized)
+                        self.append_to_list(title[:200], link)
+                        if len(self.data) >= self.MAX_COURSES:
+                            break
         except Exception:
             self.error = traceback.format_exc()
 
@@ -4437,28 +4439,25 @@ class GeeksGodScraper(Scraper):
                 except Exception:
                     return None, None
 
-            batch_size = getattr(self, "DETAIL_BATCH_SIZE", 10)
-            for i in range(0, len(candidates), batch_size):
-                if len(self.data) >= self.MAX_COURSES:
-                    break
-                chunk = candidates[i : i + batch_size]
-                chunk_tasks = [
-                    self._run_detail_task(
-                        detail_semaphore, _fetch_detail, item[0], item[1]
-                    )
-                    for item in chunk
-                ]
-                results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
-                for res in results:
-                    if isinstance(res, Exception) or not res:
-                        continue
-                    title, link = res
-                    if title and link and link not in seen_udemy:
-                        seen_udemy.add(link)
-                        self.append_to_list(title[:200], link)
-                        if len(self.data) >= self.MAX_COURSES:
-                            break
-                self.progress = min(i + len(chunk), len(candidates))
+            async def _fetch_detail_wrapper(url: str, title: str = ""):
+                return await self._run_detail_task(
+                    detail_semaphore, _fetch_detail, url, title
+                )
+
+            results = await self._process_detail_pool(
+                candidates,
+                _fetch_detail_wrapper,
+                concurrency=getattr(self, "DETAIL_BATCH_SIZE", 10),
+            )
+            for res in results:
+                if not res or not isinstance(res, tuple):
+                    continue
+                title, link = res
+                if title and link and link not in seen_udemy:
+                    seen_udemy.add(link)
+                    self.append_to_list(title[:200], link)
+                    if len(self.data) >= self.MAX_COURSES:
+                        break
         except Exception:
             self.error = traceback.format_exc()
 
@@ -4467,7 +4466,7 @@ class TutorialBarScraper(Scraper):
     BASE_URL = "https://www.tutorialbar.com"
     LISTING_ENDPOINT = "https://www.tutorialbar.com/live-coupons"
     MAX_COURSES = 500
-    MAX_PAGES = 50
+    MAX_PAGES = 10
     CANDIDATE_BUFFER = 750
     DETAIL_BATCH_SIZE = 10
 
@@ -4716,7 +4715,7 @@ def _parse_feed_item_date(date_str: str) -> Optional[datetime]:
 class TelegramDealsScraper(Scraper):
     """Scraper for public Telegram coupon channels (Task 4.2)."""
 
-    CHANNELS = ("udemy_free_courses", "free_udemy_coupons_online")
+    CHANNELS = ("udemy_free_courses", "free_udemy_courses")
     MAX_COURSES: int = 100
 
     @property
@@ -4822,7 +4821,7 @@ class WordPressFeedsScraper(Scraper):
         "https://couponscorpion.com/feed/",
     )
     MAX_COURSES: int = 100
-    MAX_ITEM_AGE_MINUTES: int = 45
+    MAX_ITEM_AGE_MINUTES: int = 180
 
     @property
     def site_name(self) -> str:
