@@ -9,7 +9,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
     <div
         role="tablist"
         aria-label="Dashboard sections"
-        class="flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl w-full sm:w-fit border border-gray-200 shadow-sm"
+        class="flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl w-full sm:w-fit border border-gray-200 shadow-sm overflow-x-auto"
     >
         <button
             type="button"
@@ -18,7 +18,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             aria-controls="section-overview"
             data-action="switch-section" data-section="overview"
             id="tab-sec-overview"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
         >
             <i data-lucide="bar-chart-2" class="w-3.5 h-3.5" aria-hidden="true"></i>Overview
         </button>
@@ -29,7 +29,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             aria-controls="section-runs"
             data-action="switch-section" data-section="runs"
             id="tab-sec-runs"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
         >
             <i data-lucide="list" class="w-3.5 h-3.5" aria-hidden="true"></i>Runs
         </button>
@@ -40,7 +40,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             aria-controls="section-logs"
             data-action="switch-section" data-section="logs"
             id="tab-sec-logs"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
         >
             <i data-lucide="terminal" class="w-3.5 h-3.5" aria-hidden="true"></i>Logs
         </button>
@@ -51,7 +51,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             aria-controls="section-scheduler"
             data-action="switch-section" data-section="scheduler"
             id="tab-sec-scheduler"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
         >
             <i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>Scheduler
         </button>
@@ -382,7 +382,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 </div>
                 <div class="p-6 h-72 relative">
                     <canvas id="savings-chart"></canvas>
-                    <div id="savings-chart-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-white/95">
+                    <div id="savings-chart-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-white">
                         <i data-lucide="bar-chart-2" class="w-10 h-10 text-gray-300 mb-2"></i>
                         <p class="text-sm font-medium text-gray-600">No enrollment savings recorded yet</p>
                         <p class="text-xs text-gray-500 mt-1 max-w-xs">Run your first automated coupon collection to track your lifetime savings over time.</p>
@@ -1101,9 +1101,9 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         const sections = ["overview", "runs", "logs", "scheduler"];
         const target = sections.includes(section) ? section : "overview";
         const activeTab =
-            "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1";
+            "flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1";
         const inactiveTab =
-            "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1";
+            "flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1";
         sections.forEach((s) => {
             const el = document.getElementById(`section-${s}`);
             const tab = document.getElementById(`tab-sec-${s}`);

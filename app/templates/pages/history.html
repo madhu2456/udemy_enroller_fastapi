@@ -201,7 +201,7 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
             document.getElementById("total-enrolled").textContent =
                 d.total_enrolled.toLocaleString();
             document.getElementById("total-saved").textContent =
-                `${currencySym}${d.total_amount_saved.toFixed(2)}`;
+                `${currencySym}${Number(d.total_amount_saved || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             document.getElementById("total-runs").textContent =
                 d.total_runs.toLocaleString();
             const rate =
@@ -279,7 +279,7 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
                         <div class="min-w-0">
                             <div class="flex items-center gap-3 mb-1 flex-wrap">
                                 <span class="text-gray-900 font-semibold text-base tracking-tight">Run #${run.run_id}</span>
-                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase border ${badgeClass}">${escapeHTML(run.status)}</span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase border ${badgeClass}"><span class="w-1.5 h-1.5 rounded-full ${isSuccess ? 'bg-green-600' : isError ? 'bg-red-600' : 'bg-yellow-600'}"></span>${escapeHTML(run.status)}</span>
                             </div>
                             <div class="flex items-center gap-3 text-xs text-gray-600 font-light">
                                 <span>${formatTime(run.started_at)}</span>
@@ -297,7 +297,7 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
                             </div>
                             <div class="text-center md:text-left">
                                 <p class="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5">Savings</p>
-                                <p class="text-lg font-semibold text-blue-700 leading-none">${currencySym}${(run.amount_saved || 0).toFixed(2)}</p>
+                                <p class="text-lg font-semibold text-blue-700 leading-none">${currencySym}${Number(run.amount_saved || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
@@ -390,20 +390,20 @@ endblock %} {% block twitter_description %}Review your automated Udemy enrollmen
                 <!-- Data Grid -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
-                        <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Status</p>
+                        <p class="text-[9px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Status</p>
                         <p class="text-xs text-gray-700 font-bold uppercase">${escapeHTML(data.run.status)}</p>
                     </div>
                     <div class="bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
-                        <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Links Discovered</p>
+                        <p class="text-[9px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Links Discovered</p>
                         <p class="text-xs text-gray-700 font-bold">${data.run.total_courses_found} links</p>
                     </div>
                     <div class="bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
-                        <p class="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Session Duration</p>
+                        <p class="text-[9px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Session Duration</p>
                         <p class="text-xs text-gray-700 font-bold">${getRunTime(data.run.started_at, data.run.completed_at)}</p>
                     </div>
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm">
-                        <p class="text-[9px] text-blue-500/80 font-semibold uppercase tracking-wider mb-1">Session Savings</p>
-                        <p class="text-lg font-bold text-blue-600 leading-none">${currencySym}${(data.run.amount_saved || 0).toFixed(2)}</p>
+                        <p class="text-[9px] text-blue-700 font-semibold uppercase tracking-wider mb-1">Session Savings</p>
+                        <p class="text-lg font-bold text-blue-600 leading-none">${currencySym}${Number(data.run.amount_saved || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                 </div>
 
