@@ -8,6 +8,14 @@ and this project uses date-based notes until formal version tags are published.
 ## [Unreleased]
 
 ### Added
+- **Automated Enrollment Scheduler & Cron UI ([`app/routers/scheduler.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/routers/scheduler.py), [`app/services/scheduler.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scheduler.py), [`app/templates/pages/dashboard.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/dashboard.html), [`app/templates/pages/settings.html`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/templates/pages/settings.html), [`tests/test_scheduler_api_and_ui.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_scheduler_api_and_ui.py))**:
+  - Introduced an interactive 4th navigation tab **"Scheduler"** on the Dashboard with bundled Lucide clock icon.
+  - Live header status badge pill (`#scheduler-header-badge`) with pulse indicator and drift-free countdown ticker (`Next: 01:24:15` / `Due now`).
+  - Dedicated `section-scheduler` panel featuring Hero Status Card (Active/Paused status, countdown timer, Pause/Resume toggle, and Trigger Run Now button), Frequency Presets Grid (1h, 2h, 4h, 6h, 12h, 24h, Disabled), human-readable cron translation, and Prerequisites & Safety Health telemetry deck.
+  - New dedicated backend router `app/routers/scheduler.py` exposing authenticated and CSRF-protected endpoints: `GET /api/scheduler/status`, `POST /api/scheduler/update`, and `POST /api/scheduler/trigger`.
+  - Settings synchronization: Added an informational callout banner in `app/templates/pages/settings.html` linking directly to `/dashboard?tab=scheduler` with deep-link URL parsing.
+  - Recompiled production Tailwind CSS bundle bundling `md:grid-cols-7`, `md:grid-cols-3`, `border-2`, and opacity utility classes.
+  - Comprehensive unit and integration test suite in `tests/test_scheduler_api_and_ui.py`.
 - **Decoupled Enrollment Pipeline & Sleep De-Stacking ([`app/services/enrollment_queue.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_queue.py), [`app/services/enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_manager.py), [`tests/test_enrollment_decoupling.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_enrollment_decoupling.py))**:
   - Implemented `EnrollmentPriorityQueue` with freshness bias (`priority = -discovered_at`), prioritizing newer coupons before they expire.
   - Decoupled ingestion into Stage 1 Async Validation Pool (concurrent course ID resolution and coupon validation) and Stage 2 Serialized Checkout Consumer under transaction locking.
@@ -44,6 +52,12 @@ and this project uses date-based notes until formal version tags are published.
   - `CoursesityScraper`: right-sized `MAX_LISTING_PAGES` to 5 (from 205), preventing 204 concurrent tasks from triggering 300s watchdog timeouts while capturing fresh 24–48h deals.
   - `GeeksGodScraper`: right-sized `MAX_PAGES` to 5 (from 50) and `CANDIDATE_BUFFER` to 120 (from 700); canonicalized pagination to standard WordPress path routing (`/courses/page/{p}/`) with trailing-slash defense.
   - `CouponScorpionScraper`: adjusted `MAX_REST_PAGES` to 5 (from 3) and aligned fallback defaults to prevent candidate buffer starvation under API deduplication.
+
+### Fixed
+- **Background Worker & Trigger Socket Leak Remediation ([`app/services/scheduler.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scheduler.py), [`tests/test_scheduler_api_and_ui.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_scheduler_api_and_ui.py))**:
+  - Fixed `EnrollmentScheduler.check_and_trigger_due_runs()` and `trigger_run_for_user()` to pass `close_client=True` to `EnrollmentManager.start_run` wrapped in `try...finally: if not started and client is not None: await client.close()`, eliminating unclosed TCP socket and file descriptor leaks (FM-01, FM-02).
+  - Fixed naive vs aware UTC datetime arithmetic in `compute_scheduler_timings()` via `_to_naive_utc()` normalization, eliminating potential `TypeError` crashes (FM-03).
+  - Clamped overdue countdown ticker seconds to `0` to prevent negative countdown displays (FM-04).
 
 ### Removed
 - **Decommissioned `RedditUdemyScraper` (`ru`) ([`app/services/scraper.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/scraper.py), [`app/models/database.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/models/database.py))**:

@@ -3,12 +3,49 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from fastapi import HTTPException
 from loguru import logger
+from sqlalchemy.orm import Session
 
 from app.models.database import EnrollmentRun, SessionLocal, User, UserSettings
 from app.services.enrollment_manager import EnrollmentManager
 from app.services.udemy_client import UdemyClient
 from config.settings import resolve_user_proxy
+
+
+def _to_naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Convert an aware or naive datetime to naive UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def compute_scheduler_timings(
+    schedule_interval_hours: int,
+    last_scheduled_run: Optional[datetime],
+    now_utc: Optional[datetime] = None,
+) -> tuple[bool, Optional[datetime], Optional[int]]:
+    """Compute scheduler run status, next target execution time, and remaining seconds."""
+    if schedule_interval_hours <= 0:
+        return (False, None, None)
+
+    now_naive = _to_naive_utc(now_utc) or datetime.now(timezone.utc).replace(tzinfo=None)
+    last_naive = _to_naive_utc(last_scheduled_run)
+
+    if last_naive is None:
+        next_run_at = now_naive
+        return (True, next_run_at, 0)
+
+    interval_td = timedelta(hours=schedule_interval_hours)
+    target_naive = last_naive + interval_td
+    remaining_seconds = (target_naive - now_naive).total_seconds()
+
+    if remaining_seconds <= 0:
+        return (True, target_naive, 0)
+
+    return (True, target_naive, int(remaining_seconds))
 
 
 class EnrollmentScheduler:
@@ -113,7 +150,7 @@ class EnrollmentScheduler:
                 if interval_hours <= 0:
                     continue
 
-                last_run = settings.last_scheduled_run
+                last_run = _to_naive_utc(settings.last_scheduled_run)
                 if last_run is not None:
                     elapsed = now_utc - last_run
                     if elapsed < timedelta(hours=interval_hours):
@@ -141,14 +178,21 @@ class EnrollmentScheduler:
                     continue
 
                 settings_dict = self.build_user_settings_dict(settings)
+                started = False
                 try:
-                    run_id = await EnrollmentManager.start_run(user.id, client, settings_dict)
+                    run_id = await EnrollmentManager.start_run(
+                        user.id, client, settings_dict, close_client=True
+                    )
+                    started = True
                     settings.last_scheduled_run = now_utc
                     db.commit()
                     launched_count += 1
                     logger.info(f"Triggered scheduled enrollment run #{run_id} for user {user.id} (interval: {interval_hours}h)")
                 except Exception as e:
                     logger.warning(f"Failed to start scheduled run for user {user.id}: {e}")
+                finally:
+                    if not started and client is not None:
+                        await client.close()
 
         return launched_count
 
@@ -164,3 +208,64 @@ class EnrollmentScheduler:
                 await asyncio.sleep(self.check_interval_seconds)
             except asyncio.CancelledError:
                 break
+
+
+async def trigger_run_for_user(user_id: int, db: Session) -> int:
+    """Manually trigger an immediate enrollment run for a user.
+
+    Validates settings, credentials, and active run status.
+    """
+    user = db.query(User).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    active = (
+        db.query(EnrollmentRun)
+        .filter(
+            EnrollmentRun.user_id == user.id,
+            EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]),
+        )
+        .first()
+    )
+    if active:
+        raise HTTPException(status_code=409, detail="An enrollment run is already active")
+
+    user_settings = user.settings
+    if not user_settings:
+        raise HTTPException(status_code=400, detail="User settings not found")
+
+    # Guardrail 1: Validate settings BEFORE calling restore_user_client to prevent socket leak
+    settings_dict = EnrollmentScheduler.build_user_settings_dict(user_settings)
+    enabled_sites = [k for k, v in settings_dict.get("sites", {}).items() if v]
+    languages = settings_dict.get("languages", [])
+    categories = settings_dict.get("categories", [])
+
+    if not enabled_sites or not languages or not categories:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one scraper, language, and category must be enabled in Settings.",
+        )
+
+    client = EnrollmentScheduler.restore_user_client(user)
+    if not client:
+        raise HTTPException(
+            status_code=400, detail="Udemy account credentials missing or expired"
+        )
+
+    started = False
+    try:
+        try:
+            run_id = await EnrollmentManager.start_run(
+                user.id, client, settings_dict, close_client=True
+            )
+            started = True
+        except ValueError as e:
+            # Guardrail 2: Catch ValueError from start_run and re-raise as 409 Conflict
+            raise HTTPException(status_code=409, detail=str(e))
+    finally:
+        if not started and client is not None:
+            await client.close()
+
+    user_settings.last_scheduled_run = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.commit()
+    return run_id

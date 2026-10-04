@@ -44,6 +44,17 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         >
             <i data-lucide="terminal" class="w-3.5 h-3.5" aria-hidden="true"></i>Logs
         </button>
+        <button
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="section-scheduler"
+            data-action="switch-section" data-section="scheduler"
+            id="tab-sec-scheduler"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-gray-700 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
+        >
+            <i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>Scheduler
+        </button>
     </div>
 
     <!-- Page Header & Main Controls -->
@@ -67,6 +78,17 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             ></p>
         </div>
         <div class="flex items-center gap-2">
+            <button
+                type="button"
+                id="scheduler-header-badge"
+                class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border bg-gray-50 border-gray-200 text-gray-700 transition-all cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
+                onclick="switchDashboardSection('scheduler')"
+                title="Click to view Scheduler"
+                aria-label="View automated scheduler"
+            >
+                <span id="scheduler-pulse-dot" class="w-2 h-2 rounded-full bg-gray-400"></span>
+                <span id="scheduler-header-text">Scheduler: Loading...</span>
+            </button>
             <a
                 href="/settings"
                 class="inline-flex items-center justify-center min-h-[40px] min-w-[40px] p-2.5 bg-white border border-gray-200 rounded-lg text-gray-600 hover:text-gray-900 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
@@ -774,6 +796,123 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         </div>
     </div>
 
+    <!-- Section: Scheduler -->
+    <div id="section-scheduler" role="tabpanel" aria-labelledby="tab-sec-scheduler" class="hidden space-y-6" hidden>
+        <!-- Hero Status Card -->
+        <div class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="space-y-2 max-w-xl">
+                <div class="flex items-center gap-2.5">
+                    <span id="sched-hero-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                        <span id="sched-hero-pulse" class="w-2 h-2 rounded-full bg-gray-400"></span>
+                        <span id="sched-hero-status">Checking Status...</span>
+                    </span>
+                    <span class="text-xs text-gray-400">•</span>
+                    <span id="sched-frequency-desc" class="text-xs text-gray-600 font-medium">Automatic recurrence loading...</span>
+                </div>
+                <h2 class="text-lg font-bold text-gray-900 tracking-tight">Automated Enrollment Scheduler</h2>
+                <p class="text-xs text-gray-500 leading-relaxed">
+                    Background worker periodically scrapes all active coupon sources and enrolls in 100% free courses using your saved categories and languages.
+                </p>
+                <div class="pt-1 flex items-center gap-3 text-xs text-gray-600">
+                    <span class="font-semibold text-gray-700">Next Scheduled Run:</span>
+                    <span id="sched-countdown-text" class="font-mono font-bold text-blue-600 text-sm">--:--:--</span>
+                    <span id="sched-target-time" class="text-gray-400 text-[11px]"></span>
+                </div>
+            </div>
+            <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full md:w-auto">
+                <button
+                    type="button"
+                    id="sched-toggle-btn"
+                    class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors border border-gray-200"
+                >
+                    <i data-lucide="square" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    <span id="sched-toggle-text">Pause Schedule</span>
+                </button>
+                <button
+                    type="button"
+                    id="sched-trigger-btn"
+                    class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
+                >
+                    <i data-lucide="play" class="w-3.5 h-3.5 fill-current" aria-hidden="true"></i>
+                    <span id="sched-trigger-text">Trigger Run Now</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Frequency & Presets Configuration Card -->
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900">Run Recurrence & Interval</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Select how frequently the engine wakes up in the background to scrape and enroll.</p>
+                </div>
+                <button
+                    type="button"
+                    id="sched-save-btn"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
+                >
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    <span>Save Interval</span>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Frequency Presets</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2" id="sched-preset-container">
+                    <button type="button" data-preset="1h" class="sched-preset-btn px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all">Every 1h</button>
+                    <button type="button" data-preset="2h" class="sched-preset-btn px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all">Every 2h</button>
+                    <button type="button" data-preset="4h" class="sched-preset-btn px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all">Every 4h</button>
+                    <button type="button" data-preset="6h" class="sched-preset-btn px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all">Every 6h</button>
+                    <button type="button" data-preset="12h" class="sched-preset-btn px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all">Every 12h</button>
+                    <button type="button" data-preset="24h" class="sched-preset-btn px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all">Every 24h</button>
+                    <button type="button" data-preset="disabled" class="sched-preset-btn px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all">Disabled</button>
+                </div>
+            </div>
+
+            <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-700">Cron Representation:</span>
+                    <code id="sched-cron-text" class="px-2 py-0.5 bg-white border border-gray-200 rounded text-gray-800 font-mono text-[11px]">--</code>
+                </div>
+                <span class="text-gray-400">Settings changes synchronize automatically across Dashboard and Settings panel.</span>
+            </div>
+        </div>
+
+        <!-- Prerequisites & Safety Health Card -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-start gap-3">
+                <div class="p-2 rounded-lg bg-blue-50 text-blue-600">
+                    <i data-lucide="check-circle-2" class="w-5 h-5" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-gray-900 uppercase tracking-wider">Udemy Session</h4>
+                    <p id="sched-health-auth" class="text-xs font-medium text-gray-700 mt-0.5">Checking...</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Required for background automated checkout</p>
+                </div>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-start gap-3">
+                <div class="p-2 rounded-lg bg-green-50 text-green-600">
+                    <i data-lucide="sliders-horizontal" class="w-5 h-5" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-gray-900 uppercase tracking-wider">Scraper Fleet</h4>
+                    <p id="sched-health-fleet" class="text-xs font-medium text-green-700 mt-0.5">19 Scrapers Active</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">High-velocity multi-threaded extraction</p>
+                </div>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-start gap-3">
+                <div class="p-2 rounded-lg bg-purple-50 text-purple-600">
+                    <i data-lucide="external-link" class="w-5 h-5" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-gray-900 uppercase tracking-wider">Webhooks & Alerts</h4>
+                    <a href="/settings" class="text-xs font-medium text-purple-600 hover:text-purple-700 underline mt-0.5 inline-block">Configure Webhook</a>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Instant push alert on scheduled completion</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Stats Modal Popup -->
     <div
         id="stats-modal"
@@ -959,7 +1098,8 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
     let userCurrency = "usd";
 
     function switchDashboardSection(section) {
-        const sections = ["overview", "runs", "logs"];
+        const sections = ["overview", "runs", "logs", "scheduler"];
+        const target = sections.includes(section) ? section : "overview";
         const activeTab =
             "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm border border-gray-200/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1";
         const inactiveTab =
@@ -968,7 +1108,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             const el = document.getElementById(`section-${s}`);
             const tab = document.getElementById(`tab-sec-${s}`);
 
-            if (s === section) {
+            if (s === target) {
                 el?.classList.remove("hidden");
                 if (el) el.removeAttribute("hidden");
                 if (tab) {
@@ -986,10 +1126,25 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 }
             }
         });
+        try {
+            const url = new URL(window.location);
+            if (url.searchParams.get("tab") !== target) {
+                url.searchParams.set("tab", target);
+                window.history.replaceState({}, "", url);
+            }
+        } catch (_) {}
+        if (window.lucide) {
+            lucide.createIcons();
+        }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
         initializeDashboard();
+
+        const initialTab = new URLSearchParams(window.location.search).get("tab");
+        if (initialTab && ["overview", "runs", "logs", "scheduler"].includes(initialTab)) {
+            switchDashboardSection(initialTab);
+        }
 
         // Event listeners for data-action attributes
         document.querySelectorAll('[data-action="switch-section"]').forEach(btn => {
@@ -1026,6 +1181,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         loadRecentRuns();
         checkActiveRun();
         initAnalytics();
+        initSchedulerController();
 
         setTimeout(() => {
             initLogStream();
@@ -2023,6 +2179,327 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             }
             window._statsModalLastFocus = null;
         }, 300);
+    }
+
+    // ── Scheduler Controller ──────────────────────────────────────────
+    let schedulerTargetEpochMs = null;
+    let schedulerTickerInterval = null;
+    let schedulerCurrentData = null;
+    let schedulerSelectedPreset = null;
+
+    async function initSchedulerController() {
+        const toggleBtn = document.getElementById("sched-toggle-btn");
+        const triggerBtn = document.getElementById("sched-trigger-btn");
+        const saveBtn = document.getElementById("sched-save-btn");
+        const presetContainer = document.getElementById("sched-preset-container");
+
+        if (presetContainer) {
+            presetContainer.querySelectorAll(".sched-preset-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const preset = btn.dataset.preset;
+                    selectSchedulerPreset(preset);
+                });
+            });
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener("click", () => toggleSchedulerState());
+        }
+
+        if (triggerBtn) {
+            triggerBtn.addEventListener("click", () => triggerSchedulerManualRun());
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener("click", () => saveSchedulerInterval());
+        }
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                if (schedulerTargetEpochMs && Date.now() >= schedulerTargetEpochMs) {
+                    refreshSchedulerStatus();
+                }
+            }
+        });
+
+        await refreshSchedulerStatus();
+    }
+
+    function selectSchedulerPreset(preset) {
+        schedulerSelectedPreset = preset;
+        const container = document.getElementById("sched-preset-container");
+        if (!container) return;
+
+        const activeClass = "px-3 py-2 text-xs font-semibold rounded-lg border-2 border-blue-600 bg-blue-50 text-blue-800 text-center shadow-sm transition-all";
+        const inactiveClass = "px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-center transition-all";
+
+        container.querySelectorAll(".sched-preset-btn").forEach((btn) => {
+            if (btn.dataset.preset === preset) {
+                btn.className = `sched-preset-btn ${activeClass}`;
+            } else {
+                btn.className = `sched-preset-btn ${inactiveClass}`;
+            }
+        });
+
+        const cronEl = document.getElementById("sched-cron-text");
+        if (cronEl) {
+            const cronMap = {
+                "1h": "0 * * * *",
+                "2h": "0 */2 * * *",
+                "4h": "0 */4 * * *",
+                "6h": "0 */6 * * *",
+                "12h": "0 */12 * * *",
+                "24h": "0 0 * * *",
+                "disabled": "--",
+            };
+            cronEl.textContent = cronMap[preset] || "--";
+        }
+    }
+
+    async function refreshSchedulerStatus() {
+        try {
+            const resp = await apiFetch("/api/scheduler/status");
+            if (!resp.ok) return;
+            const data = await resp.json();
+            schedulerCurrentData = data;
+            renderSchedulerStatus(data);
+        } catch (e) {
+            console.error("Failed to load scheduler status:", e);
+        }
+    }
+
+    function renderSchedulerStatus(data) {
+        // Header badge
+        const headerBadge = document.getElementById("scheduler-header-badge");
+        const pulseDot = document.getElementById("scheduler-pulse-dot");
+        const headerText = document.getElementById("scheduler-header-text");
+
+        if (headerBadge && pulseDot && headerText) {
+            headerBadge.classList.remove("hidden");
+            if (data.is_enabled) {
+                pulseDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                headerBadge.className = "hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border bg-emerald-50/70 border-emerald-200 text-emerald-800 transition-all cursor-pointer hover:bg-emerald-100/70";
+            } else {
+                pulseDot.className = "w-2 h-2 rounded-full bg-gray-400";
+                headerBadge.className = "hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border bg-gray-50 border-gray-200 text-gray-700 transition-all cursor-pointer hover:bg-gray-100";
+                headerText.textContent = "Scheduler: Off";
+            }
+        }
+
+        // Hero Card
+        const heroBadge = document.getElementById("sched-hero-badge");
+        const heroPulse = document.getElementById("sched-hero-pulse");
+        const heroStatus = document.getElementById("sched-hero-status");
+        const freqDesc = document.getElementById("sched-frequency-desc");
+        const toggleText = document.getElementById("sched-toggle-text");
+        const toggleBtn = document.getElementById("sched-toggle-btn");
+
+        if (heroBadge && heroPulse && heroStatus) {
+            if (data.is_enabled) {
+                heroBadge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+                heroPulse.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                heroStatus.textContent = "Active";
+                if (toggleText) toggleText.textContent = "Pause Schedule";
+                if (toggleBtn) toggleBtn.className = "flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 transition-colors border border-amber-200";
+            } else {
+                heroBadge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200";
+                heroPulse.className = "w-2 h-2 rounded-full bg-gray-400";
+                heroStatus.textContent = "Disabled";
+                if (toggleText) toggleText.textContent = "Enable Schedule";
+                if (toggleBtn) toggleBtn.className = "flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition-colors border border-emerald-200";
+            }
+        }
+
+        if (freqDesc) {
+            freqDesc.textContent = data.human_description || "Disabled";
+        }
+
+        const cronEl = document.getElementById("sched-cron-text");
+        if (cronEl) {
+            cronEl.textContent = data.cron_expression || "--";
+        }
+
+        // Preset buttons active selection
+        const intervalHours = data.schedule_interval_hours;
+        let matchedPreset = "disabled";
+        if (intervalHours === 1) matchedPreset = "1h";
+        else if (intervalHours === 2) matchedPreset = "2h";
+        else if (intervalHours === 4) matchedPreset = "4h";
+        else if (intervalHours === 6) matchedPreset = "6h";
+        else if (intervalHours === 12) matchedPreset = "12h";
+        else if (intervalHours === 24) matchedPreset = "24h";
+        selectSchedulerPreset(matchedPreset);
+
+        // Health Telemetry
+        const authEl = document.getElementById("sched-health-auth");
+        if (authEl) {
+            if (data.has_udemy_auth) {
+                authEl.textContent = "Connected & Active";
+                authEl.className = "text-xs font-medium text-emerald-700 mt-0.5";
+            } else {
+                authEl.textContent = "Cookies Missing / Expired";
+                authEl.className = "text-xs font-medium text-amber-700 mt-0.5";
+            }
+        }
+
+        const fleetEl = document.getElementById("sched-health-fleet");
+        if (fleetEl) {
+            fleetEl.textContent = `${data.active_scrapers_count || 19} Scrapers Active`;
+        }
+
+        // Trigger Run Button State
+        const triggerBtn = document.getElementById("sched-trigger-btn");
+        const triggerText = document.getElementById("sched-trigger-text");
+        if (triggerBtn && triggerText) {
+            if (data.is_run_in_progress) {
+                triggerBtn.disabled = true;
+                triggerBtn.classList.add("opacity-50", "cursor-not-allowed");
+                triggerText.textContent = "Run in Progress...";
+            } else {
+                triggerBtn.disabled = false;
+                triggerBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                triggerText.textContent = "Trigger Run Now";
+            }
+        }
+
+        // Countdown Ticker
+        setupSchedulerTicker(data);
+    }
+
+    function setupSchedulerTicker(data) {
+        if (schedulerTickerInterval) {
+            clearInterval(schedulerTickerInterval);
+            schedulerTickerInterval = null;
+        }
+
+        const countdownEl = document.getElementById("sched-countdown-text");
+        const targetTimeEl = document.getElementById("sched-target-time");
+        const headerText = document.getElementById("scheduler-header-text");
+
+        if (!data.is_enabled || data.next_run_in_seconds === null) {
+            if (countdownEl) countdownEl.textContent = "Disabled";
+            if (targetTimeEl) targetTimeEl.textContent = "";
+            if (headerText) headerText.textContent = "Scheduler: Off";
+            return;
+        }
+
+        schedulerTargetEpochMs = Date.now() + (Math.max(0, data.next_run_in_seconds) * 1000);
+
+        if (targetTimeEl && data.next_run_at) {
+            try {
+                const d = new Date(data.next_run_at.endsWith("Z") ? data.next_run_at : data.next_run_at + "Z");
+                targetTimeEl.textContent = `(~${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+            } catch (_) {
+                targetTimeEl.textContent = "";
+            }
+        }
+
+        function tick() {
+            const now = Date.now();
+            const diffSec = Math.max(0, Math.round((schedulerTargetEpochMs - now) / 1000));
+
+            if (diffSec <= 0) {
+                if (countdownEl) countdownEl.textContent = "Due now";
+                if (headerText) headerText.textContent = "Scheduler: Due now";
+                clearInterval(schedulerTickerInterval);
+                schedulerTickerInterval = null;
+                setTimeout(() => refreshSchedulerStatus(), 4000);
+                return;
+            }
+
+            const h = String(Math.floor(diffSec / 3600)).padStart(2, "0");
+            const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, "0");
+            const s = String(diffSec % 60).padStart(2, "0");
+            const formatted = `${h}:${m}:${s}`;
+
+            if (countdownEl) countdownEl.textContent = formatted;
+            if (headerText) headerText.textContent = `Next: ${formatted}`;
+        }
+
+        tick();
+        schedulerTickerInterval = setInterval(tick, 1000);
+    }
+
+    async function saveSchedulerInterval() {
+        if (!schedulerSelectedPreset) return;
+        const saveBtn = document.getElementById("sched-save-btn");
+        if (saveBtn) saveBtn.disabled = true;
+
+        try {
+            const resp = await apiFetch("/api/scheduler/update", {
+                method: "POST",
+                body: JSON.stringify({ cron_preset: schedulerSelectedPreset }),
+            });
+            if (!resp.ok) {
+                const err = await resp.json();
+                showToast(err.detail || "Failed to update scheduler", "error");
+                return;
+            }
+            const data = await resp.json();
+            schedulerCurrentData = data;
+            renderSchedulerStatus(data);
+            showToast("Scheduler interval updated successfully", "success");
+        } catch (e) {
+            console.error("Save scheduler error:", e);
+            showToast("Failed to update scheduler interval", "error");
+        } finally {
+            if (saveBtn) saveBtn.disabled = false;
+        }
+    }
+
+    async function toggleSchedulerState() {
+        if (!schedulerCurrentData) return;
+        const isEnabled = schedulerCurrentData.is_enabled;
+        const nextPreset = isEnabled ? "disabled" : "2h";
+
+        try {
+            const resp = await apiFetch("/api/scheduler/update", {
+                method: "POST",
+                body: JSON.stringify({ cron_preset: nextPreset }),
+            });
+            if (!resp.ok) {
+                const err = await resp.json();
+                showToast(err.detail || "Failed to update scheduler", "error");
+                return;
+            }
+            const data = await resp.json();
+            schedulerCurrentData = data;
+            renderSchedulerStatus(data);
+            showToast(isEnabled ? "Scheduler paused" : "Scheduler activated (Every 2h)", "success");
+        } catch (e) {
+            console.error("Toggle scheduler error:", e);
+            showToast("Failed to toggle scheduler", "error");
+        }
+    }
+
+    async function triggerSchedulerManualRun() {
+        const triggerBtn = document.getElementById("sched-trigger-btn");
+        const triggerText = document.getElementById("sched-trigger-text");
+        if (triggerBtn) triggerBtn.disabled = true;
+        if (triggerText) triggerText.textContent = "Launching...";
+
+        try {
+            const resp = await apiFetch("/api/scheduler/trigger", {
+                method: "POST",
+            });
+            if (!resp.ok) {
+                const err = await resp.json();
+                showToast(err.detail || "Failed to trigger run", "error");
+                if (triggerBtn) triggerBtn.disabled = false;
+                if (triggerText) triggerText.textContent = "Trigger Run Now";
+                return;
+            }
+            const result = await resp.json();
+            showToast(result.message || "Scheduled run initiated!", "success");
+            await refreshSchedulerStatus();
+            checkActiveRun();
+            loadRecentRuns();
+        } catch (e) {
+            console.error("Trigger run error:", e);
+            showToast("Failed to launch scheduled run", "error");
+            if (triggerBtn) triggerBtn.disabled = false;
+            if (triggerText) triggerText.textContent = "Trigger Run Now";
+        }
     }
 </script>
 {% endblock %}

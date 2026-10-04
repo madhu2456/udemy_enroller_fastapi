@@ -50,7 +50,7 @@ from app.models.database import (
     create_tables,
     engine,
 )
-from app.routers import auth, dashboard, enrollment, public_deals, seo, settings
+from app.routers import auth, dashboard, enrollment, public_deals, scheduler, seo, settings
 from app.security import (
     SESSION_COOKIE_PLAIN,
     SESSION_COOKIE_PREFIXED,
@@ -547,6 +547,7 @@ app.include_router(auth.router)
 app.include_router(settings.router)
 app.include_router(enrollment.router)
 app.include_router(public_deals.router)
+app.include_router(scheduler.router)
 
 
 @app.get(

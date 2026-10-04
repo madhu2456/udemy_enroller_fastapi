@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ── Auth ──────────────────────────────────────────────
@@ -204,3 +204,29 @@ class EnrollmentProgress(BaseModel):
     current_course_title: Optional[str] = None
     current_course_url: Optional[str] = None
     scraping_progress: list[ScrapingProgress] = []
+
+
+# ── Scheduler ─────────────────────────────────────────
+class SchedulerStatusResponse(BaseModel):
+    is_enabled: bool
+    schedule_interval_hours: int
+    cron_expression: Optional[str] = None
+    human_description: str
+    last_scheduled_run: Optional[datetime] = None
+    next_run_at: Optional[datetime] = None
+    next_run_in_seconds: Optional[int] = None
+    is_run_in_progress: bool = False
+    active_run_id: Optional[int] = None
+    has_udemy_auth: bool = False
+    active_scrapers_count: int = 19
+
+
+class SchedulerUpdateRequest(BaseModel):
+    schedule_interval_hours: Optional[int] = Field(None, ge=0, le=168)
+    cron_preset: Optional[str] = None
+
+
+class SchedulerTriggerResponse(BaseModel):
+    success: bool
+    message: str
+    run_id: Optional[int] = None
