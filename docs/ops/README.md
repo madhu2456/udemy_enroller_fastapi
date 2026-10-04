@@ -20,6 +20,7 @@ Local-only ops docs (see note below on gitignore). Hosted canonical runbook:
 - [scraping-robots.md](scraping-robots.md) — aggregator robots posture (F252).
 - [consent-sheet.md](consent-sheet.md) — NM-05 Consent Mode HAR matrix.
 - [www-and-contact-fix.md](www-and-contact-fix.md) — apex/www + contact-page fix.
+- [w4-audit-closeout.md](w4-audit-closeout.md) — W4 accessibility, SEO, API, DNS, and supply-chain dispositions.
 
 ## Cross-repo owner flips (executed in their own repos)
 

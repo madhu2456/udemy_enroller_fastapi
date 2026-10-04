@@ -490,6 +490,53 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+# X-Robots-Tag policy (F091) mirrors the page-level robots metadata. Dynamic
+# coupon/category pages keep their conditional template decision, while known
+# public, private, API, and static paths receive an explicit header.
+_ROBOTS_INDEX_PATHS: frozenset[str] = frozenset(
+    {
+        "/",
+        "/faq",
+        "/about",
+        "/guides",
+        "/guides/free-udemy-coupons",
+        "/privacy",
+        "/contact",
+        "/terms",
+        "/accessibility",
+        "/udemycoupons",
+    }
+)
+_ROBOTS_NOINDEX_PATHS: frozenset[str] = frozenset(
+    {"/dashboard", "/settings", "/history", "/login", "/logout", "/reset"}
+)
+_ROBOTS_NOINDEX_PREFIXES: tuple[str, ...] = (
+    "/api/",
+    "/udemycoupons/api/",
+    "/static/",
+)
+
+
+def _robots_tag_for_path(path: str) -> str | None:
+    """Return the X-Robots-Tag directive for a normalized request path."""
+    normalized = path.rstrip("/") or "/"
+    if normalized in _ROBOTS_NOINDEX_PATHS or normalized.startswith(_ROBOTS_NOINDEX_PREFIXES):
+        return "noindex, nofollow"
+    if normalized in _ROBOTS_INDEX_PATHS:
+        return "index, follow"
+    return None
+
+
+@app.middleware("http")
+async def add_robots_tag(request: Request, call_next):
+    """Emit X-Robots-Tag for paths with a stable indexability policy (F091)."""
+    response = await call_next(request)
+    directive = _robots_tag_for_path(request.url.path)
+    if directive and "x-robots-tag" not in response.headers:
+        response.headers["X-Robots-Tag"] = directive
+    return response
+
+
 # Host-header pinning (F049): spoofed Host headers (e.g. Host: evil.example
 # hitting the origin directly) are rejected with 400 before routing.
 # - Allowlist source: allowed_hosts_list(app_settings) — unset/empty env =

@@ -66,6 +66,7 @@ test_err.log
 docs/ops/*
 !docs/ops/
 !docs/ops/backup-restore.md
+!docs/ops/w4-audit-closeout.md
 
 # Local SQLite backup output (F065)
 backups/
