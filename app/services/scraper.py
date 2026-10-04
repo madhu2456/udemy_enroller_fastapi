@@ -550,32 +550,16 @@ class Scraper(ABC):
         fetch_coro,
         concurrency: int = 8,
     ) -> list[Any]:
-        """Non-blocking continuous worker pool for detail processing using asyncio.as_completed."""
+        """Process detail items with a bounded set of continuously fed workers."""
         if not items:
             return []
 
-        sem = asyncio.Semaphore(max(1, concurrency))
-
-        async def _worker(item: Any) -> Any:
-            if self.circuit_open:
-                return None
-            async with sem:
-                if self.circuit_open:
-                    return None
-                try:
-                    if isinstance(item, tuple):
-                        return await fetch_coro(*item)
-                    return await fetch_coro(item)
-                except Exception as e:
-                    logger.bind(
-                        scraper=self.code_name,
-                        site=self.site_name,
-                    ).warning(f"Worker task error in {getattr(fetch_coro, '__name__', 'fetch_coro')}: {e}")
-                    return None
-
-        tasks = [asyncio.create_task(_worker(item)) for item in items]
+        worker_count = max(1, min(concurrency, len(items)))
+        item_iter = iter(items)
         results: list[Any] = []
         completed = 0
+        quota = getattr(self, "MAX_COURSES", 500)
+        active: set[asyncio.Task[Any]] = set()
 
         def _is_viable(r: Any) -> bool:
             if r is None:
@@ -584,22 +568,61 @@ class Scraper(ABC):
                 return any(r) and (len(r) != 2 or bool(r[1]))
             return bool(r)
 
-        for future in asyncio.as_completed(tasks):
-            completed += 1
-            self.progress = min(completed, len(items))
+        async def _run_one(item: Any) -> Any:
+            if self.circuit_open:
+                return None
             try:
-                res = await future
-                if _is_viable(res):
-                    results.append(res)
-            except (Exception, asyncio.CancelledError):
-                pass
+                if isinstance(item, tuple):
+                    return await fetch_coro(*item)
+                return await fetch_coro(item)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.bind(
+                    scraper=self.code_name,
+                    site=self.site_name,
+                ).warning(f"Worker task error in {getattr(fetch_coro, '__name__', 'fetch_coro')}: {e}")
+                return None
 
-            if (len(results) + len(self.data)) >= getattr(self, "MAX_COURSES", 500):
-                for t in tasks:
-                    if not t.done():
-                        t.cancel()
-                await asyncio.gather(*tasks, return_exceptions=True)
+        def _start_next() -> bool:
+            try:
+                item = next(item_iter)
+            except StopIteration:
+                return False
+            active.add(asyncio.create_task(_run_one(item)))
+            return True
+
+        for _ in range(worker_count):
+            if not _start_next():
                 break
+
+        try:
+            while active:
+                done, pending = await asyncio.wait(active, return_when=asyncio.FIRST_COMPLETED)
+                active = pending
+                for task in done:
+                    completed += 1
+                    self.progress = min(completed, len(items))
+                    try:
+                        res = task.result()
+                    except (Exception, asyncio.CancelledError):
+                        res = None
+                    if _is_viable(res) and len(results) + len(self.data) < quota:
+                        results.append(res)
+                    if len(results) + len(self.data) >= quota:
+                        for pending_task in active:
+                            pending_task.cancel()
+                        await asyncio.gather(*active, return_exceptions=True)
+                        active.clear()
+                        break
+                else:
+                    for _ in done:
+                        if not self.circuit_open:
+                            _start_next()
+        finally:
+            for task in active:
+                task.cancel()
+            await asyncio.gather(*active, return_exceptions=True)
 
         return results
 
