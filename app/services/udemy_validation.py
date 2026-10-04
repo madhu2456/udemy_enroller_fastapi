@@ -7,6 +7,7 @@ helpers here. The CI gate `scripts/verify-no-udemy-substring.sh` fails if a
 substring-style check reappears in ``app/services``.
 """
 
+import posixpath
 from typing import Any
 from urllib.parse import urlparse
 
@@ -85,3 +86,19 @@ def is_trk_udemy_url(url: Any) -> bool:
     except ValueError:
         return False
     return netloc.lower() == "trk.udemy.com"
+
+
+_UDEMY_PATH_SHARE = "share"
+
+
+def is_udemy_share_url(url: Any) -> bool:
+    """Whether *url* is an exact Udemy netloc whose path starts with /share/."""
+    if not is_udemy_url(url):
+        return False
+    try:
+        raw_path = urlparse(url).path
+        norm_path = posixpath.normpath(raw_path)
+    except (ValueError, Exception):
+        return False
+    parts = [p for p in norm_path.split("/") if p]
+    return len(parts) >= 2 and parts[0] == _UDEMY_PATH_SHARE

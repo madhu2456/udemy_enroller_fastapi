@@ -80,6 +80,29 @@ async def test_resolve_redirect_hop_turnstile_fail_fast():
 
 
 @pytest.mark.asyncio
+async def test_resolve_redirect_hop_forwards_custom_headers():
+    """Test resolve_redirect_hop forwards custom headers into client.get."""
+    client = AsyncHTTPClient()
+    mock_resp = httpx.Response(
+        302,
+        headers={"Location": "https://www.udemy.com/course/python-mastery/?couponCode=FREE"},
+        request=httpx.Request("GET", "https://example.com/out/test"),
+    )
+    client.client.get = AsyncMock(return_value=mock_resp)
+
+    res = await client.resolve_redirect_hop(
+        "https://example.com/out/test",
+        headers={"Referer": "https://couponscorpion.com/custom-post/"},
+    )
+    assert res == "https://www.udemy.com/course/python-mastery/?couponCode=FREE"
+    client.client.get.assert_called_once()
+    called_headers = client.client.get.call_args.kwargs.get("headers", {})
+    assert called_headers.get("Referer") == "https://couponscorpion.com/custom-post/"
+    await client.close()
+
+
+
+@pytest.mark.asyncio
 async def test_http_get_resilient_turnstile_abort():
     """Test Scraper._http_get_resilient aborts without CloudScraper retry when Turnstile is detected."""
     mock_http = MagicMock(spec=AsyncHTTPClient)

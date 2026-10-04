@@ -30,12 +30,21 @@ from app.services.scraper import (
 async def test_telegram_deals_scraper_parsing_and_resilience():
     """Test TelegramDealsScraper parses web preview HTML and handles errors."""
     mock_http = MagicMock(spec=AsyncHTTPClient)
+    mock_http.resolve_redirect_hop = AsyncMock(
+        return_value="https://www.udemy.com/course/share-course/?couponCode=SHAREFREE"
+    )
     html_content = """
     <div class="tgme_widget_message_text">
         <a href="https://www.udemy.com/course/telegram-course/?couponCode=TG2026">Telegram Course</a>
     </div>
     <div class="tgme_widget_message_text">
         Plain text deal: https://www.udemy.com/course/plain-deal/ coupon: PLAIN100
+    </div>
+    <div class="tgme_widget_message_text">
+        <a href="https://www.udemy.com/share/10123/">Share Deal</a>
+    </div>
+    <div class="tgme_widget_message_text">
+        Duplicate share: https://www.udemy.com/share/10123/
     </div>
     <div class="tgme_widget_message_text">
         Duplicate deal: https://www.udemy.com/course/telegram-course/?couponCode=TG2026
@@ -52,10 +61,12 @@ async def test_telegram_deals_scraper_parsing_and_resilience():
 
     await scraper.scrape(asyncio.Semaphore(2))
     assert scraper.done is True
-    assert len(scraper.data) == 2
+    assert len(scraper.data) == 3
     urls = [c.url for c in scraper.data]
     assert any("telegram-course" in u and "couponCode=TG2026" in u for u in urls)
     assert any("plain-deal" in u and "couponCode=PLAIN100" in u for u in urls)
+    assert any("share-course" in u and "couponCode=SHAREFREE" in u for u in urls)
+    assert mock_http.resolve_redirect_hop.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -83,18 +94,31 @@ async def test_wordpress_feeds_scraper_freshness_guard():
 
     mock_http = MagicMock(spec=AsyncHTTPClient)
     resp = MagicMock(status_code=200, text=rss_xml)
-    mock_http.get = AsyncMock(return_value=resp)
+
+    async def mock_get(url, *args, **kwargs):
+        if url in (
+            "https://real.discount/feed/",
+            "https://www.reddit.com/r/udemyfreebies/.rss",
+        ):
+            return resp
+        return None
+
+    mock_http.get = AsyncMock(side_effect=mock_get)
 
     scraper = WordPressFeedsScraper(mock_http)
     assert scraper.site_name == "WordPress Feeds"
     assert scraper.code_name == "wp"
     assert scraper.MAX_ITEM_AGE_MINUTES == 180
+    assert "https://www.reddit.com/r/udemyfreebies/.rss" in scraper.FEEDS
 
     await scraper.scrape(asyncio.Semaphore(2))
     assert scraper.done is True
     assert len(scraper.data) == 1
     assert "fresh-course" in scraper.data[0].url
     assert "stale-course" not in [c.url for c in scraper.data]
+    requested_urls = [c.args[0] for c in mock_http.get.call_args_list if c.args]
+    assert "https://www.reddit.com/r/udemyfreebies/.rss" in requested_urls
+
 
 
 def test_parse_feed_item_date():

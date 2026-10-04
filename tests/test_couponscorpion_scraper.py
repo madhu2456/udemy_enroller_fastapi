@@ -364,3 +364,54 @@ async def test_resolve_out_fast_hop_none_falls_back_to_cloudscraper(scraper):
     assert resolved == "https://www.udemy.com/course/fallback-course/?couponCode=FB"
     scraper.http.resolve_redirect_hop.assert_awaited_once_with(url, timeout=10)
     scraper.http.get.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_resolve_out_passes_referer_header_to_redirect_hop(scraper):
+    """Test _resolve_out forwards sanitized Referer header to resolve_redirect_hop."""
+    scraper.http.resolve_redirect_hop = AsyncMock(
+        return_value="https://www.udemy.com/course/python-masterclass/?couponCode=FREE100"
+    )
+    scraper.http.get = AsyncMock()
+
+    url = "https://couponscorpion.com/scripts/udemy/out.php?go=123"
+    referer = "https://couponscorpion.com/post-1/"
+    resolved = await scraper._resolve_out(url, referer=referer)
+
+    assert resolved == "https://www.udemy.com/course/python-masterclass/?couponCode=FREE100"
+    scraper.http.resolve_redirect_hop.assert_awaited_once_with(
+        url, timeout=10, headers={"Referer": "https://couponscorpion.com/post-1/"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_resolve_out_strips_crlf_injection_from_referer(scraper):
+    """Test _resolve_out strips CRLF injection characters from referer."""
+    scraper.http.resolve_redirect_hop = AsyncMock(
+        return_value="https://www.udemy.com/course/python-masterclass/?couponCode=FREE100"
+    )
+    scraper.http.get = AsyncMock()
+
+    url = "https://couponscorpion.com/scripts/udemy/out.php?go=123"
+    crlf_referer = "https://couponscorpion.com/post-1/\r\nEvil-Header: injected"
+    await scraper._resolve_out(url, referer=crlf_referer)
+
+    scraper.http.resolve_redirect_hop.assert_awaited_once_with(
+        url,
+        timeout=10,
+        headers={"Referer": "https://couponscorpion.com/post-1/Evil-Header: injected"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_resolve_out_omits_kwargs_when_referer_none(scraper):
+    """Test _resolve_out calls resolve_redirect_hop without headers kwarg when referer is None or empty."""
+    scraper.http.resolve_redirect_hop = AsyncMock(
+        return_value="https://www.udemy.com/course/python-masterclass/?couponCode=FREE100"
+    )
+    scraper.http.get = AsyncMock()
+
+    url = "https://couponscorpion.com/scripts/udemy/out.php?go=123"
+    await scraper._resolve_out(url, referer=None)
+
+    scraper.http.resolve_redirect_hop.assert_awaited_once_with(url, timeout=10)

@@ -14,10 +14,11 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from app.services.udemy_validation import (
+    is_trk_udemy_url,
     is_udemy_course_url,
     is_udemy_netloc,
+    is_udemy_share_url,
     is_udemy_url,
-    is_trk_udemy_url,
 )
 
 # ---------------------------------------------------------------------------
@@ -171,6 +172,43 @@ def test_is_trk_udemy_url_accepts(url):
 @pytest.mark.parametrize("url", TRK_FALSE)
 def test_is_trk_udemy_url_rejects(url):
     assert is_trk_udemy_url(url) is False, f"non-trk URL accepted: {url}"
+
+
+# ---------------------------------------------------------------------------
+# is_udemy_share_url.
+# ---------------------------------------------------------------------------
+
+SHARE_URL_TRUE = [
+    "https://www.udemy.com/share/10123/",
+    "https://udemy.com/share/abc-xyz/?couponCode=FREE",
+    "http://www.udemy.com/share/test-share",
+    "https://udemy.com/share/123",
+]
+
+SHARE_URL_FALSE = [
+    "https://udemy.com.evil.com/share/123",
+    "https://eviludemy.com/share/123",
+    "https://www.udemy.com/share",
+    "https://www.udemy.com/share/",
+    "https://www.udemy.com/share/../../malicious",
+    "https://www.udemy.com/course/python/",
+    "https://www.udemy.com/",
+    "not-a-url",
+    "",
+    None,
+    123,
+]
+
+
+@pytest.mark.parametrize("url", SHARE_URL_TRUE)
+def test_is_udemy_share_url_accepts(url):
+    assert is_udemy_share_url(url) is True, f"valid share URL rejected: {url}"
+
+
+@pytest.mark.parametrize("url", SHARE_URL_FALSE)
+def test_is_udemy_share_url_rejects(url):
+    assert is_udemy_share_url(url) is False, f"invalid share URL accepted: {url}"
+
 
 
 # ---------------------------------------------------------------------------

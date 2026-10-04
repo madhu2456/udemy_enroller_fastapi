@@ -4,6 +4,7 @@ import asyncio
 import html
 import json
 import os
+import random
 import re
 import time
 import traceback
@@ -26,6 +27,7 @@ from app.services.robots_gate import RobotsGate
 from app.services.udemy_validation import (
     is_trk_udemy_url,
     is_udemy_course_url,
+    is_udemy_share_url,
     is_udemy_url,
 )
 
@@ -3806,24 +3808,40 @@ class CouponScorpionScraper(Scraper):
             return f"{self.BASE_URL}/scripts/udemy/out.php?go={go_q}&s={s_q}"
         return f"{self.BASE_URL}/scripts/udemy/out.php?go={go_q}"
 
-    async def _resolve_out(self, out_url: str) -> Optional[str]:
+    async def _resolve_out(
+        self, out_url: str, referer: Optional[str] = None
+    ) -> Optional[str]:
         try:
+            clean_ref = None
+            if isinstance(referer, str):
+                stripped = referer.strip().replace("\r", "").replace("\n", "")
+                if stripped.startswith(("http://", "https://")):
+                    clean_ref = stripped
+            ref_headers = {"Referer": clean_ref} if clean_ref else None
+
             # Fast probe: check redirect hop via async HTTP client first (~30ms)
             location = None
-            loc_val = await self.http.resolve_redirect_hop(out_url, timeout=10)
+            if ref_headers:
+                loc_val = await self.http.resolve_redirect_hop(
+                    out_url, timeout=10, headers=ref_headers
+                )
+            else:
+                loc_val = await self.http.resolve_redirect_hop(out_url, timeout=10)
             if isinstance(loc_val, str) and loc_val:
                 location = loc_val
 
             if not location:
-                resp = await self.http.get(
-                    out_url,
-                    use_cloudscraper=True,
-                    allow_redirects=False,
-                    follow_redirects=False,
-                    raise_for_status=False,
-                    attempts=1,
-                    timeout=8,
-                )
+                get_kwargs = {
+                    "use_cloudscraper": True,
+                    "allow_redirects": False,
+                    "follow_redirects": False,
+                    "raise_for_status": False,
+                    "attempts": 1,
+                    "timeout": 8,
+                }
+                if ref_headers:
+                    get_kwargs["headers"] = ref_headers
+                resp = await self.http.get(out_url, **get_kwargs)
                 if not resp or resp.status_code not in (301, 302, 307, 308):
                     status = getattr(resp, "status_code", None)
                     logger.warning(
@@ -3839,16 +3857,19 @@ class CouponScorpionScraper(Scraper):
             if is_udemy_course_url(location):
                 return location
             # Handle relative/same-origin redirect hops
-            if "couponscorpion.com" in location and "/scripts/udemy/" in location:
-                resp2 = await self.http.get(
-                    location,
-                    use_cloudscraper=True,
-                    allow_redirects=False,
-                    follow_redirects=False,
-                    raise_for_status=False,
-                    attempts=1,
-                    timeout=8,
-                )
+            parsed_loc = urllib.parse.urlparse(location)
+            if parsed_loc.netloc in {"couponscorpion.com", "www.couponscorpion.com"}:
+                resp2_kwargs = {
+                    "use_cloudscraper": True,
+                    "allow_redirects": False,
+                    "follow_redirects": False,
+                    "raise_for_status": False,
+                    "attempts": 1,
+                    "timeout": 8,
+                }
+                if ref_headers:
+                    resp2_kwargs["headers"] = ref_headers
+                resp2 = await self.http.get(location, **resp2_kwargs)
                 if resp2 and resp2.status_code in (301, 302, 307, 308):
                     loc2 = resp2.headers.get("location") or resp2.headers.get("Location") or ""
                     loc2 = urllib.parse.urljoin(location, loc2)
@@ -3894,7 +3915,7 @@ class CouponScorpionScraper(Scraper):
                                 break
                     if not out_url:
                         return None, None
-                    udemy_url = await self._resolve_out(out_url)
+                    udemy_url = await self._resolve_out(out_url, referer=post_url)
                     if not udemy_url or not is_udemy_course_url(udemy_url):
                         return None, None
                     title = post_title or "Unknown"
@@ -4730,6 +4751,19 @@ class TelegramDealsScraper(Scraper):
         self.length = len(self.CHANNELS)
         self.progress = 0
         seen_urls = set()
+        share_sem = asyncio.Semaphore(3)
+        seen_share_links: set[str] = set()
+
+        async def _resolve_share(link: str) -> Optional[str]:
+            if link in seen_share_links:
+                return None
+            seen_share_links.add(link)
+            async with share_sem:
+                await asyncio.sleep(random.uniform(0.15, 0.35))
+                resolved = await self.http.resolve_redirect_hop(link, timeout=10)
+                if resolved and is_udemy_course_url(resolved):
+                    return resolved
+            return None
 
         for idx, channel in enumerate(self.CHANNELS):
             if len(self.data) >= self.MAX_COURSES:
@@ -4776,14 +4810,23 @@ class TelegramDealsScraper(Scraper):
                         href = a.get("href", "")
                         a_text = a.get_text(strip=True)
                         t = a_text if (a_text and not a_text.startswith("http")) else fallback_title
-                        candidates.append((href, t))
+                        if is_udemy_share_url(href):
+                            resolved = await _resolve_share(href)
+                            if resolved:
+                                candidates.append((resolved, t))
+                        elif is_udemy_course_url(href) or is_udemy_url(href):
+                            candidates.append((href, t))
 
                     plain_links = re.findall(
                         r"https?://[^\s\)\]\"'>]+",
                         msg_text,
                     )
                     for plink in plain_links:
-                        if is_udemy_course_url(plink) or is_udemy_url(plink):
+                        if is_udemy_share_url(plink):
+                            resolved = await _resolve_share(plink)
+                            if resolved:
+                                candidates.append((resolved, fallback_title))
+                        elif is_udemy_course_url(plink) or is_udemy_url(plink):
                             candidates.append((plink, fallback_title))
 
                     for raw_link, title in candidates:
@@ -4818,7 +4861,7 @@ class WordPressFeedsScraper(Scraper):
 
     FEEDS = (
         "https://real.discount/feed/",
-        "https://couponscorpion.com/feed/",
+        "https://www.reddit.com/r/udemyfreebies/.rss",
     )
     MAX_COURSES: int = 100
     MAX_ITEM_AGE_MINUTES: int = 180

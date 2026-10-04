@@ -772,7 +772,12 @@ class AsyncHTTPClient:
         except Exception:
             return False
 
-    async def resolve_redirect_hop(self, url: str, timeout: float = 8.0) -> Optional[str]:
+    async def resolve_redirect_hop(
+        self,
+        url: str,
+        timeout: float = 8.0,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Optional[str]:
         """Resolve a single HTTP redirect hop using native async HTTPX (follow_redirects=False).
 
         Enforces SSRF safety and aborts fail-fast on Cloudflare Turnstile challenge without retry (FM-003).
@@ -785,7 +790,7 @@ class AsyncHTTPClient:
             return None
 
         try:
-            headers = self._get_headers(url, req_type="document")
+            headers = self._get_headers(url, custom_headers=headers, req_type="document")
             async with self._request_semaphore:
                 response = await self.client.get(
                     url,
