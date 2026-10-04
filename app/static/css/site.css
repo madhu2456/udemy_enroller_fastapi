@@ -144,6 +144,105 @@ textarea {
     }
 }
 
+/* Forced colors (Windows High Contrast, Chromium forced-colors: active) —
+   WCAG 1.4.12 / 2.3.3. A forced palette strips the author background and border
+   colors that Tailwind utilities rely on for separation, so structure is
+   re-asserted with system colors here. This sheet is linked AFTER the Tailwind
+   bundles (components/base.html), so these rules win at equal specificity. */
+@media (forced-colors: active) {
+    /* Focus: the forced palette discards Tailwind's box-shadow ring utilities,
+       so a system Highlight outline is required (WCAG 2.4.7 / 2.4.11). */
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    summary:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+    }
+
+    /* Muted placeholders inherit GrayText instead of a washed-out grey */
+    ::placeholder {
+        color: GrayText;
+        opacity: 1;
+    }
+
+    /* Surfaces whose separation came from background color alone */
+    .toast,
+    .checkbox-pill,
+    .nav-link,
+    .bg-gradient-to-r,
+    .bg-gradient-to-br {
+        border: 1px solid CanvasText;
+    }
+
+    /* Skeleton loaders keep a visible track instead of a flat block */
+    .animate-pulse-light,
+    .animate-pulse {
+        border: 1px solid CanvasText;
+        background-color: Canvas;
+    }
+
+    /* The .spinner ring keeps its gap: transparent is not forced, but the ring
+       color must come from the system palette. */
+    .spinner {
+        border-color: CanvasText;
+        border-right-color: transparent;
+    }
+
+    /* Decorative elevation is dropped by the forced palette — make it explicit
+       so no UA default shadow survives a custom theme. */
+    .shadow, .shadow-sm, .shadow-lg, .shadow-xl, .shadow-2xl {
+        box-shadow: none;
+    }
+}
+
+/* prefers-contrast: more — lift muted greys and hairline borders above AA
+   (WCAG 1.4.3 / 1.4.11). Only classes this site actually paints are listed;
+   the dark toast is already 15.7:1 and is deliberately left untouched. */
+@media (prefers-contrast: more) {
+    body {
+        color: #111827;
+    }
+
+    .text-gray-400,
+    .placeholder-gray-400,
+    ::placeholder {
+        color: #4b5563; /* 7.2:1 on #f9fafb */
+    }
+
+    .text-gray-500 {
+        color: #374151; /* 9.9:1 on #f9fafb */
+    }
+
+    .text-gray-600 {
+        color: #1f2937; /* 14.1:1 on #f9fafb */
+    }
+
+    /* Small blue/green accents sit below 4.5:1 on the light page background */
+    .text-blue-500 {
+        color: #1d4ed8; /* 6.7:1 on #ffffff */
+    }
+
+    .text-green-500 {
+        color: #047857; /* 5.5:1 on #ffffff */
+    }
+
+    .border-gray-100,
+    .border-gray-200,
+    .border-gray-300 {
+        border-color: #6b7280; /* 4.8:1 on #ffffff */
+    }
+
+    a:focus-visible, button:focus-visible, input:focus-visible,
+    select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+        outline: 2px solid #111827;
+        outline-offset: 2px;
+    }
+}
+
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }

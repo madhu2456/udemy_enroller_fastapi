@@ -1041,6 +1041,21 @@ block twitter_title %}Free Udemy Courses Automation | Enroller by Madhu Dadi{% e
                         .lf-spinner {
                             animation: spin 0.8s linear infinite;
                         }
+                        /* Forced colors: keep the spinner ring in the system
+                           palette so it stays visible on the white card. */
+                        @media (forced-colors: active) {
+                            .lf-spinner {
+                                border-color: CanvasText;
+                                border-right-color: transparent;
+                            }
+                        }
+                        /* prefers-contrast: more: full-strength ink ring. */
+                        @media (prefers-contrast: more) {
+                            .lf-spinner {
+                                border-color: #111827;
+                                border-right-color: transparent;
+                            }
+                        }
                     </style>
 
                     <div id="login-success" class="hidden text-center py-8">

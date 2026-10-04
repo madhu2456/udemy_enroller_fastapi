@@ -328,6 +328,21 @@
     .lf-spinner {
         animation: spin 0.8s linear infinite;
     }
+    /* Forced colors: keep the spinner ring in the system palette (the forced
+       palette would otherwise drop the border color that draws the ring). */
+    @media (forced-colors: active) {
+        .lf-spinner {
+            border-color: CanvasText;
+            border-right-color: transparent;
+        }
+    }
+    /* prefers-contrast: more: draw the ring at full-strength ink. */
+    @media (prefers-contrast: more) {
+        .lf-spinner {
+            border-color: #111827;
+            border-right-color: transparent;
+        }
+    }
 </style>
 <script nonce="{{ request.state.nonce }}">
     const EMAIL_LOGIN_ENABLED =

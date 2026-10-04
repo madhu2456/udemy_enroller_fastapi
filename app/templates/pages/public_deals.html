@@ -128,6 +128,22 @@ og_description %}Browse 100% free Udemy coupons, promo codes, and verified deals
     .animate-pulse-light {
         animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+    /* Forced colors: skeleton placeholders keep a visible track instead of a
+       flat block (the forced palette strips their background color). */
+    @media (forced-colors: active) {
+        .animate-pulse-light {
+            border: 1px solid CanvasText;
+            background-color: Canvas;
+        }
+    }
+    /* prefers-contrast: more: lift the placeholder fill above 3:1 so the
+       loading skeleton stays a visible track. */
+    @media (prefers-contrast: more) {
+        .animate-pulse-light {
+            background-color: #e5e7eb;
+            border: 1px solid #6b7280;
+        }
+    }
     .line-clamp-2 {
         display: -webkit-box;
         -webkit-line-clamp: 2;
