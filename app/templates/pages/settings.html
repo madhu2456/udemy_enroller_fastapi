@@ -732,13 +732,16 @@ content %}
         if (!input || !container) return;
 
         input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                const val = input.value.trim();
-                if (val) {
-                    addTag(container, val);
-                    input.value = "";
-                }
+            if (e.key !== "Enter") return;
+            // IME composition guard (F086): an Enter that confirms a candidate
+            // (isComposing, or the legacy keyCode 229 for browsers that don't
+            // set isComposing) must not also commit a partial tag.
+            if (e.isComposing || e.keyCode === 229) return;
+            e.preventDefault();
+            const val = input.value.trim();
+            if (val) {
+                addTag(container, val);
+                input.value = "";
             }
         });
     }
