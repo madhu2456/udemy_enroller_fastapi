@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import json
 import secrets
 import tempfile
 from unittest.mock import AsyncMock, patch
@@ -323,3 +324,46 @@ async def test_trigger_run_socket_cleanup_on_error():
         mock_client.close.assert_awaited_once()
 
     db.close()
+
+
+def test_scheduler_update_explicit_json_success(auth_client):
+    """POST /api/scheduler/update with explicit application/json header succeeds."""
+    client, _, _ = auth_client
+    resp = client.post(
+        "/api/scheduler/update",
+        data=json.dumps({"cron_preset": "4h"}),
+        headers={"Content-Type": "application/json"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["is_enabled"] is True
+    assert data["schedule_interval_hours"] == 4
+
+
+def test_scheduler_update_text_plain_rejection_reproduction(auth_client):
+    """POST /api/scheduler/update with text/plain header reproduces 422 Unprocessable Entity."""
+    client, _, _ = auth_client
+    resp = client.post(
+        "/api/scheduler/update",
+        data='{"cron_preset": "2h"}',
+        headers={"Content-Type": "text/plain;charset=UTF-8"},
+    )
+    assert resp.status_code == 422
+    data = resp.json()
+    assert data["detail"][0]["loc"] == ["body"]
+
+
+def test_frontend_assets_scheduler_content_type_and_error_handling():
+    """Verify frontend assets enforce error handling and Content-Type defense."""
+    app_js_path = Path("app/static/js/app.js")
+    dashboard_html_path = Path("app/templates/pages/dashboard.html")
+
+    app_js_content = app_js_path.read_text(encoding="utf-8")
+    dashboard_content = dashboard_html_path.read_text(encoding="utf-8")
+
+    assert "extractErrorDetail" in dashboard_content
+    assert "extractErrorDetail(err" in dashboard_content
+    assert dashboard_content.count("extractErrorDetail") >= 3
+    assert "formatToastMessage" in app_js_content
+    assert 'options.headers["Content-Type"] = "application/json"' in app_js_content
+    assert '"Content-Type": "application/json"' in dashboard_content

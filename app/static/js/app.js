@@ -23,7 +23,30 @@ async function apiFetch(url, options = {}) {
     options.headers = options.headers || {};
     const token = getCsrfToken();
     if (token) {
-      options.headers["X-CSRF-Token"] = token;
+      if (typeof Headers !== "undefined" && options.headers instanceof Headers) {
+        options.headers.set("X-CSRF-Token", token);
+      } else {
+        options.headers["X-CSRF-Token"] = token;
+      }
+    }
+
+    // Auto-detect JSON body and set Content-Type header if not already specified
+    if (options.body && typeof options.body === "string") {
+      const isHeaders = typeof Headers !== "undefined" && options.headers instanceof Headers;
+      const hasContentType = isHeaders
+        ? options.headers.has("content-type")
+        : Object.keys(options.headers || {}).some((k) => k.toLowerCase() === "content-type");
+
+      if (!hasContentType) {
+        const trimmed = options.body.trim();
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+          if (isHeaders) {
+            options.headers.set("Content-Type", "application/json");
+          } else {
+            options.headers["Content-Type"] = "application/json";
+          }
+        }
+      }
     }
   }
   return fetch(url, options);
@@ -160,7 +183,38 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Toast notification utility
-function showToast(message, type = "info") {
+function formatToastMessage(msg) {
+  if (msg === null || msg === undefined) return "";
+  if (typeof msg === "string") return msg;
+  if (Array.isArray(msg)) {
+    return msg
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          return item.msg || item.message || item.detail || formatToastMessage(item);
+        }
+        return String(item);
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+  if (msg instanceof Error) return msg.message;
+  if (typeof msg === "object") {
+    if (typeof msg.detail === "string") return msg.detail;
+    if (Array.isArray(msg.detail)) return formatToastMessage(msg.detail);
+    if (typeof msg.message === "string") return msg.message;
+    if (typeof msg.msg === "string") return msg.msg;
+    try {
+      return JSON.stringify(msg);
+    } catch (_) {
+      return String(msg);
+    }
+  }
+  return String(msg);
+}
+
+function showToast(rawMessage, type = "info") {
+  const message = formatToastMessage(rawMessage) || "Notification";
   const toast = document.createElement("div");
   toast.className = "toast";
 

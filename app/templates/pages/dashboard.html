@@ -2420,6 +2420,20 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         schedulerTickerInterval = setInterval(tick, 1000);
     }
 
+    function extractErrorDetail(err, fallback = "An unexpected error occurred") {
+        if (!err) return fallback;
+        if (typeof err === "string") return err;
+        if (typeof err.detail === "string") return err.detail;
+        if (Array.isArray(err.detail) && err.detail.length > 0) {
+            return err.detail
+                .map(item => (typeof item === "string" ? item : (item && item.msg ? item.msg : JSON.stringify(item))))
+                .filter(Boolean)
+                .join("; ");
+        }
+        if (err.message && typeof err.message === "string") return err.message;
+        return fallback;
+    }
+
     async function saveSchedulerInterval() {
         if (!schedulerSelectedPreset) return;
         const saveBtn = document.getElementById("sched-save-btn");
@@ -2428,11 +2442,12 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         try {
             const resp = await apiFetch("/api/scheduler/update", {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ cron_preset: schedulerSelectedPreset }),
             });
             if (!resp.ok) {
-                const err = await resp.json();
-                showToast(err.detail || "Failed to update scheduler", "error");
+                const err = await resp.json().catch(() => null);
+                showToast(extractErrorDetail(err, "Failed to update scheduler"), "error");
                 return;
             }
             const data = await resp.json();
@@ -2455,11 +2470,12 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
         try {
             const resp = await apiFetch("/api/scheduler/update", {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ cron_preset: nextPreset }),
             });
             if (!resp.ok) {
-                const err = await resp.json();
-                showToast(err.detail || "Failed to update scheduler", "error");
+                const err = await resp.json().catch(() => null);
+                showToast(extractErrorDetail(err, "Failed to update scheduler"), "error");
                 return;
             }
             const data = await resp.json();
@@ -2483,8 +2499,8 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
                 method: "POST",
             });
             if (!resp.ok) {
-                const err = await resp.json();
-                showToast(err.detail || "Failed to trigger run", "error");
+                const err = await resp.json().catch(() => null);
+                showToast(extractErrorDetail(err, "Failed to trigger run"), "error");
                 if (triggerBtn) triggerBtn.disabled = false;
                 if (triggerText) triggerText.textContent = "Trigger Run Now";
                 return;
