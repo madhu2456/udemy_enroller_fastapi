@@ -72,3 +72,6 @@ docs/ops/*
 backups/
 data/*.enc
 *.enc
+
+# Scratch and local test artifacts
+scratch/
