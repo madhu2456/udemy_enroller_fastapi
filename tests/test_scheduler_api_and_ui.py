@@ -267,8 +267,8 @@ def test_scheduler_update_preset_success(auth_client):
     assert data2["cron_expression"] is None
 
 
-def test_scheduler_trigger_conflict_when_run_active(auth_client):
-    """POST /api/scheduler/trigger returns 409 Conflict if a run is already active."""
+def test_scheduler_trigger_supersedes_active_run(auth_client):
+    """POST /api/scheduler/trigger supersedes active run and launches successfully."""
     client, user_id, _ = auth_client
     db = TestingSessionLocal()
     active_run = EnrollmentRun(
@@ -281,9 +281,13 @@ def test_scheduler_trigger_conflict_when_run_active(auth_client):
     db.commit()
     db.close()
 
-    resp = client.post("/api/scheduler/trigger")
-    assert resp.status_code == 409
-    assert "already active" in resp.json()["detail"]
+    with patch(
+        "app.services.scheduler.EnrollmentManager.start_run",
+        AsyncMock(return_value=999),
+    ):
+        resp = client.post("/api/scheduler/trigger")
+    assert resp.status_code == 200
+    assert resp.json()["run_id"] == 999
 
 
 @pytest.mark.asyncio

@@ -38,20 +38,6 @@ async def start_enrollment(
     """Start a new enrollment run."""
     enrollment_start_limiter.raise_if_limited(_client_key(request))
 
-    active = (
-        db.query(EnrollmentRun)
-        .filter(
-            EnrollmentRun.user_id == user_id,
-            EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]),
-        )
-        .first()
-    )
-
-    if active:
-        raise HTTPException(
-            status_code=409, detail="An enrollment run is already active"
-        )
-
     user_settings = (
         db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     )

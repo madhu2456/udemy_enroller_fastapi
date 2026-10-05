@@ -1,15 +1,16 @@
 """Tests for EnrollmentManager pipeline logic with mocked dependencies."""
 
 import asyncio
-import tempfile
+from datetime import timedelta
 from pathlib import Path
+import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.models.database import Base, EnrollmentRun, User
+from app.models.database import Base, EnrollmentRun, User, _utcnow_naive
 from app.services import enrollment_manager as em_module
 from app.services.course import Course
 from app.services.enrollment_manager import EnrollmentManager
@@ -57,6 +58,7 @@ def isolate_side_effects_and_cleanup_db(monkeypatch):
         for table in reversed(Base.metadata.sorted_tables):
             connection.execute(table.delete())
     EnrollmentManager.active_tasks.clear()
+    EnrollmentManager.active_managers.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -759,6 +761,103 @@ class TestEnrollmentManagerPipeline:
         db_session.refresh(run)
         assert run.status == "failed"
         assert run.error_message == "checkout_circuit_exhausted"
+
+    @pytest.mark.asyncio
+    async def test_start_run_supersedes_existing_active_run(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """Starting a new run for a user with an active run supersedes and cancels it."""
+        user = User(email="supersede@example.com", udemy_display_name="Supersede User")
+        db_session.add(user)
+        db_session.commit()
+
+        with patch.object(EnrollmentManager, "run_pipeline", AsyncMock()):
+            run_id_1 = await EnrollmentManager.start_run(
+                user.id, mock_udemy_client, default_settings
+            )
+            # Ensure age > 3.0s to bypass rapid double-click debounce
+            run_1 = db_session.get(EnrollmentRun, run_id_1)
+            assert run_1 is not None
+            run_1.started_at = _utcnow_naive() - timedelta(seconds=10)
+            db_session.commit()
+
+            # Now start run 2 for same user
+            run_id_2 = await EnrollmentManager.start_run(
+                user.id, mock_udemy_client, default_settings
+            )
+
+        assert run_id_1 != run_id_2
+        db_session.refresh(run_1)
+        assert run_1.status == "cancelled"
+        assert run_1.error_message == "Superseded by new run"
+        assert run_1.completed_at is not None
+
+        run_2 = db_session.get(EnrollmentRun, run_id_2)
+        assert run_2 is not None
+        assert run_2.status == "pending"
+
+        # Verify only 1 active run exists for the user (partial index constraint satisfied)
+        active_runs = (
+            db_session.query(EnrollmentRun)
+            .filter(
+                EnrollmentRun.user_id == user.id,
+                EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]),
+            )
+            .all()
+        )
+        assert len(active_runs) == 1
+        assert active_runs[0].id == run_id_2
+
+    @pytest.mark.asyncio
+    async def test_start_run_debounce_within_three_seconds(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """Rapid duplicate calls (< 3.0s) reuse the existing active run_id."""
+        user = User(email="debounce@example.com", udemy_display_name="Debounce User")
+        db_session.add(user)
+        db_session.commit()
+
+        with patch.object(EnrollmentManager, "run_pipeline", AsyncMock()):
+            run_id_1 = await EnrollmentManager.start_run(
+                user.id, mock_udemy_client, default_settings
+            )
+            # Immediate second call within 3s debounce window
+            run_id_2 = await EnrollmentManager.start_run(
+                user.id, mock_udemy_client, default_settings
+            )
+
+        assert run_id_1 == run_id_2
+        all_runs = (
+            db_session.query(EnrollmentRun)
+            .filter(EnrollmentRun.user_id == user.id)
+            .all()
+        )
+        assert len(all_runs) == 1
+        assert all_runs[0].status == "pending"
+
+    @pytest.mark.asyncio
+    async def test_zombie_task_fencing_prevents_db_mutations(
+        self, db_session, mock_udemy_client, default_settings
+    ):
+        """A superseded task with abort_event set must not mutate DB status or send failure alerts."""
+        user = User(email="zombie@example.com", udemy_display_name="Zombie User")
+        db_session.add(user)
+        db_session.commit()
+
+        # Startup Guard fence: pending run with abort_event set does not transition to scraping
+        run = EnrollmentRun(user_id=user.id, status="pending", currency="usd")
+        db_session.add(run)
+        db_session.commit()
+
+        manager = EnrollmentManager(user.id, run.id, mock_udemy_client, default_settings)
+        manager.abort_event.set()
+
+        with patch("app.services.enrollment_manager.send_alert", AsyncMock()) as mock_alert:
+            await manager._run_pipeline_impl()
+            mock_alert.assert_not_called()
+
+        db_session.refresh(run)
+        assert run.status == "pending"
 
 
 if __name__ == "__main__":

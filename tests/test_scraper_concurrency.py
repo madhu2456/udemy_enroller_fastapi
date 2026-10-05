@@ -272,6 +272,7 @@ async def test_enrollment_manager_passes_max_workers():
         mock_session = MagicMock()
         mock_session.get.return_value = run
         mock_session.execute.return_value.scalars.return_value.all.return_value = []
+        mock_db.return_value = mock_session
         mock_db.return_value.__enter__.return_value = mock_session
 
         # Run enrollment pipeline

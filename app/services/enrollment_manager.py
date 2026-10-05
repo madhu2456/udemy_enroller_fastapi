@@ -45,6 +45,7 @@ class EnrollmentManager:
 
     # Track active tasks to prevent duplicate runs per user
     active_tasks: Dict[int, asyncio.Task] = {}
+    active_managers: Dict[int, "EnrollmentManager"] = {}
     locks: Dict[int, asyncio.Lock] = {}
 
     @classmethod
@@ -73,6 +74,7 @@ class EnrollmentManager:
         self.current_course_title = ""
         self.current_course_url = ""
         self.scraper_service: Optional[ScraperService] = None
+        self.abort_event = asyncio.Event()
 
         self._checkout_semaphore = asyncio.Semaphore(1)
         self._db_lock = asyncio.Lock()
@@ -136,6 +138,9 @@ class EnrollmentManager:
             if stale:
                 db.commit()
                 for run in stale:
+                    mgr = cls.active_managers.pop(run.id, None)
+                    if mgr is not None:
+                        mgr.abort_event.set()
                     task = cls.active_tasks.pop(run.id, None)
                     if task is not None and not task.done():
                         task.cancel()
@@ -166,7 +171,7 @@ class EnrollmentManager:
         sources_completed = sum(1 for s in scraping_progress if s.get("state") == "completed")
         sources_failed = sum(1 for s in scraping_progress if s.get("state") in ("failed", "timed_out"))
         courses_discovered = sum(s.get("courses_found", 0) for s in scraping_progress)
-        
+
         phase: str = str(run.status or "")
         if run.status == "enrolling" and (sources_completed + sources_failed) < sources_total:
             phase = "scraping_and_enrolling"
@@ -194,6 +199,33 @@ class EnrollmentManager:
         }
 
     @classmethod
+    async def _cancel_active_run_unlocked(
+        cls, user_id: int, active_id: int, timeout: float = 5.0
+    ) -> None:
+        """Cancel an active run under the user lock without re-acquiring it."""
+        manager = cls.active_managers.get(active_id)
+        if manager is not None:
+            manager.abort_event.set()
+
+        task = cls.active_tasks.get(active_id)
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
+            except (asyncio.TimeoutError, asyncio.CancelledError, Exception):
+                pass
+
+        with SessionLocal() as db:
+            old_run = db.get(EnrollmentRun, active_id)
+            if old_run and old_run.status in ("pending", "scraping", "enrolling"):
+                old_run.status = "cancelled"
+                old_run.error_message = "Superseded by new run"
+                old_run.completed_at = _utcnow_naive()
+                db.commit()
+
+        clear_user_caches(user_id)
+
+    @classmethod
     async def start_run(
         cls,
         user_id: int,
@@ -201,32 +233,46 @@ class EnrollmentManager:
         settings: dict,
         close_client: bool = False,
     ) -> int:
-        """Create a run and start the background task."""
+        """Create a run and start the background task, superseding any prior active run."""
         lock = cls.get_lock(user_id)
         async with lock:
             logger.warning(f"Creating enrollment run for user {user_id}")
-            db = SessionLocal()
-            try:
+            with SessionLocal() as db:
                 active = cls.get_active_run(db, user_id)
-                if active:
-                    raise ValueError("An enrollment run is already active")
+                active_id = active.id if active else None
+                started_at = active.started_at if active else None
 
-                # Create the run record
+            # Rapid double-click debounce window (3.0 seconds)
+            if active_id and started_at:
+                age = (_utcnow_naive() - started_at).total_seconds()
+                if 0 <= age < 3.0:
+                    logger.info(
+                        f"Rapid duplicate run request for user {user_id} ({age:.2f}s old); reusing run {active_id}"
+                    )
+                    return active_id
+
+            if active_id:
+                logger.warning(
+                    f"Active run {active_id} found for user {user_id}; superseding with new run."
+                )
+                await cls._cancel_active_run_unlocked(user_id, active_id)
+
+            with SessionLocal() as db:
                 run = EnrollmentRun(
                     user_id=user_id, status="pending", currency=udemy_client.currency
                 )
                 db.add(run)
                 db.commit()
                 db.refresh(run)
+                run_id = run.id
 
-                logger.warning(f"Run {run.id} created. Starting background task.")
-                manager = cls(user_id, run.id, udemy_client, settings, close_client)
-                task = asyncio.create_task(manager.run_pipeline())
-                cls.active_tasks[run.id] = task
+            logger.warning(f"Run {run_id} created. Starting background task.")
+            manager = cls(user_id, run_id, udemy_client, settings, close_client)
+            task = asyncio.create_task(manager.run_pipeline())
+            cls.active_tasks[run_id] = task
+            cls.active_managers[run_id] = manager
 
-                return run.id
-            finally:
-                db.close()
+            return run_id
 
     async def run_pipeline(self):
         """Main enrollment pipeline: Scrape -> Filter -> Enroll."""
@@ -290,6 +336,8 @@ class EnrollmentManager:
                 discovered_at = item.discovered_at
 
                 try:
+                    if self.abort_event.is_set():
+                        break
                     now = time.time()
                     # Fast price probe pre-checkout TTL re-check (Task 3.3 / FM-002)
                     if now - discovered_at > PRE_CHECKOUT_TTL_SECONDS:
@@ -311,6 +359,8 @@ class EnrollmentManager:
                             await self._update_run_stats(db, run)
                             continue
 
+                    if self.abort_event.is_set():
+                        break
                     can_continue = await self._wait_for_circuit_breaker(db, run)
                     if not can_continue:
                         run.status = "failed"
@@ -321,6 +371,8 @@ class EnrollmentManager:
                         abort_event.set()
                         break
 
+                    if self.abort_event.is_set():
+                        break
                     self.processed += 1
                     self.current_course_title = course.title
                     self.current_course_url = course.url or ""
@@ -458,11 +510,11 @@ class EnrollmentManager:
         producer_task: Optional[asyncio.Task] = None
         validation_tasks: list[asyncio.Task] = []
         checkout_task: Optional[asyncio.Task] = None
-        abort_event = asyncio.Event()
+        abort_event = self.abort_event
         try:
             run = db.get(EnrollmentRun, self.run_id)
-            if not run:
-                logger.error(f"Run {self.run_id} not found in database.")
+            if not run or self.abort_event.is_set() or run.status != "pending":
+                logger.info(f"Pipeline {self.run_id} aborted before startup; skipping execution.")
                 return
 
             run.status = "scraping"
@@ -654,12 +706,19 @@ class EnrollmentManager:
                             if course.slug and (course.slug, coupon) in previously_attempted:
                                 continue
 
+                            if self.abort_event.is_set():
+                                break
                             if self.status == "scraping":
-                                run.status = "enrolling"
-                                run.last_heartbeat = _utcnow_naive()
                                 async with self._db_lock:
-                                    db.commit()
-                                self.status = "enrolling"
+                                    db.refresh(run)
+                                    if run.status in ("pending", "scraping") and not self.abort_event.is_set():
+                                        run.status = "enrolling"
+                                        run.last_heartbeat = _utcnow_naive()
+                                        db.commit()
+                                        self.status = "enrolling"
+                                    else:
+                                        self.abort_event.set()
+                                        break
 
                             self.total_courses += 1
                             run.total_courses_found = self.total_courses
@@ -692,6 +751,15 @@ class EnrollmentManager:
             pd = dict(run.progress_data or {})
             pd["scraping_progress"] = self.scraper_service.get_progress()
             run.progress_data = pd
+
+            if self.abort_event.is_set():
+                logger.info(f"Pipeline {self.run_id} aborted/superseded; skipping completion finalization.")
+                return
+            async with self._db_lock:
+                db.refresh(run)
+                if self.abort_event.is_set() or run.status in ("cancelled", "failed"):
+                    logger.info(f"Pipeline {self.run_id} already terminal ({run.status}); skipping completion finalization.")
+                    return
 
             if run.status == "failed":
                 pass
@@ -785,28 +853,29 @@ class EnrollmentManager:
                 cleanup_db.close()
             raise
         except Exception as e:
-            logger.exception("Enrollment pipeline failed")
-            # F230: alert on enrollment task failure (webhook OFF unless
-            # ALERT_WEBHOOK_URL is set; never raises).
-            await send_alert(
-                "enrollment_failed",
-                f"Enrollment run {self.run_id} (user {self.user_id}) failed: {e}",
-                run_id=self.run_id,
-                user_id=self.user_id,
-            )
-            try:
-                run = db.get(EnrollmentRun, self.run_id)
-                if run:
-                    run.status = "failed"
-                    run.error_message = str(e)
-                    run.completed_at = _utcnow_naive()
-                    db.commit()
+            if not self.abort_event.is_set():
+                logger.exception("Enrollment pipeline failed")
+                # F230: alert on enrollment task failure (webhook OFF unless
+                # ALERT_WEBHOOK_URL is set; never raises).
+                await send_alert(
+                    "enrollment_failed",
+                    f"Enrollment run {self.run_id} (user {self.user_id}) failed: {e}",
+                    run_id=self.run_id,
+                    user_id=self.user_id,
+                )
                 try:
-                    self._merge_run_into_public_catalog(db)
-                except Exception as exp:
-                    logger.warning(f"public_deals merge on failure failed: {exp}")
-            except Exception:
-                pass
+                    run = db.get(EnrollmentRun, self.run_id)
+                    if run and run.status in ("pending", "scraping", "enrolling"):
+                        run.status = "failed"
+                        run.error_message = str(e)
+                        run.completed_at = _utcnow_naive()
+                        db.commit()
+                    try:
+                        self._merge_run_into_public_catalog(db)
+                    except Exception as exp:
+                        logger.warning(f"public_deals merge on failure failed: {exp}")
+                except Exception:
+                    pass
         finally:
             if stop_event:
                 stop_event.set()
@@ -824,6 +893,7 @@ class EnrollmentManager:
 
             clear_user_caches(self.user_id)
             EnrollmentManager.active_tasks.pop(self.run_id, None)
+            EnrollmentManager.active_managers.pop(self.run_id, None)
             db.close()
             if self.scraper_service:
                 try:

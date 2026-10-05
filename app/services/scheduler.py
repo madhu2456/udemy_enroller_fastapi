@@ -219,17 +219,6 @@ async def trigger_run_for_user(user_id: int, db: Session) -> int:
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    active = (
-        db.query(EnrollmentRun)
-        .filter(
-            EnrollmentRun.user_id == user.id,
-            EnrollmentRun.status.in_(["pending", "scraping", "enrolling"]),
-        )
-        .first()
-    )
-    if active:
-        raise HTTPException(status_code=409, detail="An enrollment run is already active")
-
     user_settings = user.settings
     if not user_settings:
         raise HTTPException(status_code=400, detail="User settings not found")

@@ -121,7 +121,7 @@ async def test_telemetry_status_assignment(monkeypatch):
     mock_db = MagicMock()
     mock_run = MagicMock()
     mock_run.progress_data = {}
-    mock_run.status = "scraping"
+    mock_run.status = "pending"
     mock_db.get.return_value = mock_run
     mock_db.execute.return_value = []
 
