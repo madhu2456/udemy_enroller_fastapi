@@ -245,7 +245,7 @@ class TestCourseFiltersAndExclusions:
         course = Course("Old Python", "https://udemy.com/course/old/")
         course.language = "English"
         course.category = "Development"
-        
+
         # 2 years ago (threshold is 12 months)
         two_years_ago = (datetime.datetime.now() - datetime.timedelta(days=730)).strftime("%Y-%m-%d")
         course.last_update = two_years_ago
@@ -270,8 +270,8 @@ class TestCourseFiltersAndExclusions:
 class TestCookieLoginIdentityMigration:
     """Test identity migration and stable Udemy ID checks inside /login/cookies."""
 
-    async def test_legacy_user_migration_flow(self):
-        """Verify legacy display-name users are successfully migrated to stable ID emails."""
+    async def test_cookie_login_does_not_mutate_existing_user_with_same_display_name(self):
+        """Verify cookie login does not mutate existing user sharing the same display name."""
         mock_db = MagicMock()
         mock_request = MagicMock()
         mock_cookie_req = MagicMock(
@@ -280,15 +280,15 @@ class TestCookieLoginIdentityMigration:
             csrf_token="csrf123"
         )
 
-        mock_user = User(
-            id=42,
-            email="john_doe@udemy.local",  # Legacy email format
+        legacy_user = User(
+            id=1,
+            email="legacy@example.com",
             udemy_display_name="John Doe",
             udemy_cookies=None
         )
 
-        # Mock query sequence: First query by email (None), second query by display name (returns legacy user)
-        mock_db.query.return_value.filter.return_value.first.side_effect = [None, mock_user]
+        # Query by email returns None (the stable udemy_9999@udemy.local does not exist yet)
+        mock_db.query.return_value.filter.return_value.first.return_value = None
 
         mock_client_inst = MagicMock(
             display_name="John Doe",
@@ -298,15 +298,29 @@ class TestCookieLoginIdentityMigration:
         )
         mock_client_inst.get_session_info = AsyncMock()
 
+        added_objects = []
+        mock_db.add.side_effect = lambda obj: added_objects.append(obj)
+
         with patch("app.routers.auth.UdemyClient", return_value=mock_client_inst):
             with patch("app.routers.auth.encrypt_cookies_salted", return_value=b"encrypted"):
-                with patch("app.routers.auth._create_session", return_value="session123"):
+                with patch("app.routers.auth._create_session", return_value="session123") as mock_create_session:
                     with patch("app.routers.auth._login_response"):
                         await login_with_cookies(mock_cookie_req, mock_request, mock_db)
 
-        # Assert that the user's email was successfully migrated to stable Udemy ID email
-        assert mock_user.email == "udemy_9999@udemy.local"
-        assert mock_db.commit.call_count >= 1
+        # Assert that the legacy user was not mutated
+        assert legacy_user.email == "legacy@example.com"
+        assert legacy_user.udemy_cookies is None
+
+        # Assert a new user was created with udemy_9999@udemy.local
+        created_users = [obj for obj in added_objects if isinstance(obj, User)]
+        assert len(created_users) == 1
+        new_user = created_users[0]
+        assert new_user.email == "udemy_9999@udemy.local"
+        assert new_user.udemy_display_name == "John Doe"
+
+        # Assert session was created for the new user, not the legacy user
+        mock_create_session.assert_called_once()
+        assert mock_create_session.call_args[0][0] == new_user
 
 
 # ==========================================
@@ -318,7 +332,7 @@ class TestLogIsolationFiltering:
 
     def test_log_stream_user_tag_isolation(self):
         """Test process_log_line to verify log leakage prevention between users."""
-        
+
         # Setup mock stream handler logic matching app/routers/dashboard.py
         def process_log_line(line: str, user_id: int) -> str | None:
             import re

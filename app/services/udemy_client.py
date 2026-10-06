@@ -451,13 +451,18 @@ class UdemyClient:
 
             self.display_name = user_data.get("display_name") or "Udemy User"
             raw_id = user_data.get("id")
-            if raw_id:
-                self.udemy_user_id = str(raw_id)
+            raw_id_str = str(raw_id).strip() if raw_id is not None and not isinstance(raw_id, bool) else ""
+            if (
+                raw_id_str
+                and raw_id_str.isdigit()
+                and 1 <= len(raw_id_str) <= 32
+                and int(raw_id_str) > 0
+            ):
+                self.udemy_user_id = raw_id_str
             else:
                 import hashlib
-                # Stable deterministic fallback using cookie material (client_id, then access_token) and display name salt
                 cookie_material = self.cookie_dict.get("client_id") or self.cookie_dict.get("access_token") or ""
-                salt = self.display_name
+                salt = self.display_name or "fallback"
                 hash_input = f"{cookie_material}:{salt}"
                 self.udemy_user_id = "fallback_" + hashlib.sha256(hash_input.encode("utf-8")).hexdigest()[:12]
 
@@ -478,7 +483,15 @@ class UdemyClient:
     def _get_cache_path(self) -> Optional[Path]:
         if not self.udemy_user_id:
             return None
-        return self._get_cache_dir() / f"enrolled_courses_{self.udemy_user_id}.json"
+        if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", self.udemy_user_id):
+            logger.warning(f"Invalid udemy_user_id format for cache path: {self.udemy_user_id}")
+            return None
+        cache_dir = self._get_cache_dir().resolve()
+        cache_file = (cache_dir / f"enrolled_courses_{self.udemy_user_id}.json").resolve()
+        if not cache_file.is_relative_to(cache_dir):
+            logger.warning(f"Path traversal detected in udemy_user_id: {self.udemy_user_id}")
+            return None
+        return cache_file
 
     def _load_enrolled_cache(self) -> bool:
         """Safely load enrolled courses cache from disk if available."""

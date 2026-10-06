@@ -6,6 +6,7 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from datetime import timedelta
@@ -245,37 +246,41 @@ async def login_with_cookies(
 
         udemy_email = f"udemy_{client.udemy_user_id}@udemy.local"
         user = db.query(User).filter(User.email == udemy_email).first()
-        if not user:
-            # Backwards compatibility: fallback to display name check for legacy records
-            user = (
-                db.query(User)
-                .filter(User.udemy_display_name == client.display_name)
-                .first()
-            )
-            if user:
-                logger.warning(
-                    f"Migrating user display name '{client.display_name}' to stable ID email: {udemy_email}"
-                )
-                user.email = udemy_email
-                db.commit()
 
         if not user:
-            salt = generate_cookie_salt()
-            user = User(
-                email=udemy_email,
-                udemy_display_name=client.display_name,
-                udemy_cookies=encrypt_cookies_salted(client.cookie_dict, salt),
-                cookies_salt=salt,
-                currency=client.currency,
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-            db.add(UserSettings(user_id=user.id))
-            db.commit()
-            logger.info(
-                f"New user via cookie (ID: {user.id})"
-            )
+            # Provision a new user strictly bound to this unique Udemy ID
+            try:
+                salt = generate_cookie_salt()
+                user = User(
+                    email=udemy_email,
+                    udemy_display_name=client.display_name,
+                    currency=client.currency,
+                    is_active=True,
+                    cookies_salt=salt,
+                    udemy_cookies=encrypt_cookies_salted(
+                        client.cookie_dict, salt
+                    ),
+                )
+                db.add(user)
+                db.flush()
+                user_settings = UserSettings(user_id=user.id)
+                db.add(user_settings)
+                db.commit()
+                db.refresh(user)
+                logger.info(f"Created new user #{user.id} for Udemy account {client.udemy_user_id}")
+            except IntegrityError:
+                db.rollback()
+                user = db.query(User).filter(User.email == udemy_email).first()
+                if not user:
+                    raise
+                user.cookies_salt = generate_cookie_salt()
+                user.udemy_cookies = encrypt_cookies_salted(
+                    client.cookie_dict, user.cookies_salt
+                )
+                user.currency = client.currency
+                user.udemy_display_name = client.display_name
+                db.commit()
+                logger.info(f"Resolved concurrent first-login race for user #{user.id}")
         else:
             # Fresh per-session envelope on every login (F-ENRL-C01)
             user.cookies_salt = generate_cookie_salt()
@@ -285,9 +290,6 @@ async def login_with_cookies(
             user.currency = client.currency
             user.udemy_display_name = client.display_name  # Keep display name in sync
             db.commit()
-            logger.info(
-                f"User cookies updated (ID: {user.id})"
-            )
 
         token = _create_session(user, client, request, db)
         client_handed_off = True
