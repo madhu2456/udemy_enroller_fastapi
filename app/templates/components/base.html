@@ -518,6 +518,7 @@
                             id="user-info"
                             class="text-xs font-medium text-gray-700"
                         >{{ nav_name }}</span>
+                        <span id="nav-account-pill" class="text-[10px] bg-blue-100 text-blue-700 font-mono px-1.5 py-0.5 rounded-full hidden"></span>
                     </div>
 
                     <!-- Logout -->
@@ -886,6 +887,15 @@
                             const info = document.getElementById("user-info");
                             if (info)
                                 info.textContent = data.display_name || "";
+                            const navAccPill = document.getElementById("nav-account-pill");
+                            if (navAccPill) {
+                                if (data.udemy_user_id) {
+                                    navAccPill.textContent = `#${data.udemy_user_id}`;
+                                    navAccPill.classList.remove("hidden");
+                                } else {
+                                    navAccPill.classList.add("hidden");
+                                }
+                            }
                             showInlineFlex(logoutBtn);
 
                             hideEl(githubLink);
@@ -901,6 +911,10 @@
                             if (loginNavBtn) loginNavBtn.style.display = "";
                             document.querySelectorAll(".unauth-only").forEach(el => el.classList.remove("hidden"));
                             hideEl(profileBadge);
+                            const navAccPill = document.getElementById("nav-account-pill");
+                            if (navAccPill) {
+                                navAccPill.classList.add("hidden");
+                            }
                             hideEl(logoutBtn);
                             showInlineFlex(githubLink);
                             showInlineFlex(getStartedBtn);

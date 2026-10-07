@@ -65,7 +65,7 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             <h1
                 class="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-2"
             >
-                Welcome back, <span id="header-user-name">User</span> 👋
+                Welcome back, <span id="header-user-name">User</span> <span id="header-account-pill" class="text-xs bg-blue-100 text-blue-700 font-mono px-2 py-0.5 rounded-full hidden" title="Active Udemy Account ID"></span> 👋
             </h1>
             <p class="text-sm text-gray-500 mt-0.5" id="run-meta-text">
                 Start the enrollment engine to claim courses
@@ -1240,6 +1240,11 @@ og_title %}Udemy Course Automation Dashboard: Track Your Progress{% endblock %}
             }
             document.getElementById("header-user-name").textContent =
                 data.display_name;
+            const accPill = document.getElementById("header-account-pill");
+            if (accPill && data.udemy_user_id) {
+                accPill.textContent = `#${data.udemy_user_id}`;
+                accPill.classList.remove("hidden");
+            }
             updateSessionExpiryNote(data);
             return true;
         } catch (e) {

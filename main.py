@@ -144,6 +144,15 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"Skipped stale run cleanup ({type(exc).__name__})")
 
+    try:
+        from app.models.database import SessionLocal
+        if getattr(SessionLocal, "__name__", "") != "<lambda>":
+            with SessionLocal() as db_session:
+                from app.services.session_sanitizer import sanitize_legacy_fallback_records
+                sanitize_legacy_fallback_records(db_session)
+    except Exception as e:
+        logger.debug(f"Startup fallback record check skipped: {e}")
+
     # Initialize app state
     from app.core.cache import SessionCache
 

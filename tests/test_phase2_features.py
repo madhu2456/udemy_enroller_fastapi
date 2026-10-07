@@ -394,19 +394,23 @@ class TestPhase2SecurityRefinements:
         assert "&" in sanitized  # Safe and uncorrupted for direct DOM assignment
 
     def test_udemy_identity_fallback_hash(self):
-        """Test that Udemy stable fallback ID avoids collisions by using client_id / access_token cookie material."""
+        """Test that Udemy stable fallback ID avoids collisions by prioritizing access_token over client_id."""
         import hashlib
+
         def get_fallback_id(client_id, access_token, display_name):
-            cookie_material = client_id or access_token or ""
-            hash_input = f"{cookie_material}:{display_name}"
+            token_mat = (access_token or "").strip()
+            cid_mat = (client_id or "").strip()
+            cookie_material = token_mat or cid_mat or ""
+            salt = display_name or "fallback"
+            hash_input = f"{cookie_material}:{salt}"
             return "fallback_" + hashlib.sha256(hash_input.encode("utf-8")).hexdigest()[:12]
 
-        id1 = get_fallback_id("client1", None, "John Doe")
-        id2 = get_fallback_id("client2", None, "John Doe")
+        id1 = get_fallback_id("same_browser", "token_a", "Madhu Dadi")
+        id2 = get_fallback_id("same_browser", "token_b", "Madhu Dadi")
 
         assert id1.startswith("fallback_")
         assert id2.startswith("fallback_")
-        assert id1 != id2  # Avoids "John Doe" display name collisions
+        assert id1 != id2  # Avoids "Madhu Dadi" same-browser collisions when access_token differs
 
     def test_metadata_filters_fail_closed_only_when_narrowed(self):
         """Test that missing course metadata causes exclusion only if filters are actively narrowed from defaults."""

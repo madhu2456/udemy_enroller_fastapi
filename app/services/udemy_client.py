@@ -446,22 +446,57 @@ class UdemyClient:
                     )
                 raise LoginException("Session invalid.")
 
-            header = ctx.get("header", {})
-            user_data = header.get("user") or {}
+            header_dict = ctx.get("header") or {} if isinstance(ctx, dict) else {}
+            header_user = header_dict.get("user") or {} if isinstance(header_dict, dict) else {}
+            me_data = ctx.get("me") or {} if isinstance(ctx, dict) else {}
+            top_user = ctx.get("user") or {} if isinstance(ctx, dict) else {}
 
-            self.display_name = user_data.get("display_name") or "Udemy User"
-            raw_id = user_data.get("id")
+            self.display_name = (
+                header_user.get("display_name")
+                or me_data.get("title")
+                or me_data.get("display_name")
+                or top_user.get("display_name")
+                or "Udemy User"
+            )
+            raw_id = me_data.get("id") or header_user.get("id") or top_user.get("id")
+
+            token = (self.cookie_dict.get("access_token") or "").strip()
+            if raw_id is None and token and token.count(".") == 2:
+                try:
+                    import base64
+                    parts = token.split(".")
+                    payload_b64 = parts[1] + "=" * (-len(parts[1]) % 4)
+                    payload_data = json.loads(base64.urlsafe_b64decode(payload_b64.encode("ascii")))
+                    raw_id = payload_data.get("sub") or payload_data.get("user_id") or payload_data.get("id")
+                except Exception:
+                    pass
+
+            if raw_id is None and token:
+                try:
+                    user_resp = await self.http.get(
+                        f"{constants.UDEMY_API_BASE}/users/me/",
+                        cookies=self.cookie_dict,
+                        headers=headers,
+                        req_type="mobile",
+                        timeout=5.0,
+                        attempts=1,
+                    )
+                    if user_resp and user_resp.status_code == 200:
+                        u_json = await self.http.safe_json(user_resp, "users_me")
+                        if isinstance(u_json, dict):
+                            raw_id = u_json.get("id")
+                except Exception as exc:
+                    logger.debug(f"Secondary users/me lookup skipped: {exc}")
+
             raw_id_str = str(raw_id).strip() if raw_id is not None and not isinstance(raw_id, bool) else ""
-            if (
-                raw_id_str
-                and raw_id_str.isdigit()
-                and 1 <= len(raw_id_str) <= 32
-                and int(raw_id_str) > 0
-            ):
+            if raw_id_str and raw_id_str.isdigit() and 1 <= len(raw_id_str) <= 32 and int(raw_id_str) > 0:
                 self.udemy_user_id = raw_id_str
             else:
                 import hashlib
-                cookie_material = self.cookie_dict.get("client_id") or self.cookie_dict.get("access_token") or ""
+                # CRITICAL: Prioritize account-unique access_token over browser-shared client_id
+                token_mat = (self.cookie_dict.get("access_token") or "").strip()
+                cid_mat = (self.cookie_dict.get("client_id") or "").strip()
+                cookie_material = token_mat or cid_mat or ""
                 salt = self.display_name or "fallback"
                 hash_input = f"{cookie_material}:{salt}"
                 self.udemy_user_id = "fallback_" + hashlib.sha256(hash_input.encode("utf-8")).hexdigest()[:12]

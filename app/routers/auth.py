@@ -2,6 +2,7 @@
 
 import asyncio
 import secrets
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -30,6 +31,7 @@ from app.security import (
     verify_csrf_token,
     verify_login_csrf,
 )
+from app.services.session_sanitizer import evict_stale_fallback_sessions_for_client
 from app.services.udemy_client import LoginException, UdemyClient
 from app.session_lifecycle import (
     _active_sessions_query,
@@ -93,9 +95,17 @@ def _create_session(
     return token
 
 
-def _login_response(client: UdemyClient, token: str) -> JSONResponse:
+def _login_response(
+    client: UdemyClient, token: str, user: Optional[User] = None
+) -> JSONResponse:
     csrf_token = generate_csrf_token(token)
     max_age = _session_ttl_seconds()
+    raw_uid = getattr(client, "udemy_user_id", None)
+    udemy_user_id = (
+        str(raw_uid)
+        if isinstance(raw_uid, (str, int)) and not isinstance(raw_uid, bool)
+        else None
+    )
     response = JSONResponse(
         content={
             "success": True,
@@ -103,6 +113,8 @@ def _login_response(client: UdemyClient, token: str) -> JSONResponse:
             "message": f"Logged in as {client.display_name}",
             "display_name": client.display_name,
             "currency": client.currency,
+            "udemy_user_id": udemy_user_id,
+            "email": user.email if user else None,
             "csrf_token": csrf_token,
         }
     )
@@ -206,7 +218,7 @@ async def login_with_credentials(
         token = _create_session(user, client, request, db)
         client_handed_off = True
         logger.info(f"Login successful (ID: {user.id})")
-        return _login_response(client, token)
+        return _login_response(client, token, user=user)
 
     except LoginException as e:
         logger.warning(f"Login rejected: {e}")
@@ -244,7 +256,15 @@ async def login_with_cookies(
         )
         await client.get_session_info()
 
-        udemy_email = f"udemy_{client.udemy_user_id}@udemy.local"
+        raw_uid = getattr(client, "udemy_user_id", None)
+        uid_str = (
+            str(raw_uid).strip()
+            if isinstance(raw_uid, (str, int)) and not isinstance(raw_uid, bool)
+            else "unknown"
+        )
+        udemy_email = f"udemy_{uid_str}@udemy.local"
+        if not uid_str.startswith("fallback_"):
+            evict_stale_fallback_sessions_for_client(db, client, request)
         user = db.query(User).filter(User.email == udemy_email).first()
 
         if not user:
@@ -294,7 +314,7 @@ async def login_with_cookies(
         token = _create_session(user, client, request, db)
         client_handed_off = True
         logger.info(f"Cookie login successful (ID: {user.id}, currency: {client.currency})")
-        return _login_response(client, token)
+        return _login_response(client, token, user=user)
 
     except LoginException as e:
         logger.warning(f"Cookie login rejected: {e}")
@@ -365,6 +385,8 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
             client.http.client.cookies.update(cookies)
             client.display_name = user.udemy_display_name
             client.currency = user.currency
+            if user.email and user.email.startswith("udemy_") and user.email.endswith("@udemy.local"):
+                client.udemy_user_id = user.email[6:-12]
             client.is_authenticated = True
 
             if not hasattr(request.app.state, "udemy_clients"):
@@ -387,10 +409,19 @@ async def auth_status(request: Request, db: Session = Depends(get_db)):
         remaining = int((expires_at - _utcnow_naive()).total_seconds())
         session_seconds_remaining = max(0, remaining)
 
+    raw_uid = getattr(client, "udemy_user_id", None)
+    udemy_user_id = (
+        str(raw_uid)
+        if isinstance(raw_uid, (str, int)) and not isinstance(raw_uid, bool)
+        else None
+    )
+
     return {
         "authenticated": True,
         "display_name": client.display_name,
         "currency": client.currency,
+        "udemy_user_id": udemy_user_id,
+        "email": session.user.email if session and session.user else None,
         "enrolled_courses_count": len(client.enrolled_courses)
         if client.enrolled_courses
         else 0,

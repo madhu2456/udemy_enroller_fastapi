@@ -21,20 +21,23 @@ from app.security import encrypt_cookies_salted, generate_cookie_salt
 from app.services.udemy_client import UdemyClient
 
 
-def _make_request(path: str = "/api/auth/login/cookies") -> Request:
+def _make_request(path: str = "/api/auth/login/cookies", token: str | None = None) -> Request:
     fake_app = SimpleNamespace(state=SimpleNamespace(session_cache=None, udemy_clients={}))
+    headers = []
+    if token:
+        headers.append((b"cookie", f"session_id={token}".encode("ascii")))
     return Request(
         {
             "type": "http",
             "asgi": {"version": "3.0"},
             "http_version": "1.1",
-            "method": "POST",
+            "method": "POST" if "login" in path else "GET",
             "scheme": "http",
             "path": path,
             "raw_path": path.encode("ascii"),
             "query_string": b"",
             "root_path": "",
-            "headers": [],
+            "headers": headers,
             "client": ("127.0.0.1", 12345),
             "server": ("testserver", 80),
             "app": fake_app,
@@ -307,3 +310,272 @@ def test_udemy_user_id_path_traversal_rejection():
     assert valid_path.name == "enrolled_courses_40960386.json"
     cache_dir = client._get_cache_dir().resolve()
     assert valid_path.is_relative_to(cache_dir)
+
+
+@pytest.mark.asyncio
+async def test_session_info_resolves_id_from_me_context():
+    client = UdemyClient()
+    client.cookie_dict = {"client_id": "test_client_id", "access_token": "token123"}
+    client.http = AsyncMock()
+    mock_resp = MagicMock(status_code=200, text="{}")
+    client.http.get = AsyncMock(return_value=mock_resp)
+    client.http.safe_json = AsyncMock(
+        return_value={
+            "header": {
+                "isLoggedIn": True,
+                "user": {"display_name": "Madhu Dadi"},
+            },
+            "me": {
+                "id": 40960386,
+                "title": "Madhu Dadi",
+            },
+        }
+    )
+
+    await client.get_session_info()
+
+    assert client.udemy_user_id == "40960386"
+    assert client.display_name == "Madhu Dadi"
+
+
+@pytest.mark.asyncio
+async def test_session_info_resolves_id_from_secondary_users_me_api():
+    client = UdemyClient()
+    client.cookie_dict = {"client_id": "test_client_id", "access_token": "token123"}
+    client.http = AsyncMock()
+
+    context_resp = MagicMock(status_code=200, text="{}")
+    user_me_resp = MagicMock(status_code=200, text="{}")
+
+    async def mock_get(url, **kwargs):
+        if "users/me/" in url:
+            return user_me_resp
+        return context_resp
+
+    client.http.get = AsyncMock(side_effect=mock_get)
+
+    async def mock_safe_json(resp, label):
+        if label == "users_me":
+            return {"id": 887766, "title": "Madhu Dadi"}
+        return {
+            "header": {
+                "isLoggedIn": True,
+                "user": {"display_name": "Madhu Dadi"},
+            },
+            "me": {},
+        }
+
+    client.http.safe_json = AsyncMock(side_effect=mock_safe_json)
+
+    await client.get_session_info()
+
+    assert client.udemy_user_id == "887766"
+
+
+@pytest.mark.asyncio
+async def test_session_info_resolves_id_from_jwt_token():
+    import base64
+    import json
+
+    client = UdemyClient()
+    header_b64 = base64.urlsafe_b64encode(json.dumps({"alg": "HS256"}).encode()).decode().rstrip("=")
+    payload_b64 = base64.urlsafe_b64encode(json.dumps({"user_id": 554433}).encode()).decode().rstrip("=")
+    jwt_token = f"{header_b64}.{payload_b64}.fake_signature"
+
+    client.cookie_dict = {"client_id": "test_client_id", "access_token": jwt_token}
+    client.http = AsyncMock()
+    mock_resp = MagicMock(status_code=200, text="{}")
+    client.http.get = AsyncMock(return_value=mock_resp)
+    client.http.safe_json = AsyncMock(
+        return_value={
+            "header": {
+                "isLoggedIn": True,
+                "user": {"display_name": "Madhu Dadi"},
+            },
+            "me": {},
+        }
+    )
+
+    await client.get_session_info()
+
+    assert client.udemy_user_id == "554433"
+
+
+@pytest.mark.asyncio
+async def test_fallback_hash_prioritizes_access_token_over_client_id():
+    client_a = UdemyClient()
+    client_a.cookie_dict = {"client_id": "same_browser", "access_token": "token_a"}
+    client_a.http = AsyncMock()
+    client_a.http.get = AsyncMock(return_value=MagicMock(status_code=404, text="{}"))
+    client_a.http.safe_json = AsyncMock(
+        return_value={
+            "header": {
+                "isLoggedIn": True,
+                "user": {"display_name": "Madhu Dadi"},
+            },
+            "me": {},
+        }
+    )
+
+    client_b = UdemyClient()
+    client_b.cookie_dict = {"client_id": "same_browser", "access_token": "token_b"}
+    client_b.http = AsyncMock()
+    client_b.http.get = AsyncMock(return_value=MagicMock(status_code=404, text="{}"))
+    client_b.http.safe_json = AsyncMock(
+        return_value={
+            "header": {
+                "isLoggedIn": True,
+                "user": {"display_name": "Madhu Dadi"},
+            },
+            "me": {},
+        }
+    )
+
+    await client_a.get_session_info()
+    await client_b.get_session_info()
+
+    assert client_a.udemy_user_id.startswith("fallback_")
+    assert client_b.udemy_user_id.startswith("fallback_")
+    assert client_a.udemy_user_id != client_b.udemy_user_id
+
+
+@pytest.mark.asyncio
+async def test_auth_status_and_login_response_expose_udemy_user_id_and_email(db):
+    import json
+    from app.routers.auth import _login_response, auth_status
+
+    user = User(
+        email="udemy_40960386@udemy.local",
+        udemy_display_name="Madhu Dadi",
+        currency="usd",
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    client = MagicMock()
+    client.display_name = "Madhu Dadi"
+    client.currency = "usd"
+    client.udemy_user_id = "40960386"
+    client.enrolled_courses = []
+    client.is_authenticated = True
+
+    # Check _login_response
+    resp = _login_response(client, "test_session_token", user=user)
+    body = json.loads(resp.body.decode("utf-8"))
+    assert body["udemy_user_id"] == "40960386"
+    assert body["email"] == "udemy_40960386@udemy.local"
+
+    # Check auth_status
+    session = UserSession(
+        user_id=user.id,
+        token="test_session_token",
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    session.user = user
+
+    req = _make_request("/api/auth/status", token="test_session_token")
+    req.app.state.udemy_clients = {"test_session_token": client}
+
+    status_data = await auth_status(request=req, db=db)
+    assert status_data["authenticated"] is True
+    assert status_data["udemy_user_id"] == "40960386"
+    assert status_data["email"] == "udemy_40960386@udemy.local"
+
+
+@pytest.mark.asyncio
+async def test_reconstructed_client_restores_udemy_user_id_from_email(db):
+    from app.routers.auth import auth_status
+
+    salt = generate_cookie_salt()
+    encrypted = encrypt_cookies_salted({"access_token": "tok123"}, salt)
+    user = User(
+        email="udemy_40960386@udemy.local",
+        udemy_display_name="Madhu Dadi",
+        currency="usd",
+        is_active=True,
+        cookies_salt=salt,
+        udemy_cookies=encrypted,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    db.add(UserSettings(user_id=user.id))
+    db.commit()
+
+    session = UserSession(
+        user_id=user.id,
+        token="cold_cache_token",
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    session.user = user
+
+    # Cold cache: no in-memory client
+    req = _make_request("/api/auth/status", token="cold_cache_token")
+    req.app.state.session_cache = None
+    req.app.state.udemy_clients = {}
+
+    status_data = await auth_status(request=req, db=db)
+    assert status_data["authenticated"] is True
+    assert status_data["udemy_user_id"] == "40960386"
+    # Verify in-memory reconstructed client also has udemy_user_id set
+    reconstructed_client = req.app.state.udemy_clients.get("cold_cache_token")
+    assert reconstructed_client is not None
+    assert reconstructed_client.udemy_user_id == "40960386"
+
+
+@pytest.mark.asyncio
+async def test_cookie_login_evicts_stale_fallback_sessions_with_same_token(db):
+    from app.services.session_sanitizer import evict_stale_fallback_sessions_for_client
+
+    # 1. Existing fallback user with access_token="shared_access_token"
+    salt_fb = generate_cookie_salt()
+    cookies_fb = encrypt_cookies_salted({"access_token": "shared_access_token", "client_id": "cid1"}, salt_fb)
+    fb_user = User(
+        email="udemy_fallback_aabbccddeeff@udemy.local",
+        udemy_display_name="Madhu Dadi",
+        currency="usd",
+        is_active=True,
+        cookies_salt=salt_fb,
+        udemy_cookies=cookies_fb,
+    )
+    db.add(fb_user)
+    db.commit()
+    db.refresh(fb_user)
+
+    fb_session = UserSession(
+        user_id=fb_user.id,
+        token="fallback_session_tok",
+    )
+    db.add(fb_session)
+    db.commit()
+
+    # App state with cache
+    req = _make_request()
+    req.app.state.session_cache = MagicMock()
+    req.app.state.udemy_clients = {"fallback_session_tok": MagicMock()}
+
+    # Incoming client with same access_token but authoritative ID
+    incoming_client = UdemyClient()
+    incoming_client.udemy_user_id = "40960386"
+    incoming_client.cookie_dict = {"access_token": "shared_access_token", "client_id": "cid1"}
+
+    evicted = evict_stale_fallback_sessions_for_client(db, incoming_client, req)
+    assert evicted == 1
+
+    # Verify fallback user deactivated and cookies wiped
+    db.refresh(fb_user)
+    assert fb_user.is_active is False
+    assert fb_user.udemy_cookies is None
+
+    # Verify session removed from DB
+    remaining_sessions = db.query(UserSession).filter(UserSession.user_id == fb_user.id).all()
+    assert len(remaining_sessions) == 0
+
+    # Verify cache eviction
+    req.app.state.session_cache.delete.assert_called_with("fallback_session_tok")

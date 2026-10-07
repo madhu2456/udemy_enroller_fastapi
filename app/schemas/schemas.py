@@ -42,6 +42,8 @@ class LoginResponse(BaseModel):
     message: str
     display_name: Optional[str] = None
     currency: Optional[str] = None
+    udemy_user_id: Optional[str] = None
+    email: Optional[str] = None
 
 
 # ── Settings ──────────────────────────────────────────
