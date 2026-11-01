@@ -1,7 +1,7 @@
-# Udemy Course Enroller — v1.0.0 General Availability (GA)
+# Udemy Course Enroller — v1.1.0 Release
 
-> **Release Version**: `v1.0.0`  
-> **Release Date**: 2026-09-27  
+> **Release Version**: `v1.1.0`  
+> **Release Date**: 2026-10-02  
 > **Repository**: [madhu2456/udemy_enroller_fastapi](https://github.com/madhu2456/udemy_enroller_fastapi)  
 > **Live Demo**: [udemyenroller.madhudadi.in](https://udemyenroller.madhudadi.in)  
 > **License**: MIT  
@@ -51,7 +51,7 @@
 
 ## 1. Executive Summary & Overview
 
-We are proud to announce the **v1.0.0 General Availability (GA)** release of **Udemy Course Enroller**! This release marks the official transition from development to a hardened, production-ready, self-hosted automation platform.
+We are proud to announce the **v1.1.0** release of **Udemy Course Enroller**! This release marks the official transition from development to a hardened, production-ready, self-hosted automation platform. The v1.1.0 change list (urllib3 security patch, verified public deals pipeline seeding, sitemap snapshot hardening, and more) lives in [`CHANGELOG.md`](CHANGELOG.md) under `[1.1.0]`; this document carries the v1.0.0 GA feature overview unchanged.
 
 Udemy Course Enroller discovers 100% off Udemy coupons across 17 aggregator sources and automates enrollment when you initiate a run. Designed with a security-first architecture, it operates with **zero master passwords handled**, utilizing session-based browser cookies and platform keychain decryption.
 
@@ -157,7 +157,7 @@ The core enrollment engine is engineered to prevent Cloudflare 403 checkout stor
 
 ---
 
-## 8. Verifying & Upgrading to v1.0.0
+## 8. Verifying & Upgrading to v1.1.0
 
 ```bash
 # Clone or pull latest release
@@ -166,7 +166,7 @@ cd udemy_enroller_fastapi
 
 # Verify CLI version
 ./venv/bin/python -m app.cli.main --version
-# Output: Udemy Enroller v1.0.0
+# Output: Udemy Enroller v1.1.0
 
 # Run standalone desktop app
 python gui.py

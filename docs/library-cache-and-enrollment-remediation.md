@@ -11,13 +11,13 @@
 Prior to this remediation, two interrelated issues affected course enrollment accuracy:
 
 1. **False Positive Enrollment Metrics:**  
-   When enrolling via [`_du_checkout()`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/udemy_client.py#L1277) or [`free_checkout()`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/udemy_client.py#L1345), responses indicating the user was already subscribed (such as HTTP 400 with `"already subscribed"` or a 200 response on verification for an older enrollment) were either treated as successful enrollments or conflated with checkout failures. This falsely inflated the "ENROLLED" count and estimated dollar savings on the dashboard, CLI, and GUI.
+   When enrolling via [`_du_checkout()`](../../app/services/udemy_client.py#L1277) or [`free_checkout()`](../../app/services/udemy_client.py#L1345), responses indicating the user was already subscribed (such as HTTP 400 with `"already subscribed"` or a 200 response on verification for an older enrollment) were either treated as successful enrollments or conflated with checkout failures. This falsely inflated the "ENROLLED" count and estimated dollar savings on the dashboard, CLI, and GUI.
 
 2. **Excessive Network Roundtrips on Owned Courses:**  
    Without persistent library tracking and dual-key indexing (slug and numeric ID), consumer pipelines had to query Udemy's coupon validation endpoint for every course encountered—even courses the user had owned for years. In addition, users with large libraries (>5,000 courses) suffered incomplete synchronizations due to tight pagination caps.
 
 ### Solutions Delivered
-- **Decoupled Ownership State:** Added `is_already_enrolled: bool = False` to [`Course`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/course.py#L32).
+- **Decoupled Ownership State:** Added `is_already_enrolled: bool = False` to [`Course`](../../app/services/course.py#L32).
 - **Dual-Key Indexing:** Tracked concurrently by slug (`enrolled_courses: Dict[str, str]`) and numeric ID (`enrolled_course_ids: Set[str]`).
 - **Atomic Disk Cache Persistence:** Written to `data/cache/enrolled_courses_{udemy_user_id}.json` using a `.tmp` staging file, explicit `os.fsync`, and atomic `os.replace`.
 - **500-Page Deep Synchronization:** Up to 50,000 courses with 50ms cooperative delays, 429 `Retry-After` backoff, 10-page disk checkpoints, and early stopping gated strictly on `full_sync_complete is True`.
@@ -28,7 +28,7 @@ Prior to this remediation, two interrelated issues affected course enrollment ac
 
 ## 2. Core Domain Model Changes
 
-In [`app/services/course.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/course.py):
+In [`app/services/course.py`](../../app/services/course.py):
 
 ```python
 class Course:
@@ -46,11 +46,11 @@ class Course:
 
 ## 3. Dual-Key Library Indexing & In-Memory State
 
-In [`app/services/udemy_client.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/udemy_client.py):
+In [`app/services/udemy_client.py`](../../app/services/udemy_client.py):
 
 Udemy API endpoints alternate between course URL slugs (e.g. `python-masterclass`) and numeric course IDs (e.g. `1234567`). Relying on a single key caused cache misses during checkout workflows where only one identifier was known.
 
-[`UdemyClient`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/udemy_client.py#L29) maintains dual in-memory structures:
+[`UdemyClient`](../../app/services/udemy_client.py#L29) maintains dual in-memory structures:
 - `self.enrolled_courses: Dict[str, str]`: Maps course slug to ISO-8601 enrollment timestamp (e.g. `"2026-01-15T12:00:00Z"`).
 - `self.enrolled_course_ids: Set[str]`: Set of stringified numeric course IDs.
 - `self.full_sync_complete: bool`: Tracks whether an end-to-end library sync has completed across all pages.
@@ -99,7 +99,7 @@ Library data is persisted per user on disk at:
 
 ## 5. 500-Page Synchronization Lifecycle
 
-[`get_enrolled_courses()`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/udemy_client.py#L493) queries the subscribed courses mobile endpoint:
+[`get_enrolled_courses()`](../../app/services/udemy_client.py#L493) queries the subscribed courses mobile endpoint:
 
 `https://www.udemy.com/api-2.0/users/me/subscribed-courses/?ordering=-enroll_time&fields[course]=id,enrollment_time,url&page_size=100`
 
@@ -175,7 +175,7 @@ The enrollment contract distinguishes 4 states across all consumers:
 | `False` | `False` | Checkout Failed | `✗ FAILED` (Red) | `unknown_c += 1` |
 
 ### 0ms Fast Pre-check in Pipeline Loops
-In [`app/cli/commands/enroll.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/cli/commands/enroll.py), [`app/cli/commands/check.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/cli/commands/check.py), [`app/gui/bridge.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/gui/bridge.py), and [`app/services/enrollment_manager.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/app/services/enrollment_manager.py):
+In [`app/cli/commands/enroll.py`](../../app/cli/commands/enroll.py), [`app/cli/commands/check.py`](../../app/cli/commands/check.py), [`app/gui/bridge.py`](../../app/gui/bridge.py), and [`app/services/enrollment_manager.py`](../../app/services/enrollment_manager.py):
 
 ```python
 # Check if already enrolled in library before calling check_course
@@ -201,7 +201,7 @@ This bypasses `check_course()` entirely for pre-owned courses, saving 1–2 netw
 
 The changes are validated by unit tests:
 
-1. **[`tests/test_udemy_client_cache.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_udemy_client_cache.py)** (10 tests):
+1. **[`tests/test_udemy_client_cache.py`](../../tests/test_udemy_client_cache.py)** (10 tests):
    - `test_cache_save_and_load_roundtrip`: Verifies atomic disk save and reload of dual-key indices and `full_sync_complete`.
    - `test_cache_noop_when_user_id_empty`: Confirms memory-only isolation when `udemy_user_id` is missing.
    - `test_cache_load_corrupted_json`: Verifies safe handling of corrupted JSON files without crashing.
@@ -213,5 +213,5 @@ The changes are validated by unit tests:
    - `test_free_checkout_fast_precheck_skips_http`: Verifies HTTP calls are bypassed for known courses.
    - `test_cli_fast_precheck_bypasses_check_course`: Tests CLI enroll execution bypassing `check_course` for owned courses.
 
-2. **[`tests/test_udemy_checkout_limits.py`](file:///run/media/madhud/Storage1/LinuxProjects/Codes/Projects/Udemy%20Enroller/tests/test_udemy_checkout_limits.py)**:
+2. **[`tests/test_udemy_checkout_limits.py`](../../tests/test_udemy_checkout_limits.py)**:
    - Line 261 (`test_du_checkout_already_subscribed_400`): Asserts `status is False`, `is_already_enrolled is True`, and `error == "already_enrolled"`.
